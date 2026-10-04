@@ -19,5 +19,5 @@ Status values: **accepted** (in force), **proposed** (under discussion), **super
 | [0009-router.md](0009-router.md)                           | accepted | Typed route tables; History API baseline with Navigation API enhancement; streaming `listen()`                                  |
 | [0010-child-components.md](0010-child-components.md)       | accepted | Props down, `emit()` outputs up, `child()` parsers, keyed `repeat()` collections                                                |
 | [0012-ssr.md](0012-ssr.md)                                 | accepted | Server render from `init(props)`, per-element hydration seed, init commands start after hydration                               |
-| [0013-shared-state.md](0013-shared-state.md)               | proposed | Stores as "props from the side": `ctx.stores`, optional `StoreChanged`, writes via `send()` commands, per-request on the server |
+| [0013-shared-state.md](0013-shared-state.md)               | accepted | Stores as "props from the side": `ctx.stores`, optional `StoreChanged`, writes via `send()` commands, per-request on the server |
 | [lessons-from-cyclejs.md](lessons-from-cyclejs.md)         | accepted | What we keep, drop and replace from Cycle.js                                                                                    |

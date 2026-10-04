@@ -1,6 +1,6 @@
 # ADR 0013 — Shared state: stores as "props from the side"
 
-Status: **proposed** (2026-10-04). Bead: gyral-czi.18. Needed by the e-commerce app (a cart
+Status: **accepted** (2026-10-04, approved by the project owner). Bead: gyral-czi.18. Needed by the e-commerce app (a cart
 badge in the header and a checkout page deep in the tree share one cart).
 
 ## Context
@@ -38,7 +38,7 @@ request**, serialized for hydration.
 - **D. Stores as context: "props from the side"** (recommended). This mirrors ADR 0007:
   read through context, react through an optional message, write through commands.
 
-## Proposal (D)
+## Decision (D)
 
 ```ts
 // state/cart.ts: a store is MVI without a view
