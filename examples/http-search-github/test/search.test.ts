@@ -8,7 +8,8 @@ import {
   virtualTime,
   type VirtualTime,
 } from '@gyral/testing';
-import { debounce, searchUrl } from '../src/github.js';
+import { time as timeDriver } from '@gyral/time';
+import { searchUrl } from '../src/github.js';
 import { DEBOUNCE_MS, GithubSearch, type State } from '../src/search.js';
 
 const repo = (id: number, name: string) => ({
@@ -25,7 +26,7 @@ async function mount({ realDebounce = false } = {}) {
   const el = new GithubSearch();
   el.drivers = realDebounce
     ? { http: github }
-    : { http: github, debounce: fakeDriver(debounce, { impl: () => undefined }) };
+    : { http: github, time: fakeDriver(timeDriver, { impl: () => undefined }) };
   document.body.append(el);
   await el.updateComplete;
   return { el, github };
@@ -124,7 +125,7 @@ describe('<gy-github-search>', () => {
     const idle: State = { query: '', results: { _tag: 'Idle' } };
     const { state, commands } = step(GithubSearch.spec, idle, { _tag: 'Typed', query: 'q' });
     expect(state.query).toBe('q');
-    expect(inputsFor(commands, debounce)).toEqual([{ ms: DEBOUNCE_MS }]);
+    expect(inputsFor(commands, timeDriver)).toEqual([{ _tag: 'Delay', ms: DEBOUNCE_MS }]);
     const [pause] = commands;
     if (pause === undefined) throw new Error('no command');
     expect(resolve(pause, undefined)).toEqual({ _tag: 'Search', query: 'q' });

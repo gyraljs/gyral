@@ -124,3 +124,19 @@ ignored once the command has settled or been aborted (switched away, or the comp
 disconnected). A streaming `run` usually returns a promise that never resolves; abort ends
 it. A finite stream may resolve, and its resolved value is delivered last. Used by
 `listen()` in `@gyral/router` and by `@gyral/time`.
+
+### `@gyral/time` (gyral-ud5.3)
+
+One `time` driver (substitutable by name) with four commands. Each command kind has its own
+default lane, and a `Lane` option (`key`, `concurrency`) lets timers coexist:
+
+| Command                   | Kind                        | Default lane / policy                                         |
+| ------------------------- | --------------------------- | ------------------------------------------------------------- |
+| `delay(ms, msg)`          | one-shot                    | `time:delay`, `merge` (every delay fires)                     |
+| `debounce(ms, msg, key?)` | one-shot                    | `time:debounce`, `switch` (each call cancels the pending one) |
+| `periodic(ms, toMsg)`     | stream of 1, 2, 3…          | `time:periodic`, `switch`                                     |
+| `animationFrames(toMsg)`  | stream of `{ time, delta }` | `time:frames`, `switch`                                       |
+
+Debounce is a delay under `switch`, not a separate mechanism. Nothing starts at import, and
+`animationFrames` falls back to a 16 ms timer where `requestAnimationFrame` is missing. Tests
+use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval`/rAF.

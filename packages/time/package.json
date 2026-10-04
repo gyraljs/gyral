@@ -1,0 +1,28 @@
+{
+  "name": "@gyral/time",
+  "version": "0.0.0",
+  "description": "Gyral time: delays, debounces, periodic ticks and animation frames as commands.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
