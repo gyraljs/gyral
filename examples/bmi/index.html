@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BMI calculator — Gyral examples</title>
+    <meta
+      name="description"
+      content="A body-mass-index calculator written with Gyral, using schema-validated field intents."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      @layer reset, base;
+      @layer reset {
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+        }
+      }
+      @layer base {
+        :root {
+          color-scheme: light dark;
+          font-family: system-ui, sans-serif;
+          --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+          --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+        }
+        body {
+          background: var(--surface);
+          color: var(--ink);
+        }
+        main {
+          max-inline-size: 40rem;
+          margin-inline: auto;
+          padding: 2rem 1rem;
+        }
+      }
+    </style>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>BMI calculator</h1>
+      <gy-bmi></gy-bmi>
+    </main>
+  </body>
+</html>

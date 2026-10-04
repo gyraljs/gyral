@@ -1,0 +1,14 @@
+{
+  "name": "@gyral-examples/bmi",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js basic/bmi-naive and intermediate/bmi-typescript examples.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "valibot": "1.5.0"
+  }
+}
