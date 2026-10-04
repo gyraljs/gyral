@@ -80,6 +80,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/hello-lastname:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/hello-world:
     dependencies:
       '@gyral/core':
