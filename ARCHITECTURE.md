@@ -28,7 +28,7 @@ Dependencies only point **down** this list. Nothing points up or sideways except
 | Layer | Package                        | Status  | May depend on                                        |
 | ----- | ------------------------------ | ------- | ---------------------------------------------------- |
 | 0     | `@gyral/core`                  | v0 work | `lit`; `effect` only from `src/internal/`            |
-| 1     | `@gyral/testing`               | planned | core                                                 |
+| 1     | `@gyral/testing`               | v0 work | core, `@sinonjs/fake-timers`                         |
 | 1     | `@gyral/http`                  | v0 work | core, `@standard-schema/spec` (types only)           |
 | 1     | `@gyral/router`, `@gyral/time` | planned | core                                                 |
 | 2     | `@gyral/ssr`                   | planned | core, router, `@lit-labs/ssr` (behind an adapter)    |

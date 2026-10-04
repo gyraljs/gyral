@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
   }
 }

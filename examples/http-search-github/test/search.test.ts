@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Command, Driver } from '@gyral/core';
 import type { HttpError, HttpRequest } from '@gyral/http';
-import { searchUrl } from '../src/github.js';
-import { GithubSearch, type Msg, type State } from '../src/search.js';
+import {
+  fakeDriver,
+  inputsFor,
+  resolve,
+  step,
+  virtualTime,
+  type VirtualTime,
+} from '@gyral/testing';
+import { debounce, searchUrl } from '../src/github.js';
+import { DEBOUNCE_MS, GithubSearch, type State } from '../src/search.js';
 
 const repo = (id: number, name: string) => ({
   id,
@@ -12,54 +19,13 @@ const repo = (id: number, name: string) => ({
   stargazers_count: id * 1000,
 });
 
-class FakeFailure extends Error {
-  constructor(readonly error: HttpError) {
-    super(error._tag);
-  }
-}
-
-/** Fake http driver: every request waits until the test answers it. No network. */
-function fakeGithub() {
-  const calls: {
-    url: string;
-    signal: AbortSignal;
-    reply: (items: unknown[]) => void;
-    fail: (error: HttpError) => void;
-  }[] = [];
-  const driver: Driver<HttpRequest, unknown, HttpError> = {
-    name: 'http',
-    toError: (cause) =>
-      cause instanceof FakeFailure
-        ? cause.error
-        : { _tag: 'HttpNetworkError', url: '', message: String(cause) },
-    run: (req, { signal }) =>
-      new Promise((resolve, reject) => {
-        calls.push({
-          url: req.url,
-          signal,
-          reply: (items) => {
-            resolve({ items });
-          },
-          fail: (error) => {
-            reject(new FakeFailure(error));
-          },
-        });
-      }),
-  };
-  return { driver, calls };
-}
-
-/** Debounce substitute that fires immediately, so tests need no timers. */
-const instant: Driver<{ readonly ms: number }, undefined> = {
-  name: 'debounce',
-  concurrency: 'switch',
-  run: () => undefined,
-};
-
-async function mount() {
-  const github = fakeGithub();
+async function mount({ realDebounce = false } = {}) {
+  // Every request waits until the test answers it. No network.
+  const github = fakeDriver<HttpRequest, unknown, HttpError>('http');
   const el = new GithubSearch();
-  el.drivers = { http: github.driver, debounce: instant };
+  el.drivers = realDebounce
+    ? { http: github }
+    : { http: github, debounce: fakeDriver(debounce, { impl: () => undefined }) };
   document.body.append(el);
   await el.updateComplete;
   return { el, github };
@@ -75,7 +41,11 @@ function type(el: HTMLElement, text: string) {
 const shadowText = (el: HTMLElement, selector: string) =>
   [...(el.shadowRoot?.querySelectorAll(selector) ?? [])].map((n) => n.textContent.trim());
 
+let time: VirtualTime | undefined;
+
 afterEach(() => {
+  time?.restore();
+  time = undefined;
   document.body.replaceChildren();
 });
 
@@ -84,10 +54,10 @@ describe('<gy-github-search>', () => {
     const { el, github } = await mount();
     type(el, 'lit');
     await vi.waitFor(() => {
-      expect(github.calls.map((c) => c.url)).toEqual([searchUrl('lit')]);
+      expect(github.inputs.map((r) => r.url)).toEqual([searchUrl('lit')]);
     });
     expect(shadowText(el, 'output')).toEqual(['Searching…']);
-    github.calls[0]?.reply([repo(1, 'lit'), repo(2, 'lit-ssr')]);
+    github.resolveNext({ items: [repo(1, 'lit'), repo(2, 'lit-ssr')] });
     await vi.waitFor(() => {
       expect(shadowText(el, 'h2 a')).toEqual(['gyral/lit', 'gyral/lit-ssr']);
     });
@@ -108,8 +78,8 @@ describe('<gy-github-search>', () => {
       expect(github.calls).toHaveLength(2);
     });
     expect(github.calls[0]?.signal.aborted).toBe(true);
-    github.calls[0]?.reply([repo(9, 'stale')]);
-    github.calls[1]?.reply([repo(3, 'ab')]);
+    github.calls[0]?.resolve({ items: [repo(9, 'stale')] });
+    github.calls[1]?.resolve({ items: [repo(3, 'ab')] });
     await vi.waitFor(() => {
       expect(shadowText(el, 'h2 a')).toEqual(['gyral/ab']);
     });
@@ -121,7 +91,7 @@ describe('<gy-github-search>', () => {
     await vi.waitFor(() => {
       expect(github.calls).toHaveLength(1);
     });
-    github.calls[0]?.fail({ _tag: 'HttpStatusError', url: '', status: 403, statusText: '' });
+    github.rejectNext({ _tag: 'HttpStatusError', url: '', status: 403, statusText: '' });
     await vi.waitFor(() => {
       expect(shadowText(el, '[role=alert]')).toEqual([
         'GitHub rate limit reached. Try again in a minute.',
@@ -138,12 +108,25 @@ describe('<gy-github-search>', () => {
     expect(shadowText(el, 'output')).toEqual(['Type to search.']);
   });
 
+  it('waits for a pause in typing (virtual time, real debounce driver)', async () => {
+    time = virtualTime();
+    const { el, github } = await mount({ realDebounce: true });
+    type(el, 'l');
+    await time.advance(DEBOUNCE_MS - 1);
+    type(el, 'li');
+    await time.advance(DEBOUNCE_MS - 1);
+    expect(github.calls).toHaveLength(0);
+    await time.advance(1);
+    expect(github.inputs.map((r) => r.url)).toEqual([searchUrl('li')]);
+  });
+
   it('update debounces typing through a command', () => {
-    const { update } = GithubSearch.spec;
     const idle: State = { query: '', results: { _tag: 'Idle' } };
-    const next = update.Typed(idle, { _tag: 'Typed', query: 'q' }, { props: {} });
-    const [state, commands] = next as readonly [State, readonly Command<Msg>[]];
+    const { state, commands } = step(GithubSearch.spec, idle, { _tag: 'Typed', query: 'q' });
     expect(state.query).toBe('q');
-    expect(commands.map((c) => c.driver.name)).toEqual(['debounce']);
+    expect(inputsFor(commands, debounce)).toEqual([{ ms: DEBOUNCE_MS }]);
+    const [pause] = commands;
+    if (pause === undefined) throw new Error('no command');
+    expect(resolve(pause, undefined)).toEqual({ _tag: 'Search', query: 'q' });
   });
 });

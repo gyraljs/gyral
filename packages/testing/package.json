@@ -1,0 +1,26 @@
+{
+  "name": "@gyral/testing",
+  "version": "0.0.0",
+  "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@sinonjs/fake-timers": "15.4.0"
+  }
+}

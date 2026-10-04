@@ -97,4 +97,21 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
 - Public types are plain TypeScript; Effect stays in `src/internal/` (checked).
 - Debounce is "switch + delay": a timer driver with `concurrency: 'switch'` (see the
   http-search-github example). The time driver package (gyral-ud5.3) generalises this.
-- Virtual time for retry/debounce tests is future work in `@gyral/testing` (gyral-czi.7).
+- Virtual time for retry/debounce tests lives in `@gyral/testing` (see Testing below).
+
+## Testing (`@gyral/testing`, gyral-czi.7)
+
+- **Pure:** `initial(spec, props?)`, `step(spec, state, msg, props?)` and
+  `run(spec, msgs, { props?, state? })` return `{ state, commands }`, so tests never cast
+  `Next`. Framework messages (`PropsChanged`, `IntentRejected`) step like any other.
+  `inputsFor(commands, driver)`, `resolve(cmd, output)` and `reject(cmd, error)` drive the
+  loop through a command's mappers with no DOM.
+- **DOM:** `fakeDriver(driverOrName, { impl?, toError?, … })` records each call (input and
+  `AbortSignal`) and waits for `resolveNext` / `rejectNext` (or `calls[i].resolve`). Errors
+  pass through unchanged, so a test rejects with the already-typed error.
+- **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
+  microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
+  promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's
+  default clock sleeps through `setTimeout`. That way one API covers drivers, debounces
+  and runtime retry delays, and it keeps working if the interpreter moves to
+  `effect/Micro` (gyral-czi.9), which has no `TestClock`.
