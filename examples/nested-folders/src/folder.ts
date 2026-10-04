@@ -1,0 +1,122 @@
+import { css, define, emit, html, nothing, repeat } from '@gyral/core';
+
+export interface State {
+  /** Ids of this folder's direct children. Each child owns its own subtree. */
+  readonly children: readonly string[];
+  readonly next: number;
+}
+
+export interface Props {
+  readonly folderId: string;
+  readonly removable: boolean;
+}
+
+export type FolderOutput = { readonly _tag: 'Removed' };
+
+export type Msg =
+  | { readonly _tag: 'Add' }
+  | { readonly _tag: 'Remove' }
+  | { readonly _tag: 'Child'; readonly id: string; readonly out: FolderOutput };
+
+/** Stable pastel hue per id, replacing Cycle's `idToColor`. */
+export function hueOf(id: string): number {
+  let hue = 7;
+  for (let n = 0; n < id.length; n += 1) hue = (hue * 31 + id.charCodeAt(n)) % 360;
+  return hue;
+}
+
+/**
+ * A folder renders folders of its own kind: recursion through the custom-element tag.
+ * Unlike Cycle's onionify version (one state tree, lenses per level), each folder owns the
+ * list of its direct children; a child removes itself by emitting `Removed` up one level.
+ * Ids are paths (`1.2.1`), so making a new one is pure.
+ */
+export const Folder = define<State, Msg, Props, FolderOutput>('gy-folder', {
+  props: {
+    folderId: { type: String, attribute: 'folder-id' },
+    removable: { type: Boolean },
+  },
+  init: () => ({ children: [], next: 1 }),
+  intent: {
+    Add: () => ({ _tag: 'Add' }),
+    Remove: () => ({ _tag: 'Remove' }),
+    // `child(Folder, …)` can't be used here: `Folder` is still being defined (temporal dead
+    // zone). Read the output and the child's id by hand instead.
+    Child: ({ target, detail }) => {
+      const out = detail as FolderOutput | undefined;
+      const id = target.getAttribute('folder-id');
+      return out?._tag === 'Removed' && id !== null ? { _tag: 'Child', id, out } : undefined;
+    },
+  },
+  update: {
+    Add: (s, _m, { props }) => ({
+      children: [...s.children, `${props.folderId}.${String(s.next)}`],
+      next: s.next + 1,
+    }),
+    Remove: (s) => [s, [emit({ _tag: 'Removed' })]],
+    // FolderOutput has one variant (Removed); switch on m.out._tag when it grows.
+    Child: (s, m) => ({ ...s, children: s.children.filter((id) => id !== m.id) }),
+  },
+  view: (s, i, { props }) => html`
+    <details open style="--hue: ${hueOf(props.folderId)}">
+      <summary>Folder ${props.folderId}</summary>
+      <menu>
+        <li><button type="button" data-intent=${i.Add}>Add folder</button></li>
+        ${
+          props.removable
+            ? html`<li><button type="button" data-intent=${i.Remove}>Remove me</button></li>`
+            : nothing
+        }
+      </menu>
+      ${
+        s.children.length === 0
+          ? nothing
+          : html`<ul>
+              ${repeat(
+                s.children,
+                (id) => id,
+                (id) =>
+                  html`<li>
+                    <gy-folder folder-id=${id} removable data-intent=${i.Child}></gy-folder>
+                  </li>`,
+              )}
+            </ul>`
+      }
+    </details>
+  `,
+  styles: css`
+    @layer component {
+      :host {
+        display: block;
+      }
+      details {
+        padding: 1rem;
+        border: 2px solid oklch(45% 0.08 var(--hue));
+        border-radius: 0.5rem;
+        background: light-dark(oklch(94% 0.05 var(--hue)), oklch(30% 0.05 var(--hue)));
+      }
+      summary {
+        font-weight: 600;
+        cursor: pointer;
+      }
+      menu {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0;
+        list-style: none;
+      }
+      ul {
+        display: grid;
+        gap: 0.75rem;
+        padding-inline-start: 1.5rem;
+        list-style: none;
+      }
+    }
+  `,
+});
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'gy-folder': InstanceType<typeof Folder>;
+  }
+}

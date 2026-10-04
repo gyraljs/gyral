@@ -1,0 +1,16 @@
+{
+  "name": "@gyral-examples/hello-lastname",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js intermediate/hello-lastname example.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
