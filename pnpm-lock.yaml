@@ -60,6 +60,16 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
 
+  examples/checkbox:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/counter:
     dependencies:
       '@gyral/core':
