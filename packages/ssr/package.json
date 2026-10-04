@@ -30,6 +30,7 @@
   "dependencies": {
     "@gyral/core": "workspace:*",
     "@lit-labs/ssr": "4.1.0",
+    "@standard-schema/spec": "1.1.0",
     "@lit-labs/ssr-client": "1.1.8",
     "lit": "3.3.3"
   }

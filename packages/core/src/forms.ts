@@ -1,6 +1,6 @@
 // Forms, client half (docs/design-docs/0008-forms.md). Schemas are any Standard Schema v1.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { FieldIssue, IntentInput, IntentParser, IntentRejected } from './types.js';
+import type { FieldIssue, FormFields, IntentInput, IntentParser, IntentRejected } from './types.js';
 
 /** A form's schema, shared by the client component and (with @gyral/ssr) the server route. */
 export interface FormDefinition<Schema extends StandardSchemaV1> {
@@ -64,16 +64,58 @@ function parse<Schema extends StandardSchemaV1, M>(
   return result instanceof Promise ? result.then(settle) : settle(result);
 }
 
+/** The text fields of a parsed form, for re-filling it after a rejection. */
+export function formFields(data: Readonly<Record<string, FormValue>>): FormFields {
+  const out: Record<string, string | readonly string[]> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') out[key] = value;
+    else if (Array.isArray(value)) out[key] = value.filter((v) => typeof v === 'string');
+  }
+  return out;
+}
+
+const schemaOf = <Schema extends StandardSchemaV1>(
+  definition: FormDefinition<Schema> | Schema,
+): Schema => ('_tag' in definition ? definition.schema : definition);
+
+export type FormResult<T> =
+  | { readonly ok: true; readonly data: T }
+  | { readonly ok: false; readonly rejected: IntentRejected };
+
+/**
+ * Validates submitted form data exactly as `form()` does. The no-JS server path
+ * (`formAction` in @gyral/ssr) uses it, so both paths produce the same `IntentRejected`.
+ */
+export function validateForm<Schema extends StandardSchemaV1>(
+  definition: FormDefinition<Schema> | Schema,
+  intent: string,
+  data: FormData,
+): FormResult<Out<Schema>> | Promise<FormResult<Out<Schema>>> {
+  const raw = formDataToObject(data);
+  const values = formFields(raw);
+  const rejected = (issues: readonly FieldIssue[]): FormResult<Out<Schema>> => ({
+    ok: false,
+    rejected: { _tag: 'IntentRejected', intent, issues, values },
+  });
+  const settle = (result: StandardSchemaV1.Result<Out<Schema>>): FormResult<Out<Schema>> =>
+    result.issues === undefined
+      ? { ok: true, data: result.value }
+      : rejected(toIssues(result.issues, ''));
+  const result = schemaOf(definition)['~standard'].validate(raw);
+  return result instanceof Promise ? result.then(settle) : settle(result);
+}
+
 /** Intent parser for a `<form data-intent>` submission, validated by a schema. */
 export function form<Schema extends StandardSchemaV1, M>(
   definition: FormDefinition<Schema> | Schema,
   toMsg: (data: Out<Schema>) => M | undefined,
 ): IntentParser<M> {
-  const schema = '_tag' in definition ? definition.schema : definition;
-  return (input: IntentInput) =>
-    input.formData === undefined
-      ? undefined
-      : parse(schema, formDataToObject(input.formData), input.name, '', toMsg);
+  const toParsed = (r: FormResult<Out<Schema>>): Parsed<M> => (r.ok ? toMsg(r.data) : r.rejected);
+  return (input: IntentInput) => {
+    if (input.formData === undefined) return undefined;
+    const result = validateForm(definition, input.name, input.formData);
+    return result instanceof Promise ? result.then(toParsed) : toParsed(result);
+  };
 }
 
 /**
