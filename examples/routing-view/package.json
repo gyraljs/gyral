@@ -1,0 +1,17 @@
+{
+  "name": "@gyral-examples/routing-view",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js advanced/routing-view example.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/router": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
