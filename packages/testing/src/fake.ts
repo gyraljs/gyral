@@ -7,6 +7,8 @@ export interface FakeCall<I, O> {
   /** Settles this call (only for fakes without `impl`). */
   readonly resolve: (output: O) => void;
   readonly reject: (error: unknown) => void;
+  /** Streams a value into this call (DriverContext.emit); ignored once settled or aborted. */
+  readonly emit: (output: O) => void;
   readonly settled: boolean;
 }
 
@@ -17,6 +19,8 @@ export interface FakeDriver<I, O, E> extends Driver<I, O, E> {
   /** Settles the oldest unsettled, non-aborted call. Throws if there is none. */
   resolveNext(output: O): void;
   rejectNext(error: unknown): void;
+  /** Streams a value into the newest call that is still running. Throws if there is none. */
+  emitNext(output: O): void;
 }
 
 export interface FakeOptions<I, O, E> {
@@ -57,7 +61,14 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
   const run = (input: I, ctx: DriverContext<O>): O | Promise<O> => {
     const { impl } = options;
     if (impl !== undefined) {
-      calls.push({ input, signal: ctx.signal, resolve: noop, reject: noop, settled: true });
+      calls.push({
+        input,
+        signal: ctx.signal,
+        resolve: noop,
+        reject: noop,
+        emit: ctx.emit,
+        settled: true,
+      });
       return impl(input, ctx);
     }
     return new Promise<O>((resolveRun, rejectRun) => {
@@ -65,6 +76,7 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
         input,
         signal: ctx.signal,
         settled: false,
+        emit: ctx.emit,
         resolve: (output) => {
           call.settled = true;
           resolveRun(output);
@@ -96,6 +108,11 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
     },
     rejectNext: (error) => {
       next().reject(error);
+    },
+    emitNext: (output) => {
+      const live = calls.findLast((c) => !c.settled && !c.signal.aborted);
+      if (live === undefined) throw new Error(`fake driver "${name}" has no running call`);
+      live.emit(output);
     },
   };
 }

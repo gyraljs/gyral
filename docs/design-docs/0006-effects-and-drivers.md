@@ -108,7 +108,13 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   loop through a command's mappers with no DOM.
 - **DOM:** `fakeDriver(driverOrName, { impl?, toError?, … })` records each call (input and
   `AbortSignal`) and waits for `resolveNext` / `rejectNext` (or `calls[i].resolve`). Errors
-  pass through unchanged, so a test rejects with the already-typed error.
+  pass through unchanged, so a test rejects with the already-typed error. Streaming commands:
+  `fake.emitNext(value)` pushes into the newest running call, or use `calls[i].emit(value)`
+  for a specific one (gyral-czi.15). Emits into a settled or aborted call are ignored, like
+  the real runtime.
+- **Disconnect is asynchronous:** removing an element interrupts its commands on a later
+  tick, so a test must yield before asserting `signal.aborted` — `await clock.advance(0)`
+  under `virtualTime()`, or `await new Promise((r) => setTimeout(r, 0))` with real timers.
 - **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
   microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
   promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's
