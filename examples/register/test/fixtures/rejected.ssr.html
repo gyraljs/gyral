@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create an account — Gyral register</title>
+    <meta name="description" content="A form that validates the same way with and without JavaScript.">
+    <style>
+  @layer reset, base;
+  @layer reset {
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+  }
+  @layer base {
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+      --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+      --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+    }
+    body { background: var(--surface); color: var(--ink); }
+    main { max-inline-size: 30rem; margin-inline: auto; padding: 2rem 1rem; }
+  }
+</style>
+    <script type="module" src="/src/entry-client.ts"></script>
+  </head>
+  <body>
+    <!--lit-part nnQwacmwlXU=--><main>
+        <h1>Create an account</h1>
+        <!--lit-node 2--><gy-register
+          
+          
+         data-gyral-seed="{&quot;state&quot;:{&quot;values&quot;:{&quot;name&quot;:&quot;admin&quot;,&quot;email&quot;:&quot;mike@example.com&quot;},&quot;errors&quot;:{&quot;name&quot;:[&quot;That name is taken.&quot;],&quot;confirm&quot;:[&quot;The passwords do not match.&quot;]}},&quot;props&quot;:{}}"><template shadowroot="open" shadowrootmode="open"><style>
+    @layer component {
+      :host {
+        display: block;
+        --accent: oklch(55% 0.18 260);
+        --danger: light-dark(oklch(50% 0.2 25), oklch(75% 0.15 25));
+      }
+      p {
+        display: grid;
+        gap: 0.25rem;
+      }
+      input {
+        font: inherit;
+        padding-block: 0.4rem;
+        padding-inline: 0.6rem;
+        border: 1px solid color-mix(in oklch, currentColor 40%, transparent);
+        border-radius: 0.4rem;
+      }
+      input:user-invalid,
+      input[aria-invalid='true'] {
+        border-color: var(--danger);
+      }
+      .error {
+        color: var(--danger);
+        min-block-size: 1lh;
+      }
+      button {
+        font: inherit;
+        padding-block: 0.5rem;
+        padding-inline: 1rem;
+        border: 0;
+        border-radius: 0.5rem;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+      }
+    }
+  </style><!--lit-part AhngqDeielY=--><!--lit-node 0--><form data-intent="Register" action="/" method="post">
+          <!--lit-part--><!--lit-part UiboxxKPQE4=--><p>
+    <!--lit-node 1--><label for="name"><!--lit-part-->Name<!--/lit-part--></label>
+    <!--lit-node 3--><input
+      id="name"
+      name="name"
+      type="text"
+      autocomplete="username"
+      
+      required
+      value="admin"
+      aria-describedby="name-error"
+      aria-invalid="true"
+      
+    />
+    <!--lit-node 4--><span id="name-error" class="error"><!--lit-part-->That name is taken.<!--/lit-part--></span>
+  </p><!--/lit-part--><!--lit-part UiboxxKPQE4=--><p>
+    <!--lit-node 1--><label for="email"><!--lit-part-->Email<!--/lit-part--></label>
+    <!--lit-node 3--><input
+      id="email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      
+      required
+      value="mike@example.com"
+      aria-describedby="email-error"
+      
+      
+    />
+    <!--lit-node 4--><span id="email-error" class="error"><!--lit-part--><!--/lit-part--></span>
+  </p><!--/lit-part--><!--lit-part UiboxxKPQE4=--><p>
+    <!--lit-node 1--><label for="password"><!--lit-part-->Password<!--/lit-part--></label>
+    <!--lit-node 3--><input
+      id="password"
+      name="password"
+      type="password"
+      autocomplete="new-password"
+      minlength="8"
+      required
+      value=""
+      aria-describedby="password-error"
+      
+      
+    />
+    <!--lit-node 4--><span id="password-error" class="error"><!--lit-part--><!--/lit-part--></span>
+  </p><!--/lit-part--><!--lit-part UiboxxKPQE4=--><p>
+    <!--lit-node 1--><label for="confirm"><!--lit-part-->Repeat password<!--/lit-part--></label>
+    <!--lit-node 3--><input
+      id="confirm"
+      name="confirm"
+      type="password"
+      autocomplete="new-password"
+      
+      required
+      value=""
+      aria-describedby="confirm-error"
+      aria-invalid="true"
+      
+    />
+    <!--lit-node 4--><span id="confirm-error" class="error"><!--lit-part-->The passwords do not match.<!--/lit-part--></span>
+  </p><!--/lit-part--><!--/lit-part-->
+          <button>Create account</button>
+        </form><!--/lit-part--></template></gy-register>
+      </main><!--/lit-part-->
+  </body>
+</html>

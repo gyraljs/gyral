@@ -1,0 +1,20 @@
+{
+  "name": "@gyral-examples/register",
+  "private": true,
+  "type": "module",
+  "description": "A registration form that validates identically with and without JavaScript (ADR 0008 server half).",
+  "scripts": {
+    "dev": "tsx server/dev.ts"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/ssr": "workspace:*",
+    "@hono/node-server": "2.1.3",
+    "hono": "4.13.13",
+    "lit": "3.3.3",
+    "valibot": "1.5.0"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
