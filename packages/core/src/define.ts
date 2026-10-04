@@ -6,7 +6,8 @@ import {
   type DriverOverrides,
   type Next,
 } from './command.js';
-import { INTENT_EVENTS, readIntent } from './intent.js';
+import { EMIT } from './children.js';
+import { INTENT_EVENTS, OUTPUT_EVENT, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
 
@@ -20,10 +21,13 @@ export interface GyralElement<S, M extends Tagged> extends LitElement {
   drivers: DriverOverrides;
 }
 
-export interface GyralElementClass<S, M extends Tagged, P> {
-  new (): GyralElement<S, M>;
+export interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = never> {
+  /** Instances expose their declared props as properties. */
+  new (): GyralElement<S, M> & P;
   readonly spec: ComponentSpec<S, M, P>;
   readonly tagName: string;
+  /** Type-only: the outputs this component emits (read by `child()`). */
+  readonly outputs?: O;
 }
 
 // Any property read returns its own name, so `intents.Increment === 'Increment'`.
@@ -38,10 +42,10 @@ const intentNames = new Proxy(
  * See docs/design-docs/0001-mvi-parsed-intent.md, 0006-effects-and-drivers.md, 0007-props.md
  * and 0008-forms.md.
  */
-export function define<S, M extends Tagged, P extends object = object>(
+export function define<S, M extends Tagged, P extends object = object, O extends Tagged = never>(
   tag: string,
   spec: ComponentSpec<S, M, P>,
-): GyralElementClass<S, M, P> {
+): GyralElementClass<S, M, P, O> {
   const propNames = Object.keys(spec.props ?? {});
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
   // Sound: #dispatch() only calls the reducer whose key equals msg._tag.
@@ -128,9 +132,21 @@ export function define<S, M extends Tagged, P extends object = object>(
       const [state, commands] = splitNext(next);
       this.#model = { value: state };
       for (const cmd of commands) {
-        if (this.#interpreter === undefined) this.#pending.push(cmd);
+        if (cmd.driver === EMIT) this.#emit(cmd.input);
+        else if (this.#interpreter === undefined) this.#pending.push(cmd);
         else this.#interpreter.run(cmd);
       }
+    }
+
+    // A microtask keeps outputs in order and out of the parent's render pass. Outputs bubble
+    // through the parent's shadow tree only (not composed), so they never leak further up.
+    #emit(output: unknown): void {
+      queueMicrotask(() => {
+        if (!this.isConnected) return;
+        this.dispatchEvent(
+          new CustomEvent(OUTPUT_EVENT, { detail: output, bubbles: true, composed: false }),
+        );
+      });
     }
 
     #resolve = (driver: AnyDriver): AnyDriver =>
@@ -169,5 +185,6 @@ export function define<S, M extends Tagged, P extends object = object>(
   }
 
   if (customElements.get(tag) === undefined) customElements.define(tag, Element);
-  return Element;
+  // Sound: the declared props are reactive properties on every instance.
+  return Element as unknown as GyralElementClass<S, M, P, O>;
 }

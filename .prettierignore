@@ -3,3 +3,4 @@ archive/
 pnpm-lock.yaml
 dist/
 .pnpm-store/
+.claude/worktrees/

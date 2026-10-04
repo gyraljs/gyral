@@ -1,7 +1,10 @@
 import type { IntentInput } from './types.js';
 
+/** Event a child component dispatches on its host to send an output up (ADR 0010). */
+export const OUTPUT_EVENT = 'gyral-output';
+
 /** Events the intent layer listens for on each component's shadow root. */
-export const INTENT_EVENTS = ['click', 'submit', 'input', 'change'] as const;
+export const INTENT_EVENTS = ['click', 'submit', 'input', 'change', OUTPUT_EVENT] as const;
 
 const isToggle = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
@@ -17,6 +20,8 @@ export function defaultTrigger(el: Element): string {
     if (CLICK_INPUT_TYPES.has(el.type)) return 'click';
     return el.type === 'checkbox' || el.type === 'radio' ? 'change' : 'input';
   }
+  // Custom elements (autonomous: the name has a dash) talk to their parent via outputs.
+  if (el.localName.includes('-')) return OUTPUT_EVENT;
   return 'click';
 }
 
@@ -72,5 +77,6 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
     value: valueOf(target),
     checked: isToggle(target) ? target.checked : undefined,
     formData,
+    detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
   };
 }

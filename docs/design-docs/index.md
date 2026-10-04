@@ -16,4 +16,5 @@ Status values: **accepted** (in force), **proposed** (under discussion), **super
 | [0006-effects-and-drivers.md](0006-effects-and-drivers.md) | accepted | Commands as data with typed mappers; drivers as plain objects; concurrency lanes           |
 | [0007-props.md](0007-props.md)                             | accepted | Props as `{ props }` context; enter state only via `PropsChanged`                          |
 | [0008-forms.md](0008-forms.md)                             | accepted | Native constraints, schema-parsed intents, errors in the model mirrored to native validity |
+| [0010-child-components.md](0010-child-components.md)       | accepted | Props down, `emit()` outputs up, `child()` parsers, keyed `repeat()` collections           |
 | [lessons-from-cyclejs.md](lessons-from-cyclejs.md)         | accepted | What we keep, drop and replace from Cycle.js                                               |
