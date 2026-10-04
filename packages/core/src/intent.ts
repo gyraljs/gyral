@@ -1,4 +1,4 @@
-import type { IntentInput } from './types.js';
+import type { IntentInput, IntentParser, Tagged } from './types.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010). */
 export const OUTPUT_EVENT = 'gyral-output';
@@ -103,4 +103,47 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
     key: event instanceof KeyboardEvent ? event.key : undefined,
     newState: toggleState(event),
   };
+}
+
+// Any property read returns its own name, so `intents.Increment === 'Increment'`.
+// Types restrict reads to real message tags; a tag without a parser warns at event time.
+export const intentNames: unknown = new Proxy(
+  {},
+  { get: (_target, key) => (typeof key === 'string' ? key : undefined) },
+);
+
+/** Listens for intent events on a component root (capture phase: `toggle` doesn't bubble). */
+export function listenForIntents(
+  root: Node,
+  extra: readonly string[],
+  handler: (event: Event) => void,
+): void {
+  for (const type of new Set([...INTENT_EVENTS, ...extra])) {
+    root.addEventListener(type, handler, { capture: true });
+  }
+}
+
+/** Parses one event with its matching parser and delivers the message (sync or async). */
+export function handleIntent<M>(
+  event: Event,
+  root: Node,
+  parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
+  tag: string,
+  deliver: (msg: Tagged | undefined) => void,
+): void {
+  const input = readIntent(event, root);
+  if (input === undefined) return;
+  const parser = parsers[input.name];
+  if (parser === undefined) {
+    console.warn(`<${tag}> has no intent parser for data-intent="${input.name}".`);
+    return;
+  }
+  const result = parser(input) as Tagged | undefined | Promise<Tagged | undefined>;
+  if (result instanceof Promise) {
+    result.then(deliver, (error: unknown) => {
+      console.error(`<${tag}> intent parser for "${input.name}" failed`, error);
+    });
+  } else {
+    deliver(result);
+  }
 }
