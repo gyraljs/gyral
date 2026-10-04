@@ -64,7 +64,7 @@ describe('http-random-user', () => {
 
   it('clears the loading state and sets failed on error', async () => {
     const { el, http, settle } = await mount();
-    el.send({ _tag: 'GetRandom', id: 3 });
+    el.send({ _tag: 'Picked', id: 3 });
     await settle();
     http.rejectNext({ _tag: 'HttpNetworkError', url: userUrl(3), message: 'offline' });
     await settle();
