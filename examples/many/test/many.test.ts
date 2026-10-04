@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { run, step } from '@gyral/testing';
+import { randomDriver } from '@gyral/core';
+import { fakeDriver, run, step } from '@gyral/testing';
 import { Item } from '../src/item.js';
-import { List } from '../src/list.js';
+import { List, seedsFrom } from '../src/list.js';
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
@@ -13,11 +14,27 @@ describe('pure', () => {
   it('assigns ids in the reducer and removes by id', () => {
     const seed = { color: '#000000', width: 300 };
     const { state } = run(List.spec, [
-      { _tag: 'Add', seeds: [seed, seed] },
+      { _tag: 'Seeded', seeds: [seed, seed] },
       { _tag: 'Item', id: 1, out: { _tag: 'Removed' } },
     ]);
     expect(state.items.map((it) => it.id)).toEqual([0, 2]);
     expect(state.nextId).toBe(3);
+  });
+
+  it('Add asks the random driver for two numbers per item', () => {
+    const { state, commands } = step(List.spec, run(List.spec, []).state, {
+      _tag: 'Add',
+      count: 3,
+    });
+    expect(state.items).toHaveLength(1);
+    expect(commands[0]?.input).toEqual({ count: 6 });
+  });
+
+  it('seedsFrom maps numbers to colours and widths deterministically', () => {
+    expect(seedsFrom([0, 0, 1 - 1e-12, 1 - 1e-12])).toEqual([
+      { color: '#000000', width: 200 },
+      { color: '#ffffff', width: 999 },
+    ]);
   });
 
   it('item keeps edits local and only reports removal', () => {
@@ -33,33 +50,42 @@ describe('pure', () => {
 describe('in the browser', () => {
   async function mount() {
     const list = new List();
+    // Fixed randomness, answered at once: every new item is #800000 and 600px wide.
+    list.drivers = {
+      random: fakeDriver(randomDriver, {
+        impl: ({ count }) => Array.from({ length: count }, () => 0.5),
+      }),
+    };
     document.body.append(list);
     await list.updateComplete;
     const items = () => [...(list.shadowRoot?.querySelectorAll('gy-many-item') ?? [])];
     const ready = () => Promise.all(items().map((el) => el.updateComplete));
     await ready();
+    const click = async (value: string) => {
+      button(value).click();
+      await settle();
+      await list.updateComplete;
+      await ready();
+    };
     const button = (value: string) => {
       const b = list.shadowRoot?.querySelector<HTMLButtonElement>(`button[value="${value}"]`);
       if (b == null) throw new Error(`no button ${value}`);
       return b;
     };
-    return { list, items, ready, button };
+    return { list, items, ready, button, click };
   }
 
   it('adds one item', async () => {
-    const { list, items, ready, button } = await mount();
-    button('1').click();
-    await list.updateComplete;
-    await ready();
+    const { list, items, click } = await mount();
+    await click('1');
     expect(items()).toHaveLength(2);
+    expect(list.state.items[1]).toMatchObject({ color: '#800000', width: 600 });
   });
 
   it('keeps each item’s local state across removals of others', async () => {
-    const { list, items, ready, button } = await mount();
-    button('1').click();
-    button('1').click();
-    await list.updateComplete;
-    await ready();
+    const { list, items, click } = await mount();
+    await click('1');
+    await click('1');
     const [first, second] = items();
     if (first === undefined || second === undefined) throw new Error('items missing');
     const slider = first.shadowRoot?.querySelector<HTMLInputElement>('input[type=range]');
@@ -76,11 +102,9 @@ describe('in the browser', () => {
   });
 
   it('adds 1000 items and stays responsive', async () => {
-    const { list, items, ready, button } = await mount();
+    const { list, items, click } = await mount();
     const start = performance.now();
-    button('1000').click();
-    await list.updateComplete;
-    await ready();
+    await click('1000');
     const added = performance.now() - start;
     expect(items()).toHaveLength(1001);
 

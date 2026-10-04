@@ -146,3 +146,13 @@ default lane, and a `Lane` option (`key`, `concurrency`) lets timers coexist:
 Debounce is a delay under `switch`, not a separate mechanism. Nothing starts at import, and
 `animationFrames` falls back to a 16 ms timer where `requestAnimationFrame` is missing. Tests
 use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval`/rAF.
+
+## Randomness as an effect (gyral-czi.10, 2026-10-04)
+
+Reducers request random numbers with a command instead of reading `Math.random()` in an
+intent parser: `random(count, (values) => msg)` draws uniform numbers in [0, 1) from the
+`random` driver (`randomDriver`, in core), and `randomInt(min, max, (n) => msg)` maps one to
+an inclusive integer range via the pure `toInt(u, min, max)`. Models stay pure, and tests fix
+the numbers by substituting the driver by name:
+`el.drivers = { random: fakeDriver(randomDriver, { impl: ({ count }) => … }) }`.
+http-random-user and many use it.

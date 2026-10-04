@@ -13,6 +13,7 @@ export type {
 export { child, emit } from './children.js';
 export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
+export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
 export {
   defineForm,
   field,

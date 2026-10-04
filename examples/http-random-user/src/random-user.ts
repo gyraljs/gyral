@@ -1,6 +1,6 @@
-import { css, define, html } from '@gyral/core';
+import { css, define, html, randomInt } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
-import { fetchUser, randomUserId, type User } from './users.js';
+import { fetchUser, USER_COUNT, type User } from './users.js';
 
 export type State =
   | { readonly _tag: 'Idle' }
@@ -9,7 +9,8 @@ export type State =
   | { readonly _tag: 'Failed'; readonly message: string };
 
 export type Msg =
-  | { readonly _tag: 'GetRandom'; readonly id: number }
+  | { readonly _tag: 'GetRandom' }
+  | { readonly _tag: 'Picked'; readonly id: number }
   | { readonly _tag: 'UserLoaded'; readonly user: User }
   | { readonly _tag: 'UserFailed'; readonly error: HttpError };
 
@@ -27,10 +28,16 @@ const describeError = (error: HttpError): string => {
 export const RandomUser = define<State, Msg>('gy-random-user', {
   init: () => ({ _tag: 'Idle' }),
   intent: {
-    GetRandom: () => ({ _tag: 'GetRandom', id: randomUserId() }),
+    GetRandom: () => ({ _tag: 'GetRandom' }),
   },
   update: {
-    GetRandom: (_s, m) => [
+    // Randomness is an effect (gyral-czi.10): ask the random driver, so tests can fix it.
+    // Clicks while loading are ignored: any in-flight answer is "a random user".
+    GetRandom: (s) =>
+      s._tag === 'Loading'
+        ? s
+        : [s, [randomInt<Msg>(1, USER_COUNT, (id) => ({ _tag: 'Picked', id }))]],
+    Picked: (_s, m) => [
       { _tag: 'Loading', id: m.id },
       [
         fetchUser<Msg>(
