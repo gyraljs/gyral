@@ -16,7 +16,8 @@
     "invariants": "node scripts/check-docs.mjs && node scripts/check-workflows.mjs && node scripts/check-public-api.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ci:local": "gh act workflow_dispatch -W .github/workflows/ci.yml"
+    "ci:local": "gh act workflow_dispatch -W .github/workflows/ci.yml",
+    "examples": "node scripts/examples.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

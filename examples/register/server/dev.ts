@@ -5,7 +5,12 @@ import { getRequestListener } from '@hono/node-server';
 import { createServer as createViteServer } from 'vite';
 
 const port = Number(process.env['PORT'] ?? 5173);
-const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'custom' });
+// HMR_PORT lets several SSR examples run side by side (Vite's default is 24678).
+const hmrPort = Number(process.env['HMR_PORT'] ?? 24678);
+const vite = await createViteServer({
+  server: { middlewareMode: true, hmr: { port: hmrPort } },
+  appType: 'custom',
+});
 
 const ssr = getRequestListener(async (request) => {
   // Re-loaded per request, so server-rendered output follows source edits.
