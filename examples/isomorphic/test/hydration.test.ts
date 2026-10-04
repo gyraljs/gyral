@@ -7,6 +7,7 @@ import serverHtml from './fixtures/about.ssr.html?raw';
 const body = /<body>([\s\S]*)<\/body>/.exec(serverHtml)?.[1] ?? '';
 
 const original = location.href;
+const originalTitle = document.title;
 const errors = vi.spyOn(console, 'error');
 const warnings = vi.spyOn(console, 'warn');
 
@@ -28,6 +29,7 @@ beforeAll(() => {
 
 afterAll(() => {
   history.replaceState(null, '', original);
+  document.title = originalTitle;
   document.body.replaceChildren();
 });
 
@@ -59,5 +61,7 @@ describe('hydration', () => {
     expect(location.pathname).toBe('/');
     expect($('h1')?.textContent).toBe('The homepage');
     expect($('a[aria-current="page"]')?.getAttribute('href')).toBe('/');
+    // Same pageTitle() the server used for <title>.
+    expect(document.title).toBe('The homepage — Gyral isomorphic');
   });
 });

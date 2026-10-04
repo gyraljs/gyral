@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { step } from '@gyral/testing';
 import { makeRouter, type RouterDriver } from '@gyral/router';
-import { app, RoutingView } from '../src/app.js';
+import { app, pageTitle, RoutingView } from '../src/app.js';
 
-const original = location.href;
-let driver: RouterDriver;
+let driver: RouterDriver | undefined;
 
 async function mount(path: string) {
-  history.replaceState(null, '', path);
+  // Memory history: the real document URL and title are never touched (ADR 0009).
+  const router = makeRouter({ history: 'memory', initial: path });
+  driver = router;
   const el = new RoutingView();
-  // The History-API-only path is the baseline (ADR 0003), so test that one.
-  el.drivers = { router: driver };
+  el.drivers = { router };
   document.body.append(el);
   await el.updateComplete;
   await vi.waitFor(() => {
@@ -25,17 +25,13 @@ async function mount(path: string) {
     if (!(a instanceof HTMLAnchorElement)) throw new Error(`no link ${name}`);
     return a;
   };
-  return { el, $, link };
+  return { el, $, link, router };
 }
-
-beforeEach(() => {
-  driver = makeRouter({ navigationApi: false });
-});
 
 afterEach(() => {
   document.body.replaceChildren();
-  driver.dispose();
-  history.replaceState(null, '', original);
+  driver?.dispose();
+  driver = undefined;
 });
 
 describe('routing-view', () => {
@@ -63,6 +59,11 @@ describe('routing-view', () => {
     expect(state.route?.name).toBe('contacts');
   });
 
+  it('derives the document title from the route', () => {
+    expect(pageTitle(app.match('https://x.test/about'))).toBe('About — Gyral routing');
+    expect(pageTitle(undefined)).toBe('Page not found — Gyral routing');
+  });
+
   it('renders the initial route and marks its link as current', async () => {
     const { $, link } = await mount('/about');
     expect($('h1')?.textContent).toBe('About me');
@@ -71,13 +72,16 @@ describe('routing-view', () => {
   });
 
   it('navigates on link clicks without reloading', async () => {
-    const { el, $, link } = await mount('/');
+    const { el, $, link, router } = await mount('/');
     link('Contacts').click();
     await vi.waitFor(() => {
       expect(el.state.route?.name).toBe('contacts');
     });
     await el.updateComplete;
-    expect(location.pathname).toBe('/contacts');
+    expect(new URL(router.snapshot().href).pathname).toBe('/contacts');
+    await vi.waitFor(() => {
+      expect(router.snapshot().title).toBe('Contacts — Gyral routing');
+    });
     expect($('h1')?.textContent).toBe('Contact me');
     expect(link('Contacts').getAttribute('aria-current')).toBe('page');
   });

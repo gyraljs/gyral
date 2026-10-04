@@ -2,7 +2,15 @@ import { command, type Command } from '@gyral/core';
 import { router, type RouteLocation, type RouterInput } from './driver.js';
 
 export { makeRouter, router } from './driver.js';
-export type { RouteLocation, RouterDriver, RouterInput, RouterOptions } from './driver.js';
+export type {
+  RouteLocation,
+  RouterDriver,
+  RouterInput,
+  RouterOptions,
+  RouterSnapshot,
+} from './driver.js';
+export type { MemoryOptions } from './memory.js';
+export type { LocationLike } from './stream.js';
 export { capturedUrl } from './links.js';
 export { routes } from './routes.js';
 export type { Matcher, Params, RouteMatch, RouteTable, Routes } from './routes.js';
@@ -23,6 +31,17 @@ export function navigate(
 /** Moves through history by `delta` entries (`-1` is back). */
 export function go(delta: number): Command<never> {
   return fireAndForget({ _tag: 'Traverse', delta });
+}
+
+/**
+ * Sets the document title (the memory history records it instead). Compute the title with a
+ * pure function of state, and call the same function in the server's document template, so
+ * server and client titles come from one source:
+ *
+ *   Routed: (s, m) => [next, [setTitle(pageTitle(m.location.pathname))]]
+ */
+export function setTitle(title: string): Command<never> {
+  return fireAndForget({ _tag: 'Title', title });
 }
 
 export const back = (): Command<never> => go(-1);
