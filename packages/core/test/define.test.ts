@@ -111,6 +111,6 @@ describe('define()', () => {
         text: 'x',
       },
     );
-    expect(next.items).toEqual(['x']);
+    expect(next).toEqual({ draft: '', items: ['x'], done: false });
   });
 });

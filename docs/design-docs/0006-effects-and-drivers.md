@@ -1,0 +1,100 @@
+# ADR 0006 — Effects as data, drivers as plain objects
+
+Status: **accepted** (2026-10-04). Implements ADR 0002. Bead: gyral-czi.2.
+
+## Decision
+
+### Reducers (and `init`) may return commands
+
+```ts
+update: {
+  Search: (s, m) => [{ ...s, query: m.q }, [searchRepos(m.q)]],   // state + commands
+  Clear: (s) => ({ ...s, results: [] }),                         // state only
+}
+```
+
+The return type is `S | readonly [S, ReadonlyArray<Command<M>>]`. **State must not be an
+array** (it is always a record in Gyral), so a 2-tuple with a command list is unambiguous.
+
+### A command is data plus two pure mappers
+
+```ts
+interface Command<M> {
+  readonly driver: Driver<unknown, unknown, unknown>; // which driver runs it
+  readonly input: unknown; // what to do (serialisable data)
+  readonly key?: string; // concurrency lane, default driver.name
+  readonly concurrency?: Concurrency; // overrides the driver default
+  readonly onSuccess: (output: unknown) => M | undefined;
+  readonly onFailure: (error: unknown) => M | undefined;
+}
+```
+
+Build them with `command(driver, input, { onSuccess, onFailure?, key?, concurrency? })`,
+which ties the mappers' types to the driver's `I`, `O` and `E`. Driver packages ship typed
+helpers on top (for example `get(url, {...})` in `@gyral/http`).
+
+**Why mappers at the effect site** (not fixed driver message tags such as Cycle's
+`HTTP.select('category')`): the reducer that asks for work also says which message the
+answer becomes. That keeps the request and the response handling next to each other, typed
+end to end, with no category strings. The mappers are pure, so devtools can still log
+`driver.name` + `input`. If `onFailure` is omitted, failures are logged and dropped.
+
+### A driver is a plain object
+
+```ts
+interface Driver<I, O, E = unknown> {
+  readonly name: string;
+  readonly run: (input: I, ctx: { readonly signal: AbortSignal }) => O | Promise<O>;
+  readonly concurrency?: Concurrency; // default 'merge'
+  readonly retry?: RetryPolicy; // default: no retry
+  readonly toError?: (cause: unknown) => E; // thrown/rejected → typed error
+}
+type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';
+interface RetryPolicy {
+  times: number;
+  delayMs?: number;
+  backoff?: 'fixed' | 'exponential';
+}
+```
+
+`defineDriver({...})` is an identity helper for type inference.
+
+| Policy  | Per lane (`key`, default `driver.name`) | Use for                      |
+| ------- | --------------------------------------- | ---------------------------- |
+| merge   | run all concurrently                    | independent writes, logging  |
+| switch  | interrupt the in-flight one, run new    | search-as-you-type, debounce |
+| exhaust | drop new while one is in flight         | "submit" buttons, refresh    |
+| queue   | run one at a time, FIFO                 | ordered saves                |
+
+### Providing drivers: the command carries its default; overrides by name
+
+A command references a driver object, so most apps need no wiring at all. To substitute (test
+fakes, configured instances), drivers are looked up **by `name`** in this order:
+
+1. the element instance's `drivers` property (`el.drivers = { http: fake }`) — tests;
+2. the spec's `drivers` option (`define(tag, { drivers: { http: makeHttpDriver({...}) } })`);
+3. the driver object on the command.
+
+We chose this over a `@lit/context` provider because it needs no extra element, no
+dependency, and works for a component tested in isolation. An ancestor-provided registry
+(context) can be added later without changing this API; overrides would slot in at step 1.5.
+
+### Lifecycle and runtime
+
+- Each element owns an interpreter. Commands run as Effect fibers, forked through **one**
+  internal runtime module (`packages/core/src/internal/runtime.ts`); nothing else calls
+  `run*`.
+- Cancellation: `AbortSignal` outside, fiber interruption inside (`Effect.tryPromise` links
+  them). `switch` and `disconnectedCallback` interrupt in-flight fibers; their `signal`
+  aborts, and their results are never dispatched.
+- Retries use `Schedule` (`recurs` ∩ `spaced`/`exponential`). Only failures retry; interrupts
+  never do.
+- A driver failure becomes `onFailure(toError(cause))`, a message. Nothing is thrown into
+  the view.
+
+## Consequences
+
+- Public types are plain TypeScript; Effect stays in `src/internal/` (checked).
+- Debounce is "switch + delay": a timer driver with `concurrency: 'switch'` (see the
+  http-search-github example). The time driver package (gyral-ud5.3) generalises this.
+- Virtual time for retry/debounce tests is future work in `@gyral/testing` (gyral-czi.7).

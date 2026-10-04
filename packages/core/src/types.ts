@@ -1,4 +1,5 @@
 import type { CSSResultGroup, PropertyDeclaration } from 'lit';
+import type { DriverOverrides, Next } from './command.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
 export interface Tagged {
@@ -30,9 +31,9 @@ export type Intents<M extends Tagged> = {
   readonly [K in M['_tag']]?: IntentParser<Variant<M, K>>;
 };
 
-/** One pure reducer per message tag. Exhaustive by construction. */
+/** One pure reducer per message tag. Exhaustive by construction. May return commands. */
 export type Update<S, M extends Tagged> = {
-  readonly [K in M['_tag']]: (state: S, msg: Variant<M, K>) => S;
+  readonly [K in M['_tag']]: (state: S, msg: Variant<M, K>) => Next<S, M>;
 };
 
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
@@ -43,8 +44,8 @@ export type PropDeclarations<P> = { readonly [K in keyof P]: PropertyDeclaration
 export interface ComponentSpec<S, M extends Tagged, P> {
   /** Lit reactive property declarations: the component's inputs. */
   readonly props?: PropDeclarations<P>;
-  /** Initial model state, computed from props on first render. */
-  readonly init: (props: P) => S;
+  /** Initial model state (and optional commands), computed from props on first render. */
+  readonly init: (props: P) => Next<S, M>;
   /** INTENT: platform events to messages. */
   readonly intent: Intents<M>;
   /** MODEL: pure state transitions. */
@@ -52,4 +53,6 @@ export interface ComponentSpec<S, M extends Tagged, P> {
   /** VIEW: pure function of state. Name intents in markup; never attach closures. */
   readonly view: (state: S, intents: IntentNames<M>) => unknown;
   readonly styles?: CSSResultGroup;
+  /** Driver substitutions by name, for every instance (ADR 0006). */
+  readonly drivers?: DriverOverrides;
 }

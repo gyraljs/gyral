@@ -14,8 +14,9 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
   by Shadow DOM, which replaces Cycle's `isolate()`.
 - **Model** is a record of pure reducers keyed by message tag (exhaustive by type).
 - **View** is a pure Lit template of state. It names intents and never holds closures.
-- **Effects** (planned: gyral-czi.2) are plain data returned by `update`. Drivers carry them out
-  and report back as messages. The interpreter uses Effect internally (ADR 0002).
+- **Effects** are commands (plain data) returned by `update` or `init`. Drivers carry them out
+  under a per-lane concurrency policy and report back as messages. The interpreter uses Effect
+  internally (ADRs 0002, 0006).
 
 ## Packages and layers
 

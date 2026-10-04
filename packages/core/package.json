@@ -20,6 +20,7 @@
     "dist"
   ],
   "dependencies": {
+    "effect": "3.22.2",
     "lit": "3.3.3"
   }
 }

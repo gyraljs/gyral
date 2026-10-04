@@ -1,3 +1,15 @@
+export { command, defineDriver } from './command.js';
+export type {
+  AnyDriver,
+  Command,
+  CommandHandlers,
+  Concurrency,
+  Driver,
+  DriverContext,
+  DriverOverrides,
+  Next,
+  RetryPolicy,
+} from './command.js';
 export { define } from './define.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
