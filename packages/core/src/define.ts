@@ -10,6 +10,7 @@ import { EMIT } from './children.js';
 import { takeSeed, writeSeed } from './hydration.js';
 import { INTENT_EVENTS, OUTPUT_EVENT, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
+import { withViewTransition } from './transitions.js';
 import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
 
 /** The custom element class produced by `define()`. */
@@ -80,6 +81,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #pending: Command<M>[] = [];
     /** init's commands on the hydration path; started in firstUpdated (ADR 0012). */
     #afterHydration: readonly Command<M>[] = [];
+    /** The latest view-transition update, awaited by updateComplete. */
+    #transition: Promise<void> | undefined;
 
     get state(): S {
       if (this.#model === undefined) {
@@ -103,8 +106,26 @@ export function define<S, M extends Tagged, P extends object = object, O extends
         }
         return;
       }
-      this.#apply(reducer(this.state, msg, this.#ctx()));
-      if (render) this.requestUpdate();
+      const prev = this.state;
+      this.#apply(reducer(prev, msg, this.#ctx()));
+      if (!render) return;
+      if (spec.viewTransition?.(prev, this.state, msg) === true) {
+        // The DOM change happens inside the transition callback (ADR 0001 addendum);
+        // updateComplete waits for it, so tests and callers see the new DOM.
+        this.#transition = withViewTransition(async () => {
+          this.requestUpdate();
+          await super.getUpdateComplete();
+        }).catch((error: unknown) => {
+          console.error(`<${tag}> view transition update failed`, error);
+        });
+      } else {
+        this.requestUpdate();
+      }
+    }
+
+    protected override async getUpdateComplete(): Promise<boolean> {
+      await this.#transition;
+      return super.getUpdateComplete();
     }
 
     override connectedCallback(): void {

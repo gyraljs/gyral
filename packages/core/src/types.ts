@@ -110,4 +110,9 @@ export interface ComponentSpec<S, M extends Tagged, P> {
   readonly events?: readonly string[];
   /** Driver substitutions by name, for every instance (ADR 0006). */
   readonly drivers?: DriverOverrides;
+  /**
+   * Return `true` to render this state change inside a View Transition (route changes, list
+   * reorders). Skipped without browser support or when reduced motion is requested.
+   */
+  readonly viewTransition?: (prev: S, next: S, msg: Tagged) => boolean;
 }

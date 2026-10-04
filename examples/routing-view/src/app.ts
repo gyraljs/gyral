@@ -55,6 +55,10 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
     Routed: (_s, { location }) => ({ location, route: app.match(location.href) }),
     Back: (s) => [s, [back()]],
   },
+  // Cross-fade between pages (an enhancement: skipped without support or with reduced motion).
+  // The first location is not a page change, so it renders directly.
+  viewTransition: (prev, next) =>
+    prev.location !== undefined && prev.route?.name !== next.route?.name,
   view: (s, i) => {
     const page = s.route === undefined ? undefined : pages[s.route.name];
     return html`

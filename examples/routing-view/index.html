@@ -32,6 +32,11 @@
           background: var(--surface);
           color: var(--ink);
         }
+        /* Page changes cross-fade via the component's viewTransition hook (an enhancement). */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+          animation-duration: 180ms;
+        }
       }
     </style>
     <script type="module" src="/src/main.ts"></script>

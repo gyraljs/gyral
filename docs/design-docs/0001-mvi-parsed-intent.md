@@ -59,3 +59,12 @@ add others with `spec.events` (for example `['pointerdown']`). `IntentInput` gai
 `keydown` intent on the wrapper of an input whose `input` intent is on the input itself).
 Parsers may call `event.preventDefault()` to cancel default input handling (arrow keys moving
 the caret); they must not do other side effects.
+
+## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
+
+`spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the
+render happens inside `document.startViewTransition`. It is a pure predicate over state, so the
+model still owns "what changed"; CSS (`::view-transition-*`) owns how it looks. It is an ADR
+0003 enhancement: skipped without the API or when `prefers-reduced-motion: reduce` matches.
+`updateComplete` waits for the transition's update callback, so callers and tests see the new
+DOM. A transition skipped by a newer one still runs its update (per spec).
