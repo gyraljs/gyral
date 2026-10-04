@@ -6,21 +6,21 @@ badge in the header and a checkout page deep in the tree share one cart).
 ## Context
 
 Gyral components own their state (ADR 0001). State flows down as props (ADR 0007), and
-outputs flow up (ADR 0010). That covers parent and child. It does not cover two *distant*
+outputs flow up (ADR 0010). That covers parent and child. It does not cover two _distant_
 components that need the same data: threading it through every level in between ("prop
 drilling") couples unrelated components.
 
 How other frameworks handle it:
 
-| Framework | Shared state | Writes | SSR |
-| --- | --- | --- | --- |
-| React | Context + `useReducer`, or Redux/Zustand stores | dispatch, or setters | Per-request store, serialized |
-| Svelte 5 | Runes in `.svelte.ts` modules, or stores | direct assignment | Module state leaks across requests; use context per request |
-| Solid | `createStore` + context | setters | Per-request via context |
-| Angular | Injectable services holding signals | methods | DI scope per request |
-| Vue | Pinia stores | actions | Per-request Pinia instance, serialized |
-| Elm | One model for the whole app | `update` | n/a |
-| Cycle.js | `@cycle/state` (onionify): one tree, lenses per component | reducer streams | n/a |
+| Framework | Shared state                                              | Writes               | SSR                                                         |
+| --------- | --------------------------------------------------------- | -------------------- | ----------------------------------------------------------- |
+| React     | Context + `useReducer`, or Redux/Zustand stores           | dispatch, or setters | Per-request store, serialized                               |
+| Svelte 5  | Runes in `.svelte.ts` modules, or stores                  | direct assignment    | Module state leaks across requests; use context per request |
+| Solid     | `createStore` + context                                   | setters              | Per-request via context                                     |
+| Angular   | Injectable services holding signals                       | methods              | DI scope per request                                        |
+| Vue       | Pinia stores                                              | actions              | Per-request Pinia instance, serialized                      |
+| Elm       | One model for the whole app                               | `update`             | n/a                                                         |
+| Cycle.js  | `@cycle/state` (onionify): one tree, lenses per component | reducer streams      | n/a                                                         |
 
 The common thread: a store has its own reducer-style update. Components read it reactively
 and write through actions or messages. On the server there is **one store instance per
@@ -33,7 +33,7 @@ request**, serialized for hydration.
 - **B. Lift state to a common ancestor** and drill it down. Works today; doesn't scale to a
   header badge and a checkout page.
 - **C. A store driver with streaming subscriptions** (like router `listen()`). Pure, but
-  components keep a *copy* of store data in their own state. On the server, commands don't
+  components keep a _copy_ of store data in their own state. On the server, commands don't
   run (ADR 0012), so the first render can't see the store.
 - **D. Stores as context: "props from the side"** (recommended). This mirrors ADR 0007:
   read through context, react through an optional message, write through commands.
