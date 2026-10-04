@@ -66,6 +66,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  examples/hello-world:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  examples/http-random-user:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
+
   examples/http-search-github:
     dependencies:
       '@gyral/core':
