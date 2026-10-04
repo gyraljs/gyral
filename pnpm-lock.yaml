@@ -87,6 +87,10 @@ importers:
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
   examples/http-search-github:
     dependencies:

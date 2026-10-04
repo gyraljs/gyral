@@ -11,5 +11,8 @@
     "@gyral/core": "workspace:*",
     "@gyral/http": "workspace:*",
     "valibot": "1.5.0"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
   }
 }

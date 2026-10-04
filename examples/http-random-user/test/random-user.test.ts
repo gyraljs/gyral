@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { Driver } from '@gyral/core';
 import type { HttpError, HttpRequest } from '@gyral/http';
+import { fakeDriver } from '@gyral/testing';
 import { RandomUser } from '../src/random-user.js';
 import { USER_COUNT, userUrl } from '../src/users.js';
 
@@ -13,41 +13,13 @@ const ada = {
   company: { name: 'Analytical Engines' },
 };
 
-class FakeFailure extends Error {
-  constructor(readonly error: HttpError) {
-    super(error._tag);
-  }
-}
-
-/** Fake http driver: requests wait until the test answers them. No network. */
-function fakeHttp() {
-  const calls: { url: string; reply: (body: unknown) => void; fail: (e: HttpError) => void }[] = [];
-  const driver: Driver<HttpRequest, unknown, HttpError> = {
-    name: 'http',
-    toError: (cause) =>
-      cause instanceof FakeFailure
-        ? cause.error
-        : { _tag: 'HttpNetworkError', url: '', message: String(cause) },
-    run: (req) =>
-      new Promise((resolve, reject) => {
-        calls.push({
-          url: req.url,
-          reply: resolve,
-          fail: (error) => {
-            reject(new FakeFailure(error));
-          },
-        });
-      }),
-  };
-  return { driver, calls };
-}
-
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 async function mount() {
-  const http = fakeHttp();
+  // Requests wait until the test answers them. No network.
+  const http = fakeDriver<HttpRequest, unknown, HttpError>('http');
   const el = new RandomUser();
-  el.drivers = { http: http.driver };
+  el.drivers = { http };
   document.body.append(el);
   await el.updateComplete;
   const button = el.shadowRoot?.querySelector('button');
@@ -71,7 +43,7 @@ describe('http-random-user', () => {
     button.click();
     await settle();
     expect(http.calls).toHaveLength(1);
-    const id = Number(http.calls[0]?.url.split('/').pop());
+    const id = Number(http.inputs[0]?.url.split('/').pop());
     expect(id).toBeGreaterThanOrEqual(1);
     expect(id).toBeLessThanOrEqual(USER_COUNT);
     expect(el.state._tag).toBe('Loading');
@@ -82,8 +54,8 @@ describe('http-random-user', () => {
     const { el, http, settle } = await mount();
     el.send({ _tag: 'GetRandom', id: 3 });
     await settle();
-    expect(http.calls[0]?.url).toBe(userUrl(3));
-    http.calls[0]?.reply(ada);
+    expect(http.inputs[0]?.url).toBe(userUrl(3));
+    http.resolveNext(ada);
     await settle();
     expect(text(el, 'article h2')).toBe('Ada Lovelace');
     expect(el.shadowRoot?.querySelector('a[href^="mailto:"]')?.getAttribute('href')).toBe(
@@ -95,7 +67,7 @@ describe('http-random-user', () => {
     const { el, http, settle } = await mount();
     el.send({ _tag: 'GetRandom', id: 3 });
     await settle();
-    http.calls[0]?.fail({
+    http.rejectNext({
       _tag: 'HttpStatusError',
       url: userUrl(3),
       status: 404,
@@ -112,11 +84,11 @@ describe('http-random-user', () => {
     button.click();
     await settle();
     expect(http.calls).toHaveLength(1);
-    http.calls[0]?.reply(ada);
+    http.resolveNext(ada);
     await settle();
     expect(text(el, 'article h2')).toBe('Ada Lovelace');
     el.send({ _tag: 'GetRandom', id: 4 });
     await settle();
-    expect(http.calls.map((c) => c.url)).toEqual([userUrl(3), userUrl(4)]);
+    expect(http.inputs.map((r) => r.url)).toEqual([userUrl(3), userUrl(4)]);
   });
 });
