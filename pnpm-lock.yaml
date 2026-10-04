@@ -51,6 +51,57 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
+  examples/animated-letters:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  examples/animation:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  examples/autocomplete-search:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/bmi:
     dependencies:
       '@gyral/core':

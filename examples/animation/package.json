@@ -1,0 +1,17 @@
+{
+  "name": "@gyral-examples/animation",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js intermediate/animation example.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "lit": "3.3.3"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
