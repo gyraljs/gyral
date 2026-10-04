@@ -13,14 +13,23 @@ export type {
 export { child, emit } from './children.js';
 export type { OutputSource } from './children.js';
 export { define } from './define.js';
-export { defineForm, field, fieldErrors, form, formDataToObject } from './forms.js';
-export type { FormDefinition, FormValue } from './forms.js';
+export {
+  defineForm,
+  field,
+  fieldErrors,
+  form,
+  formDataToObject,
+  formFields,
+  validateForm,
+} from './forms.js';
+export type { FormDefinition, FormResult, FormValue } from './forms.js';
 export { invalid } from './invalid.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
   Ctx,
   FieldIssue,
+  FormFields,
   IntentInput,
   IntentNames,
   IntentParser,

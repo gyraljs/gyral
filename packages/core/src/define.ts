@@ -20,6 +20,12 @@ export interface GyralElement<S, M extends Tagged> extends LitElement {
   send(msg: M): void;
   /** Per-instance driver substitutions by name (test fakes). Checked before the spec's. */
   drivers: DriverOverrides;
+  /**
+   * Messages applied through `update` right after `init`, before the first render. The server
+   * uses it to render a rejected form with the same reducer as the JS path (ADR 0008). Ignored
+   * when the element resumes from a hydration seed (the seed already contains their effect).
+   */
+  initialMessages: readonly Tagged[];
 }
 
 export interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = never> {
@@ -64,6 +70,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     static readonly tagName = tag;
 
     drivers: DriverOverrides = {};
+    initialMessages: readonly Tagged[] = [];
 
     #model: { value: S } | undefined;
     /** Props as of the last init or PropsChanged; the `prev` of the next PropsChanged. */
@@ -78,6 +85,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (this.#model === undefined) {
         this.#seenProps = this.#props();
         this.#apply(spec.init(this.#seenProps));
+        for (const msg of this.initialMessages) this.#dispatch(msg, false);
       }
       return (this.#model as { value: S }).value;
     }

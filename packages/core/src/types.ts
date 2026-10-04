@@ -41,12 +41,20 @@ export interface FieldIssue {
   readonly message: string;
 }
 
+/** Submitted text values of a form (Files are dropped: they can't be re-filled). */
+export type FormFields = Readonly<Record<string, string | readonly string[]>>;
+
 /** Framework message: an intent's input failed schema validation (ADR 0008). */
 export interface IntentRejected {
   readonly _tag: 'IntentRejected';
   /** The `data-intent` name whose input was rejected. */
   readonly intent: string;
   readonly issues: readonly FieldIssue[];
+  /**
+   * For `form()` rejections: what the user submitted, so the view can re-fill the form. On
+   * the no-JS path (ADR 0008 server half) the server re-renders the page from this.
+   */
+  readonly values?: FormFields;
 }
 
 type ParseResult<M> = M | IntentRejected | undefined;

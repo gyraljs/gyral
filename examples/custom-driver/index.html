@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Custom driver — Gyral examples</title>
+    <meta
+      name="description"
+      content="A custom Gyral driver that draws clicks per second on a canvas chart and streams bar clicks back."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      @layer reset, base;
+      @layer reset {
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+        }
+      }
+      @layer base {
+        :root {
+          color-scheme: light dark;
+          font-family: system-ui, sans-serif;
+          --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+          --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+        }
+        body {
+          background: var(--surface);
+          color: var(--ink);
+        }
+        main {
+          max-inline-size: 40rem;
+          margin-inline: auto;
+          padding: 2rem 1rem;
+        }
+        /* Read by the chart driver when it draws. */
+        #clicks-chart {
+          --chart-bar: oklch(58% 0.16 240);
+          --chart-ink: var(--ink);
+          display: block;
+          inline-size: 100%;
+          block-size: auto;
+          margin-block: 1.5rem;
+          cursor: pointer;
+        }
+      }
+    </style>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Custom driver</h1>
+      <p>Click the button as fast as you can. Each bar is one second with clicks in it.</p>
+      <gy-clicks></gy-clicks>
+      <canvas id="clicks-chart" width="600" height="300" role="img" aria-label="Clicks per second">
+        Clicks per second chart. The same data is in the table above.
+      </canvas>
+    </main>
+  </body>
+</html>

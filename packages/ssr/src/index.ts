@@ -4,6 +4,8 @@ import { nothing } from 'lit';
 import { renderChunks, serverHtml } from './internal/lit.js';
 
 export { serverHtml };
+export { formAction, seeOther } from './forms.js';
+export type { FormActionHandlers } from './forms.js';
 
 export interface PageOptions {
   readonly title: string;

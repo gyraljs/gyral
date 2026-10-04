@@ -1,6 +1,6 @@
 # ADR 0008 — Forms: native constraints, schema-parsed intents, errors in the model
 
-Status: **accepted** (2026-10-04). The client half is in v0.1; the server half ships with SSR.
+Status: **accepted** (2026-10-04). Client half: gyral-czi.3. Server half: gyral-4k7.2 (below).
 
 ## Context
 
@@ -48,6 +48,43 @@ actions, Angular Signal Forms, Astro Actions):
    schema and `formDataToObject`, and on failure renders the page with the **same**
    `IntentRejected` issues seeded into initial state. Errors therefore render identically
    with or without JS.
+
+## Server half (gyral-4k7.2, 2026-10-04)
+
+Implemented in `@gyral/ssr` on top of ADR 0012. Example: `examples/register`.
+
+```ts
+app.post('/', (c) =>
+  formAction(RegisterForm, {
+    intent: 'Register', // the form's data-intent name
+    valid: (data) => seeOther(`/?welcome=${encodeURIComponent(data.name)}`),
+    invalid: (rejected) =>
+      renderPage({ …, body: html`<gy-register .initialMessages=${[rejected]}>` }, { status: 422 }),
+  })(c.req.raw),
+);
+```
+
+- **One validator.** Core's `validateForm(definition, intent, formData)` is what the client's
+  `form()` parser calls, and what `formAction` calls on the server. Both produce the same
+  `IntentRejected`, and only one function turns form data into an object or a rejection.
+- **One reducer.** The server does not compute error state itself. It renders the component
+  with `initialMessages: [rejected]`, a property every `define()` element has. Those messages
+  run through `update` right after `init` and before the first render, so the component's own
+  `IntentRejected` reducer builds the error state on the server, exactly as it does in the
+  browser. The resulting state is seeded (ADR 0012), so hydration resumes from it.
+  `initialMessages` is ignored when an element resumes from a seed.
+- **Re-filling.** `IntentRejected.values` (from `form()` and `validateForm`) carries the
+  submitted text fields; Files are dropped. The reducer decides what to keep. **Never keep
+  passwords**: state is serialized into the page.
+- **Post/Redirect/Get.** On success, `seeOther(url)` returns a 303, so reloading never
+  resubmits. On failure, the handler re-renders with 422. A non-form body gets 415.
+- **Accessibility without JS.** `invalid()` is an element directive that calls
+  `setCustomValidity`, and the server renderer skips it. Views therefore also render
+  `aria-invalid` as a plain attribute and link the message with `aria-describedby`. After
+  hydration, `invalid()` mirrors the seeded errors into native validity.
+- **Parity is tested.** A golden file of the server's 422 response is compared, after
+  canonicalising it (Lit markers stripped, attributes sorted), with the markup the JS path
+  renders for the same input.
 
 ## Consequences
 

@@ -1,0 +1,17 @@
+{
+  "name": "@gyral-examples/custom-driver",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js advanced/custom-driver example: a canvas chart driver.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
