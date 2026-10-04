@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shared cart — Gyral examples</title>
+    <meta
+      name="description"
+      content="Three distant Gyral components share one cart through a store: a header badge, a product list and a cart panel."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      @layer reset, base;
+      @layer reset {
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+        }
+      }
+      @layer base {
+        :root {
+          color-scheme: light dark;
+          font-family: system-ui, sans-serif;
+          --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+          --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+        }
+        body {
+          background: var(--surface);
+          color: var(--ink);
+        }
+        header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-block: 0.75rem;
+          padding-inline: 1rem;
+          border-block-end: 1px solid color-mix(in oklch, currentColor 20%, transparent);
+        }
+        .page {
+          display: grid;
+          gap: 2rem;
+          grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+          max-inline-size: 60rem;
+          margin-inline: auto;
+          padding: 2rem 1rem;
+        }
+      }
+    </style>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <header>
+      <strong>Gyral Goods</strong>
+      <nav aria-label="Account"><gy-cart-badge></gy-cart-badge></nav>
+    </header>
+    <div class="page">
+      <main>
+        <h1>Shared cart</h1>
+        <p>The badge, the list and the cart are separate components; one store connects them.</p>
+        <gy-product-list></gy-product-list>
+      </main>
+      <aside id="cart" aria-labelledby="cart-heading">
+        <h2 id="cart-heading">Your cart</h2>
+        <gy-cart-panel></gy-cart-panel>
+      </aside>
+    </div>
+  </body>
+</html>

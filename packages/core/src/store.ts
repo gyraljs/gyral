@@ -1,0 +1,190 @@
+// Shared state: stores as "props from the side" (docs/design-docs/0013-shared-state.md).
+// A store is MVI without a view: init + pure update, commands run by its own interpreter.
+import { isServer } from 'lit';
+import {
+  splitNext,
+  type AnyDriver,
+  type Command,
+  type DriverOverrides,
+  type Next,
+} from './command.js';
+import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
+import type { Tagged } from './types.js';
+
+const onServer: boolean = isServer;
+
+type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
+
+/** One pure reducer per message tag, like a component's `update` but without context. */
+export type StoreUpdate<S, M extends Tagged> = {
+  readonly [K in M['_tag']]: (state: S, msg: Variant<M, K>) => Next<S, M>;
+};
+
+export interface StoreSpec<S, M extends Tagged> {
+  /** Initial state (and optional commands, e.g. load a saved cart). */
+  readonly init: () => Next<S, M>;
+  readonly update: StoreUpdate<S, M>;
+  /** Driver substitutions by name for this store's commands. */
+  readonly drivers?: DriverOverrides;
+}
+
+/** What `ctx.read()` accepts: anything that names a store and carries its state type. */
+export interface StoreRef<S> {
+  readonly name: string;
+  /** Type-only marker for the state type. Never set at runtime. */
+  readonly stateType?: (state: S) => S;
+}
+
+/** A live store: one per page on the client, one per request on the server, one per test. */
+export interface StoreInstance<S, M extends Tagged> {
+  readonly store: Store<S, M>;
+  readonly state: S;
+  /** Feeds a message through the store's `update` and notifies subscribers on change. */
+  send(msg: M): void;
+  /** Called after every state change. Returns an unsubscribe function. */
+  subscribe(listener: (state: S, prev: S) => void): () => void;
+  /** Per-instance driver substitutions (test fakes). Checked before the spec's. */
+  drivers: DriverOverrides;
+  /** Stops running commands and drops subscribers. */
+  dispose(): void;
+}
+
+export interface Store<S, M extends Tagged> extends StoreRef<S> {
+  readonly spec: StoreSpec<S, M>;
+  /**
+   * A fresh, independent instance. `initial` skips `init`'s state (a server seed, a test
+   * fixture); `init`'s commands still run on the client.
+   */
+  instance(initial?: S): StoreInstance<S, M>;
+  /** Type-only marker for the message type. Never set at runtime. */
+  readonly messageType?: (msg: M) => M;
+}
+
+/** Any store, with its types erased (for declarations and registries). */
+export interface AnyStore {
+  readonly name: string;
+  instance(initial?: never): AnyStoreInstance;
+}
+
+/** Any store instance, with its types erased. */
+export interface AnyStoreInstance {
+  readonly store: AnyStore;
+  readonly state: unknown;
+  send(msg: never): void;
+  subscribe(listener: (state: unknown, prev: unknown) => void): () => void;
+  dispose(): void;
+}
+
+/** Store instances substituted by store name (tests, islands). */
+export type StoreOverrides = Readonly<Record<string, AnyStoreInstance>>;
+
+/** Defines a store. `name` keys it in registries, seeds and overrides, so keep it unique. */
+export function defineStore<S, M extends Tagged>(name: string, spec: StoreSpec<S, M>): Store<S, M> {
+  const store: Store<S, M> = {
+    name,
+    spec,
+    instance: (initial?: S) => createInstance(store, initial),
+  };
+  return store;
+}
+
+function createInstance<S, M extends Tagged>(
+  store: Store<S, M>,
+  initial: S | undefined,
+): StoreInstance<S, M> {
+  // Sound: send() only calls the reducer whose key equals msg._tag.
+  const reducers = store.spec.update as unknown as Readonly<
+    Record<string, ((state: S, msg: M) => Next<S, M>) | undefined>
+  >;
+  const listeners = new Set<(state: S, prev: S) => void>();
+  let interpreter: Interpreter<M> | undefined;
+  let disposed = false;
+
+  const [initState, initCommands] = splitNext(store.spec.init());
+  let state = initial === undefined ? initState : initial;
+
+  const resolve = (driver: AnyDriver): AnyDriver =>
+    instance.drivers[driver.name] ?? store.spec.drivers?.[driver.name] ?? driver;
+
+  const run = (commands: ReadonlyArray<Command<M>>): void => {
+    if (onServer || disposed || commands.length === 0) return; // never on the server (ADR 0012)
+    interpreter ??= makeInterpreter<M>(resolve, (msg) => {
+      instance.send(msg);
+    });
+    for (const cmd of commands) interpreter.run(cmd);
+  };
+
+  const instance: StoreInstance<S, M> = {
+    store,
+    get state() {
+      return state;
+    },
+    drivers: {},
+    send(msg) {
+      const reducer = reducers[msg._tag];
+      if (reducer === undefined) {
+        console.warn(`store "${store.name}" has no update for message "${msg._tag}".`);
+        return;
+      }
+      const prev = state;
+      const [next, commands] = splitNext(reducer(prev, msg));
+      state = next;
+      if (!Object.is(next, prev)) for (const listener of [...listeners]) listener(next, prev);
+      run(commands);
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    dispose() {
+      disposed = true;
+      interpreter?.dispose();
+      listeners.clear();
+    },
+  };
+
+  // A seeded instance (hydration) starts init's commands after the hydrating renders flushed,
+  // so a fast driver can't change state under them (same reason as ADR 0012 for components).
+  if (initial === undefined) run(initCommands);
+  else if (initCommands.length > 0)
+    setTimeout(() => {
+      run(initCommands);
+    }, 0);
+  return instance;
+}
+
+/** Marker driver for `send()`: `define()` delivers these to the resolved store instance. */
+export const STORE_SEND = {
+  name: '@gyral/store-send',
+  run: () => undefined,
+} as const;
+
+/** The input of a `send()` command. */
+export interface StoreSendInput {
+  readonly store: AnyStore;
+  readonly msg: Tagged;
+}
+
+/** A command that sends `msg` to the component's instance of `store`. Writes are commands. */
+export function send<S, M extends Tagged>(store: Store<S, M>, msg: M): Command<never> {
+  const input: StoreSendInput = { store, msg };
+  return { driver: STORE_SEND, input, onSuccess: () => undefined };
+}
+
+/** Framework message: a store this component reads changed (ADR 0013). Optional reducer. */
+export interface StoreChanged {
+  readonly _tag: 'StoreChanged';
+  /** The store's name. Narrow with `changed(store, msg)`. */
+  readonly store: string;
+  readonly state: unknown;
+  readonly prev: unknown;
+}
+
+/** Narrows a `StoreChanged` message to one store's typed state, or `undefined`. */
+export function changed<S>(
+  store: StoreRef<S>,
+  msg: StoreChanged,
+): { readonly state: S; readonly prev: S } | undefined {
+  // Sound: the message was built from this store's instance (matched by unique name).
+  return msg.store === store.name ? { state: msg.state as S, prev: msg.prev as S } : undefined;
+}

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { LitElement } from 'lit';
 import { define, html } from '../src/index.js';
+import { ctxOf } from './ctx.js';
 
 interface Todo {
   readonly draft: string;
@@ -110,7 +111,7 @@ describe('define()', () => {
         _tag: 'Add',
         text: 'x',
       },
-      { props: {} },
+      ctxOf({}),
     );
     expect(next).toEqual({ draft: '', items: ['x'], done: false });
   });

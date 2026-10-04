@@ -292,6 +292,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/shared-cart:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/ssr':
+        specifier: workspace:*
+        version: link:../../packages/ssr
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+
   packages/core:
     dependencies:
       '@standard-schema/spec':

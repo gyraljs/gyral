@@ -13,6 +13,29 @@ export type {
 export { child, emit } from './children.js';
 export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
+export { changed, defineStore, send } from './store.js';
+export type {
+  AnyStore,
+  AnyStoreInstance,
+  Store,
+  StoreChanged,
+  StoreInstance,
+  StoreOverrides,
+  StoreRef,
+  StoreSendInput,
+  StoreSpec,
+  StoreUpdate,
+} from './store.js';
+export { STORE_SEND } from './store.js';
+// Store scoping: used by @gyral/ssr (server scope + page seed) and @gyral/testing.
+export {
+  resetDocumentStores,
+  scriptSafeJson,
+  STORE_SEED_ATTRIBUTE,
+  StoreRegistry,
+  STORES_ELEMENT,
+  withStoreScope,
+} from './store-scope.js';
 export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
 export {
   defineForm,
@@ -41,6 +64,7 @@ export type {
   PropDeclarations,
   PropsChanged,
   Stateless,
+  StoreReader,
   Tagged,
   Update,
 } from './types.js';

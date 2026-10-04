@@ -14,6 +14,8 @@ import { handleIntent, intentNames, listenForIntents } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { readProps, restoreProps, sameProps } from './props.js';
 import { attachStates, type StateSync } from './states.js';
+import { STORE_SEND, type AnyStore, type StoreOverrides, type StoreSendInput } from './store.js';
+import { StoreBinding } from './store-binding.js';
 import { withViewTransition } from './transitions.js';
 import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
 
@@ -45,8 +47,19 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     static readonly tagName = tag;
 
     drivers: DriverOverrides = {};
+    stores: StoreOverrides = {};
     initialMessages: readonly Tagged[] = [];
 
+    /** Reads, subscriptions and writes for spec.stores (ADR 0013). */
+    #binding = new StoreBinding(
+      this,
+      tag,
+      spec.stores ?? [],
+      () => this.stores,
+      (store, state, prev) => {
+        this.#storeChanged(store, state, prev);
+      },
+    );
     #model: { value: S } | undefined;
     /** Props as of the last init or PropsChanged; the `prev` of the next PropsChanged. */
     #seenProps: P | undefined;
@@ -77,8 +90,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #dispatch(msg: Tagged, render = true): void {
       const reducer = reducers[msg._tag];
       if (reducer === undefined) {
-        // Framework messages have optional reducers; props stay readable as context.
-        if (msg._tag !== 'PropsChanged') {
+        // Framework messages have optional reducers; props and stores stay readable as context.
+        if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged') {
           console.warn(`<${tag}> has no update for message "${msg._tag}".`);
         }
         return;
@@ -108,6 +121,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     override connectedCallback(): void {
       this.#resumeFromSeed();
       super.connectedCallback();
+      // Re-resolve on every connect: the nearest <gyral-stores> may differ after a move.
+      if (this.#binding.connect()) this.requestUpdate();
       this.#interpreter = makeInterpreter<M>(this.#resolve, (msg) => {
         this.send(msg);
       });
@@ -121,6 +136,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     override disconnectedCallback(): void {
       super.disconnectedCallback();
+      this.#binding.disconnect();
       this.#interpreter?.dispose();
       this.#interpreter = undefined;
     }
@@ -156,6 +172,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (onServer) return; // commands never run on the server; the client's init starts them
       for (const cmd of commands) {
         if (cmd.driver === EMIT) dispatchOutput(this, cmd.input);
+        else if (cmd.driver === STORE_SEND) this.#binding.send(cmd.input as StoreSendInput);
         else if (this.#interpreter === undefined) this.#pending.push(cmd);
         else this.#interpreter.run(cmd);
       }
@@ -201,7 +218,12 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     };
 
     #ctx(): Ctx<P> {
-      return { props: this.#props() };
+      return { props: this.#props(), read: (store) => this.#binding.read(store) };
+    }
+
+    #storeChanged(store: AnyStore, state: unknown, prev: unknown): void {
+      if (reducers['StoreChanged'] === undefined) this.requestUpdate();
+      else this.#dispatch({ _tag: 'StoreChanged', store: store.name, state, prev } as Tagged);
     }
 
     #props(): P {

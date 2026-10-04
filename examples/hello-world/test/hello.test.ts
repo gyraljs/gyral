@@ -6,7 +6,13 @@ afterEach(() => {
 });
 
 it('update stores the typed name', () => {
-  const next = Hello.spec.update.Named({ name: '' }, { _tag: 'Named', name: 'Ada' }, { props: {} });
+  const ctx = {
+    props: {},
+    read: () => {
+      throw new Error('no stores here');
+    },
+  };
+  const next = Hello.spec.update.Named({ name: '' }, { _tag: 'Named', name: 'Ada' }, ctx);
   expect(next).toEqual({ name: 'Ada' });
 });
 

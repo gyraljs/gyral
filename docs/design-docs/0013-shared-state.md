@@ -93,3 +93,66 @@ define<State, Msg, Props>('cart-badge', {
   without `view`/`intent`.
 - Open: does `StoreChanged` need a selector so a component doesn't re-render on unrelated
   store changes? Decide when performance requires it, with a measurement.
+
+## Addendum: implementation (gyral-czi.18, 2026-10-04)
+
+Example: `examples/shared-cart`. Code: `packages/core/src/store*.ts`,
+`packages/ssr/src/{index,internal/lit}.ts`, `packages/testing/src/stores.ts`.
+
+**One deviation from the sketch above: reads are `ctx.read(cart)`, not `ctx.stores.cart`.**
+Components pass their type arguments explicitly (`define<State, Msg>`), and TypeScript has no
+partial inference, so typing `ctx.stores` from the `stores` declaration would force a fifth
+type argument on every component. `read(store)` takes its type from the argument instead.
+The declaration is an array, `stores: [cart]`. Reading a store that isn't declared throws
+an error naming the fix, because an undeclared store would never trigger re-renders.
+
+```ts
+define<State, Msg>('cart-badge', {
+  stores: [cart],
+  view: (s, i, { read }) => html`${count(read(cart))}`,
+  update: {
+    Buy: (s, m) => [s, [send(cart, { _tag: 'Add', product: m.product })]],
+    StoreChanged: (s, m) => { const c = changed(cart, m); return c ? { …s } : s; }, // typed narrowing
+  },
+});
+```
+
+- **Store instances:** `cart.instance(initial?)` creates an independent instance with
+  `state`, `send`, `subscribe`, `drivers` and `dispose`.
+  - It has its own interpreter, created lazily. Commands never run on the server.
+  - Subscribers are notified synchronously when state changes (`Object.is`).
+  - `send(store, msg)` is a marker command, like `emit()`. A component's `#apply` delivers
+    it to the instance that component resolved. Stores cannot `send` to other stores yet.
+- **Choosing the instance:** in order,
+  1. `el.stores[name]`, a per-element override for tests and islands;
+  2. the nearest `<gyral-stores>` ancestor, found through shadow roots. It takes preset
+     instances from its `.instances` property, or creates its own on demand. It's a plain
+     element tracked in a `WeakMap`, with no class to register, so it is SSR-safe;
+  3. the document default.
+
+  A component resolves and subscribes on every connect, so moving it re-resolves.
+
+- **Server scope:**
+  - `renderToString(value, { stores })`, `renderToStream(value, { stores })` and
+    `renderPage({ …, stores })` build a `StoreRegistry`. Every synchronous step of the Lit SSR
+    iterator, including the initial `render()` call, runs inside `withStoreScope(registry, …)`.
+  - Components render while the iterator advances, so each request only ever sees its own
+    registry. A test proves this by reading two streams alternately, chunk by chunk, plus
+    three concurrent pages.
+  - This needs no `AsyncLocalStorage`, so it works on any runtime.
+  - A store read outside any scope on the server throws an error naming the fix.
+- **Page seed:** `page({ stores })` writes
+  `<script type="application/json" data-gyral-stores>` from `registry.snapshot()`. The JSON is
+  script-safe (`<`, `>`, `&`, U+2028/2029 escaped). The client's document default reads it the
+  first time a store is resolved, which happens in `connectedCallback` before the hydrating
+  render.
+- **Commands of seeded instances:** an instance created with `initial` (from the seed) starts
+  its `init` commands in a `setTimeout(0)`, after the hydrating renders. This is the same
+  reason ADR 0012 defers component `init` commands.
+- **Testing** (`@gyral/testing`):
+  - `testStore(store, initial?)` gives a fresh instance for a test.
+  - `stepStore(store, state, msg)` runs a store reducer purely.
+  - `sentTo(commands, store)` lists the messages a reducer's commands `send()` to that store.
+  - `step(spec, state, msg, props, [instances])` and `run(…, { stores })` give reducers a
+    working `ctx.read`.
+  - `resetDocumentStores()` (core) clears the document default between tests.

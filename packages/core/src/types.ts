@@ -1,5 +1,6 @@
 import type { CSSResultGroup, PropertyDeclaration } from 'lit';
 import type { DriverOverrides, Next } from './command.js';
+import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
 export interface Tagged {
@@ -27,9 +28,15 @@ export interface IntentInput {
   readonly newState: 'open' | 'closed' | undefined;
 }
 
-/** Read-only context handed to every reducer and to the view (ADR 0007). */
+/** Reads a declared store's current state, typed by the store (ADR 0013). */
+export type StoreReader = <S>(store: StoreRef<S>) => S;
+
+/** Read-only context handed to every reducer and to the view (ADR 0007, 0013). */
 export interface Ctx<P> {
+  /** Props from above. */
   readonly props: P;
+  /** Stores from the side: `read(cart).lines`. The store must be in `spec.stores`. */
+  readonly read: StoreReader;
 }
 
 /** Framework message: declared props changed after the first render (ADR 0007). */
@@ -87,6 +94,7 @@ export type Update<S, M extends Tagged, P = object> = {
 } & {
   readonly PropsChanged?: Reducer<S, M, PropsChanged<P>, P>;
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
+  readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
 };
 
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
@@ -121,6 +129,11 @@ interface SpecBody<S, M extends Tagged, P> {
   readonly events?: readonly string[];
   /** Driver substitutions by name, for every instance (ADR 0006). */
   readonly drivers?: DriverOverrides;
+  /**
+   * Stores this component reads with `ctx.read(store)` and writes with `send(store, msg)`.
+   * Their changes re-render it (and reach the optional `StoreChanged` reducer). ADR 0013.
+   */
+  readonly stores?: readonly AnyStore[];
   /**
    * Return `true` to render this state change inside a View Transition (route changes, list
    * reorders). Skipped without browser support or when reduced motion is requested.

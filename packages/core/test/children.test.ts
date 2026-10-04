@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
 import { child, define, emit, html, repeat, type GyralElementClass } from '../src/index.js';
+import { ctxOf } from './ctx.js';
 
 interface Item {
   readonly id: string;
@@ -146,9 +147,7 @@ describe('child components (ADR 0010)', () => {
     const next = TestItem.spec.update.Remove(
       { pokes: 0 },
       { _tag: 'Remove' },
-      {
-        props: { item: { id: 'x', text: 'X', done: false } },
-      },
+      ctxOf({ item: { id: 'x', text: 'X', done: false } }),
     );
     const [, commands] = splitNext(next);
     expect(commands[0]?.input).toEqual({ _tag: 'Removed' });

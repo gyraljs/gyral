@@ -5,14 +5,36 @@ import type { RenderResult } from '@lit-labs/ssr/lib/render-result.js';
 
 export { html as serverHtml } from '@lit-labs/ssr';
 
-/** Renders any Lit value (templates, custom elements with DSD) as a stream of HTML chunks. */
-export async function* renderChunks(value: unknown): AsyncGenerator<string, void, undefined> {
-  yield* flatten(render(value));
+/** Runs one synchronous render step inside a scope (the request's stores, ADR 0013). */
+export type StepScope = <T>(step: () => T) => T;
+
+const unscoped: StepScope = (step) => step();
+
+/**
+ * Renders any Lit value (templates, custom elements with DSD) as a stream of HTML chunks.
+ * Components render while the result is iterated, so every iteration step runs in `scope`:
+ * two interleaved requests each see only their own scope.
+ */
+export async function* renderChunks(
+  value: unknown,
+  scope: StepScope = unscoped,
+): AsyncGenerator<string, void, undefined> {
+  yield* flatten(
+    scope(() => render(value)),
+    scope,
+  );
 }
 
-async function* flatten(result: RenderResult): AsyncGenerator<string, void, undefined> {
-  for (const chunk of result) {
+async function* flatten(
+  result: RenderResult,
+  scope: StepScope,
+): AsyncGenerator<string, void, undefined> {
+  const iterator = result[Symbol.iterator]();
+  for (;;) {
+    const next = scope(() => iterator.next());
+    if (next.done === true) return;
+    const chunk = next.value;
     if (typeof chunk === 'string') yield chunk;
-    else yield* flatten(await chunk);
+    else yield* flatten(await chunk, scope);
   }
 }
