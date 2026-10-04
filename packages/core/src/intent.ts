@@ -3,6 +3,9 @@ import type { IntentInput } from './types.js';
 /** Events the intent layer listens for on each component's shadow root. */
 export const INTENT_EVENTS = ['click', 'submit', 'input', 'change'] as const;
 
+const isToggle = (el: Element): el is HTMLInputElement =>
+  el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
+
 const CLICK_INPUT_TYPES = new Set(['button', 'submit', 'reset', 'image']);
 
 /** The event that fires an intent unless `data-intent-on` overrides it. */
@@ -67,7 +70,7 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
     event,
     target,
     value: valueOf(target),
-    checked: target instanceof HTMLInputElement ? target.checked : undefined,
+    checked: isToggle(target) ? target.checked : undefined,
     formData,
   };
 }

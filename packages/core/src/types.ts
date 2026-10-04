@@ -21,8 +21,39 @@ export interface IntentInput {
   readonly formData: FormData | undefined;
 }
 
-/** Parses a platform event into one message variant, or `undefined` to ignore it. */
-export type IntentParser<M> = (input: IntentInput) => M | undefined;
+/** Read-only context handed to every reducer and to the view (ADR 0007). */
+export interface Ctx<P> {
+  readonly props: P;
+}
+
+/** Framework message: declared props changed after the first render (ADR 0007). */
+export interface PropsChanged<P> {
+  readonly _tag: 'PropsChanged';
+  readonly props: P;
+  readonly prev: P;
+}
+
+/** One validation problem. `path` is dot-joined and matches the field's `name`. */
+export interface FieldIssue {
+  readonly path: string;
+  readonly message: string;
+}
+
+/** Framework message: an intent's input failed schema validation (ADR 0008). */
+export interface IntentRejected {
+  readonly _tag: 'IntentRejected';
+  /** The `data-intent` name whose input was rejected. */
+  readonly intent: string;
+  readonly issues: readonly FieldIssue[];
+}
+
+type ParseResult<M> = M | IntentRejected | undefined;
+
+/**
+ * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
+ * ignore it. May be async because schema validation may be.
+ */
+export type IntentParser<M> = (input: IntentInput) => ParseResult<M> | Promise<ParseResult<M>>;
 
 type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 
@@ -31,9 +62,17 @@ export type Intents<M extends Tagged> = {
   readonly [K in M['_tag']]?: IntentParser<Variant<M, K>>;
 };
 
-/** One pure reducer per message tag. Exhaustive by construction. May return commands. */
-export type Update<S, M extends Tagged> = {
-  readonly [K in M['_tag']]: (state: S, msg: Variant<M, K>) => Next<S, M>;
+type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
+
+/**
+ * One pure reducer per message tag (exhaustive by construction), plus optional reducers
+ * for framework messages. Reducers may return commands.
+ */
+export type Update<S, M extends Tagged, P = object> = {
+  readonly [K in M['_tag']]: Reducer<S, M, Variant<M, K>, P>;
+} & {
+  readonly PropsChanged?: Reducer<S, M, PropsChanged<P>, P>;
+  readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
 };
 
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
@@ -49,9 +88,9 @@ export interface ComponentSpec<S, M extends Tagged, P> {
   /** INTENT: platform events to messages. */
   readonly intent: Intents<M>;
   /** MODEL: pure state transitions. */
-  readonly update: Update<S, M>;
-  /** VIEW: pure function of state. Name intents in markup; never attach closures. */
-  readonly view: (state: S, intents: IntentNames<M>) => unknown;
+  readonly update: Update<S, M, P>;
+  /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
+  readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
   readonly styles?: CSSResultGroup;
   /** Driver substitutions by name, for every instance (ADR 0006). */
   readonly drivers?: DriverOverrides;

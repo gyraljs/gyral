@@ -7,8 +7,9 @@ afterEach(() => {
 
 it('update is pure and exhaustive', () => {
   const { update } = Counter.spec;
-  expect(update.Increment({ count: 1 }, { _tag: 'Increment' })).toEqual({ count: 2 });
-  expect(update.Decrement({ count: 1 }, { _tag: 'Decrement' })).toEqual({ count: 0 });
+  const ctx = { props: {} };
+  expect(update.Increment({ count: 1 }, { _tag: 'Increment' }, ctx)).toEqual({ count: 2 });
+  expect(update.Decrement({ count: 1 }, { _tag: 'Decrement' }, ctx)).toEqual({ count: 0 });
 });
 
 it('counts clicks', async () => {

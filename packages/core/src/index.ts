@@ -11,14 +11,21 @@ export type {
   RetryPolicy,
 } from './command.js';
 export { define } from './define.js';
+export { defineForm, field, fieldErrors, form, formDataToObject } from './forms.js';
+export type { FormDefinition, FormValue } from './forms.js';
+export { invalid } from './invalid.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
+  Ctx,
+  FieldIssue,
   IntentInput,
   IntentNames,
   IntentParser,
+  IntentRejected,
   Intents,
   PropDeclarations,
+  PropsChanged,
   Tagged,
   Update,
 } from './types.js';

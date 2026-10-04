@@ -20,6 +20,7 @@
     "dist"
   ],
   "dependencies": {
+    "@standard-schema/spec": "1.1.0",
     "effect": "3.22.2",
     "lit": "3.3.3"
   }

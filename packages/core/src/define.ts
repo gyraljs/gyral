@@ -8,7 +8,7 @@ import {
 } from './command.js';
 import { INTENT_EVENTS, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
-import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
+import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
 
 /** The custom element class produced by `define()`. */
 export interface GyralElement<S, M extends Tagged> extends LitElement {
@@ -35,7 +35,8 @@ const intentNames = new Proxy(
 
 /**
  * Compiles a Model-View-Intent spec into a custom element and registers it under `tag`.
- * See docs/design-docs/0001-mvi-parsed-intent.md and 0006-effects-and-drivers.md.
+ * See docs/design-docs/0001-mvi-parsed-intent.md, 0006-effects-and-drivers.md, 0007-props.md
+ * and 0008-forms.md.
  */
 export function define<S, M extends Tagged, P extends object = object>(
   tag: string,
@@ -43,9 +44,9 @@ export function define<S, M extends Tagged, P extends object = object>(
 ): GyralElementClass<S, M, P> {
   const propNames = Object.keys(spec.props ?? {});
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
-  // Sound: send() only calls the reducer whose key equals msg._tag.
+  // Sound: #dispatch() only calls the reducer whose key equals msg._tag.
   const reducers = spec.update as unknown as Readonly<
-    Record<string, (state: S, msg: M) => Next<S, M>>
+    Record<string, ((state: S, msg: Tagged, ctx: Ctx<P>) => Next<S, M>) | undefined>
   >;
 
   class Element extends LitElement implements GyralElement<S, M> {
@@ -57,23 +58,35 @@ export function define<S, M extends Tagged, P extends object = object>(
     drivers: DriverOverrides = {};
 
     #model: { value: S } | undefined;
+    /** Props as of the last init or PropsChanged; the `prev` of the next PropsChanged. */
+    #seenProps: P | undefined;
     #listening = false;
     #interpreter: Interpreter<M> | undefined;
     #pending: Command<M>[] = [];
 
     get state(): S {
-      if (this.#model === undefined) this.#apply(spec.init(this.#props()));
+      if (this.#model === undefined) {
+        this.#seenProps = this.#props();
+        this.#apply(spec.init(this.#seenProps));
+      }
       return (this.#model as { value: S }).value;
     }
 
     send(msg: M): void {
+      this.#dispatch(msg);
+    }
+
+    #dispatch(msg: Tagged, render = true): void {
       const reducer = reducers[msg._tag];
       if (reducer === undefined) {
-        console.warn(`<${tag}> has no update for message "${msg._tag}".`);
+        // Framework messages have optional reducers; props stay readable as context.
+        if (msg._tag !== 'PropsChanged') {
+          console.warn(`<${tag}> has no update for message "${msg._tag}".`);
+        }
         return;
       }
-      this.#apply(reducer(this.state, msg));
-      this.requestUpdate();
+      this.#apply(reducer(this.state, msg, this.#ctx()));
+      if (render) this.requestUpdate();
     }
 
     override connectedCallback(): void {
@@ -95,8 +108,20 @@ export function define<S, M extends Tagged, P extends object = object>(
       this.#interpreter = undefined;
     }
 
+    protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
+      super.willUpdate(changed);
+      const prev = this.#seenProps;
+      if (prev === undefined) return; // first render: init() sees the props
+      const props = this.#props();
+      const record = (p: P) => p as Readonly<Record<string, unknown>>;
+      if (propNames.every((name) => Object.is(record(props)[name], record(prev)[name]))) return;
+      this.#seenProps = props;
+      // Inside the update cycle, so the new state renders in this same pass.
+      this.#dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
+    }
+
     protected override render(): unknown {
-      return spec.view(this.state, intentNames as IntentNames<M>);
+      return spec.view(this.state, intentNames as IntentNames<M>, this.#ctx());
     }
 
     #apply(next: Next<S, M>): void {
@@ -119,9 +144,23 @@ export function define<S, M extends Tagged, P extends object = object>(
         console.warn(`<${tag}> has no intent parser for data-intent="${input.name}".`);
         return;
       }
-      const msg = parser(input);
-      if (msg !== undefined) this.send(msg);
+      const result = parser(input);
+      if (result instanceof Promise) {
+        result.then(this.#deliver, (error: unknown) => {
+          console.error(`<${tag}> intent parser for "${input.name}" failed`, error);
+        });
+      } else {
+        this.#deliver(result);
+      }
     };
+
+    #deliver = (msg: Tagged | undefined): void => {
+      if (msg !== undefined && this.isConnected) this.#dispatch(msg);
+    };
+
+    #ctx(): Ctx<P> {
+      return { props: this.#props() };
+    }
 
     #props(): P {
       const self = this as unknown as Readonly<Record<string, unknown>>;

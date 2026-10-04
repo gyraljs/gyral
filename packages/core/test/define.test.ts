@@ -110,6 +110,7 @@ describe('define()', () => {
         _tag: 'Add',
         text: 'x',
       },
+      { props: {} },
     );
     expect(next).toEqual({ draft: '', items: ['x'], done: false });
   });

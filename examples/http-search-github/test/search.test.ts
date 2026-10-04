@@ -141,7 +141,7 @@ describe('<gy-github-search>', () => {
   it('update debounces typing through a command', () => {
     const { update } = GithubSearch.spec;
     const idle: State = { query: '', results: { _tag: 'Idle' } };
-    const next = update.Typed(idle, { _tag: 'Typed', query: 'q' });
+    const next = update.Typed(idle, { _tag: 'Typed', query: 'q' }, { props: {} });
     const [state, commands] = next as readonly [State, readonly Command<Msg>[]];
     expect(state.query).toBe('q');
     expect(commands.map((c) => c.driver.name)).toEqual(['debounce']);

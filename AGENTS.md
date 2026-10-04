@@ -43,6 +43,9 @@ First run needs `pnpm exec playwright install chromium`.
 | Anything                               | [core-beliefs.md](docs/design-docs/core-beliefs.md)                         |
 | Component model, intents, update, view | [0001-mvi-parsed-intent.md](docs/design-docs/0001-mvi-parsed-intent.md)     |
 | Effects, drivers, runtime internals    | [0002-effect-boundary.md](docs/design-docs/0002-effect-boundary.md)         |
+| Commands and driver API                | [0006-effects-and-drivers.md](docs/design-docs/0006-effects-and-drivers.md) |
+| Props, `PropsChanged`                  | [0007-props.md](docs/design-docs/0007-props.md)                             |
+| Forms, validation, `invalid()`         | [0008-forms.md](docs/design-docs/0008-forms.md)                             |
 | Browser APIs, CSS features             | [0003-browser-baseline.md](docs/design-docs/0003-browser-baseline.md)       |
 | CI, GitHub Actions                     | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                       |
 | Repo docs, lint rules, this file       | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md) |
