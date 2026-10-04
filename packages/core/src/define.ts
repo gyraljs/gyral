@@ -8,6 +8,7 @@ import {
 } from './command.js';
 import { EMIT } from './children.js';
 import { takeSeed, writeSeed } from './hydration.js';
+import { runInit } from './init.js';
 import { INTENT_EVENTS, OUTPUT_EVENT, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { attachStates, type StateSync } from './states.js';
@@ -91,7 +92,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     get state(): S {
       if (this.#model === undefined) {
         this.#seenProps = this.#props();
-        this.#apply(spec.init(this.#seenProps));
+        this.#apply(runInit(spec, this.#seenProps));
         for (const msg of this.initialMessages) this.#dispatch(msg, false);
       }
       return (this.#model as { value: S }).value;
@@ -217,7 +218,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
         if (propNames.includes(name) && self[name] === undefined) self[name] = value;
       }
       this.#seenProps = this.#props();
-      const [, commands] = splitNext(spec.init(this.#seenProps));
+      const [, commands] = splitNext(runInit(spec, this.#seenProps));
       // Sound: the seed is this component's own state, serialized by writeSeed() on the server.
       this.#model = { value: seed.state as S };
       this.#afterHydration = commands;

@@ -1,5 +1,4 @@
-import { css, define, html, repeat } from '@gyral/core';
-import { unsafeCSS } from 'lit';
+import { css, define, html, repeat, unsafeCSS } from '@gyral/core';
 
 // Cycle's version tweened coordinates in JS on every frame. Here the model only counts runs;
 // the motion is a CSS animation the browser runs on its own (no per-frame state, no JS timer).

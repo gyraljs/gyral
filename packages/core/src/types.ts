@@ -94,11 +94,22 @@ export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
 
 export type PropDeclarations<P> = { readonly [K in keyof P]: PropertyDeclaration };
 
-export interface ComponentSpec<S, M extends Tagged, P> {
+/** State of a component that keeps none (a pure view of its props). Its `init` is optional. */
+export type Stateless = Readonly<Record<string, never>>;
+
+/** Initial model state (and optional commands), computed from props on first render. */
+type Init<S, M, P> = (props: P) => Next<S, M>;
+
+// `init` may be omitted only when an empty object is a valid state (Stateless, all-optional).
+type InitField<S, M extends Tagged, P> = Stateless extends S
+  ? { readonly init?: Init<S, M, P> }
+  : { readonly init: Init<S, M, P> };
+
+export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitField<S, M, P>;
+
+interface SpecBody<S, M extends Tagged, P> {
   /** Lit reactive property declarations: the component's inputs. */
   readonly props?: PropDeclarations<P>;
-  /** Initial model state (and optional commands), computed from props on first render. */
-  readonly init: (props: P) => Next<S, M>;
   /** INTENT: platform events to messages. */
   readonly intent: Intents<M>;
   /** MODEL: pure state transitions. */

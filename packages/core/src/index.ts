@@ -23,6 +23,7 @@ export {
   validateForm,
 } from './forms.js';
 export type { FormDefinition, FormResult, FormValue } from './forms.js';
+export { runInit } from './init.js';
 export { invalid } from './invalid.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
@@ -37,10 +38,14 @@ export type {
   Intents,
   PropDeclarations,
   PropsChanged,
+  Stateless,
   Tagged,
   Update,
 } from './types.js';
 
 // The view layer is Lit. Re-exported so most apps need a single import.
-export { css, html, nothing, svg } from 'lit';
+export { css, html, nothing, svg, unsafeCSS } from 'lit';
+export { classMap } from 'lit/directives/class-map.js';
+export { live } from 'lit/directives/live.js';
 export { repeat } from 'lit/directives/repeat.js';
+export { styleMap } from 'lit/directives/style-map.js';

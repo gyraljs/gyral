@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "@gyral/core": "workspace:*",
-    "@gyral/time": "workspace:*",
-    "lit": "3.3.3"
+    "@gyral/time": "workspace:*"
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*"

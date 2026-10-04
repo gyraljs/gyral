@@ -1,5 +1,4 @@
-import { css, define, emit, html } from '@gyral/core';
-import { styleMap } from 'lit/directives/style-map.js';
+import { css, define, emit, html, styleMap } from '@gyral/core';
 
 export interface ItemSeed {
   readonly id: number;

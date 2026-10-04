@@ -1,6 +1,6 @@
-import { css, define, html, repeat, type Next } from '@gyral/core';
+import { css, define, html, repeat, unsafeCSS, type Next } from '@gyral/core';
 import { delay } from '@gyral/time';
-import { unsafeCSS } from 'lit';
+
 import { letterKeys } from './keyboard.js';
 
 // Cycle's version ran a per-frame easing loop over every letter. Here the model only knows

@@ -40,3 +40,18 @@ Status: **accepted** (2026-10-04). Bead: gyral-czi.5. Replaces Cycle's `isolate(
 contains itself (a folder tree) uses `child(() => Folder, …)` and annotates the constant
 (`const Folder: GyralElementClass<S, M, P, O> = define(…)`) so TypeScript accepts the
 self-reference. Instance types expose declared props as writable properties.
+
+## Addendum: stateless children and controlled inputs (gyral-czi.14, 2026-10-04)
+
+- **Stateless children:** `define<Stateless, Msg, Props, Out>(…)` may omit `init`; the types
+  only allow that when `{}` is a valid state. Such a component is a pure view of its props
+  that reports changes up with `emit()`.
+- **Controlled inputs:** when the parent owns a value and may clamp or reject a change, bind it
+  with `.value=${live(…)}` (re-exported from core). Plain `.value=${…}` compares against the
+  last rendered value, so a rejected change would stay in the input.
+- **Single-variant outputs:** while a child's output union has one variant, the parent's
+  reducer reads `out` directly; `switch (out._tag)` with one case trips
+  `no-unnecessary-condition`. Add the switch when a second variant appears (the compiler then
+  forces every reducer to handle it, which is the point of the union).
+- Core also re-exports `classMap`, `styleMap` and `unsafeCSS`, so examples import only
+  `@gyral/core`.

@@ -1,10 +1,11 @@
-import type {
-  Command,
-  ComponentSpec,
-  IntentRejected,
-  Next,
-  PropsChanged,
-  Tagged,
+import {
+  runInit,
+  type Command,
+  type ComponentSpec,
+  type IntentRejected,
+  type Next,
+  type PropsChanged,
+  type Tagged,
 } from '@gyral/core';
 
 /** A reducer result, normalised: the new state plus the commands it asked for. */
@@ -32,7 +33,7 @@ export function initial<S, M extends Tagged, P>(
   spec: ComponentSpec<S, M, P>,
   props: P = {} as P,
 ): Stepped<S, M> {
-  return normalise(spec.init(props));
+  return normalise(runInit(spec, props));
 }
 
 /**

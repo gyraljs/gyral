@@ -59,9 +59,6 @@ importers:
       '@gyral/time':
         specifier: workspace:*
         version: link:../../packages/time
-      lit:
-        specifier: 3.3.3
-        version: 3.3.3
     devDependencies:
       '@gyral/testing':
         specifier: workspace:*
@@ -72,9 +69,6 @@ importers:
       '@gyral/core':
         specifier: workspace:*
         version: link:../../packages/core
-      lit:
-        specifier: 3.3.3
-        version: 3.3.3
     devDependencies:
       '@gyral/testing':
         specifier: workspace:*
@@ -235,9 +229,6 @@ importers:
       '@gyral/core':
         specifier: workspace:*
         version: link:../../packages/core
-      lit:
-        specifier: 3.3.3
-        version: 3.3.3
     devDependencies:
       '@gyral/testing':
         specifier: workspace:*
