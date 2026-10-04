@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "gyral",
+  "project_id": "9144a0fa-3075-4b6d-b27d-871408e77530"
+}
