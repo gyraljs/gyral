@@ -1,0 +1,15 @@
+{
+  "name": "@gyral-examples/http-random-user",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js basic/http-random-user example.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/http": "workspace:*",
+    "valibot": "1.5.0"
+  }
+}
