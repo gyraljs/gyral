@@ -111,6 +111,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/routing-view:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/router':
+        specifier: workspace:*
+        version: link:../../packages/router
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/seconds-elapsed:
     dependencies:
       '@gyral/core':
