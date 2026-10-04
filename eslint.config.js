@@ -82,6 +82,32 @@ export default tseslint.config(
     },
   },
   {
+    // Layer 2: @gyral/ssr may depend on core and router only (ARCHITECTURE.md).
+    files: ['packages/ssr/src/**/*.ts'],
+    ignores: ['packages/*/src/internal/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            {
+              group: ['@gyral/*', '!@gyral/core', '!@gyral/router'],
+              message:
+                '@gyral/ssr may only import @gyral/core and @gyral/router (ARCHITECTURE.md).',
+            },
+            {
+              group: ['@lit-labs/ssr', '@lit-labs/ssr/*'],
+              message:
+                'Labs APIs stay behind packages/ssr/src/internal/lit.ts (ADR 0005). Add what you need there.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Internal modules are the only place Effect is allowed.
     files: ['packages/*/src/internal/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },

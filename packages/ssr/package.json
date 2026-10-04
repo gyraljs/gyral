@@ -1,0 +1,36 @@
+{
+  "name": "@gyral/ssr",
+  "version": "0.0.0",
+  "description": "Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": [
+    "./src/hydrate.ts",
+    "./dist/hydrate.js"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./hydrate": "./src/hydrate.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./hydrate": {
+        "types": "./dist/hydrate.d.ts",
+        "default": "./dist/hydrate.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@lit-labs/ssr": "4.1.0",
+    "@lit-labs/ssr-client": "1.1.8",
+    "lit": "3.3.3"
+  }
+}

@@ -9,6 +9,7 @@
     "packages/*/test",
     "examples/*/src",
     "examples/*/test",
+    "examples/*/server",
     "vitest.config.ts"
   ]
 }

@@ -8,6 +8,8 @@ export default defineConfig({
         test: {
           name: 'browser',
           include: ['packages/*/test/**/*.test.ts', 'examples/*/test/**/*.test.ts'],
+          // Server-rendering tests run in Node (the `node` project below).
+          exclude: ['**/*.node.test.ts', '**/node_modules/**'],
           browser: {
             enabled: true,
             headless: true,
@@ -19,7 +21,11 @@ export default defineConfig({
       {
         test: {
           name: 'node',
-          include: ['scripts/test/**/*.test.mjs'],
+          include: [
+            'scripts/test/**/*.test.mjs',
+            'packages/*/test/**/*.node.test.ts',
+            'examples/*/test/**/*.node.test.ts',
+          ],
           environment: 'node',
         },
       },

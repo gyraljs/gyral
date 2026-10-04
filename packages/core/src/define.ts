@@ -1,4 +1,4 @@
-import { LitElement } from 'lit';
+import { isServer, LitElement } from 'lit';
 import {
   splitNext,
   type AnyDriver,
@@ -7,6 +7,7 @@ import {
   type Next,
 } from './command.js';
 import { EMIT } from './children.js';
+import { takeSeed, writeSeed } from './hydration.js';
 import { INTENT_EVENTS, OUTPUT_EVENT, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
@@ -30,6 +31,9 @@ export interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = ne
   readonly outputs?: O;
 }
 
+// Lit types `isServer` per build condition; widen it so both branches type-check (ADR 0012).
+const onServer: boolean = isServer;
+
 // Any property read returns its own name, so `intents.Increment === 'Increment'`.
 // Types restrict reads to real message tags; a tag without a parser warns at event time.
 const intentNames = new Proxy(
@@ -40,7 +44,7 @@ const intentNames = new Proxy(
 /**
  * Compiles a Model-View-Intent spec into a custom element and registers it under `tag`.
  * See docs/design-docs/0001-mvi-parsed-intent.md, 0006-effects-and-drivers.md, 0007-props.md
- * and 0008-forms.md.
+ * 0008-forms.md and 0012-ssr.md.
  */
 export function define<S, M extends Tagged, P extends object = object, O extends Tagged = never>(
   tag: string,
@@ -67,6 +71,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #listening = false;
     #interpreter: Interpreter<M> | undefined;
     #pending: Command<M>[] = [];
+    /** init's commands on the hydration path; started in firstUpdated (ADR 0012). */
+    #afterHydration: readonly Command<M>[] = [];
 
     get state(): S {
       if (this.#model === undefined) {
@@ -94,6 +100,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     }
 
     override connectedCallback(): void {
+      this.#resumeFromSeed();
       super.connectedCallback();
       this.#interpreter = makeInterpreter<M>(this.#resolve, (msg) => {
         this.send(msg);
@@ -114,6 +121,11 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
       super.willUpdate(changed);
+      if (onServer) {
+        // Server renders run constructor, willUpdate and render only (ADR 0012).
+        writeSeed(this, this.state, this.#props() as Record<string, unknown>, spec.props ?? {});
+        return;
+      }
       const prev = this.#seenProps;
       if (prev === undefined) return; // first render: init() sees the props
       const props = this.#props();
@@ -131,6 +143,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #apply(next: Next<S, M>): void {
       const [state, commands] = splitNext(next);
       this.#model = { value: state };
+      if (onServer) return; // commands never run on the server; the client's init starts them
       for (const cmd of commands) {
         if (cmd.driver === EMIT) this.#emit(cmd.input);
         else if (this.#interpreter === undefined) this.#pending.push(cmd);
@@ -146,6 +159,37 @@ export function define<S, M extends Tagged, P extends object = object, O extends
         this.dispatchEvent(
           new CustomEvent(OUTPUT_EVENT, { detail: output, bubbles: true, composed: false }),
         );
+      });
+    }
+
+    /**
+     * Hydration (ADR 0012): use the server's state and restore props that only travelled in the
+     * seed. init(props) runs again for its commands only, and they start after the hydrating
+     * render: a driver that answers synchronously must not change state before hydration.
+     */
+    #resumeFromSeed(): void {
+      if (this.#model !== undefined) return;
+      const seed = takeSeed(this);
+      if (seed === undefined) return;
+      const self = this as unknown as Record<string, unknown>;
+      for (const [name, value] of Object.entries(seed.props)) {
+        if (propNames.includes(name) && self[name] === undefined) self[name] = value;
+      }
+      this.#seenProps = this.#props();
+      const [, commands] = splitNext(spec.init(this.#seenProps));
+      // Sound: the seed is this component's own state, serialized by writeSeed() on the server.
+      this.#model = { value: seed.state as S };
+      this.#afterHydration = commands;
+    }
+
+    protected override firstUpdated(changed: Map<PropertyKey, unknown>): void {
+      super.firstUpdated(changed);
+      const commands = this.#afterHydration;
+      if (commands.length === 0) return;
+      this.#afterHydration = [];
+      // After the hydrating update has fully completed, so results start a fresh update.
+      void this.updateComplete.then(() => {
+        this.#apply([this.state, commands]);
       });
     }
 
