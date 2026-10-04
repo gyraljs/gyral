@@ -1,6 +1,6 @@
 import { css, define, html } from '@gyral/core';
-import { listen, type RouteLocation } from '@gyral/router';
-import { site, titles } from './routes.js';
+import { listen, setTitle, type RouteLocation } from '@gyral/router';
+import { pageTitle, site, titles } from './routes.js';
 
 export interface Props {
   /** The request path, set by the server. On the client the router takes over. */
@@ -51,7 +51,8 @@ export const App = define<State, Msg, Props>('gy-iso-app', {
   ],
   intent: {},
   update: {
-    Routed: (_s, m) => ({ path: m.location.pathname }),
+    // pageTitle() also renders the server's <title>: one source for both (ADR 0009).
+    Routed: (_s, m) => [{ path: m.location.pathname }, [setTitle(pageTitle(m.location.pathname))]],
   },
   view: (s) => html`
     <header>${menu(s.path)}</header>

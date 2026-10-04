@@ -1,4 +1,5 @@
-// Same-origin link capture for the History API path (docs/design-docs/0009-router.md).
+// Same-origin link capture (docs/design-docs/0009-router.md).
+import type { LocationLike } from './stream.js';
 
 const isModified = (event: MouseEvent): boolean =>
   event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
@@ -16,14 +17,16 @@ function anchorOf(event: Event): HTMLAnchorElement | undefined {
  * Skips: already-handled clicks, modified or non-primary clicks, `target` other than
  * `_self`, `download`, `rel="external"`, other origins, and same-page hash links.
  */
-export function capturedUrl(event: MouseEvent, location: Location): URL | undefined {
+export function capturedUrl(event: MouseEvent, location: LocationLike): URL | undefined {
   if (event.defaultPrevented || isModified(event)) return undefined;
   const anchor = anchorOf(event);
   if (anchor === undefined) return undefined;
   const target = anchor.getAttribute('target');
   if (target !== null && target !== '' && target !== '_self') return undefined;
   if (anchor.hasAttribute('download') || anchor.relList.contains('external')) return undefined;
-  const url = new URL(anchor.href, location.href);
+  // Resolve the attribute against the router's location, not the document's (memory history
+  // routes against its own origin; `anchor.href` is already absolute for the real page).
+  const url = new URL(anchor.getAttribute('href') ?? '', location.href);
   if (url.origin !== location.origin) return undefined;
   const samePage = url.pathname === location.pathname && url.search === location.search;
   if (samePage && url.hash !== '') return undefined;

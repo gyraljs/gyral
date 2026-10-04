@@ -1,5 +1,5 @@
 import { css, define, html, nothing } from '@gyral/core';
-import { back, listen, routes, type RouteLocation, type RouteMatch } from '@gyral/router';
+import { back, listen, routes, setTitle, type RouteLocation, type RouteMatch } from '@gyral/router';
 
 /** The route table: pure, typed, and reusable on a server (ADR 0009). */
 export const app = routes({ home: '/', about: '/about', contacts: '/contacts' });
@@ -42,6 +42,10 @@ const pages: Readonly<Record<Name, Page>> = {
 
 const order: readonly Name[] = ['home', 'about', 'contacts'];
 
+/** The document title for a route: one pure function, so a server could reuse it. */
+export const pageTitle = (route: Route | undefined): string =>
+  `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`;
+
 export const RoutingView = define<State, Msg>('gy-routing-view', {
   // One streaming command: the current location now, then every change (ADR 0009).
   init: () => [
@@ -52,7 +56,10 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
     Back: () => ({ _tag: 'Back' }),
   },
   update: {
-    Routed: (_s, { location }) => ({ location, route: app.match(location.href) }),
+    Routed: (_s, { location }) => {
+      const route = app.match(location.href);
+      return [{ location, route }, [setTitle(pageTitle(route))]];
+    },
     Back: (s) => [s, [back()]],
   },
   // Cross-fade between pages (an enhancement: skipped without support or with reduced motion).

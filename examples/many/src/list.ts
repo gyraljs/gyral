@@ -1,4 +1,4 @@
-import { child, css, define, html, repeat } from '@gyral/core';
+import { child, css, define, html, random, repeat, toInt } from '@gyral/core';
 import { Item, type ItemOutput, type ItemSeed } from './item.js';
 
 export interface State {
@@ -9,29 +9,41 @@ export interface State {
 type Seed = Omit<ItemSeed, 'id'>;
 
 export type Msg =
-  | { readonly _tag: 'Add'; readonly seeds: readonly Seed[] }
+  | { readonly _tag: 'Add'; readonly count: number }
+  | { readonly _tag: 'Seeded'; readonly seeds: readonly Seed[] }
   | { readonly _tag: 'Item'; readonly id: number; readonly out: ItemOutput };
 
-/** Randomness lives at the intent edge so reducers stay pure (see bead gyral-czi.10). */
-export function randomSeed(): Seed {
-  const color = `#${Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .padStart(6, '0')}`;
-  return { color, width: Math.floor(Math.random() * 800 + 200) };
+/**
+ * Turns uniform numbers from the random driver into item seeds, two numbers per item. Pure,
+ * so tests feed fixed numbers (randomness is an effect, gyral-czi.10).
+ */
+export function seedsFrom(values: readonly number[]): Seed[] {
+  const seeds: Seed[] = [];
+  for (let n = 0; n + 1 < values.length; n += 2) {
+    const hex = toInt(values[n] ?? 0, 0, 0xffffff)
+      .toString(16)
+      .padStart(6, '0');
+    seeds.push({ color: `#${hex}`, width: toInt(values[n + 1] ?? 0, 200, 999) });
+  }
+  return seeds;
 }
 
 export const List = define<State, Msg>('gy-many-list', {
   init: () => ({ items: [{ id: 0, color: '#ff0000', width: 300 }], nextId: 1 }),
   intent: {
     // Both buttons are the same intent; each carries how many items to add as its value.
-    Add: ({ value }) => ({
-      _tag: 'Add',
-      seeds: Array.from({ length: Number(value) }, randomSeed),
-    }),
+    Add: ({ value }) => {
+      const count = Number(value);
+      return Number.isInteger(count) && count > 0 ? { _tag: 'Add', count } : undefined;
+    },
     Item: child(Item, (out, el) => ({ _tag: 'Item', id: el.item.id, out })),
   },
   update: {
-    Add: (s, m) => ({
+    Add: (s, m) => [
+      s,
+      [random<Msg>(m.count * 2, (values) => ({ _tag: 'Seeded', seeds: seedsFrom(values) }))],
+    ],
+    Seeded: (s, m) => ({
       items: [...s.items, ...m.seeds.map((seed, n) => ({ ...seed, id: s.nextId + n }))],
       nextId: s.nextId + m.seeds.length,
     }),

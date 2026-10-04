@@ -159,6 +159,37 @@ describe('fakeDriver', () => {
     expect(el.state.user).toBe('Second');
   });
 
+  it('streams values into a running call with emitNext and call.emit', async () => {
+    const fake = fakeDriver(users);
+    const el = await mount(fake);
+    await flush();
+    fake.emitNext({ name: 'Ada' });
+    expect(el.state.user).toBe('Ada');
+    fake.emitNext({ name: 'Grace' });
+    expect(el.state.user).toBe('Grace');
+    expect(fake.calls[0]?.settled).toBe(false); // still running: a stream
+
+    const first = fake.calls[0];
+    el.send({ _tag: 'Load', id: 'u2' }); // switch: the first stream is aborted
+    await flush();
+    first?.emit({ name: 'stale' });
+    expect(el.state.user).toBe('Grace');
+    fake.emitNext({ name: 'Second' }); // goes to the newest running call
+    expect(el.state.user).toBe('Second');
+  });
+
+  it('emitNext throws when no call is running', async () => {
+    const fake = fakeDriver(users);
+    const el = await mount(fake);
+    await flush();
+    fake.resolveNext({ name: 'done' });
+    await flush();
+    expect(el.state.user).toBe('done');
+    expect(() => {
+      fake.emitNext({ name: 'x' });
+    }).toThrow(/no running call/);
+  });
+
   it('answers immediately with impl', async () => {
     const fake = fakeDriver(users, { impl: ({ id }) => ({ name: `user ${id}` }) });
     const el = await mount(fake);

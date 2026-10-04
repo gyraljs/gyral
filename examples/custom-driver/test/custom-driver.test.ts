@@ -50,14 +50,14 @@ describe('component with a fake chart driver', () => {
     await el.updateComplete;
     expect(draws(fake.inputs)).toEqual([[1], [2], [2, 1]]);
 
-    // fakeDriver cannot push stream values (no emit handle), so inspect via send().
-    el.send({ _tag: 'Inspect', bar: 0 });
+    // Push a chart click through the running stream, as the real driver would emit it.
+    const stream = fake.calls.find((c) => c.input._tag === 'Clicks');
+    expect(stream?.signal.aborted).toBe(false);
+    stream?.emit(0);
     await el.updateComplete;
     expect(el.shadowRoot?.textContent).toContain('Bar 0:');
     expect(el.shadowRoot?.querySelectorAll('output')[1]?.textContent).toBe('2');
 
-    const stream = fake.calls.find((c) => c.input._tag === 'Clicks');
-    expect(stream?.signal.aborted).toBe(false);
     el.remove();
     await clock.advance(0); // interruption on disconnect completes asynchronously
     expect(stream?.signal.aborted).toBe(true);
