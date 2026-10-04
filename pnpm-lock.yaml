@@ -60,6 +60,16 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
 
+  examples/bmi-nested:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/counter:
     dependencies:
       '@gyral/core':
@@ -135,6 +145,29 @@ importers:
       tsx:
         specifier: 4.23.15
         version: 4.23.15
+
+  examples/many:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  examples/nested-folders:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
   examples/routing-view:
     dependencies:

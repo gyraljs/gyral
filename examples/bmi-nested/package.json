@@ -1,0 +1,16 @@
+{
+  "name": "@gyral-examples/bmi-nested",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js advanced/bmi-nested example (and intermediate/bmi-typescript).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
