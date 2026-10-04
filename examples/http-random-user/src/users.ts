@@ -19,9 +19,6 @@ export const USER_COUNT = 10;
 export const userUrl = (id: number): string =>
   `https://jsonplaceholder.typicode.com/users/${String(id)}`;
 
-/** A user id in 1..USER_COUNT. Read at the intent edge, so reducers stay pure. */
-export const randomUserId = (): number => Math.floor(Math.random() * USER_COUNT) + 1;
-
 /**
  * `exhaust`: every click asks for "a random user", so any in-flight answer satisfies the
  * clicks that arrive while it loads. Ignoring them avoids redundant requests; `switch`
