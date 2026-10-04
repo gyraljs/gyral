@@ -1,0 +1,25 @@
+{
+  "name": "@gyral/router",
+  "version": "0.0.0",
+  "description": "Gyral router: typed route tables, navigation as commands, History API baseline with Navigation API enhancement.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  }
+}

@@ -99,6 +99,12 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
 
+  packages/router:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
+
 packages:
 
   '@blazediff/core@1.10.0':
