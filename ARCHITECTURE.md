@@ -22,16 +22,17 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
 
-| Layer | Package                                       | Status  | May depend on                                        |
-| ----- | --------------------------------------------- | ------- | ---------------------------------------------------- |
-| 0     | `@gyral/core`                                 | v0 work | `lit`; `effect` only from `src/internal/`            |
-| 1     | `@gyral/testing`                              | planned | core                                                 |
-| 1     | `@gyral/http`, `@gyral/router`, `@gyral/time` | planned | core                                                 |
-| 2     | `@gyral/ssr`                                  | planned | core, router, `@lit-labs/ssr` (behind an adapter)    |
-| 2     | `@gyral/effect`                               | planned | core; peer-depends on `effect` (opt-in API)          |
-| app   | `examples/*`                                  | —       | any public package entry point, never `src/internal` |
+| Layer | Package                        | Status  | May depend on                                        |
+| ----- | ------------------------------ | ------- | ---------------------------------------------------- |
+| 0     | `@gyral/core`                  | v0 work | `lit`; `effect` only from `src/internal/`            |
+| 1     | `@gyral/testing`               | planned | core                                                 |
+| 1     | `@gyral/http`                  | v0 work | core, `@standard-schema/spec` (types only)           |
+| 1     | `@gyral/router`, `@gyral/time` | planned | core                                                 |
+| 2     | `@gyral/ssr`                   | planned | core, router, `@lit-labs/ssr` (behind an adapter)    |
+| 2     | `@gyral/effect`                | planned | core; peer-depends on `effect` (opt-in API)          |
+| app   | `examples/*`                   | —       | any public package entry point, never `src/internal` |
 
-Enforced by `eslint.config.js` (import restrictions) and `scripts/check-public-api.mjs`.
+Enforced by `eslint.config.js` (import restrictions for core and layer-1 packages) and `scripts/check-public-api.mjs`.
 
 ## Inside a package
 

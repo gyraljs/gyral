@@ -1,0 +1,26 @@
+{
+  "name": "@gyral/http",
+  "version": "0.0.0",
+  "description": "Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@standard-schema/spec": "1.1.0"
+  }
+}

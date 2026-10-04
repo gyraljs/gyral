@@ -52,6 +52,27 @@ export default tseslint.config(
     },
   },
   {
+    // Layer 1 (drivers, testing) may depend on @gyral/core only (ARCHITECTURE.md).
+    files: ['packages/{http,router,time,testing}/src/**/*.ts'],
+    ignores: ['packages/*/src/internal/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            {
+              group: ['@gyral/*', '!@gyral/core'],
+              message:
+                'Layer-1 packages may only import @gyral/core (ARCHITECTURE.md). Move shared code into core or invert the dependency.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Internal modules are the only place Effect is allowed.
     files: ['packages/*/src/internal/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
