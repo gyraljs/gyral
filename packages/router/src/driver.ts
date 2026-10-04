@@ -1,33 +1,37 @@
 import type { Driver } from '@gyral/core';
 import { capturedUrl } from './links.js';
+import { createMemorySource, type MemoryOptions } from './memory.js';
+import type { RouterSnapshot, Source } from './source.js';
+import { locationStream, type RouteLocation } from './stream.js';
 
-/** The document location, numbered in the order this router saw changes. */
-export interface RouteLocation {
-  readonly href: string;
-  readonly pathname: string;
-  readonly search: string;
-  readonly hash: string;
-  /** Increases on every URL change seen by this router. */
-  readonly seq: number;
-}
+export type { RouteLocation } from './stream.js';
+export type { RouterSnapshot } from './source.js';
 
 export type RouterInput =
   | { readonly _tag: 'Navigate'; readonly url: string; readonly replace: boolean }
   | { readonly _tag: 'Traverse'; readonly delta: number }
+  | { readonly _tag: 'Title'; readonly title: string }
   | { readonly _tag: 'Listen' };
 
-export interface RouterOptions {
+export interface RouterOptions extends MemoryOptions {
   /** Driver name used for substitution (`el.drivers`). Default `'router'`. */
   readonly name?: string;
-  /** Default: the global window, resolved on first use (safe to import on a server). */
+  /**
+   * `'browser'` (default) drives the real document. `'memory'` keeps entries in memory: no
+   * global URL changes, no `window` needed (tests, servers). See `initial`, `origin`, `linkRoot`.
+   */
+  readonly history?: 'browser' | 'memory';
+  /** Browser history: default the global window, resolved on first use (safe on a server). */
   readonly window?: Window;
-  /** Use the Navigation API when present. Default `true`; `false` forces the History API. */
+  /** Browser history: use the Navigation API when present. Default `true`. */
   readonly navigationApi?: boolean;
-  /** Intercept same-origin link clicks. Default `true`. */
+  /** Browser history: intercept same-origin link clicks. Default `true`. */
   readonly captureLinks?: boolean;
 }
 
 export interface RouterDriver extends Driver<RouterInput, RouteLocation | undefined> {
+  /** The current URL and title as this router sees them. */
+  readonly snapshot: () => RouterSnapshot;
   /** Removes document listeners and ends running `listen` commands. */
   readonly dispose: () => void;
 }
@@ -45,14 +49,7 @@ interface NavigateEventLike extends Event {
   intercept(): void;
 }
 
-interface Source {
-  subscribe(emit: (location: RouteLocation) => void, signal: AbortSignal): Promise<never>;
-  navigate(url: string, replace: boolean): RouteLocation | Promise<RouteLocation> | undefined;
-  traverse(delta: number): void;
-  dispose(): void;
-}
-
-function createSource(options: RouterOptions): Source {
+function createBrowserSource(options: RouterOptions): Source {
   const win = options.window ?? window;
   const nav =
     options.navigationApi === false
@@ -60,19 +57,7 @@ function createSource(options: RouterOptions): Source {
       : (win as { navigation?: NavigationLike }).navigation;
   // Identifies navigations this router started, so only those are intercepted.
   const token = {};
-  let seq = 0;
-  const read = (): RouteLocation => {
-    const { href, pathname, search, hash } = win.location;
-    return { href, pathname, search, hash, seq };
-  };
-  let current = read();
-  const subscribers = new Set<(location: RouteLocation) => void>();
-
-  const notify = (): void => {
-    seq += 1;
-    current = read();
-    for (const deliver of [...subscribers]) deliver(current);
-  };
+  const stream = locationStream(() => win.location);
 
   const navigate = (url: string, replace: boolean) => {
     const target = new URL(url, win.location.href);
@@ -86,12 +71,12 @@ function createSource(options: RouterOptions): Source {
         info: token,
       });
       result.finished.catch(() => undefined); // superseded navigations reject; that's fine
-      return result.committed.then(() => current);
+      return result.committed.then(() => stream.current());
     }
     if (replace) win.history.replaceState(null, '', target.href);
     else win.history.pushState(null, '', target.href);
-    notify();
-    return current;
+    stream.notify();
+    return stream.current();
   };
 
   const onNavigate = (event: Event): void => {
@@ -108,40 +93,33 @@ function createSource(options: RouterOptions): Source {
   };
 
   if (nav === undefined) {
-    win.addEventListener('popstate', notify);
+    win.addEventListener('popstate', stream.notify);
   } else {
     nav.addEventListener('navigate', onNavigate);
-    nav.addEventListener('currententrychange', notify);
+    nav.addEventListener('currententrychange', stream.notify);
   }
   if (options.captureLinks !== false) win.document.addEventListener('click', onClick);
 
   return {
-    // Streams the current location, then every change, until the command is aborted.
-    subscribe: (emit, signal) =>
-      new Promise<never>((_resolve, reject) => {
-        const abort = (): void => {
-          subscribers.delete(emit);
-          const reason: unknown = signal.reason;
-          reject(reason instanceof Error ? reason : new DOMException('Aborted', 'AbortError'));
-        };
-        if (signal.aborted) {
-          abort();
-          return;
-        }
-        subscribers.add(emit);
-        signal.addEventListener('abort', abort, { once: true });
-        emit(current);
-      }),
+    subscribe: stream.subscribe,
     navigate,
     traverse: (delta) => {
       win.history.go(delta);
     },
+    setTitle: (title) => {
+      win.document.title = title;
+    },
+    snapshot: () => ({
+      href: win.location.href,
+      title: win.document.title,
+      length: win.history.length,
+    }),
     dispose: () => {
-      win.removeEventListener('popstate', notify);
+      win.removeEventListener('popstate', stream.notify);
       nav?.removeEventListener('navigate', onNavigate);
-      nav?.removeEventListener('currententrychange', notify);
+      nav?.removeEventListener('currententrychange', stream.notify);
       win.document.removeEventListener('click', onClick);
-      subscribers.clear();
+      stream.clear();
     },
   };
 }
@@ -149,7 +127,9 @@ function createSource(options: RouterOptions): Source {
 /** A router driver. Listeners are installed on first use, never at import time. */
 export function makeRouter(options: RouterOptions = {}): RouterDriver {
   let source: Source | undefined;
-  const use = (): Source => (source ??= createSource(options));
+  const use = (): Source =>
+    (source ??=
+      options.history === 'memory' ? createMemorySource(options) : createBrowserSource(options));
   return {
     name: options.name ?? 'router',
     run: (input, { signal, emit }) => {
@@ -161,8 +141,12 @@ export function makeRouter(options: RouterOptions = {}): RouterDriver {
         case 'Traverse':
           use().traverse(input.delta);
           return undefined;
+        case 'Title':
+          use().setTitle(input.title);
+          return undefined;
       }
     },
+    snapshot: () => use().snapshot(),
     dispose: () => {
       source?.dispose();
       source = undefined;

@@ -67,3 +67,30 @@ the current location immediately, then every change, until the component disconn
 - Routing works with neither URLPattern nor the Navigation API (tested by forcing both off).
 - Components own their routing state: the route is model state derived from `RouteLocation`.
 - SSR will call `app.match(requestUrl)` directly and seed the initial route.
+
+## Addendum: memory history (gyral-ud5.5, 2026-10-04)
+
+`makeRouter({ history: 'memory', initial: '/about', origin?, linkRoot? })` keeps history entries
+in memory: push, replace and `go(n)` (clamped at both ends) work as in a browser, `listen()`
+streams the same way, and the real `window.location` and `document.title` are never touched.
+Uses:
+
+- **Tests:** no global URL mutation to set up and restore (`examples/routing-view` tests).
+- **Servers:** routing without `window` (`linkRoot: null`); the browser history still resolves
+  `window` lazily, so importing the router on a server is safe either way.
+
+Link capture listens on `linkRoot` (default: the global `document` when there is one). Links are
+resolved from their `href` **attribute** against the router's own location, not the document's
+`anchor.href`, so memory history captures in-app links even though the real page has another
+origin. The browser history uses the same rule (a `<base href>` element is not consulted).
+
+`driver.snapshot()` returns `{ href, title, length }` as the router sees them, for assertions.
+
+## Addendum: document titles (gyral-ud5.6, 2026-10-04)
+
+Decision: a **`setTitle(title)` command**, not a `title` field in the route table. Titles often
+depend on data (a product name), not only on the route, so they are computed by a pure
+`pageTitle(…)` function of state. The server's document template calls the same function for
+`<title>`, which keeps server and client titles from one source (`examples/isomorphic`).
+Reducers return `setTitle(pageTitle(…))` alongside the new state, usually from `Routed`. The
+browser history sets `document.title`; the memory history records it in `snapshot().title`.
