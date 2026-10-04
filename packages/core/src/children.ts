@@ -23,16 +23,36 @@ export interface OutputSource<O extends Tagged, E extends Element> {
   readonly outputs?: O;
 }
 
+/** A child class, or a function returning it (for recursive or later-defined components). */
+export type ChildSource<O extends Tagged, E extends Element> =
+  OutputSource<O, E> | (() => OutputSource<O, E>);
+
+// Classes have a prototype; arrow functions (the lazy form) do not.
+const resolveSource = <O extends Tagged, E extends Element>(
+  source: ChildSource<O, E>,
+): OutputSource<O, E> =>
+  'prototype' in source && source.prototype !== undefined
+    ? (source as OutputSource<O, E>)
+    : (source as () => OutputSource<O, E>)();
+
 /**
  * Intent parser for a child component's outputs, typed by the child's output union.
  * `el` is the child element, for reading its props (an item id, for example).
+ *
+ * Pass `() => Child` when the class isn't defined yet, e.g. a component that contains
+ * itself; annotate the constant's type so TypeScript accepts the self-reference:
+ *
+ *   const Folder: GyralElementClass<State, Msg, Props, Out> = define('x-folder', {
+ *     intent: { Child: child(() => Folder, (out, el) => …) }, …
+ *   });
  */
 export function child<O extends Tagged, E extends Element, M>(
-  source: OutputSource<O, E>,
+  source: ChildSource<O, E>,
   toMsg: (output: O, el: E) => M | undefined,
 ): IntentParser<M> {
   return (input: IntentInput) => {
-    if (!(input.target instanceof source) || input.detail === undefined) return undefined;
+    const type = resolveSource(source); // resolved per event, so the lazy form never hits TDZ
+    if (!(input.target instanceof type) || input.detail === undefined) return undefined;
     // Sound: only `emit()` from a component of this class dispatches this detail.
     return toMsg(input.detail as O, input.target);
   };

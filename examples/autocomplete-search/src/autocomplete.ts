@@ -1,6 +1,5 @@
 import { define, html, nothing, repeat, type Next } from '@gyral/core';
-import { debounce } from '@gyral/time';
-import { isKeyOutput } from './key-relay.js';
+import { debounce, delay } from '@gyral/time';
 import { popoverOpen } from './popover.js';
 import { styles } from './styles.js';
 import { suggest } from './wikipedia.js';
@@ -24,7 +23,12 @@ export type Msg =
   | { readonly _tag: 'Found'; readonly query: string; readonly titles: readonly string[] }
   | { readonly _tag: 'Failed'; readonly query: string }
   | { readonly _tag: 'Key'; readonly key: NavKey }
-  | { readonly _tag: 'Pick'; readonly index: number };
+  | { readonly _tag: 'Pick'; readonly index: number }
+  | { readonly _tag: 'Blurred' }
+  | { readonly _tag: 'Dismiss' };
+
+/** Long enough for a click on an option to land after the field loses focus. */
+const BLUR_GRACE_MS = 150;
 
 const NAV_KEYS: readonly string[] = ['ArrowDown', 'ArrowUp', 'Enter', 'Escape'];
 const isNavKey = (key: string): key is NavKey => NAV_KEYS.includes(key);
@@ -77,8 +81,12 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
   init: () => ({ query: '', suggestions: [], highlighted: undefined, open: false, status: 'idle' }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
-    Key: ({ detail }) =>
-      isKeyOutput(detail) && isNavKey(detail.key) ? { _tag: 'Key', key: detail.key } : undefined,
+    Key: ({ key, event }) => {
+      if (key === undefined || !isNavKey(key) || (event as KeyboardEvent).isComposing) return;
+      if (key === 'ArrowDown' || key === 'ArrowUp') event.preventDefault(); // keep the caret
+      return { _tag: 'Key', key };
+    },
+    Blurred: () => ({ _tag: 'Blurred' }),
     Pick: ({ target }) => {
       const index = Number(target.getAttribute('data-index'));
       return Number.isInteger(index) ? { _tag: 'Pick', index } : undefined;
@@ -113,16 +121,15 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
     Failed: (s, m) => (m.query !== s.query ? s : { ...closed(s), status: 'error' }),
     Key: (s, m) => onKey(s, m.key),
     Pick: (s, m) => select(s, m.index),
+    // Close when focus leaves the combobox, after a grace period so option clicks still land.
+    Blurred: (s) => (s.open ? [s, [delay<Msg>(BLUR_GRACE_MS, { _tag: 'Dismiss' })]] : s),
+    Dismiss: (s) => closed(s),
   },
   view: (s, i) => html`
     <div class="field">
       <label for="query">Wikipedia article</label>
-      <span class="combo">
-        <gy-key-relay
-          data-intent=${i.Key}
-          keys="ArrowDown ArrowUp Enter Escape"
-          prevent="ArrowDown ArrowUp"
-        >
+      <span class="combo" data-intent=${i.Blurred} data-intent-on="focusout">
+        <span class="keys" data-intent=${i.Key} data-intent-on="keydown">
           <input
             id="query"
             type="text"
@@ -138,7 +145,7 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
             .value=${s.query}
             data-intent=${i.Typed}
           />
-        </gy-key-relay>
+        </span>
         <ul
           id="suggestions"
           role="listbox"

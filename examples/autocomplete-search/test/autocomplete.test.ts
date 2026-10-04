@@ -155,4 +155,36 @@ describe('<gy-autocomplete>', () => {
     await el.updateComplete;
     expect(el.shadowRoot?.querySelector('[role=status]')?.textContent).toContain('unavailable');
   });
+
+  it('closes the list when focus leaves the combobox', async () => {
+    const { el, input, type, answer } = await mount();
+    input.focus();
+    await type('cy');
+    await answer('cy', ['Cycle']);
+    expect(el.state.open).toBe(true);
+    input.blur();
+    await vi.waitFor(() => {
+      expect(el.state.open).toBe(false);
+    });
+  });
+
+  it('prevents the caret move on arrow keys but not on other keys', async () => {
+    const { input } = await mount();
+    const arrow = new KeyboardEvent('keydown', {
+      key: 'ArrowDown',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    const letter = new KeyboardEvent('keydown', {
+      key: 'x',
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    input.dispatchEvent(arrow);
+    input.dispatchEvent(letter);
+    expect(arrow.defaultPrevented).toBe(true);
+    expect(letter.defaultPrevented).toBe(false);
+  });
 });

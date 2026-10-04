@@ -19,7 +19,7 @@ export const styles = css`
       position: relative;
       display: block;
     }
-    gy-key-relay {
+    .keys {
       display: block;
     }
     input {

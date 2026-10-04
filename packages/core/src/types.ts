@@ -21,6 +21,10 @@ export interface IntentInput {
   readonly formData: FormData | undefined;
   /** The output a child component emitted, when the intent is on a child element. */
   readonly detail: unknown;
+  /** `KeyboardEvent.key` for `keydown`/`keyup` intents. */
+  readonly key: string | undefined;
+  /** For `toggle` intents (popover, `<details>`): the state it changed to. */
+  readonly newState: 'open' | 'closed' | undefined;
 }
 
 /** Read-only context handed to every reducer and to the view (ADR 0007). */
@@ -102,6 +106,8 @@ export interface ComponentSpec<S, M extends Tagged, P> {
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
   readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
   readonly styles?: CSSResultGroup;
+  /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
+  readonly events?: readonly string[];
   /** Driver substitutions by name, for every instance (ADR 0006). */
   readonly drivers?: DriverOverrides;
 }

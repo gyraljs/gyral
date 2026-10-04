@@ -47,3 +47,15 @@ A component is `define(tag, { props?, init, intent, update, view, styles? })`:
   always allowed.
 - Invoker commands (`command="--x"`) become a progressive intent source later (gyral-czi.6).
   They are not part of the baseline (ADR 0003).
+
+## Addendum: more trigger events (gyral-czi.16, 2026-10-04)
+
+Intent listeners run in the **capture phase** on the shadow root, so non-bubbling events reach
+it too. Beyond the default triggers (click, submit, input, change, child outputs), these fire
+through `data-intent-on`: `keydown`, `keyup`, `focusin`, `focusout`, `toggle`. A component can
+add others with `spec.events` (for example `['pointerdown']`). `IntentInput` gains `key`
+(keyboard events) and `newState` (`toggle` on popovers and `<details>`). An element carries one
+`data-intent`, so a second intent on the same control goes on an ancestor (for example a
+`keydown` intent on the wrapper of an input whose `input` intent is on the input itself).
+Parsers may call `event.preventDefault()` to cancel default input handling (arrow keys moving
+the caret); they must not do other side effects.

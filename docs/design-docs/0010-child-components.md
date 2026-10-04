@@ -33,3 +33,10 @@ Status: **accepted** (2026-10-04). Bead: gyral-czi.5. Replaces Cycle's `isolate(
   exhaustively.
 - Instance types include their declared props (`InstanceType<typeof Item>['item']`).
 - Shared state across distant components is a separate concern (signals; not decided yet).
+
+## Addendum: lazy sources for recursion (gyral-czi.13, 2026-10-04)
+
+`child()` also accepts `() => ChildClass`, resolved when an event arrives. A component that
+contains itself (a folder tree) uses `child(() => Folder, …)` and annotates the constant
+(`const Folder: GyralElementClass<S, M, P, O> = define(…)`) so TypeScript accepts the
+self-reference. Instance types expose declared props as writable properties.

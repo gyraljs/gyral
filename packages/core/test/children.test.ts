@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
-import { child, define, emit, html, repeat } from '../src/index.js';
+import { child, define, emit, html, repeat, type GyralElementClass } from '../src/index.js';
 
 interface Item {
   readonly id: string;
@@ -152,5 +152,64 @@ describe('child components (ADR 0010)', () => {
     );
     const [, commands] = splitNext(next);
     expect(commands[0]?.input).toEqual({ _tag: 'Removed' });
+  });
+});
+
+describe('child() with a lazy source', () => {
+  type TreeOut = { readonly _tag: 'Removed' };
+  type TreeMsg =
+    | { readonly _tag: 'Add' }
+    | { readonly _tag: 'Remove' }
+    | { readonly _tag: 'Child'; readonly id: string };
+  interface TreeProps {
+    readonly nodeId: string;
+  }
+
+  // A recursive component: it renders itself and parses its own outputs.
+  const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
+    define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
+      props: { nodeId: { type: String } },
+      init: () => ({ kids: [] }),
+      intent: {
+        Add: () => ({ _tag: 'Add' }),
+        Remove: () => ({ _tag: 'Remove' }),
+        Child: child(
+          () => Tree,
+          (_out, el) => ({ _tag: 'Child', id: el.nodeId }),
+        ),
+      },
+      update: {
+        Add: (s, _m, { props }) => ({
+          kids: [...s.kids, `${props.nodeId}.${String(s.kids.length)}`],
+        }),
+        Remove: (s) => [s, [emit({ _tag: 'Removed' })]],
+        Child: (s, m) => ({ kids: s.kids.filter((k) => k !== m.id) }),
+      },
+      view: (s, i) => html`
+        <button class="add" data-intent=${i.Add}>add</button>
+        <button class="rm" data-intent=${i.Remove}>remove</button>
+        ${repeat(
+          s.kids,
+          (k) => k,
+          (k) => html`<test-tree .nodeId=${k} data-intent=${i.Child}></test-tree>`,
+        )}
+      `,
+    });
+
+  it('lets a component parse outputs from children of its own class', async () => {
+    const root = new Tree();
+    root.nodeId = 'r';
+    document.body.append(root);
+    await root.updateComplete;
+    root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
+    root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
+    await root.updateComplete;
+    expect(root.state.kids).toEqual(['r.0', 'r.1']);
+    const first = root.shadowRoot?.querySelector('test-tree');
+    if (!(first instanceof Tree)) throw new Error('no child tree');
+    await first.updateComplete;
+    first.shadowRoot?.querySelector<HTMLButtonElement>('.rm')?.click();
+    await settle();
+    expect(root.state.kids).toEqual(['r.1']);
   });
 });

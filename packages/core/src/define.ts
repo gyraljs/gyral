@@ -29,8 +29,8 @@ export interface GyralElement<S, M extends Tagged> extends LitElement {
 }
 
 export interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = never> {
-  /** Instances expose their declared props as properties. */
-  new (): GyralElement<S, M> & P;
+  /** Instances expose their declared props as settable properties. */
+  new (): GyralElement<S, M> & { -readonly [K in keyof P]: P[K] };
   readonly spec: ComponentSpec<S, M, P>;
   readonly tagName: string;
   /** Type-only: the outputs this component emits (read by `child()`). */
@@ -117,7 +117,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       this.#pending = [];
       for (const cmd of pending) this.#interpreter.run(cmd);
       if (this.#listening) return;
-      for (const type of INTENT_EVENTS) this.renderRoot.addEventListener(type, this.#onEvent);
+      // Capture phase: non-bubbling events (toggle) reach the root too (ADR 0001).
+      for (const type of new Set([...INTENT_EVENTS, ...(spec.events ?? [])])) {
+        this.renderRoot.addEventListener(type, this.#onEvent, { capture: true });
+      }
       this.#listening = true;
     }
 

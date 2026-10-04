@@ -11,7 +11,7 @@ export type {
   RetryPolicy,
 } from './command.js';
 export { child, emit } from './children.js';
-export type { OutputSource } from './children.js';
+export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
 export {
   defineForm,

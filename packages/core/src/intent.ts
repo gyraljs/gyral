@@ -3,11 +3,33 @@ import type { IntentInput } from './types.js';
 /** Event a child component dispatches on its host to send an output up (ADR 0010). */
 export const OUTPUT_EVENT = 'gyral-output';
 
-/** Events the intent layer listens for on each component's shadow root. */
-export const INTENT_EVENTS = ['click', 'submit', 'input', 'change', OUTPUT_EVENT] as const;
+/**
+ * Events the intent layer listens for on each component's shadow root (capture phase, so
+ * non-bubbling events such as `toggle` are seen too). Only `click`, `submit`, `input`,
+ * `change` and outputs are default triggers; the rest fire via `data-intent-on="…"`.
+ * Components may add more with `spec.events`.
+ */
+export const INTENT_EVENTS = [
+  'click',
+  'submit',
+  'input',
+  'change',
+  'keydown',
+  'keyup',
+  'focusin',
+  'focusout',
+  'toggle',
+  OUTPUT_EVENT,
+] as const;
 
 const isToggle = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
+
+// ToggleEvent (popover, <details>) is not Baseline widely available; read it structurally.
+function toggleState(event: Event): 'open' | 'closed' | undefined {
+  if (event.type !== 'toggle' || !('newState' in event)) return undefined;
+  return event.newState === 'open' ? 'open' : 'closed';
+}
 
 const CLICK_INPUT_TYPES = new Set(['button', 'submit', 'reset', 'image']);
 
@@ -78,5 +100,7 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
     checked: isToggle(target) ? target.checked : undefined,
     formData,
     detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
+    key: event instanceof KeyboardEvent ? event.key : undefined,
+    newState: toggleState(event),
   };
 }

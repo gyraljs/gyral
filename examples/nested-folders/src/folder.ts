@@ -1,4 +1,13 @@
-import { css, define, emit, html, nothing, repeat } from '@gyral/core';
+import {
+  child,
+  css,
+  define,
+  emit,
+  html,
+  nothing,
+  repeat,
+  type GyralElementClass,
+} from '@gyral/core';
 
 export interface State {
   /** Ids of this folder's direct children. Each child owns its own subtree. */
@@ -31,7 +40,13 @@ export function hueOf(id: string): number {
  * list of its direct children; a child removes itself by emitting `Removed` up one level.
  * Ids are paths (`1.2.1`), so making a new one is pure.
  */
-export const Folder = define<State, Msg, Props, FolderOutput>('gy-folder', {
+// The explicit type lets `child(() => Folder, …)` refer to the constant being defined.
+export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define<
+  State,
+  Msg,
+  Props,
+  FolderOutput
+>('gy-folder', {
   props: {
     folderId: { type: String, attribute: 'folder-id' },
     removable: { type: Boolean },
@@ -40,13 +55,11 @@ export const Folder = define<State, Msg, Props, FolderOutput>('gy-folder', {
   intent: {
     Add: () => ({ _tag: 'Add' }),
     Remove: () => ({ _tag: 'Remove' }),
-    // `child(Folder, …)` can't be used here: `Folder` is still being defined (temporal dead
-    // zone). Read the output and the child's id by hand instead.
-    Child: ({ target, detail }) => {
-      const out = detail as FolderOutput | undefined;
-      const id = target.getAttribute('folder-id');
-      return out?._tag === 'Removed' && id !== null ? { _tag: 'Child', id, out } : undefined;
-    },
+    // Lazy source: `Folder` is still being defined here (recursion), so pass a function.
+    Child: child(
+      () => Folder,
+      (out, el) => ({ _tag: 'Child', id: el.folderId, out }),
+    ),
   },
   update: {
     Add: (s, _m, { props }) => ({
