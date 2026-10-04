@@ -100,6 +100,9 @@ importers:
       '@gyral/http':
         specifier: workspace:*
         version: link:../../packages/http
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
@@ -132,6 +135,32 @@ importers:
       tsx:
         specifier: 4.23.15
         version: 4.23.15
+
+  examples/routing-view:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/router':
+        specifier: workspace:*
+        version: link:../../packages/router
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  examples/seconds-elapsed:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
   packages/core:
     dependencies:
@@ -183,6 +212,16 @@ importers:
       '@sinonjs/fake-timers':
         specifier: 15.4.0
         version: 15.4.0
+
+  packages/time:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../testing
 
 packages:
 

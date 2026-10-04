@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Routing — Gyral examples</title>
+    <meta
+      name="description"
+      content="Client-side routing with Gyral: typed routes, captured links and a streaming location."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      @layer reset, base;
+      @layer reset {
+        *,
+        *::before,
+        *::after {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+        }
+      }
+      @layer base {
+        :root {
+          color-scheme: light dark;
+          font-family: system-ui, sans-serif;
+          --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+          --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+        }
+        body {
+          background: var(--surface);
+          color: var(--ink);
+        }
+      }
+    </style>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <gy-routing-view></gy-routing-view>
+  </body>
+</html>

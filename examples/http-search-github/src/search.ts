@@ -1,6 +1,7 @@
 import { css, define, html, nothing, repeat } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
-import { afterPause, searchRepos, type Repo } from './github.js';
+import { debounce } from '@gyral/time';
+import { searchRepos, type Repo } from './github.js';
 
 export type Results =
   | { readonly _tag: 'Idle' }
@@ -38,7 +39,8 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
   update: {
     Typed: (s, m) => [
       { ...s, query: m.query },
-      [afterPause<Msg>(DEBOUNCE_MS, { _tag: 'Search', query: m.query })],
+      // Each keystroke cancels the pending timer; replaces Cycle's Time.debounce(500).
+      [debounce<Msg>(DEBOUNCE_MS, { _tag: 'Search', query: m.query })],
     ],
     Search: (s, m) => {
       const query = m.query.trim();

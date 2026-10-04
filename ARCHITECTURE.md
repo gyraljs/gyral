@@ -31,7 +31,7 @@ Dependencies only point **down** this list. Nothing points up or sideways except
 | 1     | `@gyral/testing` | v0 work | core, `@sinonjs/fake-timers`                                           |
 | 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                             |
 | 1     | `@gyral/router`  | v0 work | core                                                                   |
-| 1     | `@gyral/time`    | planned | core                                                                   |
+| 1     | `@gyral/time`    | v0 work | core                                                                   |
 | 2     | `@gyral/ssr`     | v0 work | core, router, `@lit-labs/ssr` (behind `src/internal/lit.ts`; ADR 0012) |
 | 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                            |
 | app   | `examples/*`     | —       | any public package entry point, never `src/internal`                   |

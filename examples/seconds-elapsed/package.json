@@ -1,17 +1,15 @@
 {
-  "name": "@gyral-examples/http-search-github",
+  "name": "@gyral-examples/seconds-elapsed",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js intermediate/http-search-github example.",
+  "description": "Port of the Cycle.js basic/jsx-seconds-elapsed and intermediate/tsx-seconds-elapsed examples.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"
   },
   "dependencies": {
     "@gyral/core": "workspace:*",
-    "@gyral/http": "workspace:*",
-    "@gyral/time": "workspace:*",
-    "valibot": "1.5.0"
+    "@gyral/time": "workspace:*"
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*"
