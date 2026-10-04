@@ -55,3 +55,8 @@ self-reference. Instance types expose declared props as writable properties.
   forces every reducer to handle it, which is the point of the union).
 - Core also re-exports `classMap`, `styleMap` and `unsafeCSS`, so examples import only
   `@gyral/core`.
+- **Element directives (gyral-czi.17):** `ElementDirective<Args>` plus `directive()` give
+  `<el ${myDirective(…)}>` helpers without boilerplate: subclasses implement
+  `apply(element, args)`; the base checks the part type and renders nothing. `invalid()` is
+  built on it. `keyed(key, template)` is re-exported for "replace this element when the key
+  changes" (restarting CSS animations, resetting a subtree).

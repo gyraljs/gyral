@@ -1,5 +1,4 @@
-import { nothing } from 'lit';
-import { Directive, directive, PartType, type ElementPart, type PartInfo } from 'lit/directive.js';
+import { directive, ElementDirective } from '@gyral/core';
 
 /**
  * The enhanced path (ADR 0003): a top-layer popover placed by CSS anchor positioning. Both are
@@ -15,22 +14,11 @@ export const enhanced = (): boolean =>
  * Shows or hides a `popover="manual"` element to match model state. Without platform support it
  * does nothing, and the list stays an in-flow element shown and hidden by `?hidden`.
  */
-class PopoverOpen extends Directive {
+class PopoverOpen extends ElementDirective<[open: boolean]> {
   readonly #enabled = enhanced();
 
-  constructor(info: PartInfo) {
-    super(info);
-    if (info.type !== PartType.ELEMENT) throw new Error('popoverOpen() must be used on an element');
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  override render(open: boolean): typeof nothing {
-    return nothing;
-  }
-
-  override update(part: ElementPart, [open]: [boolean]): typeof nothing {
-    const el = part.element;
-    if (!this.#enabled || !(el instanceof HTMLElement)) return nothing;
+  apply(el: Element, [open]: [open: boolean]): void {
+    if (!this.#enabled || !(el instanceof HTMLElement)) return;
     if (!el.hasAttribute('popover')) el.setAttribute('popover', 'manual');
     const shown = el.matches(':popover-open');
     // After the hidden attribute changes in this render, so the popover is displayable.
@@ -38,7 +26,6 @@ class PopoverOpen extends Directive {
       if (open && !shown && el.isConnected) el.showPopover();
       if (!open && shown) el.hidePopover();
     });
-    return nothing;
   }
 }
 

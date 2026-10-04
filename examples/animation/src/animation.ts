@@ -1,4 +1,4 @@
-import { css, define, html, repeat, unsafeCSS } from '@gyral/core';
+import { css, define, html, keyed, unsafeCSS } from '@gyral/core';
 
 // Cycle's version tweened coordinates in JS on every frame. Here the model only counts runs;
 // the motion is a CSS animation the browser runs on its own (no per-frame state, no JS timer).
@@ -75,11 +75,10 @@ export const Animation = define<State, Msg>('gy-animation', {
   view: (s, i) => html`
     <button type="button" data-intent=${i.Animate}>Animate it!</button>
     <div class="stage" aria-hidden="true">
-      ${repeat(
-        [s.runs],
+      ${keyed(
         // A new key per run replaces the element, which restarts the CSS animation.
-        (run) => run,
-        (run) => html`<div class=${run === 0 ? 'target' : 'target moving'}></div>`,
+        s.runs,
+        html`<div class=${s.runs === 0 ? 'target' : 'target moving'}></div>`,
       )}
     </div>
   `,

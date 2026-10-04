@@ -85,9 +85,6 @@ importers:
       '@gyral/time':
         specifier: workspace:*
         version: link:../../packages/time
-      lit:
-        specifier: 3.3.3
-        version: 3.3.3
       valibot:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)

@@ -11,7 +11,6 @@
     "@gyral/core": "workspace:*",
     "@gyral/http": "workspace:*",
     "@gyral/time": "workspace:*",
-    "lit": "3.3.3",
     "valibot": "1.5.0"
   },
   "devDependencies": {
