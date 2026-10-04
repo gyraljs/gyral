@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Read more about us — Gyral isomorphic</title>
+    <meta name="description" content="A Gyral app rendered on the server and hydrated in the browser.">
+    <style>
+  @layer reset, base;
+  @layer reset {
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+  }
+  @layer base {
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+      --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
+      --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+    }
+    body { background: var(--surface); color: var(--ink); }
+    gy-iso-app { max-inline-size: 40rem; margin-inline: auto; padding: 2rem 1rem; }
+  }
+</style>
+    <script type="module" src="/src/entry-client.ts"></script>
+  </head>
+  <body>
+    <!--lit-part 0RU5hA5TQA0=--><!--lit-node 0--><gy-iso-app  path="/about" data-gyral-seed="{&quot;state&quot;:{&quot;path&quot;:&quot;/about&quot;},&quot;props&quot;:{}}"><template shadowroot="open" shadowrootmode="open"><style>
+    @layer component {
+      :host {
+        display: block;
+        --accent: oklch(55% 0.18 260);
+      }
+      nav ul {
+        display: flex;
+        gap: 1rem;
+        padding: 0;
+        list-style: none;
+      }
+      a {
+        color: var(--accent);
+      }
+      a[aria-current='page'] {
+        font-weight: 700;
+        text-decoration: none;
+      }
+    }
+  </style><!--lit-part RiRUEswt2Jw=-->
+    <header><!--lit-part fJRp01q+S3U=-->
+  <nav aria-label="Site">
+    <ul>
+      <!--lit-part--><!--lit-part l+H1uDEz0OA=--><li>
+          <!--lit-node 1--><a href="/" aria-current="false"><!--lit-part-->The homepage<!--/lit-part--></a>
+        </li><!--/lit-part--><!--lit-part l+H1uDEz0OA=--><li>
+          <!--lit-node 1--><a href="/about" aria-current="page"><!--lit-part-->Read more about us<!--/lit-part--></a>
+        </li><!--/lit-part--><!--/lit-part-->
+    </ul>
+  </nav>
+<!--/lit-part--></header>
+    <main><!--lit-part VmT7a2EJ2a4=--><h1><!--lit-part-->Read more about us<!--/lit-part--></h1>
+        <p>This is the page where we describe ourselves.</p>
+        <p><a href="mailto:hello@example.com">Contact us</a></p><!--/lit-part--></main>
+  <!--/lit-part--></template></gy-iso-app><!--/lit-part-->
+  </body>
+</html>
