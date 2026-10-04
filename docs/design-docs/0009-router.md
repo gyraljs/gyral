@@ -1,4 +1,4 @@
-# ADR 0009 — Router: typed routes, navigation as commands, re-armed `listen`
+# ADR 0009 — Router: typed routes, navigation as commands, streaming `listen`
 
 Status: **accepted** (2026-10-04). Bead: gyral-ud5.2. Builds on ADR 0003 and ADR 0006.
 
@@ -37,7 +37,7 @@ It looks through `composedPath()`, so anchors inside shadow roots work. `makeRou
 navigationApi: false })` forces the baseline; `captureLinks: false` disables capture.
 Listeners are installed on first use, never at import time (safe to import on a server).
 
-### Incoming URL changes: a re-armed `listen` (no core change)
+### Incoming URL changes (original design: a re-armed `listen`; superseded below)
 
 The interpreter runs a driver once and dispatches once per command, so a driver cannot
 stream. `listen(toMsg, after?)` is a long-poll:
@@ -55,23 +55,12 @@ update: {
 - `listen` uses lane `router:listen` with `switch`, so re-arming replaces the old waiter.
   Disconnecting the element aborts it (ADR 0006 lifecycle).
 
-### Proposed core change (not made here): streaming drivers
+### Streaming (adopted, gyral-ud5.4)
 
-Re-arming is explicit boilerplate. The smallest core change that removes it:
-
-- `packages/core/src/command.ts`: `DriverContext` gains
-  `readonly emit: (output: unknown) => void` (typed as `(output: O) => void` via
-  `Driver<I, O, E>['run']`'s context), documented as "deliver an extra result; ignored after
-  abort".
-- `packages/core/src/internal/interpreter.ts` (`execute`): pass
-  `emit: (o) => { const msg = cmd.onSuccess(o); if (msg !== undefined) dispatch(msg); }`
-  into `driver.run`, guarded by the fiber still running (the existing `guardedDispatch`
-  covers disconnect).
-
-With it, `listen(toMsg)` becomes a single long-running command whose driver `emit`s each
-location until aborted; the public `listen()` signature would stay, and `after` becomes
-unnecessary. This would also serve `@gyral/time` (`periodic`) and WebSocket drivers. To be
-decided with gyral-ud5.3.
+The re-arming long-poll described above was replaced once `DriverContext.emit` landed
+(ADR 0006, "Streaming drivers"). `listen(toMsg)` is now one long-running command: it emits
+the current location immediately, then every change, until the component disconnects. The
+`after` parameter and `Listen.since` are gone. `RouteLocation.seq` remains as an ordering aid.
 
 ## Consequences
 

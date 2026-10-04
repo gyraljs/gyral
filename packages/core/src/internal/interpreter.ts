@@ -31,9 +31,26 @@ const execute = <M>(
   cmd: Command<M>,
   dispatch: (msg: M) => void,
 ): Effect.Effect<void> => {
+  const deliver = (output: unknown): void => {
+    try {
+      const msg = cmd.onSuccess(output);
+      if (msg !== undefined) dispatch(msg);
+    } catch (defect) {
+      console.error('gyral: command mapper threw', defect);
+    }
+  };
   const attempt = Effect.tryPromise({
-    // The input type was erased by command(); it was built for this driver's name.
-    try: (signal) => Promise.resolve(driver.run(cmd.input as never, { signal })),
+    try: (signal) => {
+      let settled = false;
+      const emit = (output: unknown): void => {
+        if (!settled && !signal.aborted) deliver(output);
+      };
+      // The input type was erased by command(); it was built for this driver's name.
+      const result = Promise.resolve(driver.run(cmd.input as never, { signal, emit }));
+      return result.finally(() => {
+        settled = true;
+      });
+    },
     catch: (cause) => new DriverFailure({ cause }),
   });
   return withRetry(attempt, driver.retry).pipe(

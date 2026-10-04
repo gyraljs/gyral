@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { makeHttpDriver } from '../src/index.js';
 
-const ctx = () => ({ signal: new AbortController().signal });
+const noEmit = (): void => undefined;
+
+const ctx = () => ({ signal: new AbortController().signal, emit: noEmit });
 
 function fakeFetch(response: () => Response | Promise<Response>) {
   return vi.fn<typeof fetch>(() => Promise.resolve(response()));
@@ -37,7 +39,9 @@ describe('makeHttpDriver', () => {
     const fetch = fakeFetch(() => Response.json({ ok: 1 }));
     const driver = makeHttpDriver({ fetch, baseUrl: 'https://api.test/v1/' });
     const signal = new AbortController().signal;
-    await expect(driver.run({ url: 'items' }, { signal })).resolves.toEqual({ ok: 1 });
+    await expect(driver.run({ url: 'items' }, { signal, emit: noEmit })).resolves.toEqual({
+      ok: 1,
+    });
     const [url, init] = fetch.mock.calls[0] ?? [];
     expect(url).toBe('https://api.test/v1/items');
     expect(init?.method).toBe('GET');

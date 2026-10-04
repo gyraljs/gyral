@@ -12,15 +12,21 @@ export interface RetryPolicy {
   readonly backoff?: 'fixed' | 'exponential';
 }
 
-export interface DriverContext {
+export interface DriverContext<O = unknown> {
   /** Aborts when the command is switched away or its component disconnects. */
   readonly signal: AbortSignal;
+  /**
+   * Delivers an extra result while the command runs (streaming drivers: routers, timers,
+   * sockets). Each value goes through the command's `onSuccess`. Ignored once the command
+   * has settled or been aborted. A streaming `run` usually never resolves; abort ends it.
+   */
+  readonly emit: (output: O) => void;
 }
 
 /** Performs one kind of side effect. A plain object: easy to fake in tests. */
 export interface Driver<I, O, E = unknown> {
   readonly name: string;
-  readonly run: (input: I, ctx: DriverContext) => O | Promise<O>;
+  readonly run: (input: I, ctx: DriverContext<O>) => O | Promise<O>;
   /** Default policy for this driver's commands. Default `'merge'`. */
   readonly concurrency?: Concurrency;
   readonly retry?: RetryPolicy;

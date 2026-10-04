@@ -115,3 +115,12 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   default clock sleeps through `setTimeout`. That way one API covers drivers, debounces
   and runtime retry delays, and it keeps working if the interpreter moves to
   `effect/Micro` (gyral-czi.9), which has no `TestClock`.
+
+## Streaming drivers (gyral-ud5.4, 2026-10-04)
+
+`DriverContext` has `emit(output)` next to `signal`. A driver calls it to deliver extra
+results while a command runs; each value goes through the command's `onSuccess`. Emits are
+ignored once the command has settled or been aborted (switched away, or the component
+disconnected). A streaming `run` usually returns a promise that never resolves; abort ends
+it. A finite stream may resolve, and its resolved value is delivered last. Used by
+`listen()` in `@gyral/router` and by `@gyral/time`.

@@ -29,20 +29,15 @@ export const back = (): Command<never> => go(-1);
 export const forward = (): Command<never> => go(1);
 
 /**
- * Delivers the next URL change as a message. Without `after` it delivers the current location
- * at once (use it in `init`). Re-arm it from the reducer with the location you received:
+ * Streams the current location, then every URL change, as messages until the component
+ * disconnects (a streaming command, ADR 0006/0009). Start it once, usually from `init`:
  *
- *   Routed: (s, m) => [{ ...s, route: app.match(m.location.href) }, [listen(toRouted, m.location)]]
- *
- * Changes that happen before re-arming are not lost: `after` carries the last `seq` seen.
+ *   init: () => [initial, [listen((location) => ({ _tag: 'Routed', location }))]]
  */
-export function listen<M>(
-  toMsg: (location: RouteLocation) => M | undefined,
-  after?: RouteLocation,
-): Command<M> {
+export function listen<M>(toMsg: (location: RouteLocation) => M | undefined): Command<M> {
   return command<RouterInput, Output, unknown, M>(
     router,
-    { _tag: 'Listen', since: after?.seq ?? -1 },
+    { _tag: 'Listen' },
     {
       onSuccess: (location) => (location === undefined ? undefined : toMsg(location)),
       key: 'router:listen',

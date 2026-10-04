@@ -21,7 +21,7 @@ export interface FakeDriver<I, O, E> extends Driver<I, O, E> {
 
 export interface FakeOptions<I, O, E> {
   /** Answer calls immediately. Without it, calls wait for `resolveNext`/`rejectNext`. */
-  readonly impl?: (input: I, ctx: DriverContext) => O | Promise<O>;
+  readonly impl?: (input: I, ctx: DriverContext<O>) => O | Promise<O>;
   readonly concurrency?: Concurrency;
   readonly retry?: RetryPolicy;
   readonly toError?: (cause: unknown) => E;
@@ -54,7 +54,7 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
     return call;
   };
 
-  const run = (input: I, ctx: DriverContext): O | Promise<O> => {
+  const run = (input: I, ctx: DriverContext<O>): O | Promise<O> => {
     const { impl } = options;
     if (impl !== undefined) {
       calls.push({ input, signal: ctx.signal, resolve: noop, reject: noop, settled: true });

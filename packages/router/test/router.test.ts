@@ -28,10 +28,10 @@ const App = define<State, Msg>('test-router-app', {
   init: () => [{ route: undefined, seen: [] }, [listen(toRouted)]],
   intent: {},
   update: {
-    Routed: (s, m) => [
-      { route: app.match(m.location.href), seen: [...s.seen, m.location.pathname] },
-      [listen(toRouted, m.location)],
-    ],
+    Routed: (s, m) => ({
+      route: app.match(m.location.href),
+      seen: [...s.seen, m.location.pathname],
+    }),
     Go: (s, m) => [s, [navigate(m.url, { replace: m.replace ?? false })]],
     Back: (s) => [s, [back()]],
   },

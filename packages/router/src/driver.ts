@@ -1,7 +1,7 @@
 import type { Driver } from '@gyral/core';
 import { capturedUrl } from './links.js';
 
-/** The document location, numbered so a re-armed `listen` never misses a change. */
+/** The document location, numbered in the order this router saw changes. */
 export interface RouteLocation {
   readonly href: string;
   readonly pathname: string;
@@ -14,7 +14,7 @@ export interface RouteLocation {
 export type RouterInput =
   | { readonly _tag: 'Navigate'; readonly url: string; readonly replace: boolean }
   | { readonly _tag: 'Traverse'; readonly delta: number }
-  | { readonly _tag: 'Listen'; readonly since: number };
+  | { readonly _tag: 'Listen' };
 
 export interface RouterOptions {
   /** Driver name used for substitution (`el.drivers`). Default `'router'`. */
@@ -28,7 +28,7 @@ export interface RouterOptions {
 }
 
 export interface RouterDriver extends Driver<RouterInput, RouteLocation | undefined> {
-  /** Removes listeners and rejects pending `listen` commands. */
+  /** Removes document listeners and ends running `listen` commands. */
   readonly dispose: () => void;
 }
 
@@ -46,7 +46,7 @@ interface NavigateEventLike extends Event {
 }
 
 interface Source {
-  wait(since: number, signal: AbortSignal): Promise<RouteLocation>;
+  subscribe(emit: (location: RouteLocation) => void, signal: AbortSignal): Promise<never>;
   navigate(url: string, replace: boolean): RouteLocation | Promise<RouteLocation> | undefined;
   traverse(delta: number): void;
   dispose(): void;
@@ -66,14 +66,12 @@ function createSource(options: RouterOptions): Source {
     return { href, pathname, search, hash, seq };
   };
   let current = read();
-  const waiters = new Set<(location: RouteLocation) => void>();
+  const subscribers = new Set<(location: RouteLocation) => void>();
 
   const notify = (): void => {
     seq += 1;
     current = read();
-    const ready = [...waiters];
-    waiters.clear();
-    for (const resolve of ready) resolve(current);
+    for (const deliver of [...subscribers]) deliver(current);
   };
 
   const navigate = (url: string, replace: boolean) => {
@@ -118,15 +116,11 @@ function createSource(options: RouterOptions): Source {
   if (options.captureLinks !== false) win.document.addEventListener('click', onClick);
 
   return {
-    wait: (since, signal) => {
-      if (since < current.seq) return Promise.resolve(current);
-      return new Promise((resolve, reject) => {
-        const done = (location: RouteLocation): void => {
-          signal.removeEventListener('abort', abort);
-          resolve(location);
-        };
+    // Streams the current location, then every change, until the command is aborted.
+    subscribe: (emit, signal) =>
+      new Promise<never>((_resolve, reject) => {
         const abort = (): void => {
-          waiters.delete(done);
+          subscribers.delete(emit);
           const reason: unknown = signal.reason;
           reject(reason instanceof Error ? reason : new DOMException('Aborted', 'AbortError'));
         };
@@ -134,10 +128,10 @@ function createSource(options: RouterOptions): Source {
           abort();
           return;
         }
-        waiters.add(done);
+        subscribers.add(emit);
         signal.addEventListener('abort', abort, { once: true });
-      });
-    },
+        emit(current);
+      }),
     navigate,
     traverse: (delta) => {
       win.history.go(delta);
@@ -147,7 +141,7 @@ function createSource(options: RouterOptions): Source {
       nav?.removeEventListener('navigate', onNavigate);
       nav?.removeEventListener('currententrychange', notify);
       win.document.removeEventListener('click', onClick);
-      waiters.clear();
+      subscribers.clear();
     },
   };
 }
@@ -158,10 +152,10 @@ export function makeRouter(options: RouterOptions = {}): RouterDriver {
   const use = (): Source => (source ??= createSource(options));
   return {
     name: options.name ?? 'router',
-    run: (input, { signal }) => {
+    run: (input, { signal, emit }) => {
       switch (input._tag) {
         case 'Listen':
-          return use().wait(input.since, signal);
+          return use().subscribe(emit, signal);
         case 'Navigate':
           return use().navigate(input.url, input.replace);
         case 'Traverse':
