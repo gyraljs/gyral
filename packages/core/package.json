@@ -1,0 +1,25 @@
+{
+  "name": "@gyral/core",
+  "version": "0.0.0",
+  "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "lit": "3.3.3"
+  }
+}

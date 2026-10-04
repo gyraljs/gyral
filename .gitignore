@@ -3,9 +3,17 @@ archive/
 .idea/
 target/
 node_modules
+.pnpm-store/
 
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Build / test output
+dist/
+coverage/
+*.tsbuildinfo
+.vitest-attachments/
+__screenshots__/

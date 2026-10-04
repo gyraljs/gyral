@@ -1,0 +1,13 @@
+{
+  "name": "@gyral-examples/counter",
+  "private": true,
+  "type": "module",
+  "description": "Port of the Cycle.js basic/counter example.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  }
+}

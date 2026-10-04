@@ -1,0 +1,5 @@
+archive/
+.beads/
+pnpm-lock.yaml
+dist/
+.pnpm-store/

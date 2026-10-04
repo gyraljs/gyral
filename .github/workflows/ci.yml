@@ -1,0 +1,21 @@
+# Runs LOCALLY only: `pnpm ci:local` (gh act + Docker). See docs/design-docs/0004-local-ci.md.
+# Do not add push / pull_request / schedule triggers: scripts/check-workflows.mjs rejects them
+# because they would run on GitHub-hosted runners and spend Actions minutes.
+name: ci
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm check
