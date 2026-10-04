@@ -10,6 +10,8 @@ export type {
   Next,
   RetryPolicy,
 } from './command.js';
+export { child, emit } from './children.js';
+export type { OutputSource } from './children.js';
 export { define } from './define.js';
 export { defineForm, field, fieldErrors, form, formDataToObject } from './forms.js';
 export type { FormDefinition, FormValue } from './forms.js';

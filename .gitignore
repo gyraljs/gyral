@@ -17,3 +17,6 @@ coverage/
 *.tsbuildinfo
 .vitest/
 __screenshots__/
+
+# Agent worktrees
+.claude/worktrees/

@@ -19,6 +19,8 @@ export interface IntentInput {
   readonly checked: boolean | undefined;
   /** Submitted data (including the submitter button) when the intent is on a `<form>`. */
   readonly formData: FormData | undefined;
+  /** The output a child component emitted, when the intent is on a child element. */
+  readonly detail: unknown;
 }
 
 /** Read-only context handed to every reducer and to the view (ADR 0007). */

@@ -15,7 +15,16 @@ const effectImports = {
 };
 
 export default tseslint.config(
-  { ignores: ['archive/**', '.beads/**', '.pnpm-store/**', '**/dist/**', 'coverage/**'] },
+  {
+    ignores: [
+      'archive/**',
+      '.beads/**',
+      '.pnpm-store/**',
+      '.claude/worktrees/**',
+      '**/dist/**',
+      'coverage/**',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['**/*.ts'],
