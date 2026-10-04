@@ -43,6 +43,8 @@ export const RandomUser = define<State, Msg>('gy-random-user', {
     UserLoaded: (_s, m) => ({ _tag: 'Loaded', user: m.user }),
     UserFailed: (_s, m) => ({ _tag: 'Failed', message: describeError(m.error) }),
   },
+  // Exposed to CSS as :state(loading) / :state(failed), on this host and for page styles.
+  states: (s) => ({ loading: s._tag === 'Loading', failed: s._tag === 'Failed' }),
   view: (s, i) => html`
     <button type="button" data-intent=${i.GetRandom} aria-busy=${s._tag === 'Loading'}>
       Get random user
@@ -70,7 +72,7 @@ export const RandomUser = define<State, Msg>('gy-random-user', {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
-      button[aria-busy='true'] {
+      :host(:state(loading)) button {
         cursor: progress;
         opacity: 0.7;
       }

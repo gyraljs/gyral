@@ -115,4 +115,10 @@ export interface ComponentSpec<S, M extends Tagged, P> {
    * reorders). Skipped without browser support or when reduced motion is requested.
    */
   readonly viewTransition?: (prev: S, next: S, msg: Tagged) => boolean;
+  /**
+   * Boolean facts about the state, exposed to CSS as custom states:
+   * `states: (s) => ({ loading: s._tag === 'Loading' })` enables `:host(:state(loading))` and
+   * `gy-x:state(loading)`. Applied after each render; feature-detected; not on the server.
+   */
+  readonly states?: (state: S) => Readonly<Record<string, boolean>>;
 }

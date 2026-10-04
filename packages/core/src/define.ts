@@ -10,6 +10,7 @@ import { EMIT } from './children.js';
 import { takeSeed, writeSeed } from './hydration.js';
 import { INTENT_EVENTS, OUTPUT_EVENT, readIntent } from './intent.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
+import { attachStates, type StateSync } from './states.js';
 import { withViewTransition } from './transitions.js';
 import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
 
@@ -83,6 +84,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #afterHydration: readonly Command<M>[] = [];
     /** The latest view-transition update, awaited by updateComplete. */
     #transition: Promise<void> | undefined;
+    /** Mirrors spec.states onto CSS custom states; only attached when the spec asks. */
+    #syncStates: StateSync | undefined =
+      spec.states === undefined || onServer ? undefined : attachStates(this);
 
     get state(): S {
       if (this.#model === undefined) {
@@ -170,6 +174,11 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     protected override render(): unknown {
       return spec.view(this.state, intentNames as IntentNames<M>, this.#ctx());
+    }
+
+    protected override updated(changed: Map<PropertyKey, unknown>): void {
+      super.updated(changed);
+      if (spec.states !== undefined) this.#syncStates?.(spec.states(this.state));
     }
 
     #apply(next: Next<S, M>): void {

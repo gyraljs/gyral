@@ -68,3 +68,12 @@ model still owns "what changed"; CSS (`::view-transition-*`) owns how it looks. 
 0003 enhancement: skipped without the API or when `prefers-reduced-motion: reduce` matches.
 `updateComplete` waits for the transition's update callback, so callers and tests see the new
 DOM. A transition skipped by a newer one still runs its update (per spec).
+
+## Addendum: model state as CSS custom states (gyral-czi.4, 2026-10-04)
+
+`spec.states?: (s) => Record<string, boolean>` mirrors boolean facts about the state onto
+`ElementInternals.states` after each render, so styles react to the model without classes:
+`:host(:state(loading))` inside, `gy-x:state(loading)` outside. ElementInternals is attached
+only when a spec declares `states` (it can be attached once; form-associated components may
+need it). Feature-detected (ADR 0003); never on the server. Accessibility state still belongs
+in ARIA attributes (`aria-busy`); custom states are for styling.

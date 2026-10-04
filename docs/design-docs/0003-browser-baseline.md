@@ -14,12 +14,14 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 
 ## Known enhancement-only features (keep this table current)
 
-| Feature        | Baseline path                                  | Enhancement                        |
-| -------------- | ---------------------------------------------- | ---------------------------------- |
-| Router         | History API + `popstate` + link-click capture  | Navigation API, URLPattern         |
-| Intent sources | `data-intent` with click/submit/input/change   | Invoker commands (`command=`)      |
-| Overlays       | `<dialog>`, `popover` (check status when used) | Anchor positioning                 |
-| Shared state   | Signals via polyfill (`@lit-labs/signals`)     | Native TC39 signals when they ship |
+| Feature        | Baseline path                                  | Enhancement                          |
+| -------------- | ---------------------------------------------- | ------------------------------------ |
+| Router         | History API + `popstate` + link-click capture  | Navigation API, URLPattern           |
+| Intent sources | `data-intent` with click/submit/input/change   | Invoker commands (`command=`)        |
+| Overlays       | `<dialog>`, `popover` (check status when used) | Anchor positioning                   |
+| Shared state   | Signals via polyfill (`@lit-labs/signals`)     | Native TC39 signals when they ship   |
+| Page changes   | Plain re-render                                | View Transitions (`viewTransition`)  |
+| State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`) |
 
 Check a feature's current status in `web-features` / MDN before relying on it, and record the
 answer here.

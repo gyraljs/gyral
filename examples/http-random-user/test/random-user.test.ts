@@ -48,6 +48,19 @@ describe('http-random-user', () => {
     expect(id).toBeLessThanOrEqual(USER_COUNT);
     expect(el.state._tag).toBe('Loading');
     expect(button.getAttribute('aria-busy')).toBe('true');
+    // Model state is visible to CSS as a custom state, from inside and outside the component.
+    expect(el.matches(':state(loading)')).toBe(true);
+    expect(getComputedStyle(button).cursor).toBe('progress');
+  });
+
+  it('clears the loading state and sets failed on error', async () => {
+    const { el, http, settle } = await mount();
+    el.send({ _tag: 'GetRandom', id: 3 });
+    await settle();
+    http.rejectNext({ _tag: 'HttpNetworkError', url: userUrl(3), message: 'offline' });
+    await settle();
+    expect(el.matches(':state(loading)')).toBe(false);
+    expect(el.matches(':state(failed)')).toBe(true);
   });
 
   it('renders the user card on success', async () => {
