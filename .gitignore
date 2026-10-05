@@ -17,6 +17,8 @@ coverage/
 *.tsbuildinfo
 .vitest/
 __screenshots__/
+# Temporary fixtures written by scripts/test/eslint-guardrails.test.mjs
+__lint_fixture_*
 
 # Agent worktrees
 .claude/worktrees/
