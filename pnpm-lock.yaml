@@ -448,9 +448,6 @@ importers:
       '@gyral/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@gyral/time':
-        specifier: workspace:*
-        version: link:../../packages/time
     devDependencies:
       '@gyral/testing':
         specifier: workspace:*

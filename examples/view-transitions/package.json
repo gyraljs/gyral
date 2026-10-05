@@ -8,8 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "@gyral/core": "workspace:*",
-    "@gyral/time": "workspace:*"
+    "@gyral/core": "workspace:*"
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*"
