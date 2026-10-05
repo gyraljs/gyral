@@ -54,6 +54,32 @@ export function writeSeed(
   host.setAttribute(SEED_ATTRIBUTE, JSON.stringify(seed));
 }
 
+/**
+ * Client side, right after hydration (gyral-4k7.12, ADR 0012): Lit SSR writes nothing for
+ * an empty primitive (`''`, `null`, `undefined`), so `<!--lit-part--><!--/lit-part-->`
+ * has no Text node between the markers. Hydration still records the primitive as the
+ * part's committed value, and the next text commit writes `.data` into the
+ * `<!--/lit-part-->` comment instead. Restore the empty Text node a client render would
+ * have created. Harmless for `nothing` and empty iterables, which clear or insert before
+ * the end marker. Shadow roots below `root` are handled by their own hosts.
+ */
+export function fillEmptyTextParts(root: Node): void {
+  const doc = root.ownerDocument ?? (root as Document);
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  const empty: Comment[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    const next = node.nextSibling;
+    if (
+      (node as Comment).data === 'lit-part' &&
+      next instanceof Comment &&
+      next.data === '/lit-part'
+    ) {
+      empty.push(node as Comment);
+    }
+  }
+  for (const start of empty) start.after(doc.createTextNode(''));
+}
+
 /** Client side: reads and removes the seed, if this element was server-rendered by Gyral. */
 export function takeSeed(host: Element): Seed | undefined {
   const raw = host.getAttribute(SEED_ATTRIBUTE);

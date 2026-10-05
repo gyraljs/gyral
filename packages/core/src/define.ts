@@ -9,7 +9,7 @@ import {
 import { dispatchOutput, EMIT } from './children.js';
 import { FOCUS, runFocus, type FocusInput } from './focus.js';
 import type { GyralElement, GyralElementClass } from './element-types.js';
-import { takeSeed, writeSeed } from './hydration.js';
+import { fillEmptyTextParts, takeSeed, writeSeed } from './hydration.js';
 import { runInit } from './init.js';
 import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
 import {
@@ -275,6 +275,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     protected override firstUpdated(changed: Map<PropertyKey, unknown>): void {
       super.firstUpdated(changed);
+      if (this.#serverRendered) fillEmptyTextParts(this.renderRoot); // gyral-4k7.12
       const commands = this.#afterHydration;
       const wantsHydrated = reducers['Hydrated'] !== undefined;
       if (commands.length === 0 && !wantsHydrated) return;
