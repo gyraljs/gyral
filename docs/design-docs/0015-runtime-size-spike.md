@@ -100,3 +100,29 @@ The recommendation above was (c); the owner chose to stay on 3.x for the first r
   under (c)), to be scheduled when 4.x has settled.
 - The spike branches `spike/effect4`, `spike/micro` and `spike/no-effect` are kept as
   reference; they are not merged.
+
+## Addendum: measured against other frameworks (2026-10-05)
+
+The baseline benchmark (gyral-7se.9; repo `gyraljs/benchmarks`, run `results/2026-10-05`,
+harness `0ccf82a`) measured Gyral 0.1.0 on Effect 3 next to six frameworks, each app
+written the way that framework's docs recommend and checked by one shared correctness spec.
+
+|                                          | Solid | Preact |  Lit | Svelte |  Vue | Gyral | React |
+| ---------------------------------------- | ----: | -----: | ---: | -----: | ---: | ----: | ----: |
+| JS gzip KiB, empty app                   |   3.7 |    4.7 |  5.8 |    9.0 | 23.0 |  49.3 |  66.1 |
+| JS gzip KiB, todo app                    |   6.6 |    6.1 |  7.3 |   14.2 | 25.0 |  51.0 |  66.6 |
+| Todo interactive, cold, throttled (ms)   |   450 |    445 |  438 |    475 |  533 |   725 |   801 |
+| Table runtime, geometric mean vs fastest |  1.07 |   1.61 | 3.09 |   1.30 | 1.43 |  3.03 |  1.90 |
+| JS heap after load (MB)                  |  1.13 |   1.17 | 1.20 |   1.19 | 1.32 |  1.71 |  1.55 |
+
+- **Runtime overhead of MVI is negligible:** Gyral is within 4% of plain Lit on 6 of 9 table
+  operations.
+- **Size and startup are the Effect 3 runtime** (about 38 of 49 KiB). Gyral is second
+  largest and starts about 280 ms after Lit, Preact and Solid.
+- **Lit and Gyral's table score is mostly the lit-html 3.3.1+ leak** (gyral-9y6): clear 1,000
+  rows took about 3,746 ms vs 26-40 ms elsewhere, 56 ms on lit-html 3.3.0.
+- **Caveat:** timing ends at the next rendered frame, so differences under about 17 ms are
+  not meaningful; trace-based timing is required before publishing (gyral-7se.12).
+
+The owner chose to benchmark the current runtime before revisiting this decision. Next step:
+benchmark an Effect 4 build with the same harness (`pnpm bench --only=gyral,lit`).

@@ -58,3 +58,15 @@ projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */}
 - Allow `style-src 'unsafe-inline'` in your CSP. Declarative Shadow DOM styles are inline
   `<style>` elements (ADR 0012, CSP addendum).
 - Keep component state and props JSON-serializable. They travel in the hydration seed.
+
+## Known issue: lit-html 3.3.1+ list leak
+
+Since lit-html 3.3.1, removing items rendered with `repeat()` leaves one comment node in the
+DOM per removed item (upstream [lit/lit#5010](https://github.com/lit/lit/issues/5010) and
+[#5298](https://github.com/lit/lit/issues/5298), open as of 2026-10-05). Lists that churn
+keep growing the DOM, and bulk changes get slow: in the Gyral benchmark, clearing 1,000 rows
+took about 3,700 ms on lit-html 3.3.3 and 56 ms on 3.3.0. It affects every Lit-based app,
+not only Gyral. Tracked in gyral-9y6, which decides between pinning, a Gyral-side
+workaround and an upstream fix. Until then, an app with long, frequently changing lists can
+pin lit-html with an override (pnpm: `"pnpm": { "overrides": { "lit-html": "3.3.0" } }` in
+`package.json`; npm: `"overrides": { "lit-html": "3.3.0" }`).
