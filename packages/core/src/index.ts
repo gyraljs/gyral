@@ -64,6 +64,8 @@ export { runInit } from './init.js';
 export { invalid } from './invalid.js';
 export { findInScope, labelledBy } from './accessible-name.js';
 export { liveBoolean } from './live-boolean.js';
+export { textarea, textareaMarkup } from './textarea.js';
+export type { TextareaAttribute, TextareaOptions } from './textarea.js';
 export type { Styles } from './styles.js';
 // Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
 export { HIDDEN_MARKER, isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
