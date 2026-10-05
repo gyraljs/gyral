@@ -71,3 +71,11 @@ define<State, Msg, { readonly label: string; readonly size: number; readonly not
 - `required: true` is a contract with the parent; a missing value logs
   `<tag> is missing required prop(s): …` once per instance, at first render (server or client).
 - Migration: add `required: true` to props that are always set by their parent.
+
+## Addendum: props that shadow built-ins (gyral-czi.33, 2026-10-04)
+
+A declared prop whose name is a built-in element property (`hidden`, `title`, `id`, `slot`,
+`style`, `dir`, `lang`, `inert`, …) replaces that property with Lit's reactive accessor, so
+setting it silently changes platform behaviour: gyral-shop's form disappeared because a prop
+was named `hidden`. `define()` now warns once, in the browser, listing the offending names
+(`name in HTMLElement.prototype`). Rename such props (`isHidden`, `heading`, `itemId`).

@@ -27,6 +27,7 @@ import {
   readRawProps,
   restoreProps,
   sameProps,
+  shadowedBuiltins,
   type PropTable,
 } from './props.js';
 import { attachStates, type StateSync } from './states.js';
@@ -69,6 +70,14 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 ): GyralElementClass<S, M, P, O> {
   const propTable = (spec.props ?? {}) as PropTable;
   const propNames = Object.keys(propTable);
+  const shadowed = onServer ? [] : shadowedBuiltins(propNames);
+  if (shadowed.length > 0) {
+    console.warn(
+      `<${tag}> declares prop(s) that shadow built-in element properties: ` +
+        `${shadowed.join(', ')}. Setting them changes platform behaviour ` +
+        `(a prop named "hidden" hides the element). Rename them.`,
+    );
+  }
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
   // Sound: #dispatch() only calls the reducer whose key equals msg._tag.
   const reducers = spec.update as unknown as Readonly<

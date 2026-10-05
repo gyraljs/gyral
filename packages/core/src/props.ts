@@ -48,3 +48,14 @@ export function restoreProps(el: object, names: readonly string[], seeded: Bag):
     if (names.includes(name) && self[name] === undefined) self[name] = value;
   }
 }
+
+/**
+ * Declared props that collide with a built-in element property (`hidden`, `title`, `id`, …).
+ * Lit's reactive accessor replaces the built-in, so setting the prop silently changes what the
+ * platform does with it: a prop named `hidden` hides the element (gyral-czi.33). Browser only:
+ * the server's DOM shim doesn't model the full prototype chain.
+ */
+export function shadowedBuiltins(names: readonly string[]): string[] {
+  if (typeof HTMLElement === 'undefined') return [];
+  return names.filter((name) => name in HTMLElement.prototype);
+}

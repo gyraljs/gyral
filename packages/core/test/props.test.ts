@@ -173,13 +173,38 @@ describe('honest prop types (ADR 0007 addendum)', () => {
   });
 
   it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {
-    define<{ readonly n: number }, never, { readonly id: string }>('test-badge-types', {
-      // @ts-expect-error -- `id: string` needs `required: true` or a `default`
-      props: { id: { type: String } },
+    define<{ readonly n: number }, never, { readonly code: string }>('test-badge-types', {
+      // @ts-expect-error -- `code: string` needs `required: true` or a `default`
+      props: { code: { type: String } },
       init: () => ({ n: 0 }),
       intent: {},
       update: {},
       view: () => html``,
     });
+  });
+
+  it('warns once at define() when a prop shadows a built-in element property (gyral-czi.33)', () => {
+    const warnings: string[] = [];
+    const original = console.warn;
+    console.warn = (message: string) => warnings.push(message);
+    try {
+      define<
+        { readonly n: number },
+        never,
+        { readonly hidden?: boolean; readonly title?: string; readonly label?: string }
+      >('test-shadowing-props', {
+        props: { hidden: { type: Boolean }, title: { type: String }, label: { type: String } },
+        init: () => ({ n: 0 }),
+        intent: {},
+        update: {},
+        view: () => html``,
+      });
+    } finally {
+      console.warn = original;
+    }
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('<test-shadowing-props>');
+    expect(warnings[0]).toContain('hidden, title');
+    expect(warnings[0]).not.toContain('label');
   });
 });
