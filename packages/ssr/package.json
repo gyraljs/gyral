@@ -12,7 +12,8 @@
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./hydrate": "./src/hydrate.ts"
+    "./hydrate": "./src/hydrate.ts",
+    "./static": "./src/static.ts"
   },
   "publishConfig": {
     "exports": {
@@ -23,6 +24,10 @@
       "./hydrate": {
         "types": "./dist/hydrate.d.ts",
         "default": "./dist/hydrate.js"
+      },
+      "./static": {
+        "types": "./dist/static.d.ts",
+        "default": "./dist/static.js"
       }
     }
   },

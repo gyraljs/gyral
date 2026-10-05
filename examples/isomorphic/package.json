@@ -4,7 +4,9 @@
   "type": "module",
   "description": "Port of the Cycle.js advanced/isomorphic example: server-rendered with Declarative Shadow DOM, hydrated on the client.",
   "scripts": {
-    "dev": "tsx server/dev.ts"
+    "dev": "tsx server/dev.ts",
+    "build": "vite build && tsx server/prerender.ts",
+    "start": "tsx server/prod.ts"
   },
   "dependencies": {
     "@gyral/core": "workspace:*",

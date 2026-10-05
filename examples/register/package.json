@@ -4,7 +4,9 @@
   "type": "module",
   "description": "A registration form that validates identically with and without JavaScript (ADR 0008 server half).",
   "scripts": {
-    "dev": "tsx server/dev.ts"
+    "dev": "tsx server/dev.ts",
+    "build": "vite build",
+    "start": "tsx server/prod.ts"
   },
   "dependencies": {
     "@gyral/core": "workspace:*",

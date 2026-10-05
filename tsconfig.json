@@ -10,6 +10,7 @@
     "examples/*/src",
     "examples/*/test",
     "examples/*/server",
+    "examples/*/vite.config.ts",
     "vitest.config.ts"
   ]
 }
