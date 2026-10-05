@@ -49,7 +49,8 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
 >('gy-folder', {
   props: {
     folderId: { type: String, attribute: 'folder-id', required: true },
-    removable: { type: Boolean, required: true },
+    // A boolean attribute: absent on the root folder means "not removable" (found by ui:check).
+    removable: { type: Boolean, default: false },
   },
   init: () => ({ children: [], next: 1 }),
   intent: {
