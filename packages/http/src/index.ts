@@ -2,10 +2,16 @@ import { command, type Command, type Concurrency } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { http, type HttpError, type HttpRequest } from './driver.js';
 
-export { http, makeHttpDriver } from './driver.js';
+export { csrfFromMeta, http, makeHttpDriver } from './driver.js';
 export { submitForm } from './forms.js';
 export type { SubmitFormOptions } from './forms.js';
-export type { HttpDriverOptions, HttpError, HttpMethod, HttpRequest } from './driver.js';
+export type {
+  HeaderSource,
+  HttpDriverOptions,
+  HttpError,
+  HttpMethod,
+  HttpRequest,
+} from './driver.js';
 
 export interface RequestHandlers<O, MS, MF> {
   /** Decodes the response; its output type becomes `onSuccess`'s input. */

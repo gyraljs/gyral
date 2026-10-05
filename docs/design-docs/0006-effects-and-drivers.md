@@ -156,3 +156,12 @@ an inclusive integer range via the pure `toInt(u, min, max)`. Models stay pure, 
 the numbers by substituting the driver by name:
 `el.drivers = { random: fakeDriver(randomDriver, { impl: ({ count }) => … }) }`.
 http-random-user and many use it.
+
+## App-level request headers (gyral-ud5.9, 2026-10-04)
+
+`makeHttpDriver({ headers })` adds default headers to every request through that driver:
+a record, or a function evaluated when each request runs (it receives the request). Per-request
+`headers` override them. `csrfFromMeta(name, header?)` is a ready-made source that reads
+`<meta name=…>` at request time (empty on the server), so components and stores never read
+the DOM: `el.drivers = { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) }`.
+`submitForm` and `HttpRequest.csrf` use the same `csrfFromMeta` mechanism.
