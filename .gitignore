@@ -19,6 +19,8 @@ coverage/
 __screenshots__/
 # Temporary fixtures written by scripts/test/eslint-guardrails.test.mjs
 __lint_fixture_*
+# pnpm ui:check output: screenshots, reports, baselines
+.ui-check/
 
 # Agent worktrees
 .claude/worktrees/

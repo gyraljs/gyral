@@ -63,10 +63,12 @@ export const HelloLastname = define<State, Msg>('gy-hello-lastname', {
         border: 1px solid color-mix(in oklch, currentColor 25%, transparent);
         border-radius: 0.75rem;
         padding: 1rem;
+        /* fieldset defaults to min-content width, which overflowed phones (found by ui:check) */
+        min-inline-size: 0;
       }
       p {
         display: grid;
-        grid-template-columns: 7rem 1fr;
+        grid-template-columns: 7rem minmax(0, 1fr);
         align-items: center;
         gap: 0.25rem 0.75rem;
         margin: 0;
@@ -76,6 +78,7 @@ export const HelloLastname = define<State, Msg>('gy-hello-lastname', {
         color: color-mix(in oklch, currentColor 65%, transparent);
       }
       input {
+        min-inline-size: 0;
         font: inherit;
         padding-block: 0.4rem;
         padding-inline: 0.75rem;

@@ -5,7 +5,7 @@ export const styles = css`
     :host {
       display: block;
       --accent: oklch(55% 0.17 160);
-      --muted: color-mix(in oklch, currentColor 60%, transparent);
+      --muted: color-mix(in oklch, currentColor 75%, transparent);
       --surface: oklch(99% 0 0);
     }
     @supports (color: light-dark(black, white)) {
@@ -15,7 +15,7 @@ export const styles = css`
     }
     .field {
       display: grid;
-      grid-template-columns: minmax(7rem, auto) 1fr;
+      grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
       align-items: center;
       gap: 0.75rem;
       margin-block: 0 0.75rem;
@@ -28,7 +28,10 @@ export const styles = css`
       display: block;
     }
     input {
+      /* The page's border-box reset doesn't reach into shadow roots (found by ui:check). */
+      box-sizing: border-box;
       inline-size: 100%;
+      min-inline-size: 0;
       font: inherit;
       padding: 0.4rem 0.6rem;
       border: 1px solid var(--muted);

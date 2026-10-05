@@ -19,16 +19,20 @@
     "test:watch": "vitest",
     "ci:local": "node scripts/ci-local.mjs",
     "examples": "node scripts/examples.mjs",
-    "size": "node scripts/measure-bundles.mjs"
+    "size": "node scripts/measure-bundles.mjs",
+    "ui:check": "node scripts/ui-check.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.1",
     "@vitest/browser-playwright": "5.0.3",
+    "axe-core": "4.13.0",
     "eslint": "10.12.0",
     "eslint-plugin-compat": "7.0.2",
     "globals": "17.13.0",
+    "pixelmatch": "7.2.0",
     "playwright": "1.63.0",
+    "pngjs": "7.0.0",
     "postcss": "8.5.28",
     "postcss-lit": "1.4.1",
     "prettier": "3.9.9",

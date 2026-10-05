@@ -4,5 +4,6 @@ pnpm-lock.yaml
 dist/
 .pnpm-store/
 .claude/worktrees/
+.ui-check/
 # Golden server-render output (byte-exact; see examples/isomorphic/test)
 **/test/fixtures/
