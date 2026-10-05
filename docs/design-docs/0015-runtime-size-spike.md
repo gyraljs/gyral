@@ -163,3 +163,20 @@ above for 0.2.0 onwards.
 - **Still open:** Gyral remains 3-4x the JavaScript of Lit, Preact or Solid, and Effect 4 is
   about 13 of its 24 KiB. Option (d) is the only way below that; revisit with the published
   benchmark.
+
+## NOTE: no-Effect experiment (experiment, not a decision) (2026-10-05, gyral-das)
+
+Local branch `exp/no-effect` (off `exp/lit330-effect4`, not merged) ports option (d) onto
+the current interpreter, which now also carries devtools tracing. `effect` is removed from
+`@gyral/core`; `internal/runtime.ts` is gone. Interruption is one `AbortController` per
+task, retry schedules are timers that cancel on abort, `queue` chains on the previous
+task's promise, and devtools `interrupted` fires from the abort listener while a command is
+unsettled. All 632 tests pass unchanged (concurrency lanes, retry, streaming, cancellation
+on disconnect, devtools traces), as does `smoke:prod`; the public API is identical.
+
+- Size (`pnpm size`, gzip): counter 11.1 KiB (Effect 4: 24.3), http-search-github 15.1
+  (28.5), isomorphic 16.2 (29.5).
+- Code: 214 lines of hand-written runtime vs 169 for the Effect 4 interpreter + runtime.
+- Benchmarks: `gyral-benchmarks` branch `exp/no-effect`, `COMPARISON-noeffect.md`.
+
+This would reverse ADR 0002's premise; it is recorded here as evidence for the owner.
