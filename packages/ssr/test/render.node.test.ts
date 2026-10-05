@@ -22,7 +22,7 @@ interface State {
 type Msg = { readonly _tag: 'Loaded'; readonly id: string };
 
 define<State, Msg, Props>('ssr-card', {
-  props: { label: { type: String }, items: { attribute: false } },
+  props: { label: { type: String, required: true }, items: { attribute: false, required: true } },
   init: (p) => [
     { title: p.label.toUpperCase(), note: '</script><script>alert(1)</script>' },
     [command(load, p.label, { onSuccess: (id) => ({ _tag: 'Loaded', id }) })],

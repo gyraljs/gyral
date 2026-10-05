@@ -15,7 +15,7 @@ type BadgeMsg = { readonly _tag: 'Pick' };
 
 // Stateless: no init, a pure view of its props that only reports up.
 const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>('test-badge', {
-  props: { label: { type: String } },
+  props: { label: { type: String, required: true } },
   intent: { Pick: () => ({ _tag: 'Pick' }) },
   update: { Pick: (s, _m, { props }) => [s, [emit({ _tag: 'Picked', value: props.label })]] },
   view: (_s, i, { props }) =>

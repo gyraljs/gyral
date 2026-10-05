@@ -24,11 +24,11 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
   'gy-labeled-slider',
   {
     props: {
-      label: { type: String },
-      unit: { type: String },
-      min: { type: Number },
-      max: { type: Number },
-      value: { type: Number },
+      label: { type: String, required: true },
+      unit: { type: String, required: true },
+      min: { type: Number, required: true },
+      max: { type: Number, required: true },
+      value: { type: Number, required: true },
     },
     // Stateless: no init needed.
     intent: {

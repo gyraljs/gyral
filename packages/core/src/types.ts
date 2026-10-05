@@ -114,7 +114,21 @@ export type Update<S, M extends Tagged, P = object> = {
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
 export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
 
-export type PropDeclarations<P> = { readonly [K in keyof P]: PropertyDeclaration };
+/**
+ * One prop's declaration: Lit's `PropertyDeclaration` plus Gyral's honesty rule (ADR 0007
+ * addendum). A prop is `undefined` until a parent, an attribute or a hydration seed sets it,
+ * so a prop whose type excludes `undefined` must say how that is guaranteed:
+ * - `required: true`: a missing value is a bug, reported once per instance at first render;
+ * - `default: value`: used whenever the element's value is `undefined`.
+ * A prop whose type includes `undefined` needs neither.
+ */
+export type PropDeclaration<T> = PropertyDeclaration &
+  (undefined extends T
+    ? { readonly required?: false; readonly default?: T }
+    : | { readonly required: true; readonly default?: undefined }
+      | { readonly required?: false; readonly default: T });
+
+export type PropDeclarations<P> = { readonly [K in keyof P]-?: PropDeclaration<P[K]> };
 
 /** State of a component that keeps none (a pure view of its props). Its `init` is optional. */
 export type Stateless = Readonly<Record<string, never>>;

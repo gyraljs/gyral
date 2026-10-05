@@ -22,7 +22,7 @@ let renders = 0;
 const load = defineDriver<string, string>({ name: 'load', run: (id) => id });
 
 const Card = define<State, Msg, Props>('test-card', {
-  props: { userId: { type: String }, label: { type: String } },
+  props: { userId: { type: String, required: true }, label: { type: String, required: true } },
   init: (props) => ({ draft: '', loadedFor: props.userId, saved: [], fetched: [] }),
   intent: { Save: () => ({ _tag: 'Save' }) },
   update: {
@@ -47,7 +47,7 @@ const Card = define<State, Msg, Props>('test-card', {
 });
 
 const Plain = define<{ readonly n: number }, never, { readonly label: string }>('test-plain', {
-  props: { label: { type: String } },
+  props: { label: { type: String, required: true } },
   init: () => ({ n: 0 }),
   intent: {},
   update: {},
@@ -119,5 +119,67 @@ describe('props (ADR 0007)', () => {
     el.setAttribute('label', 'b');
     await el.updateComplete;
     expect(text(el, 'p')).toBe('b');
+  });
+});
+
+describe('honest prop types (ADR 0007 addendum)', () => {
+  interface BadgeProps {
+    readonly label: string;
+    readonly size: number;
+    readonly note?: string | undefined;
+  }
+
+  const Badge = define<{ readonly n: number }, never, BadgeProps>('test-badge', {
+    props: {
+      label: { type: String, required: true },
+      size: { type: Number, default: 3 },
+      note: { type: String },
+    },
+    init: () => ({ n: 0 }),
+    intent: {},
+    update: {},
+    view: (_s, _i, { props }) =>
+      html`<p>${props.label}|${String(props.size)}|${props.note ?? '-'}</p>`,
+  });
+
+  it('fills unset props from their default, without changing the element', async () => {
+    const el = new Badge();
+    el.label = 'Sale';
+    document.body.append(el);
+    await el.updateComplete;
+    expect(text(el, 'p')).toBe('Sale|3|-');
+    expect((el as unknown as { size: unknown }).size).toBeUndefined();
+    el.size = 5;
+    await el.updateComplete;
+    expect(text(el, 'p')).toBe('Sale|5|-');
+  });
+
+  it('warns once when a required prop is missing at first render', async () => {
+    const warnings: string[] = [];
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.map(String).join(' '));
+    };
+    try {
+      const el = new Badge();
+      document.body.append(el);
+      await el.updateComplete;
+      el.size = 4;
+      await el.updateComplete;
+    } finally {
+      console.warn = original;
+    }
+    expect(warnings).toEqual(['<test-badge> is missing required prop(s): label.']);
+  });
+
+  it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {
+    define<{ readonly n: number }, never, { readonly id: string }>('test-badge-types', {
+      // @ts-expect-error -- `id: string` needs `required: true` or a `default`
+      props: { id: { type: String } },
+      init: () => ({ n: 0 }),
+      intent: {},
+      update: {},
+      view: () => html``,
+    });
   });
 });

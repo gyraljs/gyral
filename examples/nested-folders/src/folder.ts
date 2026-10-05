@@ -48,8 +48,8 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
   FolderOutput
 >('gy-folder', {
   props: {
-    folderId: { type: String, attribute: 'folder-id' },
-    removable: { type: Boolean },
+    folderId: { type: String, attribute: 'folder-id', required: true },
+    removable: { type: Boolean, required: true },
   },
   init: () => ({ children: [], next: 1 }),
   intent: {

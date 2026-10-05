@@ -19,7 +19,14 @@ import {
   revealLightMarkers,
 } from './light-dom.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
-import { readProps, restoreProps, sameProps } from './props.js';
+import {
+  missingRequired,
+  readProps,
+  readRawProps,
+  restoreProps,
+  sameProps,
+  type PropTable,
+} from './props.js';
 import { attachStates, type StateSync } from './states.js';
 import { STORE_SEND, type AnyStore, type StoreOverrides, type StoreSendInput } from './store.js';
 import { StoreBinding } from './store-binding.js';
@@ -58,7 +65,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
   tag: string,
   spec: ComponentSpec<S, M, P>,
 ): GyralElementClass<S, M, P, O> {
-  const propNames = Object.keys(spec.props ?? {});
+  const propTable = (spec.props ?? {}) as PropTable;
+  const propNames = Object.keys(propTable);
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
   // Sound: #dispatch() only calls the reducer whose key equals msg._tag.
   const reducers = spec.update as unknown as Readonly<
@@ -103,6 +111,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     get state(): S {
       if (this.#model === undefined) {
+        const missing = missingRequired(this, propTable);
+        if (missing.length > 0) {
+          console.warn(`<${tag}> is missing required prop(s): ${missing.join(', ')}.`);
+        }
         this.#seenProps = this.#props();
         this.#apply(runInit(spec, this.#seenProps));
         for (const msg of this.initialMessages) this.#dispatch(msg, false);
@@ -185,7 +197,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       super.willUpdate(changed);
       if (onServer) {
         // Server renders run constructor, willUpdate and render only (ADR 0012).
-        writeSeed(this, this.state, this.#props() as Record<string, unknown>, spec.props ?? {});
+        writeSeed(this, this.state, readRawProps(this, propTable), propTable);
         if (isLight(spec)) markLightHost(this);
         return;
       }
@@ -294,7 +306,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     #props(): P {
       // Sound: propNames are exactly the declared props, P's keys.
-      return readProps(this, propNames) as P;
+      return readProps(this, propTable) as P;
     }
   }
 
