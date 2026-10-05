@@ -157,6 +157,11 @@ export const Register = define<State, Msg, Props>('gy-register', {
         color: var(--danger);
         min-block-size: 1lh;
       }
+      /* The form-level alert stays in the DOM (live region) but takes no space while empty. */
+      p.error:empty {
+        min-block-size: 0;
+        margin-block: 0;
+      }
       button {
         font: inherit;
         padding-block: 0.5rem;

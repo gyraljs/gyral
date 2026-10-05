@@ -16,7 +16,8 @@ const FIRST_HMR_PORT = 24700 + (INDEX_PORT - 5100);
 const wanted = process.argv.slice(2);
 
 const examples = readdirSync('examples', { withFileTypes: true })
-  .filter((e) => e.isDirectory() && (wanted.length === 0 || wanted.includes(e.name)))
+  .filter((e) => e.isDirectory() && existsSync(join('examples', e.name, 'package.json')))
+  .filter((e) => wanted.length === 0 || wanted.includes(e.name))
   .map((e, n) => {
     const dir = join('examples', e.name);
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
