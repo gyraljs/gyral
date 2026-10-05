@@ -86,3 +86,35 @@ export function validateDemo(name, demo) {
 /** File stem for a scene: the example name alone when it has one scene. */
 export const sceneStem = (name, sceneId, sceneCount) =>
   sceneCount === 1 ? name : `${name}-${sceneId}`;
+
+/**
+ * Seconds to cut from the start of a recording. Playwright films from the moment the page
+ * opens, so the first frames show a blank or unstyled page; the recorder notes when the page
+ * was ready (network idle, fonts loaded, two frames painted) and cuts up to then.
+ */
+export function trimSeconds(openedAtMs, readyAtMs) {
+  const ms = Math.max(0, readyAtMs - openedAtMs);
+  return Math.round(ms) / 1000;
+}
+
+/** ffmpeg arguments that drop the first `seconds` of `input` (frame-accurate, VP8, no audio). */
+export function trimArgs(input, output, seconds) {
+  return [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-i',
+    input,
+    '-ss',
+    seconds.toFixed(3),
+    '-an',
+    '-c:v',
+    'libvpx',
+    '-b:v',
+    '2M',
+    '-auto-alt-ref',
+    '0',
+    output,
+  ];
+}

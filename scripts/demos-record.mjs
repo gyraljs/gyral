@@ -3,13 +3,21 @@
 // page on gyral.dev): starts the example servers, plays each scene in headless Chromium at
 // 1280×720 with video on, and writes .demos/<example>[-<scene>].webm plus a .png poster.
 // Not part of the gate: recordings are for people. The format is in scripts/lib/demos.mjs.
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { listExamples } from './lib/examples.mjs';
-import { FRAME, OUT_DIR, parseArgs, sceneStem, validateDemo } from './lib/demos.mjs';
+import {
+  FRAME,
+  OUT_DIR,
+  parseArgs,
+  sceneStem,
+  trimArgs,
+  trimSeconds,
+  validateDemo,
+} from './lib/demos.mjs';
 
 const { options, errors, usage } = parseArgs(process.argv.slice(2), process.env);
 if (errors.length > 0) {
@@ -65,6 +73,8 @@ const stopServers = () => {
 };
 
 mkdirSync(OUT_DIR, { recursive: true });
+const hasFfmpeg = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0;
+if (!hasFfmpeg) console.warn('ffmpeg not found: recordings keep their unstyled first frames.');
 const raw = join(OUT_DIR, '.raw');
 const browser = await chromium.launch();
 let failed = 0;
@@ -84,6 +94,7 @@ try {
         recordVideo: { dir: raw, size: FRAME },
       });
       const page = await context.newPage();
+      const openedAt = performance.now(); // the video starts with the page
       const posterPath = join(OUT_DIR, `${stem}.png`);
       let posterTaken = false;
       const helpers = {
@@ -95,13 +106,29 @@ try {
       };
       try {
         await page.goto(base + (scene.path ?? '/'), { waitUntil: 'networkidle' });
+        // Styled and painted: fonts loaded, then two frames.
+        // (A string: it runs in the page, where document and requestAnimationFrame exist.)
+        await page.evaluate(
+          'document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))',
+        );
+        const cut = trimSeconds(openedAt, performance.now());
         await scene.run(page, helpers);
         if (!posterTaken) await helpers.poster();
         await page.waitForTimeout(400); // the last frame stays on screen briefly
         const video = page.video();
         await context.close(); // flushes the video file
         const videoPath = join(OUT_DIR, `${stem}.webm`);
-        if (video !== null) renameSync(await video.path(), videoPath);
+        if (video !== null) {
+          const recorded = await video.path();
+          // Cut the blank and unstyled frames before the page was ready (gyral-xpd).
+          const trimmed = hasFfmpeg
+            ? spawnSync('ffmpeg', trimArgs(recorded, videoPath, cut), { stdio: 'inherit' })
+            : undefined;
+          if (trimmed?.status !== 0) {
+            if (hasFfmpeg) console.warn(`${stem}: ffmpeg trim failed, keeping the full recording`);
+            renameSync(recorded, videoPath);
+          }
+        }
         console.log(`${stem.padEnd(28)} ${videoPath}  ${posterPath}`);
       } catch (error) {
         failed += 1;
