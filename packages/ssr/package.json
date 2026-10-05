@@ -4,6 +4,7 @@
   "description": "Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.",
   "type": "module",
   "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
   "sideEffects": [
     "./src/hydrate.ts",
     "./dist/hydrate.js",

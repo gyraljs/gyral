@@ -4,6 +4,7 @@
   "description": "Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.",
   "type": "module",
   "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",

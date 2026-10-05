@@ -4,6 +4,7 @@
   "description": "Gyral devtools: an in-page timeline of messages, state, commands and stores (development builds).",
   "type": "module",
   "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
   "sideEffects": [
     "./src/panel.ts",
     "./dist/panel.js"

@@ -4,6 +4,7 @@
   "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
   "type": "module",
   "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",

@@ -56,3 +56,6 @@ pnpm ci:local                                # run CI locally (Docker + gh act)
 ## License
 
 MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE) (Cycle.js attribution).
+
+Gyral, gyraljs and the Gyral logo are trademarks of The Zoop Troop, Inc. Logos and usage
+guidelines: [gyraljs/brand](https://github.com/gyraljs/brand).

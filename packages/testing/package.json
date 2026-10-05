@@ -4,6 +4,7 @@
   "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.",
   "type": "module",
   "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
