@@ -176,3 +176,14 @@ including those inside nested shadow roots, re-scanning until nested children ha
 throws if any problem was recorded (Lit's dev-mode banner excepted). `mountSsr(html, { stores:
 false })` withholds the seed, to prove a test depends on it. Import component modules after
 mounting so they hydrate in place.
+
+## Property tests from schemas (gyral-czi.11, 2026-10-04)
+
+`@gyral/testing/arbitraries` (optional; needs `fast-check` 4) turns a Standard Schema into a
+fast-check arbitrary: `arbitraryFrom(schema)`. It reads Standard JSON Schema when the library
+implements it (Zod 4 does), or takes `{ toJsonSchema }` for libraries that don't yet (Valibot:
+`@valibot/to-json-schema`). Generated values are filtered through the schema itself, so
+refinements JSON Schema can't express still hold. `arbitraryFromJsonSchema(json)` is the
+underlying generator (types, formats, ranges, patterns, enums, arrays, objects, unions, local
+`$ref`s); unsupported keywords throw with a remedy. The community adapters were not used:
+`zod-fast-check` supports only Zod 3 and fast-check 3, and `valibot-fast-check` is 0.1.
