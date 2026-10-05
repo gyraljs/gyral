@@ -40,3 +40,24 @@ modes": `ssg` (rendered at build time), `ssr` (per request), `csr` (client only)
   included. Personalized content must stay `ssr` (or be fetched after hydration).
 - Not covered yet: incremental regeneration, prerendering parameterized routes (pass their paths
   explicitly), and compressing static files at build time.
+
+## Addendum: template whitespace (2026-10-05, gyral-9rf, branch exp/whitespace)
+
+Profiling (gyral-1kq) found Lit's indentation whitespace text nodes to be the main DOM cost in
+Gyral's list rendering: 25 nodes per benchmark row against 9 for compiled frameworks. Gyral's
+`html` and `svg` now minify template strings (`packages/core/src/template-whitespace.ts`).
+
+- **Runtime, not a Vite transform.** A build-time transform only reaches code that Vite
+  compiles; prerender scripts run by tsx or Node, and `@lit-labs/ssr` in plain Node, would keep
+  the original strings, and a different template digest breaks hydration. Minifying inside the
+  tag (once per call site, cached by the strings array) makes server and client identical by
+  construction. Cost: one linear scan per template call site; Lit's own template preparation
+  per call site is far larger.
+- **Rules** (consumer-setup.md, "Template whitespace"): drop newline-containing whitespace
+  where CSS never renders it (template edges, block-level tags, inside edges of
+  `<button>`/`<select>`), collapse elsewhere to one space, never touch raw-text elements,
+  `<pre>`, tags, attributes or comments, never move bindings. Idempotent.
+- **Opt-out:** templates whose text relies on CSS `white-space: pre*` outside `<pre>` import
+  `html` from `lit`.
+- **Verified:** unit tests on tricky templates, golden SSR fixtures regenerated, hydration of an
+  indented page in dev and production Lit, 13 nodes per benchmark row.
