@@ -11,6 +11,10 @@ run on GitHub-hosted runners**, so they cost no Actions minutes:
   `pnpm check`) fails if any other trigger (`push`, `pull_request`, `schedule`, …) appears.
 - They run locally in Docker with [`gh act`](https://github.com/nektos/gh-act):
   `pnpm ci:local`. `.actrc` maps `ubuntu-latest` to `catthehacker/ubuntu:act-latest`.
+- `pnpm ci:local` runs `scripts/ci-local.mjs`, which streams act's output and exits by the
+  **jobs' results** (`🏁 Job succeeded/failed`, parsed by `scripts/lib/act.mjs`), not by act's
+  exit code. On rootless Docker, act can exit 1 after a green job because removing the
+  container times out (gyral-8ht.8). No job result at all counts as a failure.
 
 ## Requirements
 
