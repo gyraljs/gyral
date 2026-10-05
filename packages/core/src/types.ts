@@ -1,4 +1,5 @@
-import type { CSSResultGroup, PropertyDeclaration } from 'lit';
+import type { PropertyDeclaration } from 'lit';
+import type { Styles } from './styles.js';
 import type { DriverOverrides, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
@@ -152,8 +153,11 @@ interface SpecBody<S, M extends Tagged, P> {
   readonly update: Update<S, M, P>;
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
   readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
-  /** Shadow-root styles. Ignored (with a warning) when `shadow: false`. */
-  readonly styles?: CSSResultGroup;
+  /**
+   * Shadow-root styles: `css` templates, plain CSS strings, `CSSStyleSheet`s, or arrays of
+   * them. Ignored (with a warning) when `shadow: false`.
+   */
+  readonly styles?: Styles;
   /**
    * `false` renders the view as the element's own light-DOM children (ADR 0014): document CSS
    * applies, and the server writes plain children instead of a `<template shadowrootmode>`.

@@ -1,16 +1,17 @@
 // Light-DOM render mode (docs/design-docs/0014-light-dom.md).
 import type { CSSResultGroup } from 'lit';
+import { toCssResultGroup, type Styles } from './styles.js';
 
 interface SpecLike {
   readonly shadow?: boolean;
-  readonly styles?: CSSResultGroup;
+  readonly styles?: Styles;
 }
 
 export const isLight = (spec: SpecLike): boolean => spec.shadow === false;
 
 /** Shadow components keep their styles; light ones use the document's (and warn if given). */
 export function componentStyles(spec: SpecLike, tag: string): CSSResultGroup {
-  if (!isLight(spec)) return spec.styles ?? [];
+  if (!isLight(spec)) return spec.styles === undefined ? [] : toCssResultGroup(spec.styles);
   if (spec.styles !== undefined) {
     console.warn(`<${tag}> has shadow: false, so its styles are ignored; use document CSS.`);
   }
