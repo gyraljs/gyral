@@ -64,7 +64,13 @@ export const App = define<State, Msg, Props>('gy-iso-app', {
     @layer component {
       :host {
         display: block;
-        --accent: oklch(55% 0.18 260);
+        --accent: oklch(50% 0.18 260);
+      }
+      /* A lighter accent on dark backgrounds keeps links at AA contrast (found by ui:check). */
+      @supports (color: light-dark(black, white)) {
+        :host {
+          --accent: light-dark(oklch(50% 0.18 260), oklch(78% 0.12 260));
+        }
       }
       nav ul {
         display: flex;
