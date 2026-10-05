@@ -141,3 +141,28 @@ app.post('/register', (c) => formAction(RegisterForm, {
 - The register example uses the round trip. The server stores emails and rejects duplicates on
   both paths, which covers the earlier bead "Register example: JS path persists via the same
   POST route".
+
+## Addendum: native constraints run before `form()` (gyral-czi.37, 2026-10-05)
+
+Native constraint validation (`required`, `type`, `pattern`, `min`/`max`, `minlength`…) runs
+when the form is submitted, **before** the `submit` event fires. If a constraint fails, the
+browser shows its own message and no `submit` event happens, so the `form()` intent never runs
+and the schema's message for that field never appears. This is expected, not a bug (gyral-shop's
+admin hit it with empty required fields).
+
+Choose per form:
+
+- **Native messages for the basics (default).** Keep `required` and friends: they work without
+  JavaScript, are accessible, and match `:user-invalid`. Use the schema for rules HTML can't
+  express (cross-field checks, server-only checks via `rejectWith`).
+- **Schema messages for everything.** Keep the constraints in the server-rendered markup (so
+  no-JS visitors still get native validation), then add `novalidate` once the component is live:
+
+  ```ts
+  update: { Hydrated: (s) => ({ ...s, live: true }), … },
+  view: (s, i) => html`<form data-intent=${i.Save} ?novalidate=${s.live}>…</form>`,
+  ```
+
+  Every submit then reaches `form()`, and the schema's wording shows through `invalid()`.
+  `invalid()` still mirrors errors into native validity, so `:user-invalid` styling keeps
+  working. Tested in `packages/core/test/forms.test.ts`.

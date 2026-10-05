@@ -146,3 +146,41 @@ describe('form() and field() (ADR 0008)', () => {
     expect(el.state.errors).toEqual({});
   });
 });
+
+// ADR 0008 addendum (gyral-czi.37): keep `required` for no-JS visitors, then hand messages to
+// the schema once the component is live by adding `novalidate` in the Hydrated reducer.
+const Named = defineForm(v.object({ name: v.pipe(v.string(), v.minLength(1, 'Enter your name')) }));
+type NameMsg = { readonly _tag: 'Save'; readonly name: string };
+interface NameState {
+  readonly live: boolean;
+  readonly errors: Readonly<Record<string, readonly string[]>>;
+}
+const NameEl = define<NameState, NameMsg>('test-schema-messages', {
+  init: () => ({ live: false, errors: {} }),
+  intent: { Save: form(Named, (d) => ({ _tag: 'Save', name: d.name })) },
+  update: {
+    Save: (s) => ({ ...s, errors: {} }),
+    Hydrated: (s) => ({ ...s, live: true }),
+    IntentRejected: (s, m) => ({ ...s, errors: fieldErrors(m.issues) }),
+  },
+  view: (s, i) => html`
+    <form data-intent=${i.Save} ?novalidate=${s.live}>
+      <input name="name" required ${invalid(s.errors.name)} />
+    </form>
+  `,
+});
+
+describe('schema messages for required fields (gyral-czi.37)', () => {
+  it('shows the schema message once Hydrated adds novalidate', async () => {
+    const el = new NameEl();
+    document.body.append(el);
+    await settle();
+    await el.updateComplete;
+    const formEl = el.shadowRoot?.querySelector('form');
+    if (formEl == null) throw new Error('no form');
+    expect(formEl.noValidate).toBe(true);
+    formEl.requestSubmit();
+    await settle();
+    expect(el.state.errors).toEqual({ name: ['Enter your name'] });
+  });
+});
