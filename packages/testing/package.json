@@ -1,6 +1,6 @@
 {
   "name": "@gyral/testing",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
