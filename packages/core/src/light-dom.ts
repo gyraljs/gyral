@@ -71,7 +71,18 @@ export function revealLightMarkers(host: Element): boolean {
   return own[0]?.data.startsWith('lit-part') === true;
 }
 
-/** Is `@lit-labs/ssr-client/lit-element-hydrate-support.js` loaded (it patches LitElement)? */
-export const hydrateSupportLoaded = (): boolean =>
-  typeof (globalThis as { litElementHydrateSupport?: unknown }).litElementHydrateSupport ===
-  'function';
+/** Lit's public `hydrate()` from `@lit-labs/ssr-client`. */
+export type Hydrate = (value: unknown, container: HTMLElement, options?: object) => void;
+
+/**
+ * Where `@gyral/ssr/hydrate` registers Lit's public `hydrate()` (gyral-czi.38). A global
+ * symbol, not an import, so core doesn't depend on `@lit-labs/ssr-client` and apps without
+ * SSR don't ship it.
+ */
+export const HYDRATE_KEY: unique symbol = Symbol.for('gyral.hydrate') as never;
+
+/** Lit's `hydrate()`, if a server-rendered app loaded `@gyral/ssr/hydrate`. */
+export const lightHydrator = (): Hydrate | undefined => {
+  const fn = (globalThis as { [HYDRATE_KEY]?: unknown })[HYDRATE_KEY];
+  return typeof fn === 'function' ? (fn as Hydrate) : undefined;
+};

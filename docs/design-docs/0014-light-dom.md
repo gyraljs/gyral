@@ -125,3 +125,41 @@ On a server-rendered light host's **first update**:
   it hydrates. `data-gyral-light` stays on the host; it is harmless.
 - **No upstream path yet.** Lit has no supported way for a LitElement to server-render its own
   light DOM. If one lands, the filter can be replaced by it.
+
+## Addendum: production builds rendered light content twice (gyral-czi.38, 2026-10-05)
+
+**Symptom.** In production builds (`vite build`), a server-rendered light-DOM component showed
+its content twice: the inert server copy plus a fresh client render appended after it (found
+by gyral-shop's consent banner). Development builds and every test were clean, because the
+tests ran Lit's development build through the `development` export condition.
+
+**Root cause (confirmed).** The czi.30 fix set Lit's private `_$needsHydration` flag so that
+`@lit-labs/ssr-client`'s hydrate support would call `hydrate()` instead of `render()`. Lit
+mangles private names in its production build:
+
+- Development: `@lit-labs/ssr-client/development/lit-element-hydrate-support.js:42` sets and
+  `:56` reads `this._$needsHydration`.
+- Production: `@lit-labs/ssr-client/lit-element-hydrate-support.js:1` (minified) reads
+  `this._$AG` instead.
+
+So in production the flag Gyral set was never read. The patched `update()` took its `render()`
+branch, and `render()` into a container with no root part appends a second copy after the
+server's children. (Setting `_$AG` by hand is not a fix either: it is an unstable build
+artefact and could change with any Lit release.)
+
+**Fix.** Gyral no longer touches Lit internals for light hosts. `@gyral/ssr/hydrate` registers
+Lit's **public** `hydrate()` (from `@lit-labs/ssr-client`) under `Symbol.for('gyral.hydrate')`
+(core's `HYDRATE_KEY`). On a server-rendered light host's first update, `define()` reveals the
+host's own markers and calls that `hydrate(this.render(), this, this.renderOptions)` before
+`super.update()`. `hydrate()` stores the root part under `_$litPart$`, a deliberate,
+unmangled cross-package key, so the `render()` inside Lit's update finds the part and updates
+it in place, in development and production alike. Without `@gyral/ssr/hydrate` the host falls
+back to a fresh render, as before.
+
+**Guard.** A `browser-prod` Vitest project runs every `*-hydration.test.ts` and
+`*.prod.test.ts` against Lit's production build (no `development` condition), as part of
+`pnpm check`. `lit-build.prod.test.ts` proves that project really loads production Lit.
+Before the fix, six light-DOM hydration tests failed there; they all pass now.
+
+**Remaining private API.** None for light DOM. The czi.31 monitor (upstream light-DOM SSR)
+still applies to the marker-hiding SSR filter.

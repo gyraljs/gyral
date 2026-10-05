@@ -24,7 +24,7 @@ import { runInit } from './init.js';
 import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
 import {
   componentStyles,
-  hydrateSupportLoaded,
+  lightHydrator,
   isLight,
   markLightHost,
   revealLightMarkers,
@@ -252,9 +252,13 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (isLight(spec) && !this.hasUpdated && this.#serverRendered) {
         // Hydrate the server's light view in place: reveal this host's own hidden markers
         // now (not on connect: a deferred child connects mid-way through its parent's
-        // hydrate walk), then let Lit's hydrate support take over (ADR 0014 addendum).
-        if (hydrateSupportLoaded() && revealLightMarkers(this)) {
-          (this as unknown as { _$needsHydration: boolean })._$needsHydration = true;
+        // hydrate walk), then call Lit's public hydrate() ourselves. It leaves the root part
+        // on the host, so the render() inside super.update() updates it in place instead of
+        // appending a second copy. No Lit private fields: their names are mangled in Lit's
+        // production build (ADR 0014, gyral-czi.38).
+        const hydrate = lightHydrator();
+        if (hydrate !== undefined && revealLightMarkers(this)) {
+          hydrate(this.render(), this, this.renderOptions);
         } else {
           this.replaceChildren(); // no hydrate support: fall back to a fresh render
         }

@@ -82,7 +82,7 @@ export type {
 export type { TextareaAttribute, TextareaOptions } from './textarea.js';
 export type { Styles } from './styles.js';
 // Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
-export { HIDDEN_MARKER, isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
+export { HIDDEN_MARKER, HYDRATE_KEY, isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,

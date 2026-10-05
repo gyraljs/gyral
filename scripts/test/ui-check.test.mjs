@@ -70,7 +70,9 @@ describe('validateScenario', () => {
     expect(validateScenario('x', { steps: 'no' })[0]).toContain('"steps" must be an array');
   });
 
-  it('every example ships a valid scenario', async () => {
+  // Imports ~20 scenario modules; under a loaded machine plus the parallel browser projects
+  // that takes longer than the 5 s default.
+  it('every example ships a valid scenario', { timeout: 30_000 }, async () => {
     for (const ex of listExamples([], 5100, resolve('examples'))) {
       const scenario = (await import(pathToFileURL(resolve(ex.dir, 'ui-scenario.mjs')).href))
         .default;
