@@ -15,13 +15,13 @@ const input =
   `<x-shadow>${DSD}<!--lit-part c--><b>s</b><!--/lit-part--></template></x-shadow>`;
 
 const expected =
-  `<x-page><h1>Hi</h1>` +
-  `<x-item defer-hydration>${DSD}<!--lit-part b--><p>in</p><!--/lit-part-->` +
-  `</template></x-item></x-page>` +
+  `<x-page><!--gyral:lit-part a--><h1>Hi</h1>` +
+  `<!--gyral:lit-node 1--><x-item defer-hydration>${DSD}<!--lit-part b--><p>in</p><!--/lit-part-->` +
+  `</template></x-item><!--gyral:/lit-part--></x-page>` +
   `<x-shadow>${DSD}<!--lit-part c--><b>s</b><!--/lit-part--></template></x-shadow>`;
 
 describe('LightFilter (ADR 0014)', () => {
-  it('unwraps light views, strips their hydration comments, keeps nested shadow DSD', () => {
+  it('unwraps light views, hides their hydration comments, keeps nested shadow DSD', () => {
     expect(run([input])).toBe(expected);
   });
 

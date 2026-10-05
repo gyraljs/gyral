@@ -26,14 +26,15 @@ children**.
 - **Server:** `@gyral/ssr` writes the view as plain children of the element, with no DSD
   template. A light-DOM renderer brackets the view, and a streaming filter
   (`packages/ssr/src/internal/light.ts`) unwraps it.
-- **No hydration markers inside light content.** Lit's client hydration walks every
-  `lit-part` comment in its container. A light child's markers sitting in a parent's tree would
-  corrupt the parent's hydration, so the filter strips them inside light regions. Shadow
-  components nested inside keep their DSD and markers.
-- **"Hydration" is a re-render.** A server-rendered light component replaces its server
-  children with one client render of its **seeded state** (the same markup) on its first update.
-  The DOM is not reused, so a nested component inside it is recreated from its props (its own
-  seed goes with the old DOM). Seeded state, init's deferred commands, `Hydrated`,
+- **Hydration markers inside light content are hidden, then revealed per host.** The filter
+  rewrites Lit's markers in light regions to `<!--gyral:lit-part …-->`,
+  `<!--gyral:/lit-part-->` and `<!--gyral:lit-node n-->`, and every light host is marked with
+  `data-gyral-light`. On its first client update, a light host reveals only the markers it owns
+  (those whose nearest light host is itself) and Lit's hydrate support hydrates it **in place**.
+  See the addendum below for the evidence and the mechanism. Shadow components nested inside keep
+  their DSD and markers.
+- **DOM identity is kept.** Server nodes survive hydration, including nested components, so a
+  nested component keeps its own seed. Seeded state, init's deferred commands, `Hydrated`,
   `defer-hydration` handling and custom states work as for shadow components.
 - **Intent isolation without a shadow boundary.** An intent element belongs to the nearest
   Gyral host above it. `define()` registers every class it creates, and intent lookup stops at
@@ -46,8 +47,9 @@ children**.
   form controls) in shadow DOM.
 - No `<slot>`s and no `styles`. Style with document CSS (cascade layers, `@scope` with the tag
   name as the scope root).
-- Light content is re-rendered at hydration: avoid relying on DOM identity across the
-  server→client handover (focus inside it before JS loads is lost).
+- Requires `@gyral/ssr/hydrate` (Lit's hydrate support) in the client entry, as for shadow
+  components. Without it, a server-rendered light component falls back to a fresh render of its
+  seeded state.
 - `view-transition-name` and custom states (`:state()`) work as usual.
 
 ## Tests
@@ -60,3 +62,66 @@ children**.
 - `packages/ssr/test/light-hydration.test.ts`: server markup plus document CSS, takeover from
   the seed, intents and outputs of nested light and shadow children, and a light child inside a
   shadow parent (`defer-hydration`).
+
+## Addendum: root cause and in-place hydration (gyral-czi.30, 2026-10-04)
+
+The first version re-rendered light components on the client. That lost DOM identity, and with
+it the seeds of nested components. The cause, confirmed in Lit's source (versions pinned in this
+repo: `@lit-labs/ssr` 4.1.0, `@lit-labs/ssr-client` 1.1.8):
+
+1. **The server only emits a component's view inside DSD.** In `@lit-labs/ssr/lib/render-value.js`,
+   lines 643–669 (`custom-element-shadow`), `renderShadow()` output is always wrapped in
+   `<template shadowroot>`. `LitElementRenderer.renderLight()` (`lit-element-renderer.js`
+   lines 123–132) only serves the `renderLight()` directive, which renders content **owned by the
+   parent's template** (`@lit-labs/ssr-client/directives/render-light.js`). A component that owns
+   its own light view has no upstream path, so Gyral unwraps the DSD in a stream filter.
+2. **`hydrate()` claims every Lit marker under its container.** In
+   `@lit-labs/ssr-client/development/lib/hydrate-lit-html.js`, line 75, the walk is
+   `createTreeWalker(container, NodeFilter.SHOW_COMMENT)`. It doesn't enter shadow roots, but it
+   does enter light children. Lines 80–107 treat every `lit-part` / `lit-node` / `/lit-part`
+   comment as a part of the current template, and line 81 throws on a second root part.
+   - A nested light host's markers sit inside an ancestor's container, so they would be read as
+     the ancestor's own parts.
+   - The first version stripped them, leaving the light host nothing to hydrate from. That is
+     why `update()` used `replaceChildren()`.
+3. **Nested hosts connect during the parent's walk.** `hydrate-lit-html.js` line 273 removes
+   `defer-hydration` synchronously while walking. A nested light child therefore connects
+   **in the middle of** its parent's walk.
+
+**Fix.** Only comments starting with those three prefixes are acted on (lines 80, 96, 101), so
+the filter **hides** markers in light regions behind a `gyral:` prefix instead of stripping them.
+The server marks every light host with `data-gyral-light`.
+
+On a server-rendered light host's **first update**:
+
+- `revealLightMarkers()` restores exactly the markers whose nearest `data-gyral-light`
+  ancestor is this host. This runs on the first update, not on connect, because of point 3: the
+  child's update runs after the parent's walk has finished.
+- `define()` then sets Lit's `_$needsHydration` flag, the same one
+  `lit-element-hydrate-support.js` sets for shadow roots (line 42). Lit's patched `update()`
+  (lines 51–71) calls `hydrate(value, this)` on the host's own children.
+- Nested light hosts reveal their own markers later, in their own first update, after the parent
+  has removed their `defer-hydration`.
+
+**Tests.**
+
+- `ssr/test/light-hydration.test.ts`: server nodes are the same objects after hydration (page
+  heading, buttons, a nested light child and its button, a nested shadow child, and a light child
+  inside a shadow parent).
+- The same file: nested light children keep seeded state that `init()` couldn't produce (5 and
+  7), and no hydration warnings are logged.
+- `core/test/light-markers.test.ts`: markers are revealed level by level, three light hosts deep.
+- `ssr/test/light.node.test.ts`: the hidden markers and the `data-gyral-light` marks on the
+  server.
+
+**Remaining limitations.**
+
+- **Lit private flag.** `_$needsHydration` is a private, unmangled flag of Lit's labs hydrate
+  support (the `_$` prefix is Lit's convention for cross-package internals). An upstream change
+  would surface as a failing light-hydration test. The fallback (a fresh render) still works.
+- **Hydrate support required.** Without it, server-rendered light content is re-rendered rather
+  than hydrated.
+- **Leftover markup.** The hidden markers of a light host stay in the DOM as plain comments until
+  it hydrates. `data-gyral-light` stays on the host; it is harmless.
+- **No upstream path yet.** Lit has no supported way for a LitElement to server-render its own
+  light DOM. If one lands, the filter can be replaced by it.
