@@ -440,6 +440,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/view-transitions:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   packages/core:
     dependencies:
       '@standard-schema/spec':
