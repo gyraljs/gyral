@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Undo and replay — Gyral examples</title>
+    <meta
+      name="description"
+      content="A pixel editor where undo, redo, a timeline and replay come from keeping every edit as data."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Undo, redo and replay</h1>
+      <p>
+        Paint some pixels, then undo, drag the timeline or press Replay. Every edit is a message
+        kept as data, so the picture is just those edits folded together.
+      </p>
+      <gy-pixel-editor></gy-pixel-editor>
+    </main>
+  </body>
+</html>

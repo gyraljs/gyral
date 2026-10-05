@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Type-ahead race — Gyral examples</title>
+    <meta
+      name="description"
+      content="Two search boxes with the same slow server: one shows stale results when answers arrive out of order, one never does."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      /* Unlayered, so it wins over the shared base layer: two panels need the width. */
+      body > main {
+        max-inline-size: 60rem;
+      }
+    </style>
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Type-ahead without stale results</h1>
+      <p>
+        Type quickly. The simulated server answers short queries slowest, so early requests come
+        back last. Both panels show whatever arrives; the only difference is one word:
+        <code>concurrency</code>.
+      </p>
+      <gy-typeahead-race></gy-typeahead-race>
+    </main>
+  </body>
+</html>

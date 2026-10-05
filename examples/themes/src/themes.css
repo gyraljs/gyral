@@ -1,0 +1,124 @@
+/* Four looks for the same components, as design tokens only (the Zen Garden approach).
+   The components never name a colour, font or radius: they read these custom properties,
+   which inherit into their shadow roots. A theme is a block of tokens and nothing else.
+   The `theme` layer comes after the shared `base` layer, so it wins. */
+@layer reset, base, theme;
+
+@layer theme {
+  :root {
+    /* Calm (the default): follows the system light or dark setting. */
+    color-scheme: light dark;
+    --surface: oklch(97% 0.01 250);
+    --ink: oklch(24% 0.03 250);
+    --muted: oklch(45% 0.03 250);
+    --card: oklch(100% 0 0);
+    --line: oklch(88% 0.02 250);
+    --accent: oklch(52% 0.17 255);
+    --accent-ink: oklch(100% 0 0);
+    --good: oklch(48% 0.13 150);
+    --radius: 0.75rem;
+    --border: 1px;
+    --shadow: 0 0.25rem 1rem oklch(30% 0.05 250 / 0.12);
+    --font-body: system-ui, sans-serif;
+    --font-display: system-ui, sans-serif;
+    --display-weight: 700;
+    --display-case: none;
+    --space: 1rem;
+  }
+  @supports (color: light-dark(black, white)) {
+    :root {
+      --surface: light-dark(oklch(97% 0.01 250), oklch(19% 0.02 250));
+      --ink: light-dark(oklch(24% 0.03 250), oklch(93% 0.01 250));
+      --muted: light-dark(oklch(45% 0.03 250), oklch(75% 0.02 250));
+      --card: light-dark(oklch(100% 0 0), oklch(24% 0.02 250));
+      --line: light-dark(oklch(88% 0.02 250), oklch(35% 0.03 250));
+      --accent: light-dark(oklch(52% 0.17 255), oklch(72% 0.13 255));
+      --accent-ink: light-dark(oklch(100% 0 0), oklch(18% 0.03 255));
+      --good: light-dark(oklch(48% 0.13 150), oklch(78% 0.14 150));
+    }
+  }
+
+  :root[data-theme='midnight'] {
+    color-scheme: dark;
+    --surface: oklch(15% 0.04 285);
+    --ink: oklch(94% 0.02 285);
+    --muted: oklch(76% 0.05 285);
+    --card: oklch(21% 0.06 285);
+    --line: oklch(36% 0.09 285);
+    --accent: oklch(80% 0.16 200);
+    --accent-ink: oklch(16% 0.04 285);
+    --good: oklch(84% 0.17 150);
+    --radius: 1.25rem;
+    --border: 1px;
+    --shadow: 0 0 2rem oklch(70% 0.2 300 / 0.25);
+    --font-body: system-ui, sans-serif;
+    --font-display: system-ui, sans-serif;
+    --display-weight: 800;
+    --display-case: none;
+    --space: 1.15rem;
+  }
+
+  :root[data-theme='paper'] {
+    color-scheme: light;
+    --surface: oklch(95% 0.02 85);
+    --ink: oklch(26% 0.02 60);
+    --muted: oklch(44% 0.03 60);
+    --card: oklch(98% 0.015 85);
+    --line: oklch(80% 0.03 75);
+    --accent: oklch(42% 0.12 30);
+    --accent-ink: oklch(98% 0.015 85);
+    --good: oklch(42% 0.1 140);
+    --radius: 2px;
+    --border: 1px;
+    --shadow: none;
+    --font-body: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --display-weight: 600;
+    --display-case: none;
+    --space: 1.1rem;
+  }
+
+  :root[data-theme='brutalist'] {
+    color-scheme: light;
+    --surface: oklch(93% 0.17 100);
+    --ink: oklch(0% 0 0);
+    --muted: oklch(25% 0 0);
+    --card: oklch(100% 0 0);
+    --line: oklch(0% 0 0);
+    --accent: oklch(0% 0 0);
+    --accent-ink: oklch(93% 0.17 100);
+    --good: oklch(0% 0 0);
+    --radius: 0;
+    --border: 3px;
+    --shadow: 0.4rem 0.4rem 0 oklch(0% 0 0);
+    --font-body: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    --font-display: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+    --display-weight: 800;
+    --display-case: uppercase;
+    --space: 1rem;
+  }
+
+  body {
+    font-family: var(--font-body);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    text-transform: var(--display-case);
+  }
+}
+
+/* Theme changes cross-fade where View Transitions exist (the theme driver starts one). */
+@supports selector(::view-transition-old(root)) and selector(::view-transition-new(root)) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.35s;
+  }
+}
+
+/* Page layout, not theme. */
+@layer base {
+  gy-theme-picker {
+    margin-block: 1.25rem 1.5rem;
+  }
+}

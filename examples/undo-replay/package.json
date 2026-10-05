@@ -1,0 +1,17 @@
+{
+  "name": "@gyral-examples/undo-replay",
+  "private": true,
+  "type": "module",
+  "description": "Pixel editor with undo, redo, a scrubbable timeline and replay: every edit is a message, so history is just data.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
