@@ -66,7 +66,10 @@ export { findInScope, labelledBy } from './accessible-name.js';
 export { liveBoolean } from './live-boolean.js';
 export { textarea, textareaMarkup } from './textarea.js';
 // Devtools event stream (ADR 0017): emitted in development builds only.
-export { DEVTOOLS_ENABLED as devtoolsEnabled } from '#devtools';
+export {
+  DEVTOOLS_ENABLED as devtoolsEnabled,
+  devLiveComponents as devtoolsLiveComponents,
+} from '#devtools';
 export { DEVTOOLS_GLOBAL } from './devtools-events.js';
 export type {
   CommandPhase,

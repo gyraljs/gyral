@@ -11,6 +11,9 @@ importers:
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.12.0)
+      '@gyral/devtools':
+        specifier: workspace:*
+        version: link:packages/devtools
       '@types/node':
         specifier: 24.19.1
         version: 24.19.1
@@ -162,6 +165,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/time
     devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  examples/devtools:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+    devDependencies:
+      '@gyral/devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
       '@gyral/testing':
         specifier: workspace:*
         version: link:../../packages/testing
@@ -356,6 +375,16 @@ importers:
       effect:
         specifier: 3.22.2
         version: 3.22.2
+    devDependencies:
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+
+  packages/devtools:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       lit:
         specifier: 3.3.3

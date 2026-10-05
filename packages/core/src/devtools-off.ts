@@ -13,3 +13,4 @@ export const devHydrated: typeof Dev.devHydrated = noop;
 export const devStore: typeof Dev.devStore = noop;
 export const devCommands: typeof Dev.devCommands = () => noop;
 export const devOwner: typeof Dev.devOwner = () => '';
+export const devLiveComponents: typeof Dev.devLiveComponents = () => [];

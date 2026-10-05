@@ -40,7 +40,17 @@ function emit(make: () => DevEvent): void {
 
 const now = (): number => performance.now();
 
+/** Connected components, so a panel loaded later still lists them (dev builds only). */
+const live = new Map<Element, string>();
+
+/** Components connected right now, for a panel that starts after they did. */
+export function devLiveComponents(): readonly DevComponentRef[] {
+  return [...live].map(([element, tag]) => ref(element, tag));
+}
+
 export function devConnect(element: Element, tag: string, connected: boolean): void {
+  if (connected) live.set(element, tag);
+  else live.delete(element);
   emit(() => ({
     kind: connected ? 'connect' : 'disconnect',
     component: ref(element, tag),

@@ -72,7 +72,7 @@ export default tseslint.config(
   },
   {
     // Layer 1 (drivers, testing) may depend on @gyral/core only (ARCHITECTURE.md).
-    files: ['packages/{http,router,time,testing}/src/**/*.ts'],
+    files: ['packages/{http,router,time,testing,devtools}/src/**/*.ts'],
     ignores: ['packages/*/src/internal/**'],
     rules: {
       'no-restricted-imports': [

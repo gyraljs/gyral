@@ -8,6 +8,7 @@
     "packages/*/src",
     "packages/*/test",
     "examples/*/src",
+    "examples/shared",
     "examples/*/test",
     "examples/*/server",
     "examples/*/vite.config.ts",

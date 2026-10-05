@@ -1,0 +1,34 @@
+{
+  "name": "@gyral/devtools",
+  "version": "0.0.0",
+  "description": "Gyral devtools: an in-page timeline of messages, state, commands and stores (development builds).",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": [
+    "./src/panel.ts",
+    "./dist/panel.js"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "lit": "3.3.3"
+  }
+}

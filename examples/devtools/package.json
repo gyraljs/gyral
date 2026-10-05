@@ -1,0 +1,18 @@
+{
+  "name": "@gyral-examples/devtools",
+  "private": true,
+  "type": "module",
+  "description": "A small app to try the Gyral devtools panel: open it with ?devtools or Alt+Shift+D.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/devtools": "workspace:*",
+    "@gyral/testing": "workspace:*"
+  }
+}

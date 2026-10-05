@@ -38,6 +38,26 @@ must cost nothing in production and almost nothing in development when no panel 
 
 A separate package (gyral-7ld.2), so apps never ship it unless they import it.
 
+```ts
+import { mountDevtools } from '@gyral/devtools';
+const tools = mountDevtools({ open: true }); // tools.unmount() removes everything
+```
+
+- `<gyral-devtools>` is itself a Gyral component (`define()`), styled with its own `--gd-*`
+  tokens in light and dark. `mountDevtools()` installs the hook, ignores the panel's own events
+  (it never watches itself) and delivers events in one batch per microtask.
+- Sections: a **timeline** (newest first, the last 500 events, text filter plus kind
+  checkboxes), **components** (live instances with a JSON preview of their state, read at
+  render time) and **command lanes** (owner, lane, policy, last phase, in-flight count).
+- Components that connected before the panel loaded are listed too: development builds keep a
+  registry of connected components (`devtoolsLiveComponents()`), which the panel reads on mount.
+- Toggle with the button or **Alt+Shift+D**. The panel is a labelled region with a real
+  heading, keyboard-operable controls, and no axe violations (tested).
+- Examples: every example opens it with `?devtools` through `examples/shared/devtools.ts`, a
+  dynamic import behind `import.meta.env.DEV`, so production builds drop it. The
+  `examples/devtools` demo exercises updates, a store and a command lane, and has a `ui:check`
+  scenario.
+
 ## Consequences
 
 - Instrumentation lives at the few places the loop already passes through: `define()`'s
