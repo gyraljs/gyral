@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/testing#readme",
   "repository": {
     "type": "git",

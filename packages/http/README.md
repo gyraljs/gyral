@@ -45,5 +45,5 @@ consumer setup guide (peer dependencies, Vite preset, SSR checklist):
 
 ## License
 
-MIT © The Zoop Troop, Inc. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and
-the Gyral logo are trademarks of The Zoop Troop, Inc.
+MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and
+the Gyral logo are trademarks of Mike Zupper.

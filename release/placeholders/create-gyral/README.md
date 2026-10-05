@@ -7,4 +7,4 @@ Scaffold a new Gyral app (`npm create gyral`).
 This 0.0.0 release only reserves the name. Watch
 [github.com/gyraljs/gyral](https://github.com/gyraljs/gyral) for the first real release.
 
-MIT © The Zoop Troop, Inc.
+MIT © Mike Zupper

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/ssr#readme",
   "repository": {
     "type": "git",

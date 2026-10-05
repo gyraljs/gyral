@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral router: typed route tables, navigation as commands, History API baseline with Navigation API enhancement.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/router#readme",
   "repository": {
     "type": "git",

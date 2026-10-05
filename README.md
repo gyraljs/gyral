@@ -67,5 +67,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) (commits need a DCO sign-off, `git commit
 
 MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE) (Cycle.js attribution).
 
-Gyral, gyraljs and the Gyral logo are trademarks of The Zoop Troop, Inc. Logos and usage
+Gyral, gyraljs and the Gyral logo are trademarks of Mike Zupper. Logos and usage
 guidelines: [gyraljs/brand](https://github.com/gyraljs/brand).

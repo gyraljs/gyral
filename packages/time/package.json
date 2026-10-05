@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral time: delays, debounces, periodic ticks and animation frames as commands.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/time#readme",
   "repository": {
     "type": "git",

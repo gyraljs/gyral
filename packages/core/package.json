@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",
   "repository": {
     "type": "git",

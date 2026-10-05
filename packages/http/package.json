@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.",
   "license": "MIT",
-  "author": "The Zoop Troop, Inc.",
+  "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/http#readme",
   "repository": {
     "type": "git",
