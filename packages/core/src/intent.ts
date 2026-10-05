@@ -1,3 +1,4 @@
+import { commandOf, shimInvokers } from './invokers.js';
 import type { IntentInput, IntentParser, Tagged } from './types.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010). */
@@ -19,6 +20,7 @@ export const INTENT_EVENTS = [
   'focusin',
   'focusout',
   'toggle',
+  'command',
   OUTPUT_EVENT,
 ] as const;
 
@@ -128,6 +130,7 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
     detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
     key: event instanceof KeyboardEvent ? event.key : undefined,
     newState: toggleState(event),
+    command: commandOf(event),
   };
 }
 
@@ -147,6 +150,7 @@ export function listenForIntents(
   for (const type of new Set([...INTENT_EVENTS, ...extra])) {
     root.addEventListener(type, handler, { capture: true });
   }
+  shimInvokers(root); // `command` intents in browsers without invoker commands
 }
 
 /** Parses one event with its matching parser and delivers the message (sync or async). */

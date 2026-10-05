@@ -105,3 +105,14 @@ view: (s, i, { props }) => html`
   itself, and `aria-labelledby` then wins over `aria-label`. Elsewhere it sets `aria-label` to
   `fallback` or the heading's text. It retries once if the heading renders after the component.
 - Prefer a visible `<label>`/`<legend>` inside the component when the component owns the text.
+
+## Addendum: invoker commands as an intent source (gyral-czi.6, 2026-10-04)
+
+An element with `data-intent-on="command"` receives intents for invoker commands aimed at it
+(`<button commandfor="list" command="--add">`). `IntentInput.command` carries `{ command,
+source }`. Browsers with invoker commands dispatch a native `CommandEvent` on the target. Since
+invokers are Baseline newly available, not widely (ADR 0003), Gyral's intent wiring also
+listens for clicks on custom-command (`--…`) invokers and, only when `CommandEvent` is missing,
+dispatches an equivalent `command` CustomEvent on the `commandfor` target, so the same markup
+works everywhere. Built-in commands (`show-modal`, `toggle-popover`, …) are left to the browser.
+`invokersSupported()` is exported. Example: `examples/invoker-commands`.

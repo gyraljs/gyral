@@ -1,5 +1,6 @@
 import type { PropertyDeclaration } from 'lit';
 import type { Styles } from './styles.js';
+import type { CommandInfo } from './invokers.js';
 import type { DriverOverrides, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
@@ -27,6 +28,8 @@ export interface IntentInput {
   readonly key: string | undefined;
   /** For `toggle` intents (popover, `<details>`): the state it changed to. */
   readonly newState: 'open' | 'closed' | undefined;
+  /** For `command` intents: the invoker's command (e.g. `--clear`) and source (gyral-czi.6). */
+  readonly command: CommandInfo | undefined;
 }
 
 /** Reads a declared store's current state, typed by the store (ADR 0013). */

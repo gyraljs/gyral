@@ -1,0 +1,16 @@
+{
+  "name": "@gyral-examples/invoker-commands",
+  "private": true,
+  "type": "module",
+  "description": "Invoker commands (command/commandfor) as Gyral intents, with a fallback where browsers lack them.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}

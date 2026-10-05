@@ -208,6 +208,16 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/invoker-commands:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/isomorphic:
     dependencies:
       '@gyral/core':
