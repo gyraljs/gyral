@@ -56,6 +56,7 @@ export type { FormDefinition, FormRedirected, FormResult, FormValue } from './fo
 export { ElementDirective } from './element-directive.js';
 export { runInit } from './init.js';
 export { invalid } from './invalid.js';
+export { findInScope, labelledBy } from './accessible-name.js';
 export { liveBoolean } from './live-boolean.js';
 export type { Styles } from './styles.js';
 // Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
