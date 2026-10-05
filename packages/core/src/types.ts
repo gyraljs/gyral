@@ -46,6 +46,18 @@ export interface PropsChanged<P> {
   readonly prev: P;
 }
 
+/**
+ * Framework message: the component is live in the browser (ADR 0012 addendum). Sent once,
+ * after the first client render has completed, to every client-side instance. Use it for
+ * progressive enhancement: render the no-JS form on the server and in the first client render
+ * (so hydration matches), then switch to the enhanced UI in the `Hydrated` reducer.
+ */
+export interface Hydrated {
+  readonly _tag: 'Hydrated';
+  /** `true` when the instance resumed from server-rendered markup (a hydration seed). */
+  readonly serverRendered: boolean;
+}
+
 /** One validation problem. `path` is dot-joined and matches the field's `name`. */
 export interface FieldIssue {
   readonly path: string;
@@ -96,6 +108,7 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly PropsChanged?: Reducer<S, M, PropsChanged<P>, P>;
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
+  readonly Hydrated?: Reducer<S, M, Hydrated, P>;
 };
 
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */

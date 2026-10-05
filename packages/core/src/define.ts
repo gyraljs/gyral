@@ -75,6 +75,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #pending: Command<M | IntentRejected>[] = [];
     /** init's commands on the hydration path; started in firstUpdated (ADR 0012). */
     #afterHydration: readonly Command<M | IntentRejected>[] = [];
+    /** Resumed from server markup; reported by the Hydrated message. */
+    #serverRendered = false;
     /** The latest view-transition update, awaited by updateComplete. */
     #transition: Promise<void> | undefined;
     /** Mirrors spec.states onto CSS custom states; only attached when the spec asks. */
@@ -200,16 +202,22 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       // Sound: the seed is this component's own state, serialized by writeSeed() on the server.
       this.#model = { value: seed.state as S };
       this.#afterHydration = commands;
+      this.#serverRendered = true;
     }
 
     protected override firstUpdated(changed: Map<PropertyKey, unknown>): void {
       super.firstUpdated(changed);
       const commands = this.#afterHydration;
-      if (commands.length === 0) return;
+      const wantsHydrated = reducers['Hydrated'] !== undefined;
+      if (commands.length === 0 && !wantsHydrated) return;
       this.#afterHydration = [];
-      // After the hydrating update has fully completed, so results start a fresh update.
+      // After the first (possibly hydrating) update has fully completed, so whatever these
+      // change starts a fresh update instead of diverging from the server markup.
       void this.updateComplete.then(() => {
-        this.#apply([this.state, commands]);
+        if (wantsHydrated) {
+          this.#dispatch({ _tag: 'Hydrated', serverRendered: this.#serverRendered } as Tagged);
+        }
+        if (commands.length > 0) this.#apply([this.state, commands]);
       });
     }
 

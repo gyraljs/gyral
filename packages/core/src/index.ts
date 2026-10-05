@@ -65,6 +65,7 @@ export type {
   IntentRejected,
   Intents,
   PropDeclarations,
+  Hydrated,
   PropsChanged,
   Stateless,
   StoreReader,
