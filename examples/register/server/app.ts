@@ -9,7 +9,20 @@ import { RegisterForm } from '../src/schema.js';
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /**
+   * Registered accounts. The dev server re-creates the app on every request (to follow source
+   * edits), so it creates this once with createState() and passes it in (examples/shared/
+   * dev-fetch.ts); otherwise each app starts its own.
+   */
+  readonly state?: RegisterState;
 }
+
+/** Pretend persistence: the registered emails. */
+export interface RegisterState {
+  readonly emails: Set<string>;
+}
+
+export const createState = (): RegisterState => ({ emails: new Set() });
 
 /** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
 const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
@@ -53,9 +66,9 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
  */
 export function createApp(options: AppOptions): Hono {
   const app = new Hono();
-  // Pretend persistence: registered emails, per app instance. A server-only check (the
-  // browser can't know who registered) answered with rejectWith on both paths.
-  const emails = new Set<string>();
+  // A server-only check (the browser can't know who registered), answered with rejectWith on
+  // both paths.
+  const { emails } = options.state ?? createState();
   app.get('/shared/base.css', (c) => c.body(sharedCss, 200, { 'content-type': 'text/css' }));
   app.get('/', (c) => view(options, { welcome: c.req.query('welcome') }));
   app.post('/', (c) =>
