@@ -11,7 +11,7 @@ Status values: **accepted** (in force), **proposed** (under discussion), **super
 | [0001-mvi-parsed-intent.md](0001-mvi-parsed-intent.md)     | accepted | Component model: parsed intent, record-of-reducers model, pure view                                                                  |
 | [0002-effect-boundary.md](0002-effect-boundary.md)         | accepted | Effect.ts inside, plain TypeScript outside; optional `@gyral/effect` later                                                           |
 | [0003-browser-baseline.md](0003-browser-baseline.md)       | accepted | Target Baseline _widely available_; newer features only behind detection                                                             |
-| [0004-local-ci.md](0004-local-ci.md)                       | accepted | GitHub Actions workflows that run only locally via `gh act`                                                                          |
+| [0004-local-ci.md](0004-local-ci.md)                       | accepted | GitHub Actions workflows that run only locally via `gh act`; releases are the one GitHub-hosted exception                            |
 | [0005-harness-engineering.md](0005-harness-engineering.md) | accepted | Repo as system of record, mechanical invariants, beads for work                                                                      |
 | [0006-effects-and-drivers.md](0006-effects-and-drivers.md) | accepted | Commands as data with typed mappers; drivers as plain objects; concurrency lanes                                                     |
 | [0007-props.md](0007-props.md)                             | accepted | Props as `{ props }` context; enter state only via `PropsChanged`                                                                    |

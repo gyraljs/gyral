@@ -1,0 +1,72 @@
+# Publishes @gyral/* to npm. The ONE workflow that runs on GitHub-hosted runners (ADR 0004,
+# release addendum): npm trusted publishing (OIDC) and provenance require them. Manual trigger
+# only, and the `npm` environment waits for the owner's approval before any step runs.
+# Runbook: docs/references/releasing.md.
+#
+# Versions are bumped BEFORE this runs: `pnpm changeset version` in a pull request, merged to
+# main. This workflow refuses to run with unconsumed changesets, then publishes whatever version
+# main declares that npm does not have yet. No NPM_TOKEN: npm trusts this workflow via OIDC.
+name: release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'gyraljs/gyral' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # push release tags, create the GitHub release
+      id-token: write # npm trusted publishing + provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1 (pnpm publish hands the tarball to npm).
+      - run: npm install -g npm@11
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Refuse unversioned changesets
+        run: |
+          pending=$(find .changeset -name '*.md' ! -name README.md)
+          if [ -n "$pending" ]; then
+            echo "::error::Unconsumed changesets: $pending. Run 'pnpm changeset version' in a PR and merge it first."
+            exit 1
+          fi
+
+      - run: pnpm check
+      - run: pnpm build
+
+      - name: Publish to npm
+        run: pnpm changeset publish
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+
+      - name: Tag and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./packages/core/package.json').version")
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already tagged; nothing to release."
+            exit 0
+          fi
+          git tag -a "v$version" -m "Gyral v$version"
+          git push origin --tags
+          # Notes: the newest section of @gyral/core's changelog (all packages share the version).
+          awk '/^## /{n++} n==1' packages/core/CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          gh release create "v$version" --title "Gyral v$version" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag

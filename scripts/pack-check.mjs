@@ -13,6 +13,7 @@ import { formatMessage } from 'publint/utils';
 const run = promisify(execFile);
 const out = mkdtempSync(join(tmpdir(), 'gyral-pack-'));
 const REQUIRED = ['package.json', 'README.md', 'LICENSE', 'NOTICE'];
+const OPTIONAL = ['CHANGELOG.md']; // written by `changeset version`
 
 /** Every file path an exports/imports map can resolve to. */
 function targets(map) {
@@ -41,7 +42,7 @@ async function check(dir) {
 
   for (const file of REQUIRED) if (!files.includes(file)) problems.push(`missing ${file}`);
   for (const file of files) {
-    if (!REQUIRED.includes(file) && !file.startsWith('dist/'))
+    if (![...REQUIRED, ...OPTIONAL].includes(file) && !file.startsWith('dist/'))
       problems.push(`unexpected file ${file}`);
     if (/\.test\.|(^|\/)test\//.test(file)) problems.push(`test file packed: ${file}`);
   }

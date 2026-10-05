@@ -25,3 +25,20 @@ Docker running; `gh extension install nektos/gh-act`. The first run pulls a larg
 A self-hosted runner on this machine would also be free and would react to pushes. It needs a
 long-running service and repository runner registration. Revisit if agent PR loops need
 CI on push.
+
+## Addendum (2026-10-05): releases are the one GitHub-hosted exception
+
+`.github/workflows/release.yml` publishes to npm and **does** run on a GitHub-hosted runner.
+npm trusted publishing (OIDC, no long-lived `NPM_TOKEN`) and provenance attestations only
+work from GitHub-hosted runners, and a token on a laptop is the larger risk. The exception is
+narrow on purpose:
+
+- Still `workflow_dispatch` only (the `check-workflows` rule is unchanged); the owner starts it.
+- The job targets the `npm` environment, which needs the owner's approval before any step runs.
+- `permissions` are just `contents: write` (tags, GitHub release) and `id-token: write` (OIDC).
+- Third-party actions are pinned by commit SHA.
+- `pnpm ci:local` never runs it (it runs `ci.yml` only), and the job is skipped outside
+  `gyraljs/gyral`'s `main`.
+
+A release costs one runner run of a few minutes. Everything else stays local. Runbook:
+[docs/references/releasing.md](../references/releasing.md).
