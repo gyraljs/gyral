@@ -156,3 +156,39 @@ define<State, Msg>('cart-badge', {
   - `step(spec, state, msg, props, [instances])` and `run(…, { stores })` give reducers a
     working `ctx.read`.
   - `resetDocumentStores()` (core) clears the document default between tests.
+
+## Addendum: seed schemas (gyral-czi.29, 2026-10-04)
+
+`defineStore(name, { …, schema })` takes an optional synchronous Standard Schema for the store's
+state. When the client restores a page seed (`<script data-gyral-stores>`), the registry checks
+it first: a valid seed becomes the instance's state (with the schema's output, so transforms
+apply); an invalid one is reported with `console.error` (store name and every issue path) and
+the store starts from `init`. A broken seed is a server bug: the page keeps working, and the
+error says exactly what was wrong. `store.checkSeed(value)` exposes the same check.
+
+## Addendum: store-to-store send and provider seeds (gyral-czi.20, 2026-10-04)
+
+**Store-to-store writes.** A store's `update` may return `send(otherStore, msg)`. The registry
+that holds an instance binds it to its scope (`bindScope`), and the message is delivered
+synchronously to `otherStore`'s instance in that same scope: the page default, a
+`<gyral-stores>` provider, or a test registry. An instance outside any scope (a bare
+`store.instance()`) warns and drops the message.
+
+**Providers on the server.** `@gyral/ssr` registers `<gyral-stores>` as a server-only element
+(`defineStoresProvider()`; a no-op in the browser). Components rendered inside it find it by
+dispatching `gyral-stores-request`. Lit's SSR DOM shim bubbles events through the custom
+elements being rendered (the mechanism `@lit/context` uses). Setting `.instances` writes their
+states to the provider's `data-gyral-stores` attribute; stores not listed start from `init` on
+both sides. Two Lit SSR (4.1) details shaped this:
+
+- A slotted child's event path is `child → slot → slot.getRootNode() → host`, and the root is the
+  host's shadow root only if one was attached. The renderer never calls `connectedCallback`, so
+  the provider attaches its shadow root in its constructor.
+- `LitElementRenderer.renderOptions` `disableSsr` can't be used: when `renderShadow()` returns
+  `undefined`, `render-value.js` pushes the element onto `customElementHostStack` and never pops
+  it. The provider's children, and its later siblings, would be treated as inside its shadow root.
+
+**Providers on the client.** A server-rendered provider stays a plain element whose shadow root
+is just `<slot>`. On first use its scope reads `data-gyral-stores`. Seeded stores are restored
+from it, and win over instances passed in `.instances`, so hydration matches the server.
+`.instances` supplies the rest.

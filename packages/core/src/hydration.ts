@@ -2,14 +2,24 @@
 // state, plus the props an attribute can't carry, into one attribute; the client reads it
 // before its first (hydrating) render so both sides render the same template.
 import type { PropertyDeclaration } from 'lit';
+import { warnJsonHazard } from './json-safety.js';
 
 /** Host attribute holding the JSON seed. Removed once the client has read it. */
 export const SEED_ATTRIBUTE = 'data-gyral-seed';
 
 export interface Seed {
-  readonly state: unknown;
+  /**
+   * The server's state. Omitted when it equals what `init(props)` returns for the seeded
+   * props (gyral-czi 4k7.10): the client recomputes it instead of reading a second copy of
+   * data the props already carry.
+   */
+  readonly state?: unknown;
   readonly props: Readonly<Record<string, unknown>>;
 }
+
+/** JSON equality: seeds are JSON, so two values that serialize alike hydrate alike. */
+export const sameJson = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 type Declarations = Readonly<Record<string, PropertyDeclaration>>;
 
@@ -28,6 +38,7 @@ export function writeSeed(
   state: unknown,
   props: Readonly<Record<string, unknown>>,
   declarations: Declarations,
+  initialState?: { readonly value: unknown },
 ): void {
   const carried: Record<string, unknown> = {};
   for (const [name, value] of Object.entries(props)) {
@@ -37,7 +48,9 @@ export function writeSeed(
       carried[name] = value;
     }
   }
-  const seed: Seed = { state, props: carried };
+  const derivable = initialState !== undefined && sameJson(state, initialState.value);
+  const seed: Seed = derivable ? { props: carried } : { state, props: carried };
+  warnJsonHazard(`<${host.localName}>`, seed, 'seed');
   host.setAttribute(SEED_ATTRIBUTE, JSON.stringify(seed));
 }
 
@@ -48,8 +61,9 @@ export function takeSeed(host: Element): Seed | undefined {
   host.removeAttribute(SEED_ATTRIBUTE);
   try {
     const parsed = JSON.parse(raw) as Partial<Seed> | null;
-    if (parsed === null || typeof parsed !== 'object' || !('state' in parsed)) return undefined;
-    return { state: parsed.state, props: parsed.props ?? {} };
+    if (parsed === null || typeof parsed !== 'object') return undefined;
+    const props = parsed.props ?? {};
+    return 'state' in parsed ? { state: parsed.state, props } : { props };
   } catch (error) {
     console.error(`<${host.localName}> has an unreadable ${SEED_ATTRIBUTE}`, error);
     return undefined;

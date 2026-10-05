@@ -1,11 +1,39 @@
-// Prop bookkeeping for define() (ADR 0007): snapshots, change detection, seed restore.
+// Prop bookkeeping for define() (ADR 0007): snapshots, defaults, change detection, seed restore.
+import type { PropertyDeclaration } from 'lit';
 
 type Bag = Readonly<Record<string, unknown>>;
 
-/** The element's declared props as a plain snapshot object. */
-export function readProps(el: object, names: readonly string[]): Bag {
+/** Gyral's view of a declaration: Lit's options plus `required` and `default`. */
+export interface PropInfo extends PropertyDeclaration {
+  readonly required?: boolean;
+  readonly default?: unknown;
+}
+
+export type PropTable = Readonly<Record<string, PropInfo>>;
+
+/** The element's declared props as set on it (no defaults): what a seed must carry. */
+export function readRawProps(el: object, table: PropTable): Bag {
   const self = el as Bag;
-  return Object.fromEntries(names.map((name) => [name, self[name]]));
+  return Object.fromEntries(Object.keys(table).map((name) => [name, self[name]]));
+}
+
+/** The element's declared props as components see them: `default` fills `undefined`. */
+export function readProps(el: object, table: PropTable): Bag {
+  const self = el as Bag;
+  return Object.fromEntries(
+    Object.entries(table).map(([name, info]) => {
+      const value = self[name];
+      return [name, value === undefined && 'default' in info ? info.default : value];
+    }),
+  );
+}
+
+/** Required props that are still `undefined` (ADR 0007 addendum). */
+export function missingRequired(el: object, table: PropTable): string[] {
+  const self = el as Bag;
+  return Object.entries(table)
+    .filter(([name, info]) => info.required === true && self[name] === undefined)
+    .map(([name]) => name);
 }
 
 /** True when every declared prop is identical (`Object.is`) in both snapshots. */

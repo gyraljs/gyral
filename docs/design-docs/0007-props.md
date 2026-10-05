@@ -47,3 +47,27 @@ define<State, Msg, { readonly userId: string }>('user-card', {
 - No copying props into state "just to read them".
 - Every state change still goes through a reducer and is visible to tests and devtools.
 - Tests: `spec.update.PropsChanged(s, { _tag: 'PropsChanged', props, prev }, { props })`.
+
+## Addendum: honest prop types (gyral-czi.21, 2026-10-04)
+
+A prop is `undefined` until a parent, an attribute or a hydration seed sets it, but `P`'s types
+said every prop was present. Declarations now have to say how a present value is guaranteed:
+
+```ts
+define<State, Msg, { readonly label: string; readonly size: number; readonly note?: string }>('x', {
+  props: {
+    label: { type: String, required: true }, // missing at first render → warning, once
+    size: { type: Number, default: 3 },      // ctx.props.size is 3 while the element's is unset
+    note: { type: String },                  // type includes undefined: nothing to declare
+  },
+  …
+});
+```
+
+- `PropDeclaration<T>` is Lit's `PropertyDeclaration` plus `required` / `default`. A prop whose
+  type excludes `undefined` must declare one of them; the compiler enforces it.
+- `default` is applied when components read props (`ctx.props`, `init`, `PropsChanged`); the
+  element's own property stays `undefined`, and seeds carry only values that were really set.
+- `required: true` is a contract with the parent; a missing value logs
+  `<tag> is missing required prop(s): …` once per instance, at first render (server or client).
+- Migration: add `required: true` to props that are always set by their parent.

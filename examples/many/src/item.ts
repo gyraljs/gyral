@@ -27,7 +27,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 export const Item = define<ItemState, ItemMsg, { readonly item: ItemSeed }, ItemOutput>(
   'gy-many-item',
   {
-    props: { item: { attribute: false } },
+    props: { item: { attribute: false, required: true } },
     init: ({ item }) => ({ color: item.color, width: item.width }),
     intent: {
       Color: ({ value }) =>

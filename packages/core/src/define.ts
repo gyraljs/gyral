@@ -7,6 +7,7 @@ import {
   type Next,
 } from './command.js';
 import { dispatchOutput, EMIT } from './children.js';
+import { FOCUS, runFocus, type FocusInput } from './focus.js';
 import type { GyralElement, GyralElementClass } from './element-types.js';
 import { takeSeed, writeSeed } from './hydration.js';
 import { runInit } from './init.js';
@@ -19,7 +20,14 @@ import {
   revealLightMarkers,
 } from './light-dom.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
-import { readProps, restoreProps, sameProps } from './props.js';
+import {
+  missingRequired,
+  readProps,
+  readRawProps,
+  restoreProps,
+  sameProps,
+  type PropTable,
+} from './props.js';
 import { attachStates, type StateSync } from './states.js';
 import { STORE_SEND, type AnyStore, type StoreOverrides, type StoreSendInput } from './store.js';
 import { StoreBinding } from './store-binding.js';
@@ -58,7 +66,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
   tag: string,
   spec: ComponentSpec<S, M, P>,
 ): GyralElementClass<S, M, P, O> {
-  const propNames = Object.keys(spec.props ?? {});
+  const propTable = (spec.props ?? {}) as PropTable;
+  const propNames = Object.keys(propTable);
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
   // Sound: #dispatch() only calls the reducer whose key equals msg._tag.
   const reducers = spec.update as unknown as Readonly<
@@ -103,6 +112,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     get state(): S {
       if (this.#model === undefined) {
+        const missing = missingRequired(this, propTable);
+        if (missing.length > 0) {
+          console.warn(`<${tag}> is missing required prop(s): ${missing.join(', ')}.`);
+        }
         this.#seenProps = this.#props();
         this.#apply(runInit(spec, this.#seenProps));
         for (const msg of this.initialMessages) this.#dispatch(msg, false);
@@ -185,7 +198,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       super.willUpdate(changed);
       if (onServer) {
         // Server renders run constructor, willUpdate and render only (ADR 0012).
-        writeSeed(this, this.state, this.#props() as Record<string, unknown>, spec.props ?? {});
+        // init is pure, so the client can recompute an unchanged state from the props.
+        const [initial] = splitNext(runInit(spec, this.#props()));
+        writeSeed(this, this.state, readRawProps(this, propTable), propTable, { value: initial });
         if (isLight(spec)) markLightHost(this);
         return;
       }
@@ -233,6 +248,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       for (const cmd of commands) {
         if (cmd.driver === EMIT) dispatchOutput(this, cmd.input);
         else if (cmd.driver === STORE_SEND) this.#binding.send(cmd.input as StoreSendInput);
+        else if (cmd.driver === FOCUS) this.#focusAfterUpdate(cmd.input as FocusInput);
         else if (this.#interpreter === undefined) this.#pending.push(cmd);
         else this.#interpreter.run(cmd);
       }
@@ -249,9 +265,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (seed === undefined) return;
       restoreProps(this, propNames, seed.props);
       this.#seenProps = this.#props();
-      const [, commands] = splitNext(runInit(spec, this.#seenProps));
-      // Sound: the seed is this component's own state, serialized by writeSeed() on the server.
-      this.#model = { value: seed.state as S };
+      const [initial, commands] = splitNext(runInit(spec, this.#seenProps));
+      // Sound: the seed is this component's own state, serialized by writeSeed() on the server;
+      // when absent, the server's state was exactly init(props) (seed deduplication).
+      this.#model = { value: 'state' in seed ? (seed.state as S) : initial };
       this.#afterHydration = commands;
       this.#serverRendered = true;
     }
@@ -269,6 +286,13 @@ export function define<S, M extends Tagged, P extends object = object, O extends
           this.#dispatch({ _tag: 'Hydrated', serverRendered: this.#serverRendered } as Tagged);
         }
         if (commands.length > 0) this.#apply([this.state, commands]);
+      });
+    }
+
+    // After the render this reducer caused (also the first render, for init's commands).
+    #focusAfterUpdate(input: FocusInput): void {
+      void this.updateComplete.then(() => {
+        if (this.isConnected) runFocus(this.renderRoot, tag, input);
       });
     }
 
@@ -294,7 +318,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     #props(): P {
       // Sound: propNames are exactly the declared props, P's keys.
-      return readProps(this, propNames) as P;
+      return readProps(this, propTable) as P;
     }
   }
 

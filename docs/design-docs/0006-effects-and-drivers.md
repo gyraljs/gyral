@@ -157,6 +157,17 @@ the numbers by substituting the driver by name:
 `el.drivers = { random: fakeDriver(randomDriver, { impl: ({ count }) => … }) }`.
 http-random-user and many use it.
 
+## Focus as a command (gyral-czi.28, 2026-10-04)
+
+Moving focus is a side effect that drivers can't do: they have no access to a component's DOM.
+`focus(selector, { preventScroll?, select? })` is a command that `define()` handles itself, like
+`emit()` and `send()`. Once the update the reducer caused has rendered, it focuses the first
+match in the component's own render root: its shadow root, or its children in light-DOM mode.
+The element can therefore be one that the same update creates. Non-focusable targets such as
+headings need `tabindex="-1"`. A selector that matches nothing logs a warning. It never runs on
+the server. Typical uses are moving focus to a results heading after paging and to an input
+after opening an editor.
+
 ## App-level request headers (gyral-ud5.9, 2026-10-04)
 
 `makeHttpDriver({ headers })` adds default headers to every request through that driver:

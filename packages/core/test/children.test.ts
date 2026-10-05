@@ -17,7 +17,7 @@ type ItemMsg =
 const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>(
   'test-item',
   {
-    props: { item: { attribute: false } },
+    props: { item: { attribute: false, required: true } },
     init: () => ({ pokes: 0 }),
     intent: {
       Toggle: () => ({ _tag: 'Toggle' }),
@@ -167,7 +167,7 @@ describe('child() with a lazy source', () => {
   // A recursive component: it renders itself and parses its own outputs.
   const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
     define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
-      props: { nodeId: { type: String } },
+      props: { nodeId: { type: String, required: true } },
       init: () => ({ kids: [] }),
       intent: {
         Add: () => ({ _tag: 'Add' }),

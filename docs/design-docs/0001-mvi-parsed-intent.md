@@ -77,3 +77,31 @@ DOM. A transition skipped by a newer one still runs its update (per spec).
 only when a spec declares `states` (it can be attached once; form-associated components may
 need it). Feature-detected (ADR 0003); never on the server. Accessibility state still belongs
 in ARIA attributes (`aria-busy`); custom states are for styling.
+
+## Addendum: styles as strings and stylesheets (gyral-czi.24, 2026-10-04)
+
+`spec.styles` accepts `Styles`: `css` templates, plain CSS strings, `CSSStyleSheet` instances,
+or arrays of them (nested freely). Strings let an app keep one stylesheet module and use it in
+both the document and shadow roots without wrapping it in `unsafeCSS` itself; they must be
+trusted CSS from the app's own code, never user input. A constructed `CSSStyleSheet` is adopted
+as-is, so one instance can be shared by many components.
+
+## Addendum: accessible names across shadow roots (gyral-czi.26, 2026-10-04)
+
+IDREF attributes such as `aria-labelledby` can't cross a shadow boundary, so a `<form>` or
+landmark inside a component can't point at the page's `<h1>`. The pattern:
+
+```ts
+props: { label: { type: String, required: true } },
+view: (s, i, { props }) => html`
+  <form aria-label=${props.label} ${labelledBy('page-title')} data-intent=${i.Submit}>…</form>`,
+```
+
+- Always render a plain `aria-label` from a `label` prop. It is server-rendered, so the no-JS page
+  is named too.
+- Add `labelledBy(id, fallback?)` to follow a visible heading. It resolves the id from the
+  element's own root outward to the document. Where ARIA element reflection exists
+  (`ariaLabelledByElements`, newly available Baseline, feature-detected) it links the element
+  itself, and `aria-labelledby` then wins over `aria-label`. Elsewhere it sets `aria-label` to
+  `fallback` or the heading's text. It retries once if the heading renders after the component.
+- Prefer a visible `<label>`/`<legend>` inside the component when the component owns the text.

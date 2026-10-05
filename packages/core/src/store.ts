@@ -1,5 +1,6 @@
 // Shared state: stores as "props from the side" (docs/design-docs/0013-shared-state.md).
 // A store is MVI without a view: init + pure update, commands run by its own interpreter.
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { isServer } from 'lit';
 import {
   splitNext,
@@ -26,7 +27,17 @@ export interface StoreSpec<S, M extends Tagged> {
   readonly update: StoreUpdate<S, M>;
   /** Driver substitutions by name for this store's commands. */
   readonly drivers?: DriverOverrides;
+  /**
+   * Validates the server's page seed before the client uses it (any synchronous Standard
+   * Schema). An invalid seed is reported with console.error and the store starts from `init`.
+   */
+  readonly schema?: StandardSchemaV1<unknown, S>;
 }
+
+/** The result of checking a seed against a store's schema. */
+export type SeedCheck<S> =
+  | { readonly ok: true; readonly state: S }
+  | { readonly ok: false; readonly issues: readonly string[] };
 
 /** What `ctx.read()` accepts: anything that names a store and carries its state type. */
 export interface StoreRef<S> {
@@ -47,6 +58,8 @@ export interface StoreInstance<S, M extends Tagged> {
   drivers: DriverOverrides;
   /** Stops running commands and drops subscribers. */
   dispose(): void;
+  /** Set by the registry that holds the instance (store-to-store `send`). */
+  bindScope(resolve: StoreResolver): void;
 }
 
 export interface Store<S, M extends Tagged> extends StoreRef<S> {
@@ -56,6 +69,8 @@ export interface Store<S, M extends Tagged> extends StoreRef<S> {
    * fixture); `init`'s commands still run on the client.
    */
   instance(initial?: S): StoreInstance<S, M>;
+  /** Checks a seed with `spec.schema` (ok as-is without one). */
+  checkSeed(seed: unknown): SeedCheck<S>;
   /** Type-only marker for the message type. Never set at runtime. */
   readonly messageType?: (msg: M) => M;
 }
@@ -64,6 +79,7 @@ export interface Store<S, M extends Tagged> extends StoreRef<S> {
 export interface AnyStore {
   readonly name: string;
   instance(initial?: never): AnyStoreInstance;
+  checkSeed(seed: unknown): SeedCheck<unknown>;
 }
 
 /** Any store instance, with its types erased. */
@@ -73,7 +89,15 @@ export interface AnyStoreInstance {
   send(msg: never): void;
   subscribe(listener: (state: unknown, prev: unknown) => void): () => void;
   dispose(): void;
+  /**
+   * Called by the registry that holds this instance, so the store's `send(other, msg)`
+   * commands reach `other`'s instance in the same scope (gyral-czi.20).
+   */
+  bindScope?(resolve: StoreResolver): void;
 }
+
+/** Finds a store's instance in a scope (a registry). */
+export type StoreResolver = (store: AnyStore) => AnyStoreInstance;
 
 /** Store instances substituted by store name (tests, islands). */
 export type StoreOverrides = Readonly<Record<string, AnyStoreInstance>>;
@@ -84,8 +108,29 @@ export function defineStore<S, M extends Tagged>(name: string, spec: StoreSpec<S
     name,
     spec,
     instance: (initial?: S) => createInstance(store, initial),
+    checkSeed: (seed) => checkSeed(spec.schema, seed),
   };
   return store;
+}
+
+const issuePath = (issue: StandardSchemaV1.Issue): string =>
+  (issue.path ?? []).map((s) => String(typeof s === 'object' ? s.key : s)).join('.');
+
+function checkSeed<S>(
+  schema: StandardSchemaV1<unknown, S> | undefined,
+  seed: unknown,
+): SeedCheck<S> {
+  // Sound without a schema: the seed is this store's state, serialized by the server.
+  if (schema === undefined) return { ok: true, state: seed as S };
+  const result = schema['~standard'].validate(seed);
+  if (result instanceof Promise) {
+    return { ok: false, issues: ['the store schema is async; seeds need a synchronous schema'] };
+  }
+  if (result.issues === undefined) return { ok: true, state: result.value };
+  return {
+    ok: false,
+    issues: result.issues.map((i) => `${issuePath(i) || '(root)'}: ${i.message}`),
+  };
 }
 
 function createInstance<S, M extends Tagged>(
@@ -106,13 +151,33 @@ function createInstance<S, M extends Tagged>(
   const resolve = (driver: AnyDriver): AnyDriver =>
     instance.drivers[driver.name] ?? store.spec.drivers?.[driver.name] ?? driver;
 
+  let scope: StoreResolver | undefined;
+
+  // Store-to-store writes: delivered synchronously to the other store's instance in scope.
+  const deliver = ({ store: target, msg }: StoreSendInput): void => {
+    if (scope === undefined) {
+      console.warn(
+        `store "${store.name}" sends to "${target.name}" but is not held by a store scope ` +
+          '(a registry, <gyral-stores> or the page default), so the message is dropped.',
+      );
+      return;
+    }
+    (scope(target) as { send(msg: unknown): void }).send(msg);
+  };
+
   const run = (commands: ReadonlyArray<Command<M | IntentRejected>>): void => {
     if (onServer || disposed || commands.length === 0) return; // never on the server (ADR 0012)
-    interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
-      // Stores have no IntentRejected reducer; only their own messages apply.
-      if (msg._tag !== 'IntentRejected') instance.send(msg as M);
-    });
-    for (const cmd of commands) interpreter.run(cmd);
+    for (const cmd of commands) {
+      if (cmd.driver === STORE_SEND) {
+        deliver(cmd.input as StoreSendInput);
+        continue;
+      }
+      interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
+        // Stores have no IntentRejected reducer; only their own messages apply.
+        if (msg._tag !== 'IntentRejected') instance.send(msg as M);
+      });
+      interpreter.run(cmd);
+    }
   };
 
   const instance: StoreInstance<S, M> = {
@@ -142,6 +207,9 @@ function createInstance<S, M extends Tagged>(
       interpreter?.dispose();
       listeners.clear();
     },
+    bindScope(resolver) {
+      scope = resolver;
+    },
   };
 
   // A seeded instance (hydration) starts init's commands after the hydrating renders flushed,
@@ -167,7 +235,9 @@ export interface StoreSendInput {
 }
 
 /** A command that sends `msg` to the component's instance of `store`. Writes are commands. */
-export function send<S, M extends Tagged>(store: Store<S, M>, msg: M): Command<never> {
+// NoInfer: the store decides the message type, so a literal (`{ _tag: 'Track', … }`) is checked
+// against it instead of widening `_tag` to string (store-to-store sends have no other context).
+export function send<S, M extends Tagged>(store: Store<S, M>, msg: NoInfer<M>): Command<never> {
   const input: StoreSendInput = { store, msg };
   return { driver: STORE_SEND, input, onSuccess: () => undefined };
 }

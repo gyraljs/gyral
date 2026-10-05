@@ -1,4 +1,5 @@
-import type { CSSResultGroup, PropertyDeclaration } from 'lit';
+import type { PropertyDeclaration } from 'lit';
+import type { Styles } from './styles.js';
 import type { DriverOverrides, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
@@ -114,7 +115,21 @@ export type Update<S, M extends Tagged, P = object> = {
 /** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
 export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
 
-export type PropDeclarations<P> = { readonly [K in keyof P]: PropertyDeclaration };
+/**
+ * One prop's declaration: Lit's `PropertyDeclaration` plus Gyral's honesty rule (ADR 0007
+ * addendum). A prop is `undefined` until a parent, an attribute or a hydration seed sets it,
+ * so a prop whose type excludes `undefined` must say how that is guaranteed:
+ * - `required: true`: a missing value is a bug, reported once per instance at first render;
+ * - `default: value`: used whenever the element's value is `undefined`.
+ * A prop whose type includes `undefined` needs neither.
+ */
+export type PropDeclaration<T> = PropertyDeclaration &
+  (undefined extends T
+    ? { readonly required?: false; readonly default?: T }
+    : | { readonly required: true; readonly default?: undefined }
+      | { readonly required?: false; readonly default: T });
+
+export type PropDeclarations<P> = { readonly [K in keyof P]-?: PropDeclaration<P[K]> };
 
 /** State of a component that keeps none (a pure view of its props). Its `init` is optional. */
 export type Stateless = Readonly<Record<string, never>>;
@@ -138,8 +153,11 @@ interface SpecBody<S, M extends Tagged, P> {
   readonly update: Update<S, M, P>;
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
   readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
-  /** Shadow-root styles. Ignored (with a warning) when `shadow: false`. */
-  readonly styles?: CSSResultGroup;
+  /**
+   * Shadow-root styles: `css` templates, plain CSS strings, `CSSStyleSheet`s, or arrays of
+   * them. Ignored (with a warning) when `shadow: false`.
+   */
+  readonly styles?: Styles;
   /**
    * `false` renders the view as the element's own light-DOM children (ADR 0014): document CSS
    * applies, and the server writes plain children instead of a `<template shadowrootmode>`.

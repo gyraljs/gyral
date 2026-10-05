@@ -41,7 +41,7 @@ const loadUser = (id: string) =>
   );
 
 const Profile = define<State, Msg, { readonly userId: string }>('test-profile', {
-  props: { userId: { type: String } },
+  props: { userId: { type: String, required: true } },
   init: (props) => [
     { id: props.userId, user: undefined, error: undefined },
     [loadUser(props.userId)],

@@ -19,16 +19,20 @@ interface State {
   readonly title: string;
   readonly note: string;
 }
-type Msg = { readonly _tag: 'Loaded'; readonly id: string };
+type Msg =
+  | { readonly _tag: 'Loaded'; readonly id: string }
+  | { readonly _tag: 'Noted'; readonly text: string };
+
+const HOSTILE = '</script><script>alert(1)</script>';
 
 define<State, Msg, Props>('ssr-card', {
-  props: { label: { type: String }, items: { attribute: false } },
+  props: { label: { type: String, required: true }, items: { attribute: false, required: true } },
   init: (p) => [
-    { title: p.label.toUpperCase(), note: '</script><script>alert(1)</script>' },
+    { title: p.label.toUpperCase(), note: '' },
     [command(load, p.label, { onSuccess: (id) => ({ _tag: 'Loaded', id }) })],
   ],
   intent: {},
-  update: { Loaded: (s) => s },
+  update: { Loaded: (s) => s, Noted: (s, m) => ({ ...s, note: m.text }) },
   view: (s, _i, { props }) => html`
     <h2>${s.title}</h2>
     <ul>
@@ -36,6 +40,18 @@ define<State, Msg, Props>('ssr-card', {
     </ul>
   `,
 });
+
+// State copied from props: the case seed deduplication exists for.
+define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>(
+  'ssr-copy',
+  {
+    props: { items: { attribute: false, required: true } },
+    init: (p) => ({ items: p.items }),
+    intent: {},
+    update: {},
+    view: (s) => html`<p>${String(s.items.length)}</p>`,
+  },
+);
 
 const decode = (attr: string) =>
   attr
@@ -58,17 +74,36 @@ describe('server rendering (ADR 0012)', () => {
     expect(out).toMatch(/<li>(<!--[^>]*-->)*a/);
   });
 
-  it('seeds state and only the props an attribute cannot carry', async () => {
+  it('seeds only the props an attribute cannot carry, and no state equal to init(props)', async () => {
     const out = await renderToString(html`<ssr-card label="hi" .items=${['a']}></ssr-card>`);
-    expect(seedOf(out)).toEqual({
-      state: { title: 'HI', note: '</script><script>alert(1)</script>' },
-      props: { items: ['a'] },
-    });
+    expect(seedOf(out)).toEqual({ props: { items: ['a'] } });
+  });
+
+  it('seeds state that differs from init(props)', async () => {
+    const noted = [{ _tag: 'Noted', text: 'kept' }];
+    const out = await renderToString(
+      html`<ssr-card label="hi" .items=${['a']} .initialMessages=${noted}></ssr-card>`,
+    );
+    expect(seedOf(out)).toEqual({ state: { title: 'HI', note: 'kept' }, props: { items: ['a'] } });
   });
 
   it('escapes the seed: hostile state cannot break out of the attribute', async () => {
-    const out = await renderToString(html`<ssr-card label="x" .items=${[]}></ssr-card>`);
+    const noted = [{ _tag: 'Noted', text: HOSTILE }];
+    const out = await renderToString(
+      html`<ssr-card label="x" .items=${[]} .initialMessages=${noted}></ssr-card>`,
+    );
+    expect(JSON.stringify(seedOf(out))).toContain(HOSTILE);
     expect(out).not.toContain('<script>alert(1)');
+  });
+
+  it('halves the seed when state is copied from props (gyral-4k7.10)', async () => {
+    const items = Array.from({ length: 200 }, (_, n) => `product number ${String(n)}`);
+    const out = await renderToString(html`<ssr-copy .items=${items}></ssr-copy>`);
+    const match = /data-gyral-seed="([^"]*)"/.exec(out);
+    const seed = decode(match?.[1] ?? '');
+    const payload = JSON.stringify(items).length;
+    expect(seed.length).toBeLessThan(payload * 1.1); // once, not twice
+    expect(seedOf(out)).toEqual({ props: { items } });
   });
 
   it('never runs commands on the server', async () => {
@@ -93,6 +128,20 @@ describe('server rendering (ADR 0012)', () => {
     expect(out).toContain('<meta name="description" content="About us">');
     expect(out).toContain('<script type="module" src="/src/entry-client.ts"></script>');
     expect(out).toMatch(/<ssr-card\s+label="p"/);
+  });
+
+  it('writes global styles into the head, escaping an early </style>', async () => {
+    const out = await renderToString(
+      page({
+        title: 't',
+        body: html`<p>x</p>`,
+        styles: ['body { color: red; }', 'p::after { content: "</STYLE><script>x()</script>"; }'],
+      }),
+    );
+    const head = out.slice(0, out.indexOf('</head>'));
+    expect(head).toContain('<style>body { color: red; }</style>');
+    expect(head).toContain('content: "<\\/STYLE><script>x()</script>"; }</style>');
+    expect(out.match(/<\/style>/gi)).toHaveLength(2);
   });
 
   it('streams a full page as an HTML Response', async () => {
