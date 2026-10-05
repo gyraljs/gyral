@@ -156,3 +156,12 @@ define<State, Msg>('cart-badge', {
   - `step(spec, state, msg, props, [instances])` and `run(…, { stores })` give reducers a
     working `ctx.read`.
   - `resetDocumentStores()` (core) clears the document default between tests.
+
+## Addendum: seed schemas (gyral-czi.29, 2026-10-04)
+
+`defineStore(name, { …, schema })` takes an optional synchronous Standard Schema for the store's
+state. When the client restores a page seed (`<script data-gyral-stores>`), the registry checks
+it first: a valid seed becomes the instance's state (with the schema's output, so transforms
+apply); an invalid one is reported with `console.error` (store name and every issue path) and
+the store starts from `init`. A broken seed is a server bug: the page keeps working, and the
+error says exactly what was wrong. `store.checkSeed(value)` exposes the same check.

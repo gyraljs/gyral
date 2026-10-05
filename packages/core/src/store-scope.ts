@@ -29,12 +29,22 @@ export class StoreRegistry {
   get(store: AnyStore): AnyStoreInstance {
     let instance = this.#instances.get(store.name);
     if (instance === undefined) {
-      const seed = this.#seeds[store.name];
-      // Sound: a seed is this store's own state, serialized by serializeStores().
-      instance = seed === undefined ? store.instance() : store.instance(seed as never);
+      instance = this.#create(store);
       this.#instances.set(store.name, instance);
     }
     return instance;
+  }
+
+  /** A new instance from its seed (checked by the store's schema), or from `init`. */
+  #create(store: AnyStore): AnyStoreInstance {
+    if (!(store.name in this.#seeds)) return store.instance();
+    const check = store.checkSeed(this.#seeds[store.name]);
+    if (check.ok) return store.instance(check.state as never);
+    console.error(
+      `store "${store.name}": the server's seed failed its schema, so it starts from init. ` +
+        `Issues: ${check.issues.join('; ')}`,
+    );
+    return store.instance();
   }
 
   /** Every instance's state by store name (what the SSR seed carries). */

@@ -1,5 +1,6 @@
 // Shared state: stores as "props from the side" (docs/design-docs/0013-shared-state.md).
 // A store is MVI without a view: init + pure update, commands run by its own interpreter.
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { isServer } from 'lit';
 import {
   splitNext,
@@ -26,7 +27,17 @@ export interface StoreSpec<S, M extends Tagged> {
   readonly update: StoreUpdate<S, M>;
   /** Driver substitutions by name for this store's commands. */
   readonly drivers?: DriverOverrides;
+  /**
+   * Validates the server's page seed before the client uses it (any synchronous Standard
+   * Schema). An invalid seed is reported with console.error and the store starts from `init`.
+   */
+  readonly schema?: StandardSchemaV1<unknown, S>;
 }
+
+/** The result of checking a seed against a store's schema. */
+export type SeedCheck<S> =
+  | { readonly ok: true; readonly state: S }
+  | { readonly ok: false; readonly issues: readonly string[] };
 
 /** What `ctx.read()` accepts: anything that names a store and carries its state type. */
 export interface StoreRef<S> {
@@ -56,6 +67,8 @@ export interface Store<S, M extends Tagged> extends StoreRef<S> {
    * fixture); `init`'s commands still run on the client.
    */
   instance(initial?: S): StoreInstance<S, M>;
+  /** Checks a seed with `spec.schema` (ok as-is without one). */
+  checkSeed(seed: unknown): SeedCheck<S>;
   /** Type-only marker for the message type. Never set at runtime. */
   readonly messageType?: (msg: M) => M;
 }
@@ -64,6 +77,7 @@ export interface Store<S, M extends Tagged> extends StoreRef<S> {
 export interface AnyStore {
   readonly name: string;
   instance(initial?: never): AnyStoreInstance;
+  checkSeed(seed: unknown): SeedCheck<unknown>;
 }
 
 /** Any store instance, with its types erased. */
@@ -84,8 +98,29 @@ export function defineStore<S, M extends Tagged>(name: string, spec: StoreSpec<S
     name,
     spec,
     instance: (initial?: S) => createInstance(store, initial),
+    checkSeed: (seed) => checkSeed(spec.schema, seed),
   };
   return store;
+}
+
+const issuePath = (issue: StandardSchemaV1.Issue): string =>
+  (issue.path ?? []).map((s) => String(typeof s === 'object' ? s.key : s)).join('.');
+
+function checkSeed<S>(
+  schema: StandardSchemaV1<unknown, S> | undefined,
+  seed: unknown,
+): SeedCheck<S> {
+  // Sound without a schema: the seed is this store's state, serialized by the server.
+  if (schema === undefined) return { ok: true, state: seed as S };
+  const result = schema['~standard'].validate(seed);
+  if (result instanceof Promise) {
+    return { ok: false, issues: ['the store schema is async; seeds need a synchronous schema'] };
+  }
+  if (result.issues === undefined) return { ok: true, state: result.value };
+  return {
+    ok: false,
+    issues: result.issues.map((i) => `${issuePath(i) || '(root)'}: ${i.message}`),
+  };
 }
 
 function createInstance<S, M extends Tagged>(
