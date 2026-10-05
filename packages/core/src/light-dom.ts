@@ -1,5 +1,5 @@
 // Light-DOM render mode (docs/design-docs/0014-light-dom.md).
-import type { CSSResultGroup } from 'lit';
+import { adoptStyles, type CSSResultGroup, type CSSResultOrNative } from 'lit';
 import { toCssResultGroup, type Styles } from './styles.js';
 
 interface SpecLike {
@@ -72,7 +72,11 @@ export function revealLightMarkers(host: Element): boolean {
 }
 
 /** Lit's public `hydrate()` from `@lit-labs/ssr-client`. */
-export type Hydrate = (value: unknown, container: HTMLElement, options?: object) => void;
+export type Hydrate = (
+  value: unknown,
+  container: HTMLElement | DocumentFragment,
+  options?: object,
+) => void;
 
 /**
  * Where `@gyral/ssr/hydrate` registers Lit's public `hydrate()` (gyral-czi.38). A global
@@ -81,8 +85,48 @@ export type Hydrate = (value: unknown, container: HTMLElement, options?: object)
  */
 export const HYDRATE_KEY: unique symbol = Symbol.for('gyral.hydrate') as never;
 
-/** Lit's `hydrate()`, if a server-rendered app loaded `@gyral/ssr/hydrate`. */
-export const lightHydrator = (): Hydrate | undefined => {
+/**
+ * Lit's `hydrate()`, if a server-rendered app loaded `@gyral/ssr/hydrate`. Used for light hosts
+ * and, since gyral-czi.41, for server-rendered shadow roots too: Gyral hydrates both itself, so
+ * it never depends on Lit's hydrate support having patched LitElement before Lit evaluated.
+ */
+export const hydrator = (): Hydrate | undefined => {
   const fn = (globalThis as { [HYDRATE_KEY]?: unknown })[HYDRATE_KEY];
   return typeof fn === 'function' ? (fn as Hydrate) : undefined;
 };
+
+/**
+ * First update of a server-rendered (declarative) shadow root: hydrate the server's view in
+ * place with Lit's public hydrate(), which leaves the root part on the shadow root so the
+ * render() inside LitElement's update() updates it instead of appending a second copy
+ * (gyral-czi.41). Without `@gyral/ssr/hydrate` loaded, clear the server's view and let Lit
+ * render fresh, adopting the styles Lit's own createRenderRoot would have.
+ */
+export function hydrateShadow(
+  root: ShadowRoot,
+  view: unknown,
+  options: object,
+  styles: CSSResultOrNative[],
+): void {
+  const hydrate = hydrator();
+  if (hydrate !== undefined) {
+    hydrate(view, root, options);
+    return;
+  }
+  root.replaceChildren();
+  adoptStyles(root, styles);
+}
+
+/**
+ * First update of a server-rendered light host: reveal this host's own hidden markers now (not
+ * on connect: a deferred child connects mid-way through its parent's hydrate walk), then call
+ * Lit's public hydrate(). It leaves the root part on the host, so the render() inside
+ * LitElement's update() updates it in place instead of appending a second copy. No Lit private
+ * fields: their names are mangled in Lit's production build (ADR 0014, gyral-czi.38). Without
+ * `@gyral/ssr/hydrate` loaded, clear the server's view and let Lit render fresh.
+ */
+export function hydrateLight(host: HTMLElement, view: unknown, options: object): void {
+  const hydrate = hydrator();
+  if (hydrate !== undefined && revealLightMarkers(host)) hydrate(view, host, options);
+  else host.replaceChildren();
+}

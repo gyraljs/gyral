@@ -24,10 +24,10 @@ import { runInit } from './init.js';
 import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
 import {
   componentStyles,
-  lightHydrator,
+  hydrateLight,
+  hydrateShadow,
   isLight,
   markLightHost,
-  revealLightMarkers,
 } from './light-dom.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import {
@@ -60,13 +60,12 @@ const onServer: boolean = isServer;
 const DEFER_HYDRATION = 'defer-hydration';
 
 /**
- * Waiting for a parent to hydrate? Only when Lit's hydrate support is loaded: it adds
- * `defer-hydration` to observedAttributes and connects the element when the attribute goes.
- * Without it the attribute means nothing and the element must connect normally.
+ * Has Lit's hydrate support patched LitElement? It then defers `defer-hydration` elements
+ * itself. A bundler can evaluate Lit before `@gyral/ssr/hydrate`, so it may not have
+ * (gyral-czi.41); the patch adds an own static `observedAttributes` to LitElement.
  */
-const deferred = (el: LitElement): boolean =>
-  el.hasAttribute(DEFER_HYDRATION) &&
-  (el.constructor as typeof LitElement).observedAttributes.includes(DEFER_HYDRATION);
+const litDefers = (): boolean =>
+  Object.prototype.hasOwnProperty.call(LitElement, 'observedAttributes');
 
 /**
  * Compiles a Model-View-Intent spec into a custom element and registers it under `tag`.
@@ -99,6 +98,13 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     static readonly spec = spec;
     static readonly tagName = tag;
 
+    // Always observe `defer-hydration`, so Gyral can defer server-rendered children itself
+    // when Lit's hydrate support isn't installed (gyral-czi.41, ADR 0012).
+    static override get observedAttributes(): string[] {
+      const base = super.observedAttributes;
+      return base.includes(DEFER_HYDRATION) ? base : [...base, DEFER_HYDRATION];
+    }
+
     drivers: DriverOverrides = {};
     stores: StoreOverrides = {};
     initialMessages: readonly Tagged[] = [];
@@ -123,6 +129,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #afterHydration: readonly Command<M | IntentRejected>[] = [];
     /** Resumed from server markup; reported by the Hydrated message. */
     #serverRendered = false;
+    /** The renderRoot is a server-rendered (declarative) shadow root to hydrate in place. */
+    #ssrShadow = false;
     /** The latest view-transition update, awaited by updateComplete. */
     #transition: Promise<void> | undefined;
     /** Mirrors spec.states onto CSS custom states; only attached when the spec asks. */
@@ -180,11 +188,12 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     override connectedCallback(): void {
       this.#resumeFromSeed();
-      super.connectedCallback();
-      // A component server-rendered inside another's shadow root waits for its parent to
-      // hydrate. Lit's hydrate support then connects LitElement directly, bypassing this
-      // override, so finish connecting from attributeChangedCallback (ADR 0012 addendum).
-      if (deferred(this)) {
+      // A component server-rendered inside another's view waits (`defer-hydration`) for its
+      // parent to hydrate first. Lit's hydrate support, when installed, defers LitElement
+      // itself; otherwise Gyral holds back Lit's connect until the attribute goes.
+      const waiting = this.hasAttribute(DEFER_HYDRATION);
+      if (!waiting || litDefers()) super.connectedCallback();
+      if (waiting) {
         scheduleIsland(this); // lazy islands release themselves (gyral-4k7.4)
         return;
       }
@@ -193,7 +202,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     override attributeChangedCallback(name: string, old: string | null, value: string | null) {
       super.attributeChangedCallback(name, old, value);
-      if (name === DEFER_HYDRATION && value === null && this.isConnected) this.#connect();
+      if (name !== DEFER_HYDRATION || value !== null || !this.isConnected) return;
+      if (!litDefers()) super.connectedCallback(); // Lit's support would have connected it
+      this.#connect();
     }
 
     #connect(): void {
@@ -243,25 +254,26 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       this.#dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
     }
 
-    // Light-DOM mode (ADR 0014): render into the element itself.
+    // Light-DOM mode (ADR 0014): render into the element itself. A server-rendered shadow root
+    // (Declarative Shadow DOM) is reused as is and hydrated in update() (gyral-czi.41): this
+    // bypasses Lit's hydrate-support patch on purpose, so hydration is correct whether or not
+    // that patch was installed before Lit evaluated (bundlers can reorder it; ADR 0012).
     protected override createRenderRoot(): HTMLElement | DocumentFragment {
-      return isLight(spec) ? this : super.createRenderRoot();
+      if (isLight(spec)) return this;
+      if (!onServer && this.shadowRoot !== null) {
+        this.#ssrShadow = true;
+        return this.shadowRoot;
+      }
+      return super.createRenderRoot();
     }
 
     protected override update(changed: Map<PropertyKey, unknown>): void {
+      if (this.#ssrShadow && !this.hasUpdated) {
+        const styles = (this.constructor as typeof LitElement).elementStyles;
+        hydrateShadow(this.renderRoot as ShadowRoot, this.render(), this.renderOptions, styles);
+      }
       if (isLight(spec) && !this.hasUpdated && this.#serverRendered) {
-        // Hydrate the server's light view in place: reveal this host's own hidden markers
-        // now (not on connect: a deferred child connects mid-way through its parent's
-        // hydrate walk), then call Lit's public hydrate() ourselves. It leaves the root part
-        // on the host, so the render() inside super.update() updates it in place instead of
-        // appending a second copy. No Lit private fields: their names are mangled in Lit's
-        // production build (ADR 0014, gyral-czi.38).
-        const hydrate = lightHydrator();
-        if (hydrate !== undefined && revealLightMarkers(this)) {
-          hydrate(this.render(), this, this.renderOptions);
-        } else {
-          this.replaceChildren(); // no hydrate support: fall back to a fresh render
-        }
+        hydrateLight(this, this.render(), this.renderOptions); // ADR 0014
       }
       super.update(changed);
     }
