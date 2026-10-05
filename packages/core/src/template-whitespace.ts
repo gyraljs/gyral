@@ -75,12 +75,8 @@ function minifyChunk(text: string, left: Edge, right: Edge): string {
   return body;
 }
 
-const enum Mode {
-  Text,
-  Tag,
-  Comment,
-  RawText,
-}
+const Mode = { Text: 0, Tag: 1, Comment: 2, RawText: 3 } as const;
+type Mode = (typeof Mode)[keyof typeof Mode];
 
 interface Scan {
   mode: Mode;
