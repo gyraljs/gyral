@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ci:local": "gh act workflow_dispatch -W .github/workflows/ci.yml",
-    "examples": "node scripts/examples.mjs"
+    "examples": "node scripts/examples.mjs",
+    "size": "node scripts/measure-bundles.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
