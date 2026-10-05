@@ -18,9 +18,11 @@ if (errors.length > 0) {
   process.exit(errors.includes('help') ? 0 : 2);
 }
 
-const examples = listExamples(options.examples, options.port).filter((ex) =>
-  existsSync(join(ex.dir, 'demo.mjs')),
-);
+const withDemos = listExamples(options.examples, options.port)
+  .filter((ex) => existsSync(join(ex.dir, 'demo.mjs')))
+  .map((ex) => ex.name);
+// Ports again for exactly these names: scripts/examples.mjs numbers the ones it is given.
+const examples = withDemos.length === 0 ? [] : listExamples(withDemos, options.port);
 if (examples.length === 0) {
   console.error('No examples with a demo.mjs match.');
   process.exit(2);
