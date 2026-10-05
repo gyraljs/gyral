@@ -31,6 +31,17 @@ export type { GyralElement, GyralElementClass } from './element-types.js';
 // Lit types `isServer` per build condition; widen it so both branches type-check (ADR 0012).
 const onServer: boolean = isServer;
 
+const DEFER_HYDRATION = 'defer-hydration';
+
+/**
+ * Waiting for a parent to hydrate? Only when Lit's hydrate support is loaded: it adds
+ * `defer-hydration` to observedAttributes and connects the element when the attribute goes.
+ * Without it the attribute means nothing and the element must connect normally.
+ */
+const deferred = (el: LitElement): boolean =>
+  el.hasAttribute(DEFER_HYDRATION) &&
+  (el.constructor as typeof LitElement).observedAttributes.includes(DEFER_HYDRATION);
+
 /**
  * Compiles a Model-View-Intent spec into a custom element and registers it under `tag`.
  * See docs/design-docs/0001-mvi-parsed-intent.md, 0006-effects-and-drivers.md, 0007-props.md
@@ -130,6 +141,19 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     override connectedCallback(): void {
       this.#resumeFromSeed();
       super.connectedCallback();
+      // A component server-rendered inside another's shadow root waits for its parent to
+      // hydrate. Lit's hydrate support then connects LitElement directly, bypassing this
+      // override, so finish connecting from attributeChangedCallback (ADR 0012 addendum).
+      if (deferred(this)) return;
+      this.#connect();
+    }
+
+    override attributeChangedCallback(name: string, old: string | null, value: string | null) {
+      super.attributeChangedCallback(name, old, value);
+      if (name === DEFER_HYDRATION && value === null && this.isConnected) this.#connect();
+    }
+
+    #connect(): void {
       // Re-resolve on every connect: the nearest <gyral-stores> may differ after a move.
       if (this.#binding.connect()) this.requestUpdate();
       this.#interpreter = makeInterpreter<M | IntentRejected>(this.#resolve, (msg) => {
