@@ -78,3 +78,7 @@ should add the same override until upstream fixes it:
 - pnpm 10 (`pnpm-workspace.yaml`): `overrides:` then `  lit-html: 3.3.0`
 - pnpm (`package.json`): `"pnpm": { "overrides": { "lit-html": "3.3.0" } }`
 - npm (`package.json`): `"overrides": { "lit-html": "3.3.0" }`
+
+From 0.2.0, development builds of `@gyral/core` check `globalThis.litHtmlVersions` when the
+first component connects and log one `console.warn` if a leaking lit-html (3.3.1 or later)
+is loaded. Production builds don't include the check.

@@ -92,6 +92,11 @@ describe('scaffold', () => {
     const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8')) as unknown;
     expect(pkg).toEqual(manifest(template, 'app', '0.1.0'));
     expect(manifest(template, 'app', '0.1.0').dependencies['@gyral/core']).toBe('^0.1.0');
+    // Every package manager pins the lit-html without the repeat() leak (gyral-9y6).
+    const pinned = manifest(template, 'app', '0.1.0');
+    expect(pinned.overrides['lit-html']).toBe('3.3.0');
+    expect(pinned.pnpm.overrides['lit-html']).toBe('3.3.0');
+    expect(pinned.resolutions['lit-html']).toBe('3.3.0');
   });
 
   it('refuses a directory with files in it', async () => {

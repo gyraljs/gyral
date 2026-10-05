@@ -121,7 +121,7 @@ Last recorded result (2026-10-05, 0.0.0): pack:check ok for all 7 packages; veri
 Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typecheck, build and
 pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and
 `dist/static/index.html` is the prerendered page). Client builds: basic 151.6 KiB JS
-(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015).
+(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015; 0.2.0 moves to Effect 4, about half that).
 
 Last recorded `verify:install` with `@gyral/mcp` (2026-10-05, 9 tarballs): all entries imported,
 SSR ok, and `gyral-mcp` answered over stdio with 7 tools.

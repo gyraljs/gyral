@@ -1,6 +1,7 @@
 # ADR 0015 — Runtime size spike: Effect 3, Micro, Effect 4, or no Effect
 
-Status: **accepted — (a) Effect 3 full runtime for 0.1.0** (owner, 2026-10-05; proposed
+Status: **accepted — (c) Effect 4 from 0.2.0** (owner, 2026-10-05; see the decision addendum at
+the end). 0.1.0 shipped on (a) Effect 3. Proposed
 2026-10-04). Beads: gyral-ob0 (bundle size),
 gyral-d0x (Effect 4 evaluation), gyral-czi.9 (Effect adds ~40 kB).
 
@@ -127,11 +128,38 @@ written the way that framework's docs recommend and checked by one shared correc
 The owner chose to benchmark the current runtime before revisiting this decision. Next step:
 benchmark an Effect 4 build with the same harness (`pnpm bench --only=gyral,lit`).
 
-## Experiment branch: Effect 4 on current main (2026-10-05, not a decision)
+## Decision addendum: Effect 4 and the lit-html 3.3.0 pin (2026-10-05)
 
-Branch `exp/lit330-effect4` (local, bead gyral-bu6) applies the six changes under (c) to the
-current interpreter, which now also carries devtools tracing, with effect 4.0.1 and lit-html
-pinned to 3.3.0. No public API change: check-public-api passes. All 622 tests, `smoke:prod`
-and pack:check pass. `pnpm size`: counter 24.3 KiB gzip (effect 13.2), http-search-github
-28.4, isomorphic 29.5. The owner reviews the branch and the benchmark comparison before
-anything merges; the Decision above still stands.
+**The owner adopts option (c), Effect 4 (4.0.1 or later), together with the lit-html 3.3.0
+pin**, after testing branch `exp/lit330-effect4` (bead gyral-bu6). They ship in **0.2.0**;
+until that release the change lives on the branch. This supersedes the Effect 3 decision
+above for 0.2.0 onwards.
+
+- **Code change:** the six mechanical changes under (c), applied to the interpreter as it is
+  now (it gained devtools tracing after the spike). No public API change: check-public-api,
+  all tests, `smoke:prod` and pack:check pass.
+- **Size (`pnpm size`, gzip):** counter 49.5 -> 24.3 KiB (Effect itself 13.2),
+  http-search-github 53.7 -> 28.4, isomorphic 54.8 -> 29.5.
+- **Benchmark** (repo gyraljs/benchmarks, branch `exp/lit330-effect4`,
+  `results/2026-10-05-lit-html-3.3.0-effect4/COMPARISON.md`). A = 0.1.0 (Effect 3, lit-html
+  3.3.3); B = A + lit-html 3.3.0; C = B + Effect 4:
+
+  | Within each run                           |     A |    B |    C |
+  | ----------------------------------------- | ----: | ---: | ---: |
+  | Gyral / Lit, table runtime geometric mean |  1.00 | 1.01 | 1.02 |
+  | Startup gap to Lit, todo app (ms)         |  +286 | +254 | +109 |
+  | JS heap after load, Gyral (MB; Lit 1.20)  |  1.71 | 1.71 | 1.36 |
+  | Clear 1,000 rows, Gyral (ms)              | 3,746 |   56 |   46 |
+  | Replace 1,000 rows, Gyral (ms)            | 2,231 |  414 |  373 |
+  | JS gzip, todo app (KiB)                   |  51.0 | 51.0 | 25.8 |
+
+  The pin fixes the list leak (gyral-9y6); Effect 4 halves the bundle and cuts the startup
+  gap to Lit by about 175 ms; runtime relative to Lit is unchanged.
+
+- **Caveat:** the machine ran 10-15% faster during run C (every unchanged framework sped up
+  by that much), so compare Gyral with Lit within a run, not raw milliseconds across runs.
+  Timing ends at the next rendered frame, so differences under about 17 ms are noise; publish
+  only after trace-based timing (gyral-7se.12).
+- **Still open:** Gyral remains 3-4x the JavaScript of Lit, Preact or Solid, and Effect 4 is
+  about 13 of its 24 KiB. Option (d) is the only way below that; revisit with the published
+  benchmark.

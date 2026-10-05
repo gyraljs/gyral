@@ -76,7 +76,11 @@ First run needs `pnpm exec playwright install chromium`.
 - `modern-css` — all component and example styles.
 - `semantic-html` — markup in views and examples (element choice, a11y, i18n).
 - `effect-fp-skill` — **only** inside `packages/*/src/internal/**` (see ADR 0002 for the
-  exceptions to that skill: the public API is plain TypeScript and uses Promises).
+  exceptions: the public API is plain TypeScript and uses Promises). The skill targets
+  Effect 3; Gyral is on **Effect 4**, which renamed: `Fiber.RuntimeFiber` → `Fiber.Fiber`,
+  `unsafePoll` → `pollUnsafe` (`undefined`, not `null`), `Schedule.intersect(recurs)` →
+  `Effect.retry(_, { schedule, times })`, `catchAllDefect` → `catchDefect`, `zipRight` →
+  `andThen`, `Fiber.await` → `Fiber.awaitAll([fiber])`.
 - `beads` — work tracking.
 
 ## Hard rules (enforced by `pnpm check`)
