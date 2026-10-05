@@ -105,4 +105,17 @@ describe('resuming from a server seed (ADR 0012)', () => {
       console.error = original;
     }
   });
+
+  it('recomputes a state the server left out because it equals init(props)', async () => {
+    const el = new Seeded();
+    el.setAttribute('label', 'derived');
+    el.setAttribute(SEED_ATTRIBUTE, JSON.stringify({ props: { items: ['z'] } }));
+    document.body.append(el);
+    await el.updateComplete;
+    expect(firstRenderState).toEqual({ title: 'init:derived', heard: [], renders: 0 });
+    expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('z');
+    expect(calls).toEqual([]); // init's commands still wait for the first render
+    await settle();
+    expect(calls).toEqual(['derived']);
+  });
 });

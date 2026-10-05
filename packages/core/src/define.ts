@@ -197,7 +197,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       super.willUpdate(changed);
       if (onServer) {
         // Server renders run constructor, willUpdate and render only (ADR 0012).
-        writeSeed(this, this.state, readRawProps(this, propTable), propTable);
+        // init is pure, so the client can recompute an unchanged state from the props.
+        const [initial] = splitNext(runInit(spec, this.#props()));
+        writeSeed(this, this.state, readRawProps(this, propTable), propTable, { value: initial });
         if (isLight(spec)) markLightHost(this);
         return;
       }
@@ -261,9 +263,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (seed === undefined) return;
       restoreProps(this, propNames, seed.props);
       this.#seenProps = this.#props();
-      const [, commands] = splitNext(runInit(spec, this.#seenProps));
-      // Sound: the seed is this component's own state, serialized by writeSeed() on the server.
-      this.#model = { value: seed.state as S };
+      const [initial, commands] = splitNext(runInit(spec, this.#seenProps));
+      // Sound: the seed is this component's own state, serialized by writeSeed() on the server;
+      // when absent, the server's state was exactly init(props) (seed deduplication).
+      this.#model = { value: 'state' in seed ? (seed.state as S) : initial };
       this.#afterHydration = commands;
       this.#serverRendered = true;
     }
