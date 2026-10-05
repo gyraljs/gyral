@@ -50,6 +50,7 @@ export type { FormDefinition, FormResult, FormValue } from './forms.js';
 export { ElementDirective } from './element-directive.js';
 export { runInit } from './init.js';
 export { invalid } from './invalid.js';
+export { liveBoolean } from './live-boolean.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,

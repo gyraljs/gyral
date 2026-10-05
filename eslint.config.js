@@ -34,6 +34,16 @@ export default tseslint.config(
     },
     rules: {
       'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Lit SSR serializes `.checked=${false}` as checked="false", which checks the box.
+          selector:
+            'TaggedTemplateExpression[tag.name=/^(html|serverHtml)$/] TemplateElement[value.raw=/\\.(checked|selected|open|indeterminate|defaultChecked)=$/]',
+          message:
+            'Bind boolean form state with ?checked=${liveBoolean(x)} (from @gyral/core), not a .checked property binding: server rendering turns .checked=${false} into checked="false" (docs/design-docs/0012-ssr.md).',
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
       'no-restricted-imports': ['error', effectImports],
