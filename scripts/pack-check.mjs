@@ -42,9 +42,16 @@ async function check(dir) {
 
   for (const file of REQUIRED) if (!files.includes(file)) problems.push(`missing ${file}`);
   for (const file of files) {
+    // create-gyral ships app templates (whose own tests are part of the generated app).
+    if (manifest.name === 'create-gyral' && file.startsWith('templates/')) continue;
     if (![...REQUIRED, ...OPTIONAL].includes(file) && !file.startsWith('dist/'))
       problems.push(`unexpected file ${file}`);
     if (/\.test\.|(^|\/)test\//.test(file)) problems.push(`test file packed: ${file}`);
+  }
+  for (const bin of targets(packed.bin)) {
+    const file = bin.replace(/^\.\//, '');
+    if (!file.startsWith('dist/')) problems.push(`bin outside dist: ${bin}`);
+    else if (!files.includes(file)) problems.push(`bin not in tarball: ${bin}`);
   }
   for (const target of [...targets(packed.exports), ...targets(packed.imports)]) {
     if (!target.startsWith('./dist/')) problems.push(`entry outside dist: ${target}`);

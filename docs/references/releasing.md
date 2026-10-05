@@ -35,10 +35,11 @@ Names already on npm are skipped, so re-run it after any failure. It ends by pri
 checklist below. If npm rejects an unscoped name as too similar to an existing package, the
 other names still publish; record the rejected one in the release bead.
 
-### 3. Trusted publisher, per `@gyral/*` package
+### 3. Trusted publisher, per released package
 
-For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools`:
-npmjs.com/package/@gyral/NAME → **Settings** → **Trusted Publisher** → GitHub Actions:
+For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools` **and
+`create-gyral`** (8 packages; create-gyral joined the lockstep release on 2026-10-05):
+npmjs.com/package/NAME → **Settings** → **Trusted Publisher** → GitHub Actions:
 
 | Field                | Value         |
 | -------------------- | ------------- |
@@ -56,8 +57,7 @@ a version, but cannot publish one or move `latest`.
 
 Same Settings page → **Publishing access** → **Require two-factor authentication and disallow
 tokens**. From now on the release workflow (OIDC) can only stage, and only you with 2FA can
-publish or approve. Do this
-for the unscoped placeholders too.
+publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) too.
 
 ### 5. GitHub
 
@@ -87,6 +87,7 @@ for the unscoped placeholders too.
 5. **Approve the staged versions**: npmjs.com → the `gyral` org → Packages → **Staged
    Packages** → review → **Approve** (2FA) for each, or `npm stage list @gyral/NAME` then
    `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
+   That is 8 approvals: the seven `@gyral/*` packages and `create-gyral`.
 6. Check npmjs.com shows the version with the provenance badge, then try
    `npm create vite@latest` + `npm i @gyral/core lit` in a scratch app.
 
@@ -102,10 +103,19 @@ The first real release must be **0.1.0** or higher: the placeholders already occ
   temp project, imports every Node-loadable entry and server-renders a component. The
   browser-only entries (`@gyral/ssr/hydrate`, `@gyral/devtools`) are covered by the browser
   tests instead.
+- `pnpm verify:create` (network, not in the gate): runs `create-gyral` from its packed tarball
+  for each template (`basic`, `ssr`), points the app's `@gyral/*` at the tarballs, installs
+  with npm and runs the generated app's `typecheck`, `build` and `test`. Run it after changing
+  create-gyral or its templates, and before every release.
 
 Last recorded result (2026-10-05, 0.0.0): pack:check ok for all 7 packages; verify:install ok
 (9 entries imported, `<gy-hello>` rendered to Declarative Shadow DOM) with lit ^3.3.0,
 @lit-labs/ssr ^4.1.0, @lit-labs/ssr-client ^1.1.8, fast-check ^4.
+
+Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typecheck, build and
+pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and
+`dist/static/index.html` is the prerendered page). Client builds: basic 151.6 KiB JS
+(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015).
 
 ## When something goes wrong
 

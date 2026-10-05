@@ -79,20 +79,21 @@ if (!publish) {
   process.exit(0);
 }
 
-const scoped = dirs
+// Names the release workflow publishes: every @gyral/* package plus create-gyral.
+const released = dirs
   .map((dir) => JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).name)
-  .filter((name) => name.startsWith('@gyral/'));
+  .filter((name) => name.startsWith('@gyral/') || name === 'create-gyral');
 console.log(`
 Placeholders published. Now set up trusted publishing (docs/references/releasing.md):
 
-  For each of: ${scoped.join(', ')}
+  For each of: ${released.join(', ')}
     1. https://www.npmjs.com/package/<name>/access → Trusted Publisher → GitHub Actions
          Organization or user: gyraljs   Repository: gyral
          Workflow filename:    release.yml   Environment name: npm
          Allowed actions: leave "Allow npm publish" and "Allow npm dist-tag" UNCHECKED
          (stage-only: you approve every version on npmjs.com with 2FA)
     2. Same page → Publishing access → "Require two-factor authentication and disallow tokens"
-  Unscoped placeholders (gyral, gyraljs, create-gyral): step 2 only, until they get real code.
+  Unscoped placeholders (gyral, gyraljs): step 2 only, until they get real code.
 
   Then: GitHub → gyraljs/gyral → Settings → Environments → "npm" with yourself as a required
   reviewer, and branch/tag protection for main and v* tags.

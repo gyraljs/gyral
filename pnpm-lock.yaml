@@ -389,6 +389,8 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
 
+  packages/create-gyral: {}
+
   packages/devtools:
     dependencies:
       '@gyral/core':

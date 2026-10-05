@@ -22,6 +22,8 @@ export default tseslint.config(
       '.pnpm-store/**',
       '.claude/worktrees/**',
       '**/dist/**',
+      // App templates are type-checked and linted as generated apps by `pnpm verify:create`.
+      'packages/create-gyral/templates/**',
       'coverage/**',
     ],
   },
@@ -128,6 +130,28 @@ export default tseslint.config(
     plugins: { compat },
     languageOptions: { globals: globals.browser },
     rules: { 'compat/compat': 'error' },
+  },
+  {
+    // create-gyral is a Node CLI: no browser Baseline, no Gyral imports (it only copies files).
+    files: ['packages/create-gyral/src/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    rules: {
+      'compat/compat': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            {
+              group: ['@gyral/*'],
+              message:
+                'create-gyral uses Node builtins only; the generated app depends on @gyral/* instead.',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     files: ['**/*.js', '**/*.mjs'],

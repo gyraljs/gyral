@@ -1,0 +1,56 @@
+{
+  "name": "create-gyral",
+  "version": "0.0.0",
+  "description": "Create a Gyral app: npm create gyral@latest.",
+  "keywords": [
+    "gyral",
+    "create",
+    "scaffold",
+    "starter",
+    "web-components",
+    "lit",
+    "mvi"
+  ],
+  "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
+  "homepage": "https://gyral.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/create-gyral"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.12"
+  },
+  "bin": {
+    "create-gyral": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  }
+}
