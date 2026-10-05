@@ -1,0 +1,113 @@
+---
+name: gyral
+description: Build web apps and components with Gyral (@gyral/core, @gyral/ssr, @gyral/http, @gyral/router, @gyral/time, @gyral/testing, @gyral/devtools, create-gyral) — Model-View-Intent custom elements on Lit with server rendering that hydrates in place, effects as data, and DOM-free tests. Use whenever code imports @gyral/*, calls define()/defineStore()/command(), uses data-intent markup, or the user asks for a Gyral app, component, form, store, driver, SSR page or test.
+---
+
+# Building with Gyral
+
+Gyral compiles a **Model-View-Intent** spec into a standard custom element (a Lit element).
+Every component is one loop: **intent** parses DOM events into typed messages, **update** is
+one pure reducer per message, **view** is a pure function of state. Side effects are
+**commands** (data) that drivers perform. Pages render on the server with Declarative Shadow
+DOM and hydrate in place. Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
+
+## The shape of every component
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface State {
+  readonly count: number;
+}
+type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
+
+export const Counter = define<State, Msg>('my-counter', {
+  init: () => ({ count: 0 }),
+  intent: {
+    Increment: () => ({ _tag: 'Increment' }),
+    Decrement: () => ({ _tag: 'Decrement' }),
+  },
+  update: {
+    Increment: (s) => ({ count: s.count + 1 }),
+    Decrement: (s) => ({ count: s.count - 1 }),
+  },
+  view: (s, i) => html`
+    <p>Count: <output aria-live="polite">${s.count}</output></p>
+    <button type="button" data-intent=${i.Decrement}>−</button>
+    <button type="button" data-intent=${i.Increment}>+</button>
+  `,
+});
+```
+
+## Golden rules
+
+1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`). The tag is also the
+   intent name in markup. `update` must have a reducer for **every** tag (exhaustive by type).
+2. **Views are pure and name intents; they never attach closures.** Write
+   `data-intent=${i.Save}`, never `@click=${() => …}`. The trigger is the element's default
+   event (button → click, form → submit, input/textarea → input, select/checkbox → change,
+   child component → its outputs); override with `data-intent-on="keydown"`.
+3. **Reducers are pure.** No `fetch`, timers, `Math.random`, `Date.now`, DOM or `localStorage`
+   in `update`/`init`/`view`. Return `[nextState, [command, …]]` and let a driver do it.
+4. **Intent parsers validate.** Return a message, `undefined` (ignore the event) or let
+   `form()`/`field()` produce `IntentRejected`. Never trust `value` without checking it.
+5. **Props are read-only context** (`ctx.props`). They enter state only through
+   `init(props)` and the optional `PropsChanged` reducer.
+6. **State, props and store state must be JSON-serializable.** They travel to the browser in
+   hydration seeds (no `Map`, class instances, functions or `Date` objects in state).
+7. **Import Lit helpers from `@gyral/core`** (`html`, `css`, `nothing`, `repeat`, `keyed`,
+   `classMap`, `styleMap`, `live`). Exactly one copy of Lit: spread `gyralVitePreset()` into
+   the Vite/Vitest config.
+8. **SSR client entry imports `@gyral/ssr/hydrate` first**, before anything that imports
+   `lit` or `@gyral/core`. Boolean form state uses `?checked=${liveBoolean(x)}`, never
+   `.checked=${x}` (Lit SSR writes `checked="false"`, which checks the box).
+9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
+   real browser (Vitest browser mode) with fake drivers. No jsdom.
+10. **Page-level content uses light DOM** (`shadow: false`) so crawlers and document CSS see
+    it; widgets keep shadow DOM and `styles`.
+
+## Start a project
+
+```text
+npm create gyral@latest my-app -- --template basic   # client-rendered
+npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
+```
+
+Manual install: `npm i @gyral/core lit` (+ `@gyral/ssr @lit-labs/ssr @lit-labs/ssr-client`
+for SSR, `@gyral/http @gyral/router @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
+`strict`, `moduleResolution: "bundler"`, `useDefineForClassFields: false`.
+
+## Decision tables
+
+**Where does this state live?**
+
+- Only this component cares → component state (`init` + `update`).
+- Comes from the parent → a prop (`props` + `ctx.props`; copy into state via `PropsChanged`).
+- Several components read and change it (cart, session) → a store (`defineStore`, `stores`,
+  `ctx.read(store)`, `send(store, msg)`).
+- A child must tell its parent something → an output (`emit()` in the child, `child()` intent
+  in the parent).
+
+**Which concurrency for a command?** (per lane = `key`, default the driver name)
+
+- Search as you type, latest wins → `switch`. Submit button → `exhaust`.
+- Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
+
+**Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
+`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router` (`listen`,
+`navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
+`defineDriver()` + `command()`.
+
+## References (read on demand)
+
+- `references/components.md` — `define()` spec fields, props, styles, light DOM, custom states, view transitions
+- `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
+- `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
+- `references/view.md` — template rules and directives: `liveBoolean`, `invalid`, `textarea`, `labelledBy`, `focus`
+- `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
+- `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
+- `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
+- `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
+- `references/testing.md` — `step`/`run`, command assertions, fake drivers, `fakeHttp`, virtual time, SSR tests
+- `references/devtools.md` — the dev-only timeline panel
+- `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes

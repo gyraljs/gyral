@@ -1,0 +1,23 @@
+{
+  "name": "gyral",
+  "description": "Gyral's agent skill: build Model-View-Intent web components with @gyral/* (https://gyral.dev).",
+  "owner": {
+    "name": "Mike Zupper",
+    "url": "https://gyral.dev"
+  },
+  "plugins": [
+    {
+      "name": "gyral",
+      "source": "./skills",
+      "description": "Teaches coding agents the Gyral framework: define() components, intents, pure updates, commands and drivers, forms, SSR with in-place hydration, stores and DOM-free tests.",
+      "version": "0.1.0",
+      "author": { "name": "Mike Zupper" },
+      "homepage": "https://gyral.dev",
+      "repository": "https://github.com/gyraljs/gyral",
+      "license": "MIT",
+      "keywords": ["gyral", "web-components", "lit", "mvi", "ssr"],
+      "category": "development",
+      "skills": ["./gyral"]
+    }
+  ]
+}

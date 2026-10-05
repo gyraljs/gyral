@@ -5,5 +5,6 @@ dist/
 .pnpm-store/
 .claude/worktrees/
 .ui-check/
+.skill-check/
 # Golden server-render output (byte-exact; see examples/isomorphic/test)
 **/test/fixtures/
