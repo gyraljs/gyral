@@ -91,8 +91,10 @@ export const HelloLastname = define<State, Msg>('gy-hello-lastname', {
       input:user-invalid {
         border-color: oklch(55% 0.2 25);
       }
-      h2 {
-        text-wrap: balance;
+      @supports (text-wrap: balance) {
+        h2 {
+          text-wrap: balance;
+        }
       }
     }
   `,

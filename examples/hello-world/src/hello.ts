@@ -55,7 +55,11 @@ export const Hello = define<State, Msg>('gy-hello', {
         display: block;
         font-size: 2rem;
         font-weight: 700;
-        text-wrap: balance;
+      }
+      @supports (text-wrap: balance) {
+        output {
+          text-wrap: balance;
+        }
       }
     }
   `,

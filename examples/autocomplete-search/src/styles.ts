@@ -6,7 +6,12 @@ export const styles = css`
       display: block;
       --accent: oklch(55% 0.17 160);
       --muted: color-mix(in oklch, currentColor 60%, transparent);
-      --surface: light-dark(oklch(99% 0 0), oklch(25% 0.02 250));
+      --surface: oklch(99% 0 0);
+    }
+    @supports (color: light-dark(black, white)) {
+      :host {
+        --surface: light-dark(oklch(99% 0 0), oklch(25% 0.02 250));
+      }
     }
     .field {
       display: grid;
@@ -35,9 +40,6 @@ export const styles = css`
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
-    #query {
-      anchor-name: --query;
-    }
     /* Baseline: an absolutely positioned list under the field. */
     [role='listbox'] {
       position: absolute;
@@ -55,8 +57,14 @@ export const styles = css`
       color: inherit;
       box-shadow: 0 0.25rem 1rem oklch(0% 0 0 / 0.15);
     }
-    /* Enhanced: top layer (never clipped) and placed by anchor positioning. */
-    @supports (anchor-name: --a) {
+    /* Enhanced: top layer (never clipped) and placed by anchor positioning. The condition
+       must match ANCHOR_SUPPORT in popover.ts, which decides whether to use the popover. */
+    @supports (anchor-name: --a) and (position-anchor: --a) and
+      (position-area: block-end span-inline-end) and (position-try-fallbacks: flip-block) and
+      (inline-size: anchor-size(inline)) {
+      #query {
+        anchor-name: --query;
+      }
       [role='listbox'][popover] {
         position: fixed;
         position-anchor: --query;

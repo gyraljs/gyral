@@ -10,14 +10,16 @@
   "scripts": {
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test",
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint .",
+    "lint": "eslint . && pnpm lint:css",
+    "lint:css": "stylelint \"packages/*/src/**/*.ts\" \"examples/*/src/**/*.ts\" \"examples/**/*.css\" --allow-empty-input",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "invariants": "node scripts/check-docs.mjs && node scripts/check-workflows.mjs && node scripts/check-public-api.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ci:local": "gh act workflow_dispatch -W .github/workflows/ci.yml",
-    "examples": "node scripts/examples.mjs"
+    "ci:local": "node scripts/ci-local.mjs",
+    "examples": "node scripts/examples.mjs",
+    "size": "node scripts/measure-bundles.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -27,7 +29,11 @@
     "eslint-plugin-compat": "7.0.2",
     "globals": "17.13.0",
     "playwright": "1.63.0",
+    "postcss": "8.5.28",
+    "postcss-lit": "1.4.1",
     "prettier": "3.9.9",
+    "stylelint": "17.16.0",
+    "stylelint-plugin-use-baseline": "1.4.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.0",
     "valibot": "1.5.0",

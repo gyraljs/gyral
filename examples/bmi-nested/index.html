@@ -9,36 +9,6 @@
       content="A BMI calculator built from two reusable labeled-slider child components, written with Gyral."
     />
     <meta name="color-scheme" content="light dark" />
-    <style>
-      @layer reset, base;
-      @layer reset {
-        *,
-        *::before,
-        *::after {
-          box-sizing: border-box;
-        }
-        body {
-          margin: 0;
-        }
-      }
-      @layer base {
-        :root {
-          color-scheme: light dark;
-          font-family: system-ui, sans-serif;
-          --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
-          --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
-        }
-        body {
-          background: var(--surface);
-          color: var(--ink);
-        }
-        main {
-          max-inline-size: 40rem;
-          margin-inline: auto;
-          padding: 2rem 1rem;
-        }
-      }
-    </style>
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body>

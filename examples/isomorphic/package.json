@@ -15,6 +15,7 @@
     "lit": "3.3.3"
   },
   "devDependencies": {
+    "@gyral/testing": "workspace:*",
     "tsx": "4.23.15"
   }
 }

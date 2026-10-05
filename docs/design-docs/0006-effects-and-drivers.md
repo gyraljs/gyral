@@ -167,3 +167,34 @@ The element can therefore be one that the same update creates. Non-focusable tar
 headings need `tabindex="-1"`. A selector that matches nothing logs a warning. It never runs on
 the server. Typical uses are moving focus to a results heading after paging and to an input
 after opening an editor.
+
+## App-level request headers (gyral-ud5.9, 2026-10-04)
+
+`makeHttpDriver({ headers })` adds default headers to every request through that driver:
+a record, or a function evaluated when each request runs (it receives the request). Per-request
+`headers` override them. `csrfFromMeta(name, header?)` is a ready-made source that reads
+`<meta name=…>` at request time (empty on the server), so components and stores never read
+the DOM: `el.drivers = { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) }`.
+`submitForm` and `HttpRequest.csrf` use the same `csrfFromMeta` mechanism.
+
+## Server-rendered page tests (gyral-czi.22, 2026-10-04)
+
+`@gyral/testing` mounts golden SSR output the way a page load would: `mountSsr(html)` parses
+Declarative Shadow DOM, applies only `<head>` styles (shadow-root styles stay in their roots),
+restores the page-level store seed and named `<meta>`s, and records console errors, warnings and
+uncaught errors from then on. `hydrated(page)` waits for every custom element under the page,
+including those inside nested shadow roots, re-scanning until nested children have upgraded, and
+throws if any problem was recorded (Lit's dev-mode banner excepted). `mountSsr(html, { stores:
+false })` withholds the seed, to prove a test depends on it. Import component modules after
+mounting so they hydrate in place.
+
+## Property tests from schemas (gyral-czi.11, 2026-10-04)
+
+`@gyral/testing/arbitraries` (optional; needs `fast-check` 4) turns a Standard Schema into a
+fast-check arbitrary: `arbitraryFrom(schema)`. It reads Standard JSON Schema when the library
+implements it (Zod 4 does), or takes `{ toJsonSchema }` for libraries that don't yet (Valibot:
+`@valibot/to-json-schema`). Generated values are filtered through the schema itself, so
+refinements JSON Schema can't express still hold. `arbitraryFromJsonSchema(json)` is the
+underlying generator (types, formats, ranges, patterns, enums, arrays, objects, unions, local
+`$ref`s); unsupported keywords throw with a remedy. The community adapters were not used:
+`zod-fast-check` supports only Zod 3 and fast-check 3, and `valibot-fast-check` is 0.1.

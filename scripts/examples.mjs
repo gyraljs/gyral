@@ -1,19 +1,23 @@
 // Runs every example (or the ones named) side by side, plus an index page linking them.
 //   pnpm examples                 → all examples, index at http://localhost:5100
 //   pnpm examples counter bmi     → just those
+//   EXAMPLES_PORT=5400 pnpm examples → index at :5400, examples from :5401 (a second checkout
+//                                      or agent worktree can run alongside the first)
 // Plain examples run `vite`; SSR examples (with server/dev.ts) run their own dev server.
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 
-const INDEX_PORT = 5100;
-const FIRST_PORT = 5101;
-const FIRST_HMR_PORT = 24700;
+const INDEX_PORT = Number(process.env['EXAMPLES_PORT'] ?? 5100);
+const FIRST_PORT = INDEX_PORT + 1;
+// HMR WebSockets for SSR examples, kept clear of the HTTP ports.
+const FIRST_HMR_PORT = 24700 + (INDEX_PORT - 5100);
 const wanted = process.argv.slice(2);
 
 const examples = readdirSync('examples', { withFileTypes: true })
-  .filter((e) => e.isDirectory() && (wanted.length === 0 || wanted.includes(e.name)))
+  .filter((e) => e.isDirectory() && existsSync(join('examples', e.name, 'package.json')))
+  .filter((e) => wanted.length === 0 || wanted.includes(e.name))
   .map((e, n) => {
     const dir = join('examples', e.name);
     const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));

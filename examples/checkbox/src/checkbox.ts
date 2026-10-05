@@ -40,7 +40,11 @@ export const Checkbox = define<State, Msg>('gy-checkbox', {
       input {
         inline-size: 1.25rem;
         block-size: 1.25rem;
-        accent-color: var(--accent);
+      }
+      @supports (accent-color: var(--accent)) {
+        input {
+          accent-color: var(--accent);
+        }
       }
       input:focus-visible {
         outline: 2px solid var(--accent);

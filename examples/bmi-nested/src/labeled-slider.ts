@@ -66,8 +66,12 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
           --accent: oklch(55% 0.18 160);
         }
         input {
-          accent-color: var(--accent);
           inline-size: 100%;
+        }
+        @supports (accent-color: var(--accent)) {
+          input {
+            accent-color: var(--accent);
+          }
         }
         output {
           font-variant-numeric: tabular-nums;

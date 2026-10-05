@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html, nothing } from 'lit';
 import type { IntentRejected } from '@gyral/core';
@@ -10,23 +11,16 @@ export interface AppOptions {
   readonly clientEntry: string;
 }
 
-const baseStyles = serverHtml`<style>
-  @layer reset, base;
-  @layer reset {
-    *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; }
-  }
-  @layer base {
-    :root {
-      color-scheme: light dark;
-      font-family: system-ui, sans-serif;
-      --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
-      --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+/** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
+const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
+
+const baseStyles = serverHtml`<link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    @layer reset, base;
+    @layer base {
+      body > main { max-inline-size: 30rem; }
     }
-    body { background: var(--surface); color: var(--ink); }
-    main { max-inline-size: 30rem; margin-inline: auto; padding: 2rem 1rem; }
-  }
-</style>`;
+  </style>`;
 
 interface View {
   readonly welcome?: string | undefined;
@@ -62,6 +56,7 @@ export function createApp(options: AppOptions): Hono {
   // Pretend persistence: registered emails, per app instance. A server-only check (the
   // browser can't know who registered) answered with rejectWith on both paths.
   const emails = new Set<string>();
+  app.get('/shared/base.css', (c) => c.body(sharedCss, 200, { 'content-type': 'text/css' }));
   app.get('/', (c) => view(options, { welcome: c.req.query('welcome') }));
   app.post('/', (c) =>
     formAction(RegisterForm, {

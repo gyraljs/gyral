@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html } from 'lit';
 import { renderPage, serverHtml } from '@gyral/ssr';
@@ -9,23 +10,16 @@ export interface AppOptions {
   readonly clientEntry: string;
 }
 
-const baseStyles = serverHtml`<style>
-  @layer reset, base;
-  @layer reset {
-    *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; }
-  }
-  @layer base {
-    :root {
-      color-scheme: light dark;
-      font-family: system-ui, sans-serif;
-      --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
-      --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+/** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
+const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
+
+const baseStyles = serverHtml`<link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    @layer reset, base;
+    @layer base {
+      gy-iso-app { max-inline-size: 40rem; margin-inline: auto; padding: 2rem 1rem; }
     }
-    body { background: var(--surface); color: var(--ink); }
-    gy-iso-app { max-inline-size: 40rem; margin-inline: auto; padding: 2rem 1rem; }
-  }
-</style>`;
+  </style>`;
 
 /**
  * Every GET renders the app for its path. All async work (none here) would happen in this
@@ -33,6 +27,7 @@ const baseStyles = serverHtml`<style>
  */
 export function createApp(options: AppOptions): Hono {
   const app = new Hono();
+  app.get('/shared/base.css', (c) => c.body(sharedCss, 200, { 'content-type': 'text/css' }));
   app.get('*', (c) => {
     const { pathname } = new URL(c.req.url);
     return renderPage(

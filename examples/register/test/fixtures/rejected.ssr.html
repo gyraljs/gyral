@@ -5,23 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Create an account — Gyral register</title>
     <meta name="description" content="A form that validates the same way with and without JavaScript.">
-    <style>
-  @layer reset, base;
-  @layer reset {
-    *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; }
-  }
-  @layer base {
-    :root {
-      color-scheme: light dark;
-      font-family: system-ui, sans-serif;
-      --surface: light-dark(oklch(98% 0.01 250), oklch(20% 0.02 250));
-      --ink: light-dark(oklch(25% 0.03 250), oklch(92% 0.01 250));
+    <link rel="stylesheet" href="/shared/base.css" />
+  <style>
+    @layer reset, base;
+    @layer base {
+      body > main { max-inline-size: 30rem; }
     }
-    body { background: var(--surface); color: var(--ink); }
-    main { max-inline-size: 30rem; margin-inline: auto; padding: 2rem 1rem; }
-  }
-</style>
+  </style>
     <script type="module" src="/src/entry-client.ts"></script>
   </head>
   <body>
@@ -35,7 +25,12 @@
       :host {
         display: block;
         --accent: oklch(55% 0.18 260);
-        --danger: light-dark(oklch(50% 0.2 25), oklch(75% 0.15 25));
+        --danger: oklch(50% 0.2 25);
+      }
+      @supports (color: light-dark(black, white)) {
+        :host {
+          --danger: light-dark(oklch(50% 0.2 25), oklch(75% 0.15 25));
+        }
       }
       p {
         display: grid;
@@ -55,6 +50,11 @@
       .error {
         color: var(--danger);
         min-block-size: 1lh;
+      }
+      /* The form-level alert stays in the DOM (live region) but takes no space while empty. */
+      p.error:empty {
+        min-block-size: 0;
+        margin-block: 0;
       }
       button {
         font: inherit;

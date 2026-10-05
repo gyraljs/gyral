@@ -106,7 +106,12 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
         padding: 1rem;
         border: 2px solid oklch(45% 0.08 var(--hue));
         border-radius: 0.5rem;
-        background: light-dark(oklch(94% 0.05 var(--hue)), oklch(30% 0.05 var(--hue)));
+        background: oklch(94% 0.05 var(--hue));
+      }
+      @supports (color: light-dark(black, white)) {
+        details {
+          background: light-dark(oklch(94% 0.05 var(--hue)), oklch(30% 0.05 var(--hue)));
+        }
       }
       summary {
         font-weight: 600;

@@ -79,9 +79,12 @@ export const RandomUser = define<State, Msg>('gy-random-user', {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
       }
-      :host(:state(loading)) button {
-        cursor: progress;
-        opacity: 0.7;
+      /* Custom states are an enhancement (ADR 0003); aria-busy carries the meaning. */
+      @supports selector(:state(loading)) {
+        :host(:state(loading)) button {
+          cursor: progress;
+          opacity: 0.7;
+        }
       }
       article {
         margin-block-start: 1.5rem;
@@ -91,7 +94,11 @@ export const RandomUser = define<State, Msg>('gy-random-user', {
       }
       h2 {
         margin: 0 0 0.75rem;
-        text-wrap: balance;
+      }
+      @supports (text-wrap: balance) {
+        h2 {
+          text-wrap: balance;
+        }
       }
       dl {
         display: grid;
