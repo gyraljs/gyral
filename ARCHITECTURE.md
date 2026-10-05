@@ -25,16 +25,16 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
 
-| Layer | Package          | Status  | May depend on                                                          |
-| ----- | ---------------- | ------- | ---------------------------------------------------------------------- |
-| 0     | `@gyral/core`    | v0 work | `lit`; `effect` only from `src/internal/`                              |
-| 1     | `@gyral/testing` | v0 work | core, `@sinonjs/fake-timers`                                           |
-| 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                             |
-| 1     | `@gyral/router`  | v0 work | core                                                                   |
-| 1     | `@gyral/time`    | v0 work | core                                                                   |
-| 2     | `@gyral/ssr`     | v0 work | core, router, `@lit-labs/ssr` (behind `src/internal/lit.ts`; ADR 0012) |
-| 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                            |
-| app   | `examples/*`     | —       | any public package entry point, never `src/internal`                   |
+| Layer | Package          | Status  | May depend on                                                                |
+| ----- | ---------------- | ------- | ---------------------------------------------------------------------------- |
+| 0     | `@gyral/core`    | v0 work | `lit` (peer); `effect` only from `src/internal/`                             |
+| 1     | `@gyral/testing` | v0 work | core, `@sinonjs/fake-timers`                                                 |
+| 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                                   |
+| 1     | `@gyral/router`  | v0 work | core                                                                         |
+| 1     | `@gyral/time`    | v0 work | core                                                                         |
+| 2     | `@gyral/ssr`     | v0 work | core, router, `@lit-labs/ssr` (peer; behind `src/internal/lit.ts`; ADR 0012) |
+| 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                                  |
+| app   | `examples/*`     | —       | any public package entry point, never `src/internal`                         |
 
 Enforced by `eslint.config.js` (import restrictions for core and layer-1 packages) and `scripts/check-public-api.mjs`.
 

@@ -27,15 +27,16 @@ First run needs `pnpm exec playwright install chromium`.
 
 ## Where things are
 
-| Path                                           | Contents                                                                |
-| ---------------------------------------------- | ----------------------------------------------------------------------- |
-| [ARCHITECTURE.md](ARCHITECTURE.md)             | Packages, layers, allowed dependency edges                              |
-| `packages/core`                                | `define()`, intent parsing, MVI runtime (`@gyral/core`)                 |
-| `packages/*/src/internal`                      | The only place Effect may be imported                                   |
-| `examples/*`                                   | Ports of the Cycle.js examples; the acceptance suite                    |
-| `scripts/`                                     | Invariant checks (`lib/invariants.mjs` + tests)                         |
-| [docs/design-docs/](docs/design-docs/index.md) | Decisions and beliefs (ADRs)                                            |
-| `archive/` (gitignored)                        | Old Cycle.js source. Reference only; never import or copy-paste blindly |
+| Path                                                                   | Contents                                                                |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                     | Packages, layers, allowed dependency edges                              |
+| `packages/core`                                                        | `define()`, intent parsing, MVI runtime (`@gyral/core`)                 |
+| `packages/*/src/internal`                                              | The only place Effect may be imported                                   |
+| `examples/*`                                                           | Ports of the Cycle.js examples; the acceptance suite                    |
+| `scripts/`                                                             | Invariant checks (`lib/invariants.mjs` + tests)                         |
+| [docs/design-docs/](docs/design-docs/index.md)                         | Decisions and beliefs (ADRs)                                            |
+| [docs/references/consumer-setup.md](docs/references/consumer-setup.md) | How apps install Gyral: Lit as a peer, Vite dedupe                      |
+| `archive/` (gitignored)                                                | Old Cycle.js source. Reference only; never import or copy-paste blindly |
 
 ## Design docs to read before changing…
 

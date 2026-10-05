@@ -319,6 +319,7 @@ importers:
       effect:
         specifier: 3.22.2
         version: 3.22.2
+    devDependencies:
       lit:
         specifier: 3.3.3
         version: 3.3.3
@@ -343,15 +344,16 @@ importers:
       '@gyral/core':
         specifier: workspace:*
         version: link:../core
+      '@standard-schema/spec':
+        specifier: 1.1.0
+        version: 1.1.0
+    devDependencies:
       '@lit-labs/ssr':
         specifier: 4.1.0
         version: 4.1.0(@types/node@24.19.1)
       '@lit-labs/ssr-client':
         specifier: 1.1.8
         version: 1.1.8
-      '@standard-schema/spec':
-        specifier: 1.1.0
-        version: 1.1.0
       lit:
         specifier: 3.3.3
         version: 3.3.3
