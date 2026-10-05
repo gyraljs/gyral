@@ -5,10 +5,11 @@ import { getRequestListener } from '@hono/node-server';
 import { createServer as createViteServer } from 'vite';
 
 const port = Number(process.env['PORT'] ?? 5173);
-// HMR_PORT lets several SSR examples run side by side (Vite's default is 24678).
+// HMR_PORT lets several SSR examples run side by side (Vite's default is 24678). In middleware
+// mode the HMR WebSocket needs its own port: Vite 8 sets it with server.ws.port.
 const hmrPort = Number(process.env['HMR_PORT'] ?? 24678);
 const vite = await createViteServer({
-  server: { middlewareMode: true, hmr: { port: hmrPort } },
+  server: { middlewareMode: true, ws: { port: hmrPort } },
   appType: 'custom',
 });
 

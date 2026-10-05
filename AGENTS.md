@@ -13,15 +13,15 @@ details live in the linked docs, which are the system of record.
 
 ## Commands
 
-| Command                                    | What it does                                                  |
-| ------------------------------------------ | ------------------------------------------------------------- |
-| `pnpm install`                             | Install (pnpm workspaces: `packages/*`, `examples/*`)         |
-| `pnpm check`                               | **The gate.** typecheck + lint + format + invariants + tests  |
-| `pnpm test`                                | Vitest: browser project (Chromium) + node project (scripts)   |
-| `pnpm invariants`                          | Docs map, workflow triggers, public-API purity                |
-| `pnpm ci:local`                            | Run `.github/workflows/ci.yml` locally in Docker via `gh act` |
-| `pnpm --filter @gyral-examples/<name> dev` | Run an example with Vite                                      |
-| `pnpm examples [name…]`                    | Run all (or named) examples; index at http://localhost:5100   |
+| Command                                    | What it does                                                                                         |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `pnpm install`                             | Install (pnpm workspaces: `packages/*`, `examples/*`)                                                |
+| `pnpm check`                               | **The gate.** typecheck + lint + format + invariants + tests                                         |
+| `pnpm test`                                | Vitest: browser project (Chromium) + node project (scripts)                                          |
+| `pnpm invariants`                          | Docs map, workflow triggers, public-API purity                                                       |
+| `pnpm ci:local`                            | Run `.github/workflows/ci.yml` locally in Docker via `gh act`                                        |
+| `pnpm --filter @gyral-examples/<name> dev` | Run an example with Vite                                                                             |
+| `pnpm examples [name…]`                    | Run all (or named) examples; index at http://localhost:5100 (`EXAMPLES_PORT=5400` for a second copy) |
 
 First run needs `pnpm exec playwright install chromium`.
 
