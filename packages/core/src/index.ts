@@ -15,6 +15,8 @@ export { focus } from './focus.js';
 export type { FocusOptions } from './focus.js';
 export { invokersSupported } from './invokers.js';
 export type { CommandInfo } from './invokers.js';
+export { ISLAND_ATTRIBUTE } from './islands.js';
+export type { HydrateStrategy } from './islands.js';
 export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
 export { changed, defineStore, send } from './store.js';

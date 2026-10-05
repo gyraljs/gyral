@@ -10,6 +10,7 @@ import { dispatchOutput, EMIT } from './children.js';
 import { FOCUS, runFocus, type FocusInput } from './focus.js';
 import type { GyralElement, GyralElementClass } from './element-types.js';
 import { fillEmptyTextParts, takeSeed, writeSeed } from './hydration.js';
+import { markIsland, scheduleIsland } from './islands.js';
 import { runInit } from './init.js';
 import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
 import {
@@ -164,7 +165,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       // A component server-rendered inside another's shadow root waits for its parent to
       // hydrate. Lit's hydrate support then connects LitElement directly, bypassing this
       // override, so finish connecting from attributeChangedCallback (ADR 0012 addendum).
-      if (deferred(this)) return;
+      if (deferred(this)) {
+        scheduleIsland(this); // lazy islands release themselves (gyral-4k7.4)
+        return;
+      }
       this.#connect();
     }
 
@@ -202,6 +206,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
         const [initial] = splitNext(runInit(spec, this.#props()));
         writeSeed(this, this.state, readRawProps(this, propTable), propTable, { value: initial });
         if (isLight(spec)) markLightHost(this);
+        markIsland(this, spec.hydrate);
         return;
       }
       const prev = this.#seenProps;

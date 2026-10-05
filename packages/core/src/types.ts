@@ -1,6 +1,7 @@
 import type { PropertyDeclaration } from 'lit';
 import type { Styles } from './styles.js';
 import type { CommandInfo } from './invokers.js';
+import type { HydrateStrategy } from './islands.js';
 import type { DriverOverrides, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
@@ -167,6 +168,12 @@ interface SpecBody<S, M extends Tagged, P> {
    * For page-level components (listings, articles). No `<slot>`s and no `styles`. Default `true`.
    */
   readonly shadow?: boolean;
+  /**
+   * When a server-rendered instance hydrates (gyral-4k7.4): `load` (default), `idle`,
+   * `visible` (scrolled into view) or `interaction` (first pointer/focus). Client-only
+   * renders are unaffected.
+   */
+  readonly hydrate?: HydrateStrategy;
   /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
   readonly events?: readonly string[];
   /** Driver substitutions by name, for every instance (ADR 0006). */

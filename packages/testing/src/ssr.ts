@@ -153,26 +153,31 @@ export function undefinedElementsIn(
 /**
  * Waits until every Gyral/Lit element under the page (shadow roots included) has finished
  * updating, re-scanning until no new elements appear (nested children hydrate after their
- * parents). A hydration mismatch rejects. It throws when a server-rendered custom element
- * never upgraded (import its module, or list it in `allowUndefined`). Given a `MountedSsr`,
- * it also throws when console errors/warnings or uncaught errors were recorded since mounting.
+ * parents). Elements still deferred (lazy islands and their children) are skipped. A
+ * hydration mismatch rejects. It throws when a server-rendered custom element never upgraded
+ * (import its module, or list it in `allowUndefined`). Given a `MountedSsr`, it also throws
+ * when console errors/warnings or uncaught errors were recorded since mounting.
  */
 export async function hydrated(
   page: MountedSsr | ParentNode,
   options: HydratedOptions = {},
 ): Promise<void> {
   const root = 'unmount' in page ? page.root : page;
+  // Elements still under Lit's `defer-hydration` (lazy islands waiting for their trigger,
+  // and children inside them) have nothing to wait for yet (gyral-4k7.4). A child released by
+  // its parent's hydration joins the ready set on the next pass.
+  const ready = (): Element[] =>
+    customElementsIn(root).filter((el) => !el.hasAttribute('defer-hydration'));
   let seen = new Set<Element>();
   for (let pass = 0; pass < 10; pass += 1) {
-    const elements = customElementsIn(root);
     await Promise.all(
-      elements.map(
+      ready().map(
         (el) =>
           (el as Partial<{ updateComplete: Promise<unknown> }>).updateComplete ?? Promise.resolve(),
       ),
     );
     await settle();
-    const now = new Set(customElementsIn(root));
+    const now = new Set(ready());
     const stable = now.size === seen.size && [...now].every((el) => seen.has(el));
     seen = now;
     if (stable) break;
