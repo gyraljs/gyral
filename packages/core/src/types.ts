@@ -65,7 +65,8 @@ export interface IntentRejected {
    * For `form()` rejections: what the user submitted, so the view can re-fill the form. On
    * the no-JS path (ADR 0008 server half) the server re-renders the page from this.
    */
-  readonly values?: FormFields;
+  // `| undefined` so schemas with plain optional fields (valibot `optional`) can produce it.
+  readonly values?: FormFields | undefined;
 }
 
 type ParseResult<M> = M | IntentRejected | undefined;

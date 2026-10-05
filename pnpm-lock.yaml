@@ -246,6 +246,9 @@ importers:
       '@gyral/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@gyral/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       '@gyral/ssr':
         specifier: workspace:*
         version: link:../../packages/ssr

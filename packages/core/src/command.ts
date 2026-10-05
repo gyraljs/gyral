@@ -1,4 +1,5 @@
 // Effects as data (docs/design-docs/0006-effects-and-drivers.md). Plain TypeScript only:
+import type { IntentRejected } from './types.js';
 // the Effect-based interpreter lives in ./internal/.
 
 /** How commands in the same lane interact. See ADR 0006 for the table. */
@@ -59,8 +60,12 @@ export interface CommandHandlers<O, E, MS, MF = MS> {
   readonly concurrency?: Concurrency;
 }
 
-/** What a reducer (or `init`) returns: new state, optionally with commands to run. */
-export type Next<S, M> = S | readonly [S, ReadonlyArray<Command<M>>];
+/**
+ * What a reducer (or `init`) returns: new state, optionally with commands to run. Commands may
+ * also answer with the framework message `IntentRejected` (e.g. `submitForm` in @gyral/http
+ * when the server rejects a form), which goes to the optional `IntentRejected` reducer.
+ */
+export type Next<S, M> = S | readonly [S, ReadonlyArray<Command<M | IntentRejected>>];
 
 /** Identity helper so driver literals infer `I`, `O` and `E`. */
 export function defineDriver<I, O, E = unknown>(driver: Driver<I, O, E>): Driver<I, O, E> {
@@ -87,9 +92,11 @@ export function command<I, O, E, MS, MF = MS>(
 }
 
 /** Splits a reducer result into state and commands. State is never an array (ADR 0006). */
-export function splitNext<S, M>(next: Next<S, M>): readonly [S, ReadonlyArray<Command<M>>] {
+export function splitNext<S, M>(
+  next: Next<S, M>,
+): readonly [S, ReadonlyArray<Command<M | IntentRejected>>] {
   if (Array.isArray(next) && next.length === 2 && Array.isArray(next[1])) {
-    return next as readonly [S, ReadonlyArray<Command<M>>];
+    return next as readonly [S, ReadonlyArray<Command<M | IntentRejected>>];
   }
   return [next as S, []];
 }

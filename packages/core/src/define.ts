@@ -17,7 +17,14 @@ import { attachStates, type StateSync } from './states.js';
 import { STORE_SEND, type AnyStore, type StoreOverrides, type StoreSendInput } from './store.js';
 import { StoreBinding } from './store-binding.js';
 import { withViewTransition } from './transitions.js';
-import type { ComponentSpec, Ctx, IntentNames, IntentParser, Tagged } from './types.js';
+import type {
+  ComponentSpec,
+  Ctx,
+  IntentNames,
+  IntentParser,
+  IntentRejected,
+  Tagged,
+} from './types.js';
 
 export type { GyralElement, GyralElementClass } from './element-types.js';
 
@@ -64,10 +71,10 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     /** Props as of the last init or PropsChanged; the `prev` of the next PropsChanged. */
     #seenProps: P | undefined;
     #listening = false;
-    #interpreter: Interpreter<M> | undefined;
-    #pending: Command<M>[] = [];
+    #interpreter: Interpreter<M | IntentRejected> | undefined;
+    #pending: Command<M | IntentRejected>[] = [];
     /** init's commands on the hydration path; started in firstUpdated (ADR 0012). */
-    #afterHydration: readonly Command<M>[] = [];
+    #afterHydration: readonly Command<M | IntentRejected>[] = [];
     /** The latest view-transition update, awaited by updateComplete. */
     #transition: Promise<void> | undefined;
     /** Mirrors spec.states onto CSS custom states; only attached when the spec asks. */
@@ -123,8 +130,8 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       super.connectedCallback();
       // Re-resolve on every connect: the nearest <gyral-stores> may differ after a move.
       if (this.#binding.connect()) this.requestUpdate();
-      this.#interpreter = makeInterpreter<M>(this.#resolve, (msg) => {
-        this.send(msg);
+      this.#interpreter = makeInterpreter<M | IntentRejected>(this.#resolve, (msg) => {
+        this.#dispatch(msg);
       });
       const pending = this.#pending;
       this.#pending = [];

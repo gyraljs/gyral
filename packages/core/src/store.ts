@@ -9,7 +9,7 @@ import {
   type Next,
 } from './command.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
-import type { Tagged } from './types.js';
+import type { IntentRejected, Tagged } from './types.js';
 
 const onServer: boolean = isServer;
 
@@ -97,7 +97,7 @@ function createInstance<S, M extends Tagged>(
     Record<string, ((state: S, msg: M) => Next<S, M>) | undefined>
   >;
   const listeners = new Set<(state: S, prev: S) => void>();
-  let interpreter: Interpreter<M> | undefined;
+  let interpreter: Interpreter<M | IntentRejected> | undefined;
   let disposed = false;
 
   const [initState, initCommands] = splitNext(store.spec.init());
@@ -106,10 +106,11 @@ function createInstance<S, M extends Tagged>(
   const resolve = (driver: AnyDriver): AnyDriver =>
     instance.drivers[driver.name] ?? store.spec.drivers?.[driver.name] ?? driver;
 
-  const run = (commands: ReadonlyArray<Command<M>>): void => {
+  const run = (commands: ReadonlyArray<Command<M | IntentRejected>>): void => {
     if (onServer || disposed || commands.length === 0) return; // never on the server (ADR 0012)
-    interpreter ??= makeInterpreter<M>(resolve, (msg) => {
-      instance.send(msg);
+    interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
+      // Stores have no IntentRejected reducer; only their own messages apply.
+      if (msg._tag !== 'IntentRejected') instance.send(msg as M);
     });
     for (const cmd of commands) interpreter.run(cmd);
   };

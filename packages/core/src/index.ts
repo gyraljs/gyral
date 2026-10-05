@@ -44,9 +44,11 @@ export {
   form,
   formDataToObject,
   formFields,
+  intentRejectedSchema,
+  redirectedTo,
   validateForm,
 } from './forms.js';
-export type { FormDefinition, FormResult, FormValue } from './forms.js';
+export type { FormDefinition, FormRedirected, FormResult, FormValue } from './forms.js';
 export { ElementDirective } from './element-directive.js';
 export { runInit } from './init.js';
 export { invalid } from './invalid.js';

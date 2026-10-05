@@ -105,15 +105,21 @@ export function validateForm<Schema extends StandardSchemaV1>(
   return result instanceof Promise ? result.then(settle) : settle(result);
 }
 
-/** Intent parser for a `<form data-intent>` submission, validated by a schema. */
+/**
+ * Intent parser for a `<form data-intent>` submission, validated by a schema. `toMsg` also
+ * gets the raw `FormData`, for sending the submission to the server (`submitForm` in
+ * @gyral/http) after it passed client-side validation.
+ */
 export function form<Schema extends StandardSchemaV1, M>(
   definition: FormDefinition<Schema> | Schema,
-  toMsg: (data: Out<Schema>) => M | undefined,
+  toMsg: (data: Out<Schema>, formData: FormData) => M | undefined,
 ): IntentParser<M> {
-  const toParsed = (r: FormResult<Out<Schema>>): Parsed<M> => (r.ok ? toMsg(r.data) : r.rejected);
   return (input: IntentInput) => {
-    if (input.formData === undefined) return undefined;
-    const result = validateForm(definition, input.name, input.formData);
+    const { formData } = input;
+    if (formData === undefined) return undefined;
+    const toParsed = (r: FormResult<Out<Schema>>): Parsed<M> =>
+      r.ok ? toMsg(r.data, formData) : r.rejected;
+    const result = validateForm(definition, input.name, formData);
     return result instanceof Promise ? result.then(toParsed) : toParsed(result);
   };
 }
@@ -142,4 +148,59 @@ export function fieldErrors(
   const out: Record<string, string[]> = {};
   for (const { path, message } of issues) (out[path] ??= []).push(message);
   return out;
+}
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null;
+
+const isIssue = (value: unknown): value is FieldIssue =>
+  isRecord(value) && typeof value['path'] === 'string' && typeof value['message'] === 'string';
+
+const isFields = (value: unknown): value is FormFields =>
+  isRecord(value) &&
+  Object.values(value).every(
+    (v) => typeof v === 'string' || (Array.isArray(v) && v.every((x) => typeof x === 'string')),
+  );
+
+/**
+ * A Standard Schema for `IntentRejected` as a server sends it (`formAction` answering JSON).
+ * Used by `submitForm` in @gyral/http to recognise a 422 rejection; usable with any decoder.
+ */
+export const intentRejectedSchema: StandardSchemaV1<unknown, IntentRejected> = {
+  '~standard': {
+    version: 1,
+    vendor: 'gyral',
+    validate: (value) => {
+      if (
+        !isRecord(value) ||
+        value['_tag'] !== 'IntentRejected' ||
+        typeof value['intent'] !== 'string' ||
+        !Array.isArray(value['issues']) ||
+        !value['issues'].every(isIssue) ||
+        (value['values'] !== undefined && !isFields(value['values']))
+      ) {
+        return { issues: [{ message: 'Expected an IntentRejected message' }] };
+      }
+      const rejected: IntentRejected = {
+        _tag: 'IntentRejected',
+        intent: value['intent'],
+        issues: value['issues'],
+        ...(value['values'] === undefined ? {} : { values: value['values'] }),
+      };
+      return { value: rejected };
+    },
+  },
+};
+
+/** A server's JSON answer to a valid form post that would have redirected without JS. */
+export interface FormRedirected {
+  readonly _tag: 'Redirected';
+  readonly location: string;
+}
+
+/** The `location` of a `FormRedirected` answer (from `formAction` in @gyral/ssr), if it is one. */
+export function redirectedTo(body: unknown): string | undefined {
+  return isRecord(body) && body['_tag'] === 'Redirected' && typeof body['location'] === 'string'
+    ? body['location']
+    : undefined;
 }

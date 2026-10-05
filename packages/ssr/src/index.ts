@@ -12,8 +12,8 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { renderChunks, serverHtml, type StepScope } from './internal/lit.js';
 
 export { serverHtml };
-export { formAction, seeOther } from './forms.js';
-export type { FormActionHandlers } from './forms.js';
+export { formAction, rejectWith, seeOther } from './forms.js';
+export type { FormActionHandlers, FormReject } from './forms.js';
 
 export interface RenderOptions {
   /**

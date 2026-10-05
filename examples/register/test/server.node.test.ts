@@ -82,3 +82,40 @@ describe('register server (no-JS path)', () => {
     );
   });
 });
+
+describe('register server (JS path: submitForm round trip)', () => {
+  // What submitForm sends: the browser's FormData, asking for JSON.
+  const submit = (target: ReturnType<typeof createApp>, fields: Record<string, string>) => {
+    const body = new FormData();
+    for (const [k, val] of Object.entries(fields)) body.set(k, val);
+    const headers = { accept: 'application/json' };
+    return target.fetch(new Request('http://localhost/', { method: 'POST', body, headers }));
+  };
+
+  it('stores the account and answers { _tag: Redirected } instead of a 303', async () => {
+    const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
+    const res = await submit(fresh, valid);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ _tag: 'Redirected', location: '/?welcome=mike' });
+  });
+
+  it('rejects a duplicate email on both paths with the same issue', async () => {
+    const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
+    await submit(fresh, valid);
+    const json = await submit(fresh, { ...valid, name: 'other' });
+    expect(json.status).toBe(422);
+    expect(await json.json()).toEqual({
+      _tag: 'IntentRejected',
+      intent: 'Register',
+      issues: [{ path: 'email', message: 'That email is already registered.' }],
+    });
+    const html = await fresh.fetch(
+      new Request('http://localhost/', {
+        method: 'POST',
+        body: new URLSearchParams({ ...valid, name: 'other' }),
+      }),
+    );
+    expect(html.status).toBe(422);
+    expect(await html.text()).toContain('That email is already registered.');
+  });
+});

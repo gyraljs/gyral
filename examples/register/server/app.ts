@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { html, nothing } from 'lit';
 import type { IntentRejected } from '@gyral/core';
-import { formAction, renderPage, seeOther, serverHtml } from '@gyral/ssr';
+import { formAction, rejectWith, renderPage, seeOther, serverHtml } from '@gyral/ssr';
 import '../src/register.js'; // registers <gy-register> so the server can render it
 import { RegisterForm } from '../src/schema.js';
 
@@ -59,11 +59,21 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
  */
 export function createApp(options: AppOptions): Hono {
   const app = new Hono();
+  // Pretend persistence: registered emails, per app instance. A server-only check (the
+  // browser can't know who registered) answered with rejectWith on both paths.
+  const emails = new Set<string>();
   app.get('/', (c) => view(options, { welcome: c.req.query('welcome') }));
   app.post('/', (c) =>
     formAction(RegisterForm, {
       intent: 'Register',
-      valid: (data) => seeOther(`/?welcome=${encodeURIComponent(data.name)}`),
+      valid: (data) => {
+        const email = data.email.toLowerCase();
+        if (emails.has(email)) {
+          return rejectWith([{ path: 'email', message: 'That email is already registered.' }]);
+        }
+        emails.add(email);
+        return seeOther(`/?welcome=${encodeURIComponent(data.name)}`);
+      },
       invalid: (rejected) => view(options, { rejected }, 422),
     })(c.req.raw),
   );

@@ -9,6 +9,7 @@ import {
   type FormFields,
   type IntentRejected,
 } from '@gyral/core';
+import { submitForm } from '@gyral/http';
 import { RegisterForm } from './schema.js';
 
 export interface State {
@@ -16,9 +17,15 @@ export interface State {
   readonly values: FormFields;
   readonly errors: Readonly<Record<string, readonly string[]>>;
   readonly welcome: string | undefined;
+  /** The name being registered while the JS-path request is in flight. */
+  readonly pending: string | undefined;
 }
 
-export type Msg = { readonly _tag: 'Register'; readonly name: string; readonly email: string };
+export type Msg =
+  // Passed client-side validation; `form` is the raw submission, posted to the server as is.
+  | { readonly _tag: 'Register'; readonly name: string; readonly form: FormData }
+  | { readonly _tag: 'Registered' }
+  | { readonly _tag: 'Failed' };
 
 export interface Props {
   /** Set by the server after a successful no-JS submission (Post/Redirect/Get). */
@@ -35,10 +42,12 @@ const text = (values: FormFields, key: string): string => {
   return typeof value === 'string' ? value : '';
 };
 
+// Client-side (form()) and server-side (submitForm → 422) rejections arrive the same way.
 const rejected = (s: State, m: IntentRejected): State => ({
   ...s,
-  values: refill(m.values),
+  values: m.values === undefined ? s.values : refill(m.values),
   errors: fieldErrors(m.issues),
+  pending: undefined,
 });
 
 interface FieldSpec {
@@ -86,23 +95,35 @@ const fieldView = (s: State, f: FieldSpec) => {
 
 export const Register = define<State, Msg, Props>('gy-register', {
   props: { welcome: { type: String } },
-  init: (props) => ({ values: {}, errors: {}, welcome: props.welcome }),
+  init: (props) => ({ values: {}, errors: {}, welcome: props.welcome, pending: undefined }),
   intent: {
-    Register: form(RegisterForm, (data) => ({
-      _tag: 'Register',
-      name: data.name,
-      email: data.email,
-    })),
+    Register: form(RegisterForm, (data, raw) => ({ _tag: 'Register', name: data.name, form: raw })),
   },
   update: {
-    Register: (s, m) => ({ values: {}, errors: {}, welcome: m.name }),
+    // Valid in the browser; the server still decides (it also stores the account).
+    Register: (s, m) => [
+      { ...s, errors: {}, pending: m.name },
+      [
+        submitForm('/', m.form, {
+          onSuccess: () => ({ _tag: 'Registered' }),
+          onFailure: () => ({ _tag: 'Failed' }),
+        }),
+      ],
+    ],
+    Registered: (s) => ({ values: {}, errors: {}, welcome: s.pending, pending: undefined }),
+    Failed: (s) => ({
+      ...s,
+      errors: { '': ['Something went wrong. Please try again.'] },
+      pending: undefined,
+    }),
     IntentRejected: rejected,
   },
   view: (s, i) =>
     s.welcome === undefined
       ? html`<form data-intent=${i.Register} action="/" method="post">
           ${FIELDS.map((f) => fieldView(s, f))}
-          <button>Create account</button>
+          <p class="error" role="alert">${s.errors['']?.join(' ') ?? ''}</p>
+          <button ?disabled=${s.pending !== undefined}>Create account</button>
         </form>`
       : html`<p role="status">Welcome, <strong>${s.welcome}</strong>! Your account is ready.</p>`,
   styles: css`

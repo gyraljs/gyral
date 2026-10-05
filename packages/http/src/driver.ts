@@ -17,6 +17,11 @@ export interface HttpRequest {
    * `IntentRejected`). A body that doesn't match leaves `detail` unset; `body` is always kept.
    */
   readonly errorSchema?: StandardSchemaV1;
+  /**
+   * Adds a CSRF token read from `<meta name=…>` when the request runs (keeps reducers pure).
+   * The header defaults to `x-csrf-token`.
+   */
+  readonly csrf?: { readonly meta: string; readonly header?: string };
 }
 
 /** Every way a request can fail. Delivered to `onFailure`, never thrown into the view. */
@@ -71,6 +76,12 @@ const parseLoose = (text: string): unknown => {
   }
 };
 
+function csrfHeader(csrf: HttpRequest['csrf']): Record<string, string> {
+  if (csrf === undefined || typeof document === 'undefined') return {};
+  const token = document.querySelector(`meta[name="${csrf.meta}"]`)?.getAttribute('content');
+  return token == null ? {} : { [csrf.header ?? 'x-csrf-token']: token };
+}
+
 async function statusError(
   url: string,
   response: Response,
@@ -100,6 +111,7 @@ export function makeHttpDriver(
         accept: 'application/json',
         // Form bodies set their own content type (with the multipart boundary).
         ...(asJson ? { 'content-type': 'application/json' } : {}),
+        ...csrfHeader(req.csrf),
         ...req.headers,
       },
       ...(payload === undefined ? {} : { body: asJson ? JSON.stringify(payload) : payload }),

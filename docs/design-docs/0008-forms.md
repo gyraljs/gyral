@@ -94,3 +94,50 @@ app.post('/', (c) =>
   the lit-web-apps skill.
 - `defineForm` only wraps the schema for now. It is the place where SSR will attach its route
   metadata later.
+
+## Addendum: the JS-path round trip (gyral-czi.25, 2026-10-04)
+
+Real forms need the server to decide even with JavaScript on (email already taken, wrong
+password, persisting the data). gyral-shop's login needed a JSON endpoint, a navigation driver
+and hand-mapped rejections. Now the pair is built in:
+
+```ts
+// component
+intent: { Register: form(RegisterForm, (data, raw) => ({ _tag: 'Register', form: raw })) },
+update: {
+  Register: (s, m) => [{ ...s, busy: true }, [submitForm('/register', m.form, {
+    csrf: { meta: 'csrf-token' },                        // read when the request runs
+    onSuccess: (body) => ({ _tag: 'Done', location: redirectedTo(body) }),
+    onFailure: () => ({ _tag: 'Failed' }),               // network, 500, …
+  })]],
+  IntentRejected: (s, m) => …,                           // client AND server rejections
+}
+// server (Hono)
+app.post('/register', (c) => formAction(RegisterForm, {
+  intent: 'Register',
+  valid: async (data) => (await taken(data.email))
+    ? rejectWith([{ path: 'email', message: 'That email is already registered.' }])
+    : seeOther('/welcome'),
+  invalid: (rejected) => renderForm(rejected, 422),
+})(c.req.raw));
+```
+
+- `form()`'s `toMsg` also receives the raw `FormData`. `submitForm` (in `@gyral/http`) posts it
+  unchanged, so `formAction` parses the JS post exactly like a no-JS post.
+- `formAction` answers `Accept: application/json` with JSON. A redirect becomes
+  `200 { _tag: 'Redirected', location }`, keeping other headers such as `set-cookie`. A
+  rejection becomes `422` with the `IntentRejected`, **without `values`**, so passwords are
+  never echoed. Browser form posts still get HTML.
+- `rejectWith(issues | message)` lets `valid` reject a schema-valid submission. Both paths turn
+  it into the same `IntentRejected` (a string is a form-level issue with path `''`).
+- `submitForm` decodes a 422 body with `intentRejectedSchema` and dispatches it as the
+  framework message `IntentRejected`. Commands may therefore yield `IntentRejected`: `Next`
+  allows `Command<M | IntentRejected>`. Default concurrency is `exhaust` on lane
+  `form:<url>`, so a double submit is ignored.
+- `IntentRejected.values` is typed `FormFields | undefined`, so schemas with plain optional
+  fields (valibot `optional`) decode into it under `exactOptionalPropertyTypes`.
+- `HttpStatusError` now carries the response `body` and, with an `errorSchema`, a decoded
+  `detail` (gyral-ud5.7).
+- The register example uses the round trip. The server stores emails and rejects duplicates on
+  both paths, which covers the earlier bead "Register example: JS path persists via the same
+  POST route".
