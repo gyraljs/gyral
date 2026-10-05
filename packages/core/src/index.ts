@@ -23,6 +23,8 @@ export type {
   StoreOverrides,
   StoreRef,
   StoreSendInput,
+  SeedCheck,
+  StoreResolver,
   StoreSpec,
   StoreUpdate,
 } from './store.js';
@@ -36,6 +38,7 @@ export {
   STORES_ELEMENT,
   withStoreScope,
 } from './store-scope.js';
+export { defineStoresProvider } from './stores-provider.js';
 export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
 export {
   defineForm,

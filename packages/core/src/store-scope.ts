@@ -21,17 +21,19 @@ export class StoreRegistry {
     instances: readonly AnyStoreInstance[] = [],
     seeds: Readonly<Record<string, unknown>> = {},
   ) {
-    for (const instance of instances) this.#instances.set(instance.store.name, instance);
+    for (const instance of instances) this.#hold(instance);
     this.#seeds = seeds;
   }
 
   /** The instance for `store`, creating it (from its seed, if any) on first use. */
   get(store: AnyStore): AnyStoreInstance {
-    let instance = this.#instances.get(store.name);
-    if (instance === undefined) {
-      instance = this.#create(store);
-      this.#instances.set(store.name, instance);
-    }
+    return this.#instances.get(store.name) ?? this.#hold(this.#create(store));
+  }
+
+  /** Keeps an instance and lets its `send(other, msg)` commands reach this scope. */
+  #hold(instance: AnyStoreInstance): AnyStoreInstance {
+    this.#instances.set(instance.store.name, instance);
+    instance.bindScope?.((store) => this.get(store));
     return instance;
   }
 
@@ -88,39 +90,69 @@ export function scriptSafeJson(value: unknown): string {
 
 let documentRegistry: StoreRegistry | undefined;
 
-function readSeeds(): Readonly<Record<string, unknown>> {
-  const script = document.querySelector(`script[${STORE_SEED_ATTRIBUTE}]`);
-  if (script === null) return {};
+function parseSeeds(
+  raw: string | null | undefined,
+  where: string,
+): Readonly<Record<string, unknown>> {
+  if (raw == null) return {};
   try {
-    const parsed = JSON.parse(script.textContent) as unknown;
+    const parsed = JSON.parse(raw) as unknown;
     return parsed !== null && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
   } catch (error) {
-    console.error(`unreadable ${STORE_SEED_ATTRIBUTE} seed`, error);
+    console.error(`unreadable ${STORE_SEED_ATTRIBUTE} seed on ${where}`, error);
     return {};
   }
 }
 
 /** The client's default scope, restored from the server's page seed on first use. */
 function documentScope(): StoreRegistry {
-  documentRegistry ??= new StoreRegistry([], readSeeds());
+  const script = document.querySelector(`script[${STORE_SEED_ATTRIBUTE}]`);
+  documentRegistry ??= new StoreRegistry([], parseSeeds(script?.textContent, 'the page'));
   return documentRegistry;
 }
 
 const providers = new WeakMap<Element, StoreRegistry>();
 
-function providerScope(el: Element): StoreRegistry {
+/**
+ * A `<gyral-stores>` provider's scope, created on first use. On the client a server-rendered
+ * provider carries its instances' states in `data-gyral-stores` (gyral-czi.20): seeded stores
+ * are restored from it (so hydration matches the server), and `.instances` supplies the rest.
+ */
+export function providerScope(el: Element): StoreRegistry {
   let registry = providers.get(el);
   if (registry === undefined) {
-    const { instances } = el as { instances?: readonly AnyStoreInstance[] };
-    registry = new StoreRegistry(instances ?? []);
+    const { instances = [] } = el as { instances?: readonly AnyStoreInstance[] };
+    const seeds = onServer
+      ? {}
+      : parseSeeds(el.getAttribute(STORE_SEED_ATTRIBUTE), `<${el.localName}>`);
+    const unseeded = instances.filter((i) => !(i.store.name in seeds));
+    registry = new StoreRegistry(unseeded, seeds);
     providers.set(el, registry);
   }
   return registry;
 }
 
+/** Event a component dispatches on the server to find its nearest `<gyral-stores>` provider. */
+export const STORES_REQUEST = 'gyral-stores-request';
+
+/** The detail of a STORES_REQUEST event; the provider fills in `registry`. */
+export interface StoresRequest {
+  registry?: StoreRegistry;
+}
+
+// The server has no DOM ancestry, but Lit's SSR DOM shim bubbles events through the custom
+// elements being rendered (the mechanism @lit/context uses), so a registered provider can answer.
+function serverProvider(host: Element): StoreRegistry | undefined {
+  const detail: StoresRequest = {};
+  host.dispatchEvent(new CustomEvent(STORES_REQUEST, { bubbles: true, composed: true, detail }));
+  return detail.registry;
+}
+
 /** The scope for a component: its nearest provider (across shadow roots) or the default. */
 export function scopeFor(host: Element, tag: string, store: AnyStore): StoreRegistry {
   if (onServer) {
+    const provided = serverProvider(host);
+    if (provided !== undefined) return provided;
     if (serverScope !== undefined) return serverScope;
     throw new Error(
       `<${tag}> reads store "${store.name}" during a server render without a store scope. ` +

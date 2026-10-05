@@ -6,7 +6,9 @@
   "license": "MIT",
   "sideEffects": [
     "./src/hydrate.ts",
-    "./dist/hydrate.js"
+    "./dist/hydrate.js",
+    "./src/index.ts",
+    "./dist/index.js"
   ],
   "exports": {
     ".": "./src/index.ts",

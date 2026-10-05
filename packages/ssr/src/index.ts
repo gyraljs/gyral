@@ -1,6 +1,7 @@
 // Server rendering for Gyral (docs/design-docs/0012-ssr.md). Runtime-agnostic: returns web
 // `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
 import {
+  defineStoresProvider,
   scriptSafeJson,
   STORE_SEED_ATTRIBUTE,
   StoreRegistry,
@@ -10,6 +11,10 @@ import {
 import { nothing } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { renderChunks, serverHtml, type StepScope } from './internal/lit.js';
+
+// <gyral-stores> must be a registered element before templates using it are prepared, so
+// components rendered inside it find its instances and its state is seeded (ADR 0013).
+defineStoresProvider();
 
 export { serverHtml };
 export { formAction, rejectWith, seeOther } from './forms.js';

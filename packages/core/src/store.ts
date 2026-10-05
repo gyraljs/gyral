@@ -58,6 +58,8 @@ export interface StoreInstance<S, M extends Tagged> {
   drivers: DriverOverrides;
   /** Stops running commands and drops subscribers. */
   dispose(): void;
+  /** Set by the registry that holds the instance (store-to-store `send`). */
+  bindScope(resolve: StoreResolver): void;
 }
 
 export interface Store<S, M extends Tagged> extends StoreRef<S> {
@@ -87,7 +89,15 @@ export interface AnyStoreInstance {
   send(msg: never): void;
   subscribe(listener: (state: unknown, prev: unknown) => void): () => void;
   dispose(): void;
+  /**
+   * Called by the registry that holds this instance, so the store's `send(other, msg)`
+   * commands reach `other`'s instance in the same scope (gyral-czi.20).
+   */
+  bindScope?(resolve: StoreResolver): void;
 }
+
+/** Finds a store's instance in a scope (a registry). */
+export type StoreResolver = (store: AnyStore) => AnyStoreInstance;
 
 /** Store instances substituted by store name (tests, islands). */
 export type StoreOverrides = Readonly<Record<string, AnyStoreInstance>>;
@@ -141,13 +151,33 @@ function createInstance<S, M extends Tagged>(
   const resolve = (driver: AnyDriver): AnyDriver =>
     instance.drivers[driver.name] ?? store.spec.drivers?.[driver.name] ?? driver;
 
+  let scope: StoreResolver | undefined;
+
+  // Store-to-store writes: delivered synchronously to the other store's instance in scope.
+  const deliver = ({ store: target, msg }: StoreSendInput): void => {
+    if (scope === undefined) {
+      console.warn(
+        `store "${store.name}" sends to "${target.name}" but is not held by a store scope ` +
+          '(a registry, <gyral-stores> or the page default), so the message is dropped.',
+      );
+      return;
+    }
+    (scope(target) as { send(msg: unknown): void }).send(msg);
+  };
+
   const run = (commands: ReadonlyArray<Command<M | IntentRejected>>): void => {
     if (onServer || disposed || commands.length === 0) return; // never on the server (ADR 0012)
-    interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
-      // Stores have no IntentRejected reducer; only their own messages apply.
-      if (msg._tag !== 'IntentRejected') instance.send(msg as M);
-    });
-    for (const cmd of commands) interpreter.run(cmd);
+    for (const cmd of commands) {
+      if (cmd.driver === STORE_SEND) {
+        deliver(cmd.input as StoreSendInput);
+        continue;
+      }
+      interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
+        // Stores have no IntentRejected reducer; only their own messages apply.
+        if (msg._tag !== 'IntentRejected') instance.send(msg as M);
+      });
+      interpreter.run(cmd);
+    }
   };
 
   const instance: StoreInstance<S, M> = {
@@ -177,6 +207,9 @@ function createInstance<S, M extends Tagged>(
       interpreter?.dispose();
       listeners.clear();
     },
+    bindScope(resolver) {
+      scope = resolver;
+    },
   };
 
   // A seeded instance (hydration) starts init's commands after the hydrating renders flushed,
@@ -202,7 +235,9 @@ export interface StoreSendInput {
 }
 
 /** A command that sends `msg` to the component's instance of `store`. Writes are commands. */
-export function send<S, M extends Tagged>(store: Store<S, M>, msg: M): Command<never> {
+// NoInfer: the store decides the message type, so a literal (`{ _tag: 'Track', … }`) is checked
+// against it instead of widening `_tag` to string (store-to-store sends have no other context).
+export function send<S, M extends Tagged>(store: Store<S, M>, msg: NoInfer<M>): Command<never> {
   const input: StoreSendInput = { store, msg };
   return { driver: STORE_SEND, input, onSuccess: () => undefined };
 }
