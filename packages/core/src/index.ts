@@ -39,6 +39,7 @@ export {
   withStoreScope,
 } from './store-scope.js';
 export { defineStoresProvider } from './stores-provider.js';
+export { jsonHazard, warnJsonHazard } from './json-safety.js';
 export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
 export {
   defineForm,

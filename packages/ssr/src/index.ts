@@ -5,6 +5,7 @@ import {
   scriptSafeJson,
   STORE_SEED_ATTRIBUTE,
   StoreRegistry,
+  warnJsonHazard,
   withStoreScope,
   type AnyStoreInstance,
 } from '@gyral/core';
@@ -44,7 +45,11 @@ export interface PageOptions extends RenderOptions {
 /** The page-level store seed the client restores before components hydrate (ADR 0013). */
 function storeSeed(stores: readonly AnyStoreInstance[]): unknown {
   if (stores.length === 0) return nothing;
-  const json = scriptSafeJson(new StoreRegistry(stores).snapshot());
+  const snapshot = new StoreRegistry(stores).snapshot();
+  for (const [name, state] of Object.entries(snapshot)) {
+    warnJsonHazard(`store "${name}"`, state, 'state');
+  }
+  const json = scriptSafeJson(snapshot);
   return unsafeHTML(`<script type="application/json" ${STORE_SEED_ATTRIBUTE}>${json}</script>`);
 }
 

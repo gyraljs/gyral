@@ -2,6 +2,7 @@
 // state, plus the props an attribute can't carry, into one attribute; the client reads it
 // before its first (hydrating) render so both sides render the same template.
 import type { PropertyDeclaration } from 'lit';
+import { warnJsonHazard } from './json-safety.js';
 
 /** Host attribute holding the JSON seed. Removed once the client has read it. */
 export const SEED_ATTRIBUTE = 'data-gyral-seed';
@@ -49,6 +50,7 @@ export function writeSeed(
   }
   const derivable = initialState !== undefined && sameJson(state, initialState.value);
   const seed: Seed = derivable ? { props: carried } : { state, props: carried };
+  warnJsonHazard(`<${host.localName}>`, seed, 'seed');
   host.setAttribute(SEED_ATTRIBUTE, JSON.stringify(seed));
 }
 

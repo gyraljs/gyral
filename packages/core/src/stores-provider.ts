@@ -3,6 +3,7 @@
 // be a registered element: components find it through Lit's SSR event path, and its instances'
 // states are written to `data-gyral-stores` for the client to restore.
 import { css, html, isServer, LitElement } from 'lit';
+import { warnJsonHazard } from './json-safety.js';
 import type { AnyStoreInstance } from './store.js';
 import {
   providerScope,
@@ -34,6 +35,9 @@ class GyralStores extends LitElement {
     // Written before the attributes render; the client restores it (providerScope()).
     if (value !== undefined && value.length > 0) {
       const seed = Object.fromEntries(value.map((i) => [i.store.name, i.state]));
+      for (const [name, state] of Object.entries(seed)) {
+        warnJsonHazard(`store "${name}" in <${STORES_ELEMENT}>`, state, 'state');
+      }
       this.setAttribute(STORE_SEED_ATTRIBUTE, JSON.stringify(seed));
     }
   }
