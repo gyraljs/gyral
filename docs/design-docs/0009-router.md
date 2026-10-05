@@ -112,3 +112,23 @@ defaults to `false`** in both histories:
 `define(…, { drivers: { router: makeRouter({ captureLinks: true }) }, … })`, as
 `examples/routing-view` and `examples/isomorphic` now do. Tests that click links on a memory
 router add `captureLinks: true`.
+
+## Addendum: capture only while listening (gyral-ud5.10, 2026-10-05)
+
+gyral-shop's admin tests found a leak: a memory router with `captureLinks` kept its `document`
+click listener until `dispose()`, so a leftover router from an earlier test claimed clicks
+(`preventDefault`) and the next router silently skipped them.
+
+Link capture is now tied to the router's listeners. The click listener is added when the first
+`listen()` stream starts and removed when the last one ends (its component disconnected), and
+added again for the next listener. A router nobody listens to never captures, whether or not
+anyone calls `dispose()`. `dispose()` still removes everything at once.
+
+- **Scoping:** `linkRoot` now applies to both histories. An element limits capture to its
+  subtree (and turns capture on); `null` turns it off; the default with `captureLinks: true` is
+  the document.
+- **Overlap warning:** when two routers capture on the same root at the same time, a console
+  warning says so, since only the first to see a click navigates.
+- **Migration:** apps that relied on a router capturing clicks before any component listened
+  must start a `listen()` stream first (every routing component already does). Tests that
+  created routers without disposing them no longer leak.

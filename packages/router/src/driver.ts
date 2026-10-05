@@ -1,5 +1,5 @@
 import type { Driver } from '@gyral/core';
-import { capturedUrl } from './links.js';
+import { capturedUrl, linkCapture } from './links.js';
 import { createMemorySource, type MemoryOptions } from './memory.js';
 import type { RouterSnapshot, Source } from './source.js';
 import { locationStream, type RouteLocation } from './stream.js';
@@ -18,7 +18,8 @@ export interface RouterOptions extends MemoryOptions {
   readonly name?: string;
   /**
    * `'browser'` (default) drives the real document. `'memory'` keeps entries in memory: no
-   * global URL changes, no `window` needed (tests, servers). See `initial`, `origin`, `linkRoot`.
+   * global URL changes, no `window` needed (tests, servers). See `initial` and `origin`.
+   * `captureLinks`/`linkRoot` apply to both histories.
    */
   readonly history?: 'browser' | 'memory';
   /** Browser history: default the global window, resolved on first use (safe on a server). */
@@ -81,7 +82,8 @@ function createBrowserSource(options: RouterOptions): Source {
     const e = event as NavigateEventLike;
     if (e.info === token && e.canIntercept) e.intercept(); // keep it same-document
   };
-  const onClick = (event: MouseEvent): void => {
+  const onClick = (event: Event): void => {
+    if (!(event instanceof MouseEvent)) return;
     const url = capturedUrl(event, win.location);
     if (url === undefined) return;
     event.preventDefault();
@@ -96,10 +98,17 @@ function createBrowserSource(options: RouterOptions): Source {
     nav.addEventListener('navigate', onNavigate);
     nav.addEventListener('currententrychange', stream.notify);
   }
-  if (options.captureLinks === true) win.document.addEventListener('click', onClick);
+  const linkRoot =
+    options.linkRoot === undefined
+      ? options.captureLinks === true
+        ? win.document
+        : undefined
+      : (options.linkRoot ?? undefined);
+  // Only while a component listens (gyral-ud5.10): a leftover router never claims clicks.
+  const capture = linkCapture(linkRoot, onClick);
 
   return {
-    subscribe: stream.subscribe,
+    subscribe: capture.track(stream.subscribe),
     navigate,
     traverse: (delta) => {
       win.history.go(delta);
@@ -116,7 +125,7 @@ function createBrowserSource(options: RouterOptions): Source {
       win.removeEventListener('popstate', stream.notify);
       nav?.removeEventListener('navigate', onNavigate);
       nav?.removeEventListener('currententrychange', stream.notify);
-      win.document.removeEventListener('click', onClick);
+      capture.dispose();
       stream.clear();
     },
   };

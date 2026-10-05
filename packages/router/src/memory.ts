@@ -1,5 +1,5 @@
 // In-memory history: tests and servers route without touching window.location (ADR 0009).
-import { capturedUrl } from './links.js';
+import { capturedUrl, linkCapture } from './links.js';
 import { locationStream } from './stream.js';
 import type { Source } from './source.js';
 
@@ -14,9 +14,9 @@ export interface MemoryOptions {
    */
   readonly captureLinks?: boolean;
   /**
-   * Memory history: where to capture link clicks when `captureLinks` is on. Default: the
-   * global `document` when there is one. Passing an element also turns capture on; `null`
-   * turns it off.
+   * Where to capture link clicks when `captureLinks` is on. Default: the (global, or the
+   * browser history's) `document`. Passing an element also turns capture on and limits it to
+   * that subtree; `null` turns it off. Capture is only active while a component listens.
    */
   readonly linkRoot?: EventTarget | null;
 }
@@ -57,10 +57,11 @@ export function createMemorySource(options: MemoryOptions): Source {
     event.preventDefault();
     navigate(url.href, false);
   };
-  linkRoot?.addEventListener('click', onClick);
+  // Only while a component listens (gyral-ud5.10): a leftover router never claims clicks.
+  const capture = linkCapture(linkRoot, onClick);
 
   return {
-    subscribe: stream.subscribe,
+    subscribe: capture.track(stream.subscribe),
     navigate,
     traverse: (delta) => {
       const next = Math.min(Math.max(index + delta, 0), entries.length - 1);
@@ -73,7 +74,7 @@ export function createMemorySource(options: MemoryOptions): Source {
     },
     snapshot: () => ({ href: at().href, title, length: entries.length }),
     dispose: () => {
-      linkRoot?.removeEventListener('click', onClick);
+      capture.dispose();
       stream.clear();
     },
   };

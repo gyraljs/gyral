@@ -32,3 +32,76 @@ export function capturedUrl(event: MouseEvent, location: LocationLike): URL | un
   if (samePage && url.hash !== '') return undefined;
   return url;
 }
+
+// Routers capturing clicks on each root right now (dev warning on overlap, gyral-ud5.10).
+const capturing = new Map<EventTarget, number>();
+
+type Subscribe<T> = (emit: (value: T) => void, signal: AbortSignal) => Promise<never>;
+
+export interface LinkCapture {
+  /** Wraps `subscribe`: capture is on only while at least one `listen` stream is running. */
+  readonly track: <T>(subscribe: Subscribe<T>) => Subscribe<T>;
+  readonly dispose: () => void;
+}
+
+/**
+ * Link capture tied to the router's listeners (ADR 0009 addendum, gyral-ud5.10): the click
+ * listener is added when the first `listen` stream starts and removed when the last one ends,
+ * so a router whose components have disconnected (or a leftover router from an earlier test)
+ * can never claim clicks. Warns when two routers capture on the same root at once.
+ */
+export function linkCapture(
+  root: EventTarget | undefined,
+  onClick: (event: Event) => void,
+): LinkCapture {
+  let listeners = 0;
+  let active = false;
+
+  const start = (): void => {
+    if (root === undefined || active) return;
+    const others = capturing.get(root) ?? 0;
+    if (others > 0) {
+      console.warn(
+        'gyral router: two routers are capturing link clicks on the same root; only the ' +
+          'first one to see a click navigates. Dispose the old router, or give each router its ' +
+          'own `linkRoot` (ADR 0009).',
+      );
+    }
+    capturing.set(root, others + 1);
+    root.addEventListener('click', onClick);
+    active = true;
+  };
+
+  const stop = (): void => {
+    if (root === undefined || !active) return;
+    root.removeEventListener('click', onClick);
+    const left = (capturing.get(root) ?? 1) - 1;
+    if (left > 0) capturing.set(root, left);
+    else capturing.delete(root);
+    active = false;
+  };
+
+  return {
+    track:
+      <T>(subscribe: Subscribe<T>): Subscribe<T> =>
+      (emit, signal) => {
+        if (!signal.aborted) {
+          listeners += 1;
+          start();
+          signal.addEventListener(
+            'abort',
+            () => {
+              listeners -= 1;
+              if (listeners === 0) stop();
+            },
+            { once: true },
+          );
+        }
+        return subscribe(emit, signal);
+      },
+    dispose: () => {
+      listeners = 0;
+      stop();
+    },
+  };
+}
