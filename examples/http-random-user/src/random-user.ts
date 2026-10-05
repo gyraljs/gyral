@@ -62,8 +62,14 @@ export const RandomUser = define<State, Msg>('gy-random-user', {
     @layer component {
       :host {
         display: block;
-        --accent: oklch(55% 0.18 220);
-        --muted: color-mix(in oklch, currentColor 60%, transparent);
+        /* Dark enough for AA link contrast on light backgrounds (found by ui:check). */
+        --accent: oklch(45% 0.15 220);
+        --muted: color-mix(in oklch, currentColor 75%, transparent);
+      }
+      @supports (color: light-dark(black, white)) {
+        :host {
+          --accent: light-dark(oklch(45% 0.15 220), oklch(78% 0.12 220));
+        }
       }
       button {
         font: inherit;

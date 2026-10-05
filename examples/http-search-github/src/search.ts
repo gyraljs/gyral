@@ -93,7 +93,7 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
         display: block;
         container-type: inline-size;
         --accent: oklch(55% 0.18 260);
-        --muted: color-mix(in oklch, currentColor 60%, transparent);
+        --muted: color-mix(in oklch, currentColor 75%, transparent);
       }
       form {
         display: grid;

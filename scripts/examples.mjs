@@ -5,32 +5,12 @@
 //                                      or agent worktree can run alongside the first)
 // Plain examples run `vite`; SSR examples (with server/dev.ts) run their own dev server.
 import { spawn } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { join } from 'node:path';
+import { DEFAULT_INDEX_PORT, listExamples } from './lib/examples.mjs';
 
-const INDEX_PORT = Number(process.env['EXAMPLES_PORT'] ?? 5100);
-const FIRST_PORT = INDEX_PORT + 1;
-// HMR WebSockets for SSR examples, kept clear of the HTTP ports.
-const FIRST_HMR_PORT = 24700 + (INDEX_PORT - 5100);
+const INDEX_PORT = Number(process.env['EXAMPLES_PORT'] ?? DEFAULT_INDEX_PORT);
 const wanted = process.argv.slice(2);
-
-const examples = readdirSync('examples', { withFileTypes: true })
-  .filter((e) => e.isDirectory() && existsSync(join('examples', e.name, 'package.json')))
-  .filter((e) => wanted.length === 0 || wanted.includes(e.name))
-  .map((e, n) => {
-    const dir = join('examples', e.name);
-    const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
-    const ssr = existsSync(join(dir, 'server', 'dev.ts'));
-    return {
-      name: e.name,
-      dir,
-      ssr,
-      port: FIRST_PORT + n,
-      hmr: FIRST_HMR_PORT + n,
-      about: pkg.description ?? '',
-    };
-  });
+const examples = listExamples(wanted, INDEX_PORT);
 
 if (examples.length === 0) {
   console.error(`No examples match: ${wanted.join(', ')}`);
