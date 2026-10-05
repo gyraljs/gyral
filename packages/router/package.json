@@ -2,9 +2,18 @@
   "name": "@gyral/router",
   "version": "0.0.0",
   "description": "Gyral router: typed route tables, navigation as commands, History API baseline with Navigation API enhancement.",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/router#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/router"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts"
@@ -18,18 +27,16 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@gyral/core": "workspace:*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/router"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/router#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

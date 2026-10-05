@@ -24,3 +24,7 @@ __lint_fixture_*
 
 # Agent worktrees
 .claude/worktrees/
+
+# Copied into each package at build/pack time by scripts/build-package.mjs
+packages/*/LICENSE
+packages/*/NOTICE

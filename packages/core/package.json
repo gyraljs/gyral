@@ -2,13 +2,28 @@
   "name": "@gyral/core",
   "version": "0.0.0",
   "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts"
+  },
+  "imports": {
+    "#devtools": {
+      "development": "./src/devtools.ts",
+      "default": "./src/devtools-off.ts"
+    }
   },
   "publishConfig": {
     "exports": {
@@ -29,8 +44,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@standard-schema/spec": "1.1.0",
     "effect": "3.22.2"
@@ -40,20 +62,5 @@
   },
   "devDependencies": {
     "lit": "3.3.3"
-  },
-  "imports": {
-    "#devtools": {
-      "development": "./src/devtools.ts",
-      "default": "./src/devtools-off.ts"
-    }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/core"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

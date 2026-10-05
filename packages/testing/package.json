@@ -2,9 +2,18 @@
   "name": "@gyral/testing",
   "version": "0.0.0",
   "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/testing#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/testing"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
@@ -23,8 +32,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@gyral/core": "workspace:*",
     "@sinonjs/fake-timers": "15.4.0",
@@ -41,14 +57,5 @@
   "devDependencies": {
     "@valibot/to-json-schema": "1.8.0",
     "fast-check": "4.10.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/testing"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/testing#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

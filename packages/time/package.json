@@ -2,9 +2,18 @@
   "name": "@gyral/time",
   "version": "0.0.0",
   "description": "Gyral time: delays, debounces, periodic ticks and animation frames as commands.",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/time#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/time"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts"
@@ -18,21 +27,19 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@gyral/core": "workspace:*"
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/time"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/time#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

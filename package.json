@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test && node scripts/check-fixtures.mjs",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test && node scripts/check-fixtures.mjs && pnpm pack:check",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && pnpm lint:css",
     "lint:css": "stylelint \"packages/*/src/**/*.ts\" \"examples/*/src/**/*.ts\" \"examples/**/*.css\" --allow-empty-input",
@@ -21,9 +21,14 @@
     "examples": "node scripts/examples.mjs",
     "size": "node scripts/measure-bundles.mjs",
     "ui:check": "node scripts/ui-check.mjs",
-    "smoke:prod": "node scripts/smoke-prod.mjs"
+    "smoke:prod": "node scripts/smoke-prod.mjs",
+    "build": "pnpm -r --filter \"./packages/*\" run build",
+    "pack:check": "node scripts/pack-check.mjs",
+    "verify:install": "node scripts/verify-install.mjs"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@changesets/cli": "3.0.3",
     "@eslint/js": "10.0.1",
     "@gyral/devtools": "workspace:*",
     "@types/node": "24.19.1",
@@ -38,6 +43,7 @@
     "postcss": "8.5.28",
     "postcss-lit": "1.4.1",
     "prettier": "3.9.9",
+    "publint": "0.3.25",
     "stylelint": "17.16.0",
     "stylelint-plugin-use-baseline": "1.4.6",
     "typescript": "6.0.3",

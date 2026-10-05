@@ -2,9 +2,18 @@
   "name": "@gyral/http",
   "version": "0.0.0",
   "description": "Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/http#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/http"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
@@ -23,19 +32,17 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@gyral/core": "workspace:*",
     "@standard-schema/spec": "1.1.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/http"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/http#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

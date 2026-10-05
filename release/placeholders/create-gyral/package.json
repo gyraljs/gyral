@@ -1,0 +1,24 @@
+{
+  "name": "create-gyral",
+  "version": "0.0.0",
+  "description": "Coming soon — https://gyral.dev",
+  "keywords": [
+    "gyral",
+    "web-components",
+    "lit",
+    "mvi"
+  ],
+  "license": "MIT",
+  "author": "The Zoop Troop, Inc.",
+  "homepage": "https://gyral.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

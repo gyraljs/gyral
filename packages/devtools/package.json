@@ -2,9 +2,18 @@
   "name": "@gyral/devtools",
   "version": "0.0.0",
   "description": "Gyral devtools: an in-page timeline of messages, state, commands and stores (development builds).",
-  "type": "module",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/devtools#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/devtools"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
   "sideEffects": [
     "./src/panel.ts",
     "./dist/panel.js"
@@ -21,8 +30,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs",
+    "prepack": "node ../../scripts/build-package.mjs"
+  },
   "dependencies": {
     "@gyral/core": "workspace:*"
   },
@@ -31,14 +47,5 @@
   },
   "devDependencies": {
     "lit": "3.3.3"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gyraljs/gyral.git",
-    "directory": "packages/devtools"
-  },
-  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/devtools#readme",
-  "bugs": {
-    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }
