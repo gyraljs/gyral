@@ -23,4 +23,5 @@ Status values: **accepted** (in force), **proposed** (under discussion), **super
 | [0014-light-dom.md](0014-light-dom.md)                     | accepted | `shadow: false`: page-level components render as light-DOM children (SSR without DSD, document CSS, re-render at hydration)          |
 | [0015-runtime-size-spike.md](0015-runtime-size-spike.md)   | proposed | Bundle cost of Effect 3 / Micro / Effect 4 / no Effect; recommends upgrading to Effect 4 — owner decision pending                    |
 | [0016-production-builds.md](0016-production-builds.md)     | accepted | One route table, three render modes; `@gyral/ssr/static` prerender + production server with cache policy                             |
+| [0017-devtools.md](0017-devtools.md)                       | accepted | Dev-only event stream via a `#devtools` conditional import (stripped in production); `@gyral/devtools` panel                         |
 | [lessons-from-cyclejs.md](lessons-from-cyclejs.md)         | accepted | What we keep, drop and replace from Cycle.js                                                                                         |

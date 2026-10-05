@@ -19,6 +19,12 @@
         "types": "./dist/vite.d.ts",
         "default": "./dist/vite.js"
       }
+    },
+    "imports": {
+      "#devtools": {
+        "development": "./dist/devtools.js",
+        "default": "./dist/devtools-off.js"
+      }
     }
   },
   "files": [
@@ -33,5 +39,11 @@
   },
   "devDependencies": {
     "lit": "3.3.3"
+  },
+  "imports": {
+    "#devtools": {
+      "development": "./src/devtools.ts",
+      "default": "./src/devtools-off.ts"
+    }
   }
 }

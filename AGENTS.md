@@ -55,6 +55,7 @@ First run needs `pnpm exec playwright install chromium`.
 | Shared state, stores                   | [0013-shared-state.md](docs/design-docs/0013-shared-state.md)               |
 | Light DOM, page-level components       | [0014-light-dom.md](docs/design-docs/0014-light-dom.md)                     |
 | Production builds, SSG, serving        | [0016-production-builds.md](docs/design-docs/0016-production-builds.md)     |
+| Devtools hook and panel                | [0017-devtools.md](docs/design-docs/0017-devtools.md)                       |
 | Browser APIs, CSS features             | [0003-browser-baseline.md](docs/design-docs/0003-browser-baseline.md)       |
 | CI, GitHub Actions                     | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                       |
 | Repo docs, lint rules, this file       | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md) |

@@ -1,5 +1,7 @@
 import { Data, Duration, Effect, Fiber, Schedule } from 'effect';
-import type { AnyDriver, Command, RetryPolicy } from '../command.js';
+import { DEVTOOLS_ENABLED } from '#devtools';
+import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
+import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { fork } from './runtime.js';
 
 class DriverFailure extends Data.TaggedError('DriverFailure')<{ readonly cause: unknown }> {}
@@ -26,10 +28,14 @@ const withRetry = <A>(
   return Effect.retry(attempt, delays.pipe(Schedule.intersect(Schedule.recurs(policy.times))));
 };
 
+/** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
+type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
+
 const execute = <M>(
   driver: AnyDriver,
   cmd: Command<M>,
   dispatch: (msg: M) => void,
+  report: Report,
 ): Effect.Effect<void> => {
   const deliver = (output: unknown): void => {
     try {
@@ -53,11 +59,25 @@ const execute = <M>(
     },
     catch: (cause) => new DriverFailure({ cause }),
   });
-  return withRetry(attempt, driver.retry).pipe(
+  const traced =
+    DEVTOOLS_ENABLED && report !== undefined
+      ? withRetry(attempt, driver.retry).pipe(
+          Effect.onInterrupt(() =>
+            Effect.sync(() => {
+              report('interrupted');
+            }),
+          ),
+        )
+      : withRetry(attempt, driver.retry);
+  return traced.pipe(
     Effect.matchEffect({
-      onSuccess: (output) => Effect.succeed(cmd.onSuccess(output)),
+      onSuccess: (output) => {
+        if (DEVTOOLS_ENABLED) report?.('settled', output);
+        return Effect.succeed(cmd.onSuccess(output));
+      },
       onFailure: (failure) => {
         const error = driver.toError === undefined ? failure.cause : driver.toError(failure.cause);
+        if (DEVTOOLS_ENABLED) report?.('failed', error);
         return cmd.onFailure === undefined
           ? Effect.logWarning(`gyral: unhandled failure from driver "${driver.name}"`, error).pipe(
               Effect.as(undefined),
@@ -77,7 +97,21 @@ const execute = <M>(
 export function makeInterpreter<M>(
   resolve: (driver: AnyDriver) => AnyDriver,
   dispatch: (msg: M) => void,
+  trace?: CommandTrace,
 ): Interpreter<M> {
+  const reporter = (driver: string, lane: string, policy: Concurrency, input: unknown): Report =>
+    trace === undefined
+      ? undefined
+      : (phase, result) => {
+          trace({
+            phase,
+            driver,
+            lane,
+            policy,
+            input,
+            ...(result === undefined ? {} : { result }),
+          });
+        };
   const lanes = new Map<string, Running>();
   const all = new Set<Running>();
   let active = true;
@@ -102,9 +136,14 @@ export function makeInterpreter<M>(
     const policy = cmd.concurrency ?? driver.concurrency ?? 'merge';
     const previous = lanes.get(lane);
     const inFlight = isRunning(previous) ? previous : undefined;
-    let program = execute(driver, cmd, guardedDispatch);
+    const report = DEVTOOLS_ENABLED ? reporter(driver.name, lane, policy, cmd.input) : undefined;
+    let program = execute(driver, cmd, guardedDispatch, report);
+    if (inFlight !== undefined && policy === 'exhaust') {
+      if (DEVTOOLS_ENABLED) report?.('dropped');
+      return;
+    }
+    if (DEVTOOLS_ENABLED) report?.('issued');
     if (inFlight !== undefined) {
-      if (policy === 'exhaust') return;
       if (policy === 'switch') program = Effect.zipRight(Fiber.interrupt(inFlight), program);
       if (policy === 'queue') program = Effect.zipRight(Fiber.await(inFlight), program);
     }

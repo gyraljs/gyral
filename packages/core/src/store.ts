@@ -2,6 +2,7 @@
 // A store is MVI without a view: init + pure update, commands run by its own interpreter.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { isServer } from 'lit';
+import { DEVTOOLS_ENABLED, devCommands, devStore } from '#devtools';
 import {
   splitNext,
   type AnyDriver,
@@ -172,10 +173,14 @@ function createInstance<S, M extends Tagged>(
         deliver(cmd.input as StoreSendInput);
         continue;
       }
-      interpreter ??= makeInterpreter<M | IntentRejected>(resolve, (msg) => {
-        // Stores have no IntentRejected reducer; only their own messages apply.
-        if (msg._tag !== 'IntentRejected') instance.send(msg as M);
-      });
+      interpreter ??= makeInterpreter<M | IntentRejected>(
+        resolve,
+        (msg) => {
+          // Stores have no IntentRejected reducer; only their own messages apply.
+          if (msg._tag !== 'IntentRejected') instance.send(msg as M);
+        },
+        DEVTOOLS_ENABLED ? devCommands(() => `store:${store.name}`) : undefined,
+      );
       interpreter.run(cmd);
     }
   };
@@ -195,6 +200,7 @@ function createInstance<S, M extends Tagged>(
       const prev = state;
       const [next, commands] = splitNext(reducer(prev, msg));
       state = next;
+      if (DEVTOOLS_ENABLED) devStore(store.name, msg, prev, next);
       if (!Object.is(next, prev)) for (const listener of [...listeners]) listener(next, prev);
       run(commands);
     },

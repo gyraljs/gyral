@@ -1,5 +1,13 @@
 import { isServer, LitElement } from 'lit';
 import {
+  DEVTOOLS_ENABLED,
+  devCommands,
+  devConnect,
+  devHydrated,
+  devOwner,
+  devUpdate,
+} from '#devtools';
+import {
   splitNext,
   type AnyDriver,
   type Command,
@@ -148,6 +156,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       }
       const prev = this.state;
       this.#apply(reducer(prev, msg, this.#ctx()));
+      if (DEVTOOLS_ENABLED) devUpdate(this, tag, msg, prev, this.state);
       if (!render) return;
       if (spec.viewTransition?.(prev, this.state, msg) === true) {
         // The DOM change happens inside the transition callback (ADR 0001 addendum);
@@ -189,9 +198,14 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #connect(): void {
       // Re-resolve on every connect: the nearest <gyral-stores> may differ after a move.
       if (this.#binding.connect()) this.requestUpdate();
-      this.#interpreter = makeInterpreter<M | IntentRejected>(this.#resolve, (msg) => {
-        this.#dispatch(msg);
-      });
+      this.#interpreter = makeInterpreter<M | IntentRejected>(
+        this.#resolve,
+        (msg) => {
+          this.#dispatch(msg);
+        },
+        DEVTOOLS_ENABLED ? devCommands(() => devOwner(this, tag)) : undefined,
+      );
+      if (DEVTOOLS_ENABLED) devConnect(this, tag, true);
       const pending = this.#pending;
       this.#pending = [];
       for (const cmd of pending) this.#interpreter.run(cmd);
@@ -205,6 +219,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       this.#binding.disconnect();
       this.#interpreter?.dispose();
       this.#interpreter = undefined;
+      if (DEVTOOLS_ENABLED) devConnect(this, tag, false);
     }
 
     protected override willUpdate(changed: Map<PropertyKey, unknown>): void {
@@ -290,6 +305,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     protected override firstUpdated(changed: Map<PropertyKey, unknown>): void {
       super.firstUpdated(changed);
       if (this.#serverRendered) fillEmptyTextParts(this.renderRoot); // gyral-4k7.12
+      if (DEVTOOLS_ENABLED) devHydrated(this, tag, this.#serverRendered);
       const commands = this.#afterHydration;
       const wantsHydrated = reducers['Hydrated'] !== undefined;
       if (commands.length === 0 && !wantsHydrated) return;

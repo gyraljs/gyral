@@ -65,6 +65,16 @@ export { invalid } from './invalid.js';
 export { findInScope, labelledBy } from './accessible-name.js';
 export { liveBoolean } from './live-boolean.js';
 export { textarea, textareaMarkup } from './textarea.js';
+// Devtools event stream (ADR 0017): emitted in development builds only.
+export { DEVTOOLS_ENABLED as devtoolsEnabled } from '#devtools';
+export { DEVTOOLS_GLOBAL } from './devtools-events.js';
+export type {
+  CommandPhase,
+  CommandTraceEvent,
+  DevComponentRef,
+  DevEvent,
+  DevtoolsHook,
+} from './devtools-events.js';
 export type { TextareaAttribute, TextareaOptions } from './textarea.js';
 export type { Styles } from './styles.js';
 // Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
