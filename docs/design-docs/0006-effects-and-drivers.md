@@ -237,3 +237,17 @@ http.failNext('offline'); // HttpNetworkError
 
 It lives in `@gyral/http` (a `./testing` subpath) rather than `@gyral/testing`, because layer-1
 packages may not import each other (ARCHITECTURE.md).
+
+### `fakeHttp` ergonomics (2026-10-05)
+
+From gyral-shop's admin tests:
+
+- `http.inputs` is an alias of `http.requests`, matching `fakeDriver(…).inputs`.
+- `http.reply(status, body?)` is shorthand for `respondNext({ status, body })`, e.g.
+  `http.reply(422, problem)` or `http.reply(500)`.
+- A `respond` option that throws or rejects is a bug in the test, not a network failure. The
+  request still fails (the component sees `HttpNetworkError`, so it never hangs), and the error
+  is reported as a `FakeHttpResponderError`: rethrown as an uncaught error by default, so
+  Vitest fails the run, or passed to `onResponderError(error, request)` when given. All such
+  errors are also kept in `http.responderErrors`. Simulate a real network failure with
+  `failNext()` instead.

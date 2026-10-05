@@ -28,8 +28,14 @@ export interface FakeHttp extends Driver<HttpRequest, unknown, HttpError> {
   readonly calls: readonly FakeHttpCall[];
   /** Every request so far. */
   readonly requests: readonly HttpRequest[];
+  /** Same as `requests`; matches `fakeDriver(…).inputs` from @gyral/testing. */
+  readonly inputs: readonly HttpRequest[];
+  /** Errors thrown (or rejected) by the `respond` option, in order. */
+  readonly responderErrors: readonly unknown[];
   /** Answers the oldest request that is still waiting. Throws if there is none. */
   respondNext(response?: FakeResponse): void;
+  /** Shorthand for `respondNext({ status, body })`, e.g. `reply(422, problem)`. */
+  reply(status: number, body?: unknown): void;
   /** Fails the oldest waiting request as a network error. Throws if there is none. */
   failNext(message?: string): void;
 }
@@ -44,7 +50,30 @@ export interface FakeHttpOptions {
   readonly headers?: HeaderSource;
   readonly concurrency?: Concurrency;
   readonly retry?: RetryPolicy;
+  /**
+   * Called when the `respond` option throws or rejects. That is a bug in the test, not a
+   * network failure, so by default it is rethrown as an uncaught error (Vitest fails the run).
+   * The request itself still fails (as `HttpNetworkError`) so the component never hangs.
+   */
+  readonly onResponderError?: (error: unknown, request: HttpRequest) => void;
 }
+
+/** The error a fake request fails with when the `respond` option threw. */
+export class FakeHttpResponderError extends Error {
+  constructor(
+    readonly request: HttpRequest,
+    cause: unknown,
+  ) {
+    super(`fakeHttp: the respond option threw for ${request.url}: ${String(cause)}`, { cause });
+    this.name = 'FakeHttpResponderError';
+  }
+}
+
+const rethrowLater = (error: unknown): void => {
+  setTimeout(() => {
+    throw error;
+  }, 0);
+};
 
 interface MutableCall extends FakeHttpCall {
   settled: boolean;
@@ -60,10 +89,12 @@ function toResponse({ status = 200, statusText = '', body }: FakeResponse = {}):
 
 /**
  * `el.drivers = { http: fakeHttp() }` (or `withDrivers(root, { http })`), then
- * `http.respondNext({ body })`. Request inputs are recorded in `requests`.
+ * `http.respondNext({ body })` or `http.reply(422, problem)`. Request inputs are recorded in
+ * `requests` (alias `inputs`).
  */
 export function fakeHttp(options: FakeHttpOptions = {}): FakeHttp {
   const calls: MutableCall[] = [];
+  const responderErrors: unknown[] = [];
   // The request whose fetch is being made. makeHttpDriver calls fetch synchronously within
   // run(), before its first await, so this hand-off cannot interleave.
   let current: HttpRequest | undefined;
@@ -75,7 +106,15 @@ export function fakeHttp(options: FakeHttpOptions = {}): FakeHttp {
     const signal = init?.signal ?? new AbortController().signal;
     if (options.respond !== undefined) {
       calls.push({ request, signal, settled: true, respond: noop, fail: noop });
-      return Promise.resolve(options.respond(request)).then(toResponse);
+      const responder = options.respond;
+      return new Promise<FakeResponse>((resolve) => {
+        resolve(responder(request));
+      }).then(toResponse, (cause: unknown) => {
+        const error = new FakeHttpResponderError(request, cause);
+        responderErrors.push(cause);
+        (options.onResponderError ?? rethrowLater)(error, request);
+        throw new TypeError(error.message); // the driver reports it as HttpNetworkError
+      });
     }
     return new Promise<Response>((resolve, reject) => {
       const call: MutableCall = {
@@ -131,8 +170,15 @@ export function fakeHttp(options: FakeHttpOptions = {}): FakeHttp {
     get requests() {
       return calls.map((c) => c.request);
     },
+    get inputs() {
+      return calls.map((c) => c.request);
+    },
+    responderErrors,
     respondNext: (response) => {
       waiting().respond(response);
+    },
+    reply: (status, body) => {
+      waiting().respond(body === undefined ? { status } : { status, body });
     },
     failNext: (message) => {
       waiting().fail(message);

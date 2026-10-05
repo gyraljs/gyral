@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as v from 'valibot';
 import { define, html } from '@gyral/core';
 import { request, type HttpError } from '../src/index.js';
-import { fakeHttp } from '../src/testing.js';
+import { FakeHttpResponderError, fakeHttp } from '../src/testing.js';
 
 const Count = v.object({ count: v.pipe(v.string(), v.transform(Number), v.number()) });
 const Problem = v.object({ code: v.string() });
@@ -116,5 +116,36 @@ describe('fakeHttp() decodes like the real driver (gyral-czi.36)', () => {
     expect(() => {
       http.respondNext({ body: { count: '1' } });
     }).toThrow(/no waiting request/);
+  });
+
+  it('exposes inputs like fakeDriver and answers non-200s with reply()', async () => {
+    const { http, el } = await mount();
+    expect(http.inputs).toEqual(http.requests);
+    http.reply(422, { code: 'nope' });
+    await vi.waitFor(() => {
+      expect(el.state.error).toMatchObject({ _tag: 'HttpStatusError', status: 422 });
+    });
+  });
+
+  it('reports a throwing responder as a test bug, and still fails the request', async () => {
+    const seen: unknown[] = [];
+    const broken = fakeHttp({
+      respond: () => {
+        throw new Error('typo in test');
+      },
+      onResponderError: (error) => seen.push(error),
+    });
+    const el = new Loader();
+    el.drivers = { http: broken };
+    document.body.append(el);
+    await el.updateComplete;
+    el.send({ _tag: 'Load' });
+    await vi.waitFor(() => {
+      expect(el.state.error?._tag).toBe('HttpNetworkError');
+    });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(FakeHttpResponderError);
+    expect(String((seen[0] as Error).cause)).toContain('typo in test');
+    expect(broken.responderErrors).toHaveLength(1);
   });
 });
