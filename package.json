@@ -20,7 +20,8 @@
     "ci:local": "node scripts/ci-local.mjs",
     "examples": "node scripts/examples.mjs",
     "size": "node scripts/measure-bundles.mjs",
-    "ui:check": "node scripts/ui-check.mjs"
+    "ui:check": "node scripts/ui-check.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

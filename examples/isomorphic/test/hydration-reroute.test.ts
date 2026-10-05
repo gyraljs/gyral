@@ -21,6 +21,7 @@ it('hydrates the server state first, then applies what init commands report', as
   const nav = document.querySelector('gy-iso-app')?.shadowRoot?.querySelector('nav');
 
   const { App } = await import('../src/app.js');
+  await import('../src/contact.js'); // lazy on the About page, as in entry-client.ts
   const el = document.querySelector('gy-iso-app');
   if (!(el instanceof App)) throw new Error('not upgraded');
   await hydrated(page); // rejects on "Hydration value mismatch" or console errors

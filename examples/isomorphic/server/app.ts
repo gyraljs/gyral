@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { html } from 'lit';
 import { renderPage, serverHtml } from '@gyral/ssr';
 import '../src/app.js'; // registers <gy-iso-app> so the server can render it
+import '../src/contact.js'; // and <gy-iso-contact>, rendered inside it on /about
 import { pageTitle, site } from '../src/routes.js';
 
 export interface AppOptions {

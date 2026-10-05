@@ -23,6 +23,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm --filter @gyral-examples/<name> dev`      | Run an example with Vite                                                                                           |
 | `pnpm examples [name…]`                         | Run all (or named) examples; index at http://localhost:5100 (`EXAMPLES_PORT=5400` for a second copy)               |
 | `pnpm ui:check [name…] [--baseline\|--compare]` | **See UI changes:** screenshots (desktop/phone × light/dark), console, overflow, axe → `.ui-check/<run>/report.md` |
+| `pnpm smoke:prod`                               | Build SSR examples for production, check every page hydrates in place (run after hydration changes)                |
 
 First run needs `pnpm exec playwright install chromium`.
 

@@ -40,6 +40,7 @@ describe('hydration', () => {
   it('hydrates in place: same DOM nodes, seed consumed, no mismatch', async () => {
     const h1 = $('h1');
     await import('../src/app.js');
+    await import('../src/contact.js'); // lazy on the About page, as in entry-client.ts
     const el = app() as HTMLElement & { state: unknown };
     if (page === undefined) throw new Error('not mounted');
     await hydrated(page); // rejects on a mismatch or any console error/warning

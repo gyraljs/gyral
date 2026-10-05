@@ -34,7 +34,7 @@ const content = (path: string) => {
     case 'about':
       return html`<h1>${titles.about}</h1>
         <p>This is the page where we describe ourselves.</p>
-        <p><a href="mailto:hello@example.com">Contact us</a></p>`;
+        <gy-iso-contact></gy-iso-contact>`;
     case undefined:
       return html`<h1>Page not found</h1>
         <p>Unknown page <code>${path}</code>.</p>`;
