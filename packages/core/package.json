@@ -1,6 +1,6 @@
 {
   "name": "@gyral/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
   "license": "MIT",
   "author": "The Zoop Troop, Inc.",
