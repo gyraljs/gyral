@@ -1,3 +1,4 @@
+import * as v from 'valibot';
 import { describe, expect, it, vi } from 'vitest';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { makeHttpDriver } from '../src/index.js';
@@ -68,7 +69,41 @@ describe('makeHttpDriver', () => {
       url: 'https://api.test/missing',
       status: 404,
       statusText: 'Not Found',
+      body: 'nope',
     });
+  });
+
+  it('keeps JSON error bodies and decodes them with errorSchema', async () => {
+    const rejected = { _tag: 'IntentRejected', intent: 'Login', issues: [] };
+    const driver = makeHttpDriver({
+      fetch: fakeFetch(() => Response.json(rejected, { status: 422 })),
+      baseUrl: 'https://api.test/',
+    });
+    const toError = driver.toError ?? String;
+    const tagged = v.object({ _tag: v.literal('IntentRejected'), intent: v.string() });
+    const withSchema = await failure(
+      driver.run({ url: '/login', method: 'POST', errorSchema: tagged }, ctx()),
+      toError,
+    );
+    expect(withSchema).toMatchObject({ status: 422, body: rejected });
+    expect(withSchema).toHaveProperty('detail', { _tag: 'IntentRejected', intent: 'Login' });
+    const wrongShape = await failure(
+      driver.run({ url: '/login', errorSchema: v.object({ other: v.string() }) }, ctx()),
+      toError,
+    );
+    expect(wrongShape).toMatchObject({ body: rejected });
+    expect(wrongShape).not.toHaveProperty('detail');
+  });
+
+  it('sends FormData as a form, not JSON', async () => {
+    const fetch = fakeFetch(() => Response.json({ ok: 1 }));
+    const driver = makeHttpDriver({ fetch, baseUrl: 'https://api.test/' });
+    const body = new FormData();
+    body.set('email', 'a@b.co');
+    await driver.run({ url: '/f', method: 'POST', body }, ctx());
+    const [, init] = fetch.mock.calls[0] ?? [];
+    expect(init?.body).toBe(body);
+    expect(init?.headers).not.toHaveProperty('content-type');
   });
 
   it('maps fetch rejections to HttpNetworkError', async () => {
