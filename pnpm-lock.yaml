@@ -407,6 +407,16 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
 
+  examples/themes:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   examples/typeahead-race:
     dependencies:
       '@gyral/core':
