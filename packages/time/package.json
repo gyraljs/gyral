@@ -24,5 +24,14 @@
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/time"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/time#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

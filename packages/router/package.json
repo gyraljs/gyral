@@ -21,5 +21,14 @@
   ],
   "dependencies": {
     "@gyral/core": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/router"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/router#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

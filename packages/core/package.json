@@ -45,5 +45,14 @@
       "development": "./src/devtools.ts",
       "default": "./src/devtools-off.ts"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

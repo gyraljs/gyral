@@ -27,5 +27,14 @@
   "dependencies": {
     "@gyral/core": "workspace:*",
     "@standard-schema/spec": "1.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/http"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/http#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

@@ -30,5 +30,14 @@
   },
   "devDependencies": {
     "lit": "3.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/devtools"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/devtools#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }

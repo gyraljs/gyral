@@ -40,5 +40,14 @@
   "devDependencies": {
     "@valibot/to-json-schema": "1.8.0",
     "fast-check": "4.10.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/testing"
+  },
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/testing#readme",
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
   }
 }
