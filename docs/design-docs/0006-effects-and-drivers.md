@@ -217,3 +217,23 @@ with `provideDrivers(element, drivers)` (which returns a function that removes t
 in a test container or a `mountSsr(...).root`. Resolution happens each time a command runs, so
 providers can change during a test. Commands never run on the server, so providers are not
 consulted there.
+
+## Faking http with real decoding (gyral-czi.36, 2026-10-05)
+
+`fakeDriver(http)` skipped the request's `schema`, so wrong fake data reached the view and crashed
+it instead of becoming a decode failure (gyral-shop's admin). `fakeHttp()` from
+`@gyral/http/testing` is the real driver (`makeHttpDriver`) with a controllable `fetch`, so
+schemas, `errorSchema`, status errors and JSON parsing behave exactly as in production:
+
+```ts
+import { fakeHttp } from '@gyral/http/testing';
+const http = fakeHttp(); // or fakeHttp({ respond: (req) => ({ body }) }) to answer at once
+el.drivers = { http }; // or withDrivers(root, { http })
+http.requests; // HttpRequest inputs
+http.respondNext({ body: { count: '42' } }); // decoded through the request's schema
+http.respondNext({ status: 422, body: { … } }); // HttpStatusError, detail via errorSchema
+http.failNext('offline'); // HttpNetworkError
+```
+
+It lives in `@gyral/http` (a `./testing` subpath) rather than `@gyral/testing`, because layer-1
+packages may not import each other (ARCHITECTURE.md).
