@@ -36,8 +36,14 @@ export interface PageOptions extends RenderOptions {
   readonly lang?: string;
   readonly dir?: 'ltr' | 'rtl' | 'auto';
   readonly description?: string;
-  /** Extra server-only head content, written with `serverHtml` (styles, links, meta). */
+  /** Extra server-only head content, written with `serverHtml` (links, meta). */
   readonly head?: unknown;
+  /**
+   * Global CSS for the document (your app's own stylesheet text, e.g. a `?raw` import), written
+   * as `<style>` elements in the head. A `</style` inside the text is escaped, so it can't
+   * close the element early. Trusted CSS only: never put user input here.
+   */
+  readonly styles?: string | readonly string[];
   /** Module scripts to load, e.g. the client entry that imports `@gyral/ssr/hydrate` first. */
   readonly scripts?: readonly string[];
 }
@@ -53,9 +59,19 @@ function storeSeed(stores: readonly AnyStoreInstance[]): unknown {
   return unsafeHTML(`<script type="application/json" ${STORE_SEED_ATTRIBUTE}>${json}</script>`);
 }
 
+// `</style` (any case) would end the element; `<\/style` is the same text to CSS.
+const styleSafe = (css: string): string => css.replace(/<\/(style)/gi, '<\\/$1');
+
+/** `<style>` elements for `page({ styles })`. */
+function documentStyles(styles: string | readonly string[] | undefined): unknown {
+  if (styles === undefined) return nothing;
+  const sheets = typeof styles === 'string' ? [styles] : styles;
+  return unsafeHTML(sheets.map((css) => `<style>${styleSafe(css)}</style>`).join(''));
+}
+
 /** The server-only document shell around the hydratable body. Never hydrated itself. */
 export function page(options: PageOptions): unknown {
-  const { title, body, description, head, scripts = [], stores = [] } = options;
+  const { title, body, description, head, scripts = [], stores = [], styles } = options;
   return serverHtml`<!doctype html>
 <html lang=${options.lang ?? 'en'} dir=${options.dir ?? 'ltr'}>
   <head>
@@ -63,7 +79,7 @@ export function page(options: PageOptions): unknown {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${title}</title>
     ${description === undefined ? nothing : serverHtml`<meta name="description" content=${description}>`}
-    ${head ?? nothing}${storeSeed(stores)}
+    ${documentStyles(styles)}${head ?? nothing}${storeSeed(stores)}
     ${scripts.map((src) => serverHtml`<script type="module" src=${src}></script>`)}
   </head>
   <body>

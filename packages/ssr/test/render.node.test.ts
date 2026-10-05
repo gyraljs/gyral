@@ -130,6 +130,20 @@ describe('server rendering (ADR 0012)', () => {
     expect(out).toMatch(/<ssr-card\s+label="p"/);
   });
 
+  it('writes global styles into the head, escaping an early </style>', async () => {
+    const out = await renderToString(
+      page({
+        title: 't',
+        body: html`<p>x</p>`,
+        styles: ['body { color: red; }', 'p::after { content: "</STYLE><script>x()</script>"; }'],
+      }),
+    );
+    const head = out.slice(0, out.indexOf('</head>'));
+    expect(head).toContain('<style>body { color: red; }</style>');
+    expect(head).toContain('content: "<\\/STYLE><script>x()</script>"; }</style>');
+    expect(out.match(/<\/style>/gi)).toHaveLength(2);
+  });
+
   it('streams a full page as an HTML Response', async () => {
     const res = renderPage({ title: 't', body: html`<p>hello</p>` }, { status: 404 });
     expect(res.status).toBe(404);
