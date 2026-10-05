@@ -21,4 +21,5 @@ Status values: **accepted** (in force), **proposed** (under discussion), **super
 | [0012-ssr.md](0012-ssr.md)                                 | accepted | Server render from `init(props)`, per-element hydration seed, init commands start after hydration                                    |
 | [0013-shared-state.md](0013-shared-state.md)               | accepted | Stores as "props from the side": `ctx.read(store)`, optional `StoreChanged`, writes via `send()` commands, per-request on the server |
 | [0014-light-dom.md](0014-light-dom.md)                     | accepted | `shadow: false`: page-level components render as light-DOM children (SSR without DSD, document CSS, re-render at hydration)          |
+| [0015-runtime-size-spike.md](0015-runtime-size-spike.md)   | proposed | Bundle cost of Effect 3 / Micro / Effect 4 / no Effect; recommends upgrading to Effect 4 — owner decision pending                    |
 | [lessons-from-cyclejs.md](lessons-from-cyclejs.md)         | accepted | What we keep, drop and replace from Cycle.js                                                                                         |
