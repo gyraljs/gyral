@@ -154,6 +154,29 @@ export default tseslint.config(
     },
   },
   {
+    // @gyral/mcp is a Node MCP server: no browser Baseline. It answers from a corpus built at
+    // build time, so it never imports Gyral at runtime (that would pin apps to its copy).
+    files: ['packages/mcp/src/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    rules: {
+      'compat/compat': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            {
+              group: ['@gyral/*'],
+              message:
+                '@gyral/mcp reads Gyral docs and types from its build-time corpus, not by importing Gyral.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: { globals: globals.node },
   },

@@ -25,7 +25,8 @@
     "build": "pnpm -r --filter \"./packages/*\" run build",
     "pack:check": "node scripts/pack-check.mjs",
     "verify:install": "node scripts/verify-install.mjs",
-    "verify:create": "node scripts/verify-create.mjs"
+    "verify:create": "node scripts/verify-create.mjs",
+    "mcp:refresh": "pnpm --filter @gyral/mcp run refresh"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

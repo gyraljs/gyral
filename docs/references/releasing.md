@@ -19,9 +19,12 @@ placeholders are for.
 
 ### 2. Reserve the names (placeholders)
 
-`release/placeholders/` holds 0.0.0 "Coming soon — https://gyral.dev" manifests for the seven
+`release/placeholders/` holds 0.0.0 "Coming soon — https://gyral.dev" manifests for the eight
 `@gyral/*` packages and the unscoped `gyral`, `gyraljs` and `create-gyral`. Publish them once,
-from a clean checkout of `main`:
+from a clean checkout of `main`. **A new package needs this again before the first release
+that includes it** (npm only lets you configure a trusted publisher for a package that
+exists): add its placeholder, re-run the script (published names are skipped), then do steps
+3 and 4 for it.
 
 ```sh
 npm login                                        # browser login, 2FA
@@ -37,8 +40,9 @@ other names still publish; record the rejected one in the release bead.
 
 ### 3. Trusted publisher, per released package
 
-For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools` **and
-`create-gyral`** (8 packages; create-gyral joined the lockstep release on 2026-10-05):
+For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools`, `mcp`
+**and `create-gyral`** (9 packages; create-gyral joined the lockstep release on 2026-10-05,
+`@gyral/mcp` on 2026-10-05 and needs its placeholder published first):
 npmjs.com/package/NAME → **Settings** → **Trusted Publisher** → GitHub Actions:
 
 | Field                | Value         |
@@ -75,7 +79,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 
 1. Pull requests that change a package add a changeset: `pnpm changeset` (see
    [.changeset/README.md](../../.changeset/README.md)).
-2. When ready, on a branch: `pnpm changeset version`. It consumes the changesets, bumps every
+2. When ready, on a branch: `pnpm mcp:refresh` (updates `@gyral/mcp`'s docs snapshot from
+   gyral.dev; review and commit the diff), then `pnpm changeset version`. It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
@@ -87,7 +92,7 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 5. **Approve the staged versions**: npmjs.com → the `gyral` org → Packages → **Staged
    Packages** → review → **Approve** (2FA) for each, or `npm stage list @gyral/NAME` then
    `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
-   That is 8 approvals: the seven `@gyral/*` packages and `create-gyral`.
+   That is 9 approvals: the eight `@gyral/*` packages and `create-gyral`.
 6. Check npmjs.com shows the version with the provenance badge, then try
    `npm create vite@latest` + `npm i @gyral/core lit` in a scratch app.
 
@@ -100,7 +105,8 @@ The first real release must be **0.1.0** or higher: the placeholders already occ
   runs publint, @arethetypeswrong/cli (esm-only profile), tarball content assertions and an
   `npm pack --dry-run` file-list comparison.
 - `pnpm verify:install` (network, not in the gate): installs the tarballs with npm in a fresh
-  temp project, imports every Node-loadable entry and server-renders a component. The
+  temp project, imports every Node-loadable entry, server-renders a component, and starts the
+  installed `gyral-mcp` bin over stdio and calls a tool. The
   browser-only entries (`@gyral/ssr/hydrate`, `@gyral/devtools`) are covered by the browser
   tests instead.
 - `pnpm verify:create` (network, not in the gate): runs `create-gyral` from its packed tarball
@@ -116,6 +122,9 @@ Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typechec
 pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and
 `dist/static/index.html` is the prerendered page). Client builds: basic 151.6 KiB JS
 (49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015).
+
+Last recorded `verify:install` with `@gyral/mcp` (2026-10-05, 9 tarballs): all entries imported,
+SSR ok, and `gyral-mcp` answered over stdio with 7 tools.
 
 ## When something goes wrong
 

@@ -62,6 +62,26 @@ console.log('ssr ok     <gy-hello> rendered to Declarative Shadow DOM (' + out.l
 `,
   );
   execFileSync('node', ['smoke.mjs'], { cwd: app, stdio: 'inherit' });
+
+  // @gyral/mcp: start the installed bin over stdio and call it the way an agent would.
+  writeFileSync(
+    join(app, 'mcp.mjs'),
+    `
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+const client = new Client({ name: 'verify-install', version: '0.0.0' });
+await client.connect(new StdioClientTransport({ command: 'node_modules/.bin/gyral-mcp', stderr: 'ignore' }));
+const { tools } = await client.listTools();
+const result = await client.callTool({ name: 'get_api', arguments: { symbol: 'define' } });
+const text = result.content.map((c) => c.text).join('');
+if (tools.length !== 7 || !text.includes("import { define } from '@gyral/core'")) {
+  throw new Error('unexpected MCP answer: ' + tools.length + ' tools, ' + text.slice(0, 200));
+}
+await client.close();
+console.log('mcp ok     gyral-mcp answered over stdio (' + tools.length + ' tools)');
+`,
+  );
+  execFileSync('node', ['mcp.mjs'], { cwd: app, stdio: 'inherit' });
   console.log(`verify:install ok (${tgz.length} tarballs, peers: ${PEERS.join(' ')})`);
 } finally {
   rmSync(dir, { recursive: true, force: true });

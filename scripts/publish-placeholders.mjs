@@ -84,7 +84,8 @@ const released = dirs
   .map((dir) => JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).name)
   .filter((name) => name.startsWith('@gyral/') || name === 'create-gyral');
 console.log(`
-Placeholders published. Now set up trusted publishing (docs/references/releasing.md):
+Placeholders published. Now set up trusted publishing (docs/references/releasing.md) for
+any package that doesn't have it yet (new packages, e.g. @gyral/mcp):
 
   For each of: ${released.join(', ')}
     1. https://www.npmjs.com/package/<name>/access → Trusted Publisher → GitHub Actions

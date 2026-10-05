@@ -1,0 +1,26 @@
+{
+  "name": "@gyral/mcp",
+  "version": "0.0.0",
+  "description": "Coming soon — https://gyral.dev",
+  "keywords": [
+    "gyral",
+    "web-components",
+    "lit",
+    "mvi",
+    "mcp"
+  ],
+  "license": "MIT",
+  "author": "Mike Zupper",
+  "homepage": "https://gyral.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

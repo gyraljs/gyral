@@ -1,0 +1,77 @@
+{
+  "name": "@gyral/mcp",
+  "version": "0.1.0",
+  "description": "Gyral MCP server: docs search, API lookup, examples, scaffolding and snippet checks for coding agents.",
+  "keywords": [
+    "gyral",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "agents",
+    "web-components",
+    "lit"
+  ],
+  "license": "MIT",
+  "author": "Mike Zupper",
+  "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyraljs/gyral.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/gyraljs/gyral/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22.12"
+  },
+  "bin": {
+    "gyral-mcp": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs && node scripts/build-corpus.mjs",
+    "prepack": "node ../../scripts/build-package.mjs && node scripts/build-corpus.mjs",
+    "refresh": "node scripts/refresh-snapshot.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/http": "workspace:*",
+    "@gyral/ssr": "workspace:*",
+    "@gyral/testing": "workspace:*",
+    "@lit-labs/ssr": "4.1.0",
+    "@lit-labs/ssr-client": "1.1.8",
+    "lit": "3.3.3"
+  }
+}

@@ -63,8 +63,12 @@ invariants`), so it can't drift from the real API.
 
 - **Other agents (Codex, Cursor, Copilot, …):** point the agent at
   [skills/gyral/SKILL.md](skills/gyral/SKILL.md), or copy `skills/gyral/` into the agent's
-  skills or rules folder. A plain-text version of the docs for agents,
-  `https://gyral.dev/llms.txt`, is coming.
+  skills or rules folder. The docs for agents are at https://gyral.dev/llms.txt and
+  https://gyral.dev/llms-full.txt.
+- **MCP server (any MCP client):** `@gyral/mcp` searches the docs, looks up API signatures,
+  returns examples, scaffolds components and typechecks snippets against your project. Claude
+  Code: `claude mcp add gyral -- npx -y @gyral/mcp`; other clients in
+  [packages/mcp/README.md](packages/mcp/README.md). (Published with the next release.)
 - **New apps:** `npm create gyral@latest` writes an `AGENTS.md` (and a `CLAUDE.md` that
   imports it) into every project, so any agent that opens it learns the rules.
 
