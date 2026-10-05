@@ -21,6 +21,7 @@ __screenshots__/
 __lint_fixture_*
 # pnpm ui:check output: screenshots, reports, baselines
 .ui-check/
+.demos/
 
 # Agent worktrees
 .claude/worktrees/

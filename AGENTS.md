@@ -23,6 +23,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm --filter @gyral-examples/<name> dev`      | Run an example with Vite                                                                                           |
 | `pnpm examples [name…]`                         | Run all (or named) examples; index at http://localhost:5100 (`EXAMPLES_PORT=5400` for a second copy)               |
 | `pnpm ui:check [name…] [--baseline\|--compare]` | **See UI changes:** screenshots (desktop/phone × light/dark), console, overflow, axe → `.ui-check/<run>/report.md` |
+| `pnpm demos:record [name…]`                     | Record each example's `demo.mjs` (1280×720 video + poster) → `.demos/` for gyral.dev                               |
 | `pnpm verify:create`                            | Generate both `create-gyral` templates from the tarball, install, typecheck, build, test (network)                 |
 | `pnpm smoke:prod`                               | Build SSR examples for production, check every page hydrates in place (run after hydration changes)                |
 
