@@ -1,0 +1,16 @@
+{
+  "name": "@gyral-examples/typeahead-race",
+  "private": true,
+  "type": "module",
+  "description": "Side by side: a search that shows stale results when answers arrive out of order, and the same search with switch concurrency.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}
