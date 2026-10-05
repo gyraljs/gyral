@@ -30,9 +30,37 @@ describe('workflow triggers', () => {
     expect(workflowTriggers('on: [push, pull_request]\n')).toEqual(['push', 'pull_request']);
   });
 
-  it('rejects anything that would run on GitHub-hosted runners', () => {
-    expect(checkWorkflow('ci.yml', 'on:\n  push:\n')).toHaveLength(1);
-    expect(checkWorkflow('ci.yml', 'on:\n  workflow_dispatch:\njobs:\n')).toEqual([]);
+  const ci =
+    'on:\n  push:\n  pull_request:\n  workflow_dispatch:\npermissions:\n  contents: read\njobs:\n';
+
+  it('lets only ci.yml run on push and pull_request', () => {
+    expect(checkWorkflow('.github/workflows/ci.yml', ci)).toEqual([]);
+    expect(checkWorkflow('.github/workflows/other.yml', 'on:\n  push:\n')).toHaveLength(1);
+    expect(checkWorkflow('other.yml', 'on:\n  workflow_dispatch:\njobs:\n')).toEqual([]);
+    expect(checkWorkflow('ci.yml', ci.replace('  push:\n', '  schedule:\n'))).toHaveLength(1);
+  });
+
+  it('never allows pull_request_target', () => {
+    const errors = checkWorkflow('ci.yml', ci.replace('pull_request:', 'pull_request_target:'));
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('untrusted');
+  });
+
+  it('requires a read-only token in ci.yml', () => {
+    expect(
+      checkWorkflow('ci.yml', ci.replace('  contents: read\n', '  contents: write\n')),
+    ).toHaveLength(1);
+  });
+
+  it('keeps release.yml manual and behind the npm environment', () => {
+    const release = 'on:\n  workflow_dispatch:\njobs:\n  publish:\n    environment: npm\n';
+    expect(checkWorkflow('release.yml', release)).toEqual([]);
+    expect(checkWorkflow('release.yml', release.replace('workflow_dispatch', 'push'))).toHaveLength(
+      1,
+    );
+    expect(
+      checkWorkflow('release.yml', release.replace('    environment: npm\n', '')),
+    ).toHaveLength(1);
   });
 });
 

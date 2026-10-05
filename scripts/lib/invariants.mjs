@@ -40,16 +40,38 @@ export function workflowTriggers(text) {
   return keys;
 }
 
-/** Workflows may only run on demand, locally via `gh act` (docs/design-docs/0004-local-ci.md). */
+/** Triggers each workflow may use (docs/design-docs/0004-local-ci.md). The repo is public, so
+ * CI runs on GitHub for pushes and pull requests; everything else runs on demand only. */
+const ALLOWED_TRIGGERS = {
+  'ci.yml': ['workflow_dispatch', 'push', 'pull_request'],
+};
+
+/** Trigger policy for one workflow file. Messages say how to fix the violation. */
 export function checkWorkflow(file, text) {
-  return workflowTriggers(text)
-    .filter((t) => t !== 'workflow_dispatch')
-    .map(
-      (t) =>
-        `${file}: trigger "${t}" would run on GitHub-hosted runners and spend money. ` +
-        `Use only "workflow_dispatch" and run it locally with "pnpm ci:local" ` +
-        `(docs/design-docs/0004-local-ci.md).`,
+  const name = file.split('/').at(-1) ?? file;
+  const allowed = ALLOWED_TRIGGERS[name] ?? ['workflow_dispatch'];
+  const errors = workflowTriggers(text)
+    .filter((t) => !allowed.includes(t))
+    .map((t) =>
+      t === 'pull_request_target'
+        ? `${file}: "pull_request_target" runs untrusted pull request code with write access ` +
+          `and secrets. Never use it (docs/design-docs/0004-local-ci.md).`
+        : `${file}: trigger "${t}" is not allowed here. Only ci.yml runs on push/pull_request; ` +
+          `every other workflow uses "workflow_dispatch" only (docs/design-docs/0004-local-ci.md).`,
     );
+  if (name === 'ci.yml' && !/^permissions:\s*\n\s+contents:\s*read\s*$/m.test(text)) {
+    errors.push(
+      `${file}: declare top-level "permissions:\n  contents: read" so pull request runs get a ` +
+        `read-only token (docs/design-docs/0004-local-ci.md).`,
+    );
+  }
+  if (name === 'release.yml' && !/^\s+environment:\s*npm\s*$/m.test(text)) {
+    errors.push(
+      `${file}: the publish job must use "environment: npm" so the owner approves every ` +
+        `release (docs/references/releasing.md).`,
+    );
+  }
+  return errors;
 }
 
 /** Relative markdown link targets (without anchors). */

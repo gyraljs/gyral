@@ -11,4 +11,4 @@ if (errors.length > 0) {
   console.error(errors.join('\n'));
   process.exit(1);
 }
-console.log('workflows: only workflow_dispatch triggers');
+console.log('workflows: triggers, permissions and release environment ok');

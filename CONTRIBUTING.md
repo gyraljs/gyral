@@ -23,9 +23,10 @@ listed in [AGENTS.md](AGENTS.md#commands).
 `pnpm check` is the single quality gate: typecheck, ESLint and stylelint, Prettier,
 repository invariants (docs map, workflow triggers, no Effect types in public declarations),
 the browser and Node test suites, fixture stability, and `pnpm pack:check` (the published
-tarballs). A pull request must pass it locally. CI does not run on GitHub
-([ADR 0004](docs/design-docs/0004-local-ci.md)); `pnpm ci:local` runs the same workflow in
-Docker if you want a clean-room run.
+tarballs). Run it locally before you push. Every pull request also runs it on GitHub (the
+`pnpm check` job of the `ci` workflow, [ADR 0004](docs/design-docs/0004-local-ci.md)), and a
+PR merges only when that check is green. `pnpm ci:local` runs the same workflow in Docker if
+you want a clean-room run.
 
 ## Pull requests
 

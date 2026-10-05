@@ -79,7 +79,7 @@ First run needs `pnpm exec playwright install chromium`.
 - `@gyral/core` imports no other `@gyral/*` package.
 - Views are pure: name intents with `data-intent=${i.Tag}`, never attach closures.
 - Browser code must pass the Baseline policy (`.browserslistrc`), or feature-detect.
-- Workflows trigger on `workflow_dispatch` only. Never add `push`/`pull_request`.
+- Only `ci.yml` runs on `push`/`pull_request` (read-only token); others are `workflow_dispatch`.
 - Files ≤ 300 lines. No `any`, no non-null assertions.
 - Every design doc is listed in `docs/design-docs/index.md`; AGENTS.md stays ≤ 120 lines.
 

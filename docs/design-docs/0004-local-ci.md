@@ -1,6 +1,7 @@
 # ADR 0004 — GitHub Actions that run locally
 
-Status: **accepted** (2026-10-04)
+Status: **accepted** (2026-10-04); **amended 2026-10-05**: the repository is public, so `ci.yml`
+runs on GitHub for pushes and pull requests (see the second addendum). The rest still holds.
 
 ## Decision
 
@@ -42,3 +43,23 @@ narrow on purpose:
 
 A release costs one runner run of a few minutes. Everything else stays local. Runbook:
 [docs/references/releasing.md](../references/releasing.md).
+
+## Addendum (2026-10-05): public repository, CI on GitHub
+
+gyraljs/gyral is public. GitHub-hosted runners are free for public repositories, and outside
+contributors need their pull requests checked automatically. So (bead gyral-i7g.8):
+
+- **`ci.yml` triggers on `push` to `main`, `pull_request` and `workflow_dispatch`.** Its job
+  `pnpm check` runs the gate. The `main` ruleset requires that check.
+- **The token is read-only** (`permissions: contents: read`) and checkout does not persist
+  credentials, so a pull request's code cannot write to the repository.
+- **`pull_request_target` is forbidden everywhere**: it runs untrusted code with write access
+  and secrets.
+- **Every other workflow stays `workflow_dispatch`-only.** `release.yml` keeps the first
+  addendum's rules and must use `environment: npm`.
+- `scripts/check-workflows.mjs` enforces all of the above (`checkWorkflow` in
+  `scripts/lib/invariants.mjs`).
+- `pnpm ci:local` still runs the same workflow locally with `gh act` before pushing.
+
+Private repositories (gyral-shop while private) keep the original rule: `workflow_dispatch`
+only, run locally.
