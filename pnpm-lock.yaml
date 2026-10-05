@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  lit-html: 3.3.0
+
 importers:
 
   .:
@@ -2105,8 +2108,8 @@ packages:
   lit-element@4.2.2:
     resolution: {integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==}
 
-  lit-html@3.3.3:
-    resolution: {integrity: sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA==}
+  lit-html@3.3.0:
+    resolution: {integrity: sha512-RHoswrFAxY2d8Cf2mm4OZ1DgzCoBKUKSPvA1fhtSELxUERq2aQQ2h05pO9j81gS1o7RIRJ+CePLogfyahwmynw==}
 
   lit@3.3.3:
     resolution: {integrity: sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw==}
@@ -3255,7 +3258,7 @@ snapshots:
     dependencies:
       '@lit/reactive-element': 2.1.2
       lit: 3.3.3
-      lit-html: 3.3.3
+      lit-html: 3.3.0
 
   '@lit-labs/ssr-dom-shim@1.6.0': {}
 
@@ -3268,7 +3271,7 @@ snapshots:
       enhanced-resolve: 5.26.0
       lit: 3.3.3
       lit-element: 4.2.2
-      lit-html: 3.3.3
+      lit-html: 3.3.0
       node-fetch: 3.3.2
       parse5: 7.3.0
     optionalDependencies:
@@ -4341,9 +4344,9 @@ snapshots:
     dependencies:
       '@lit-labs/ssr-dom-shim': 1.6.0
       '@lit/reactive-element': 2.1.2
-      lit-html: 3.3.3
+      lit-html: 3.3.0
 
-  lit-html@3.3.3:
+  lit-html@3.3.0:
     dependencies:
       '@types/trusted-types': 2.0.7
 
@@ -4351,7 +4354,7 @@ snapshots:
     dependencies:
       '@lit/reactive-element': 2.1.2
       lit-element: 4.2.2
-      lit-html: 3.3.3
+      lit-html: 3.3.0
 
   locate-path@6.0.0:
     dependencies:

@@ -1,3 +1,8 @@
 packages:
   - packages/*
   - examples/*
+
+# lit-html >=3.3.1 leaks a comment node per item removed by repeat() (lit/lit#5010, #5298;
+# gyral-9y6). Pin until upstream fixes it. Apps can use the same override.
+overrides:
+  lit-html: 3.3.0

@@ -66,7 +66,15 @@ DOM per removed item (upstream [lit/lit#5010](https://github.com/lit/lit/issues/
 [#5298](https://github.com/lit/lit/issues/5298), open as of 2026-10-05). Lists that churn
 keep growing the DOM, and bulk changes get slow: in the Gyral benchmark, clearing 1,000 rows
 took about 3,700 ms on lit-html 3.3.3 and 56 ms on 3.3.0. It affects every Lit-based app,
-not only Gyral. Tracked in gyral-9y6, which decides between pinning, a Gyral-side
-workaround and an upstream fix. Until then, an app with long, frequently changing lists can
-pin lit-html with an override (pnpm: `"pnpm": { "overrides": { "lit-html": "3.3.0" } }` in
-`package.json`; npm: `"overrides": { "lit-html": "3.3.0" }`).
+not only Gyral. Tracked in gyral-9y6.
+
+**Gyral's own workspace pins lit-html 3.3.0** with an override in `pnpm-workspace.yaml`, so
+Gyral's tests and examples run on the fixed version, and
+`packages/core/test/repeat-leak.test.ts` fails if a leaking lit-html comes back (1,002
+comment nodes after clearing 1,000 rows on 3.3.3, 2 on 3.3.0). Gyral can't pin lit-html
+inside your app, because it arrives through `lit`. Apps with long, frequently changing lists
+should add the same override until upstream fixes it:
+
+- pnpm 10 (`pnpm-workspace.yaml`): `overrides:` then `  lit-html: 3.3.0`
+- pnpm (`package.json`): `"pnpm": { "overrides": { "lit-html": "3.3.0" } }`
+- npm (`package.json`): `"overrides": { "lit-html": "3.3.0" }`
