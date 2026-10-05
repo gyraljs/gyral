@@ -60,6 +60,11 @@ try {
       dir,
     );
 
+    // Agent instructions ship from the tarball too (gyral-7se.2).
+    for (const file of ['AGENTS.md', 'CLAUDE.md']) {
+      if (!readdirSync(app).includes(file)) throw new Error(`${template}: ${file} missing`);
+    }
+
     // Point @gyral/* at the tarballs: direct dependencies, and overrides for the ones that
     // only arrive transitively (otherwise npm would fetch the registry's 0.0.0 placeholders).
     const manifestFile = join(app, 'package.json');

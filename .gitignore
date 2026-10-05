@@ -22,6 +22,7 @@ __lint_fixture_*
 # pnpm ui:check output: screenshots, reports, baselines
 .ui-check/
 .demos/
+.skill-check/
 
 # Agent worktrees
 .claude/worktrees/

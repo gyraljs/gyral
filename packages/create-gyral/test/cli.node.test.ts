@@ -83,6 +83,12 @@ describe('scaffold', () => {
     expect(files).toContain('.gitignore');
     expect(files).not.toContain('_gitignore');
     expect(files).toContain('tsconfig.json');
+    // Agent instructions: AGENTS.md for every agent, CLAUDE.md importing it for Claude Code.
+    const agents = await readFile(join(target, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('https://gyral.dev/llms.txt');
+    expect(agents).toContain('/plugin install gyral@gyral');
+    expect(agents.split('\n').length).toBeLessThanOrEqual(80);
+    expect(await readFile(join(target, 'CLAUDE.md'), 'utf8')).toBe('@AGENTS.md\n');
     const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8')) as unknown;
     expect(pkg).toEqual(manifest(template, 'app', '0.1.0'));
     expect(manifest(template, 'app', '0.1.0').dependencies['@gyral/core']).toBe('^0.1.0');

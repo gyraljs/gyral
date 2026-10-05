@@ -46,6 +46,28 @@ define<{ count: number }, Msg>('gy-counter', {
 Using Gyral in your own app (peer dependencies, Vite dedupe, SSR checklist):
 [docs/references/consumer-setup.md](docs/references/consumer-setup.md).
 
+## Using Gyral with AI coding agents
+
+Gyral ships an agent skill: [skills/gyral/SKILL.md](skills/gyral/SKILL.md) plus references
+for every part of the API. Every code block in it typechecks against the packages (`pnpm
+invariants`), so it can't drift from the real API.
+
+- **Claude Code:** add this repository as a plugin marketplace, then install the plugin:
+
+  ```text
+  /plugin marketplace add gyraljs/gyral
+  /plugin install gyral@gyral
+  ```
+
+  From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
+
+- **Other agents (Codex, Cursor, Copilot, …):** point the agent at
+  [skills/gyral/SKILL.md](skills/gyral/SKILL.md), or copy `skills/gyral/` into the agent's
+  skills or rules folder. A plain-text version of the docs for agents,
+  `https://gyral.dev/llms.txt`, is coming.
+- **New apps:** `npm create gyral@latest` writes an `AGENTS.md` (and a `CLAUDE.md` that
+  imports it) into every project, so any agent that opens it learns the rules.
+
 ## Development
 
 ```sh
