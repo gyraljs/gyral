@@ -51,18 +51,44 @@ function triggerOf(el: Element): string {
   return el.getAttribute('data-intent-on') ?? defaultTrigger(el);
 }
 
+/** Every class `define()` creates, so intent lookup can tell where a component begins. */
+const hostClasses = new WeakSet<object>();
+
+export function markGyralHost(ctor: object): void {
+  hostClasses.add(ctor);
+}
+
+const isGyralHost = (node: Node): boolean => hostClasses.has(node.constructor);
+
 /**
- * Finds the nearest `data-intent` element for this event that belongs to `root`.
- * Elements inside nested shadow roots are ignored: that is component isolation.
+ * Does `node` belong to the component whose intent root is `root`? `root` is the component's
+ * shadow root, or the host itself for light-DOM components (ADR 0014). The node must be in the
+ * same tree (not inside a nested shadow root) with no other Gyral host between them: a nested
+ * component, light-DOM or shadow, owns its own content. The nested host element itself (with
+ * the parent's `data-intent` on it) still belongs to the parent.
+ */
+function ownedBy(node: Element, root: Node): boolean {
+  const tree = root instanceof ShadowRoot ? root : root.getRootNode();
+  if (node.getRootNode() !== tree) return false;
+  for (let p = node.parentNode; p !== null; p = p.parentNode) {
+    if (p === root) return true;
+    if (isGyralHost(p)) return false;
+  }
+  return false;
+}
+
+/**
+ * Finds the nearest `data-intent` element for this event that belongs to `root`. Elements
+ * inside nested components are ignored: that is component isolation.
  */
 export function findIntentElement(event: Event, root: Node): Element | undefined {
   for (const node of event.composedPath()) {
     if (node === root) return undefined;
     if (
       node instanceof Element &&
-      node.getRootNode() === root &&
       node.hasAttribute('data-intent') &&
-      triggerOf(node) === event.type
+      triggerOf(node) === event.type &&
+      ownedBy(node, root)
     ) {
       return node;
     }

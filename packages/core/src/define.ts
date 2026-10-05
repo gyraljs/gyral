@@ -10,7 +10,8 @@ import { dispatchOutput, EMIT } from './children.js';
 import type { GyralElement, GyralElementClass } from './element-types.js';
 import { takeSeed, writeSeed } from './hydration.js';
 import { runInit } from './init.js';
-import { handleIntent, intentNames, listenForIntents } from './intent.js';
+import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
+import { componentStyles, isLight } from './light-dom.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { readProps, restoreProps, sameProps } from './props.js';
 import { attachStates, type StateSync } from './states.js';
@@ -60,7 +61,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
   class Element extends LitElement implements GyralElement<S, M> {
     static override properties = spec.props ?? {};
-    static override styles = spec.styles ?? [];
+    static override styles = componentStyles(spec, tag);
     static readonly spec = spec;
     static readonly tagName = tag;
 
@@ -190,6 +191,18 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       this.#dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
     }
 
+    // Light-DOM mode (ADR 0014): render into the element itself. Server-rendered light content
+    // carries no hydration markers, so the first client update replaces it with a fresh
+    // render of the seeded state (same markup) instead of hydrating it.
+    protected override createRenderRoot(): HTMLElement | DocumentFragment {
+      return isLight(spec) ? this : super.createRenderRoot();
+    }
+
+    protected override update(changed: Map<PropertyKey, unknown>): void {
+      if (isLight(spec) && !this.hasUpdated && this.#serverRendered) this.replaceChildren();
+      super.update(changed);
+    }
+
     protected override render(): unknown {
       return spec.view(this.state, intentNames as IntentNames<M>, this.#ctx());
     }
@@ -271,6 +284,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     }
   }
 
+  markGyralHost(Element);
   if (customElements.get(tag) === undefined) customElements.define(tag, Element);
   // Sound: the declared props are reactive properties on every instance.
   return Element as unknown as GyralElementClass<S, M, P, O>;

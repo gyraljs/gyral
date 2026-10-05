@@ -51,6 +51,7 @@ First run needs `pnpm exec playwright install chromium`.
 | Child components, collections          | [0010-child-components.md](docs/design-docs/0010-child-components.md)       |
 | Server rendering, hydration            | [0012-ssr.md](docs/design-docs/0012-ssr.md)                                 |
 | Shared state, stores                   | [0013-shared-state.md](docs/design-docs/0013-shared-state.md)               |
+| Light DOM, page-level components       | [0014-light-dom.md](docs/design-docs/0014-light-dom.md)                     |
 | Browser APIs, CSS features             | [0003-browser-baseline.md](docs/design-docs/0003-browser-baseline.md)       |
 | CI, GitHub Actions                     | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                       |
 | Repo docs, lint rules, this file       | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md) |

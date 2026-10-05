@@ -17,9 +17,7 @@ interface ChildState {
   readonly heard: readonly string[];
   readonly hydrated: boolean | undefined;
 }
-type ChildMsg =
-  | { readonly _tag: 'Inc' }
-  | { readonly _tag: 'Heard'; readonly value: string };
+type ChildMsg = { readonly _tag: 'Inc' } | { readonly _tag: 'Heard'; readonly value: string };
 type ChildOut = { readonly _tag: 'Bumped'; readonly count: number };
 
 /** A Gyral child with an intent, an init command and an output. */
@@ -41,9 +39,7 @@ interface ParentState {
   readonly clicks: number;
   readonly bumps: readonly number[];
 }
-type ParentMsg =
-  | { readonly _tag: 'Click' }
-  | { readonly _tag: 'Child'; readonly count: number };
+type ParentMsg = { readonly _tag: 'Click' } | { readonly _tag: 'Child'; readonly count: number };
 
 /** A shadow-DOM parent whose server-rendered shadow root contains the child. */
 export const NestParent = define<ParentState, ParentMsg>('test-nest-parent', {
@@ -56,6 +52,7 @@ export const NestParent = define<ParentState, ParentMsg>('test-nest-parent', {
     Click: (s) => ({ ...s, clicks: s.clicks + 1 }),
     Child: (s, m) => ({ ...s, bumps: [...s.bumps, m.count] }),
   },
-  view: (s, i) => html`<button class="click" data-intent=${i.Click}>parent ${s.clicks}</button>
-    <test-nest-child data-intent=${i.Child}></test-nest-child>`,
+  view: (s, i) =>
+    html`<button class="click" data-intent=${i.Click}>parent ${s.clicks}</button>
+      <test-nest-child data-intent=${i.Child}></test-nest-child>`,
 });

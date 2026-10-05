@@ -1,7 +1,11 @@
-// The only module that touches @lit-labs/ssr (a labs package): ADR 0005 keeps labs APIs
-// behind a thin adapter so an upstream change is a one-file fix.
-import { render } from '@lit-labs/ssr';
+// With ./light.ts, the only modules that touch @lit-labs/ssr (a labs package): ADR 0005 keeps
+// labs APIs behind a thin adapter so an upstream change is a contained fix.
+import { LitElementRenderer, render } from '@lit-labs/ssr';
 import type { RenderResult } from '@lit-labs/ssr/lib/render-result.js';
+import { GyralLightRenderer, LightFilter } from './light.js';
+
+// Light-DOM components first (ADR 0014); everything else is a regular LitElement.
+const elementRenderers = [GyralLightRenderer, LitElementRenderer];
 
 export { html as serverHtml } from '@lit-labs/ssr';
 
@@ -19,10 +23,16 @@ export async function* renderChunks(
   value: unknown,
   scope: StepScope = unscoped,
 ): AsyncGenerator<string, void, undefined> {
-  yield* flatten(
-    scope(() => render(value)),
+  const filter = new LightFilter();
+  for await (const chunk of flatten(
+    scope(() => render(value, { elementRenderers })),
     scope,
-  );
+  )) {
+    const out = filter.push(chunk);
+    if (out !== '') yield out;
+  }
+  const rest = filter.flush();
+  if (rest !== '') yield rest;
 }
 
 async function* flatten(

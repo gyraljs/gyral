@@ -138,7 +138,14 @@ interface SpecBody<S, M extends Tagged, P> {
   readonly update: Update<S, M, P>;
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
   readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
+  /** Shadow-root styles. Ignored (with a warning) when `shadow: false`. */
   readonly styles?: CSSResultGroup;
+  /**
+   * `false` renders the view as the element's own light-DOM children (ADR 0014): document CSS
+   * applies, and the server writes plain children instead of a `<template shadowrootmode>`.
+   * For page-level components (listings, articles). No `<slot>`s and no `styles`. Default `true`.
+   */
+  readonly shadow?: boolean;
   /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
   readonly events?: readonly string[];
   /** Driver substitutions by name, for every instance (ADR 0006). */
