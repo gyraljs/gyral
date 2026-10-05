@@ -1,6 +1,7 @@
 # ADR 0015 — Runtime size spike: Effect 3, Micro, Effect 4, or no Effect
 
-Status: **proposed — decision pending owner** (2026-10-04). Beads: gyral-ob0 (bundle size),
+Status: **accepted — (a) Effect 3 full runtime for 0.1.0** (owner, 2026-10-05; proposed
+2026-10-04). Beads: gyral-ob0 (bundle size),
 gyral-d0x (Effect 4 evaluation), gyral-czi.9 (Effect adds ~40 kB).
 
 ## Question
@@ -86,6 +87,16 @@ app. It costs about 13 KiB less than (c), but reverses ADR 0002. **Avoid (b).**
 
 ## Decision
 
-_Pending the owner._ If (c) is chosen: apply the spike's six-line port, pin
-`effect@^4.0.1`, update ADR 0002's "Version" section, and set a size budget in
-`pnpm size` (for example, counter ≤ 25 KiB gzipped).
+**(a): Gyral 0.1.0 ships on the Effect 3 full runtime** (owner, 2026-10-05; bead gyral-i7g.7).
+The recommendation above was (c); the owner chose to stay on 3.x for the first release.
+
+- **Why:** Effect 3 is the stable, current and most adopted line. 4.0 was days old when
+  0.1.0 was cut, and the first public release should not ride a new major.
+- **Cost accepted for 0.1:** about 48 KiB gzipped for a minimal app (counter), of which about
+  38 KiB is Effect. The table above stays the reference.
+- **No runtime code changes.** ADR 0002's boundary means a later switch is internal to
+  `packages/core/src/internal/` and invisible to users.
+- **Effect 4** remains the expected next step: gyral-d0x tracks the upgrade (the six changes
+  under (c)), to be scheduled when 4.x has settled.
+- The spike branches `spike/effect4`, `spike/micro` and `spike/no-effect` are kept as
+  reference; they are not merged.
