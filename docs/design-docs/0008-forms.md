@@ -166,3 +166,23 @@ Choose per form:
   Every submit then reaches `form()`, and the schema's wording shows through `invalid()`.
   `invalid()` still mirrors errors into native validity, so `:user-invalid` styling keeps
   working. Tested in `packages/core/test/forms.test.ts`.
+
+## Addendum: when invalid() clears a custom error (2026-10-05)
+
+From gyral-shop admin tests: a value set from code (a test, a script) fires no `input` event, so
+the field's custom error stayed and the browser blocked every later submit. `invalid()` now
+clears the custom error and `aria-invalid` when:
+
+- the control fires `input` **or `change`** (the user edited it);
+- the bound errors become `undefined` or empty (the model cleared them, e.g. after a successful
+  resubmit);
+- a submit finds the error **stale**: the control fails validation only because of the custom
+  error, and its value differs from the value that was rejected. The directive cancels the
+  `invalid` event (no bubble), drops the error, and calls `form.requestSubmit()` once (several
+  stale fields in one pass resubmit once). The original submitter button is not passed on, so
+  forms that read the submitter's name should not rely on this path.
+
+The rejected value itself keeps its error: resubmitting it unchanged is still blocked, with the
+model's message. Element directives don't run on the server; server-rendered errors are applied
+on hydration (`packages/ssr/test/invalid-hydration.test.ts`, which also runs against production
+Lit).
