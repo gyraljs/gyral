@@ -303,6 +303,37 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  examples/no-js-first:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/http':
+        specifier: workspace:*
+        version: link:../../packages/http
+      '@gyral/ssr':
+        specifier: workspace:*
+        version: link:../../packages/ssr
+      '@hono/node-server':
+        specifier: 2.1.3
+        version: 2.1.3(hono@4.13.13)
+      hono:
+        specifier: 4.13.13
+        version: 4.13.13
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+      valibot:
+        specifier: 1.5.0
+        version: 1.5.0(typescript@6.0.3)
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
+
   examples/register:
     dependencies:
       '@gyral/core':

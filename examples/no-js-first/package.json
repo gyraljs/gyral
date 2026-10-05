@@ -1,0 +1,24 @@
+{
+  "name": "@gyral-examples/no-js-first",
+  "private": true,
+  "type": "module",
+  "description": "An RSVP page that works completely with JavaScript off, then checks as you type and submits without reloading once it loads.",
+  "scripts": {
+    "dev": "tsx server/dev.ts",
+    "build": "vite build",
+    "start": "tsx server/prod.ts"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/http": "workspace:*",
+    "@gyral/ssr": "workspace:*",
+    "@hono/node-server": "2.1.3",
+    "hono": "4.13.13",
+    "lit": "3.3.3",
+    "valibot": "1.5.0"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*",
+    "tsx": "4.23.15"
+  }
+}
