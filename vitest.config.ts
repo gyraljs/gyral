@@ -1,23 +1,14 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
+import { gyralVitePreset } from './packages/core/src/vite.js';
 
 export default defineConfig({
   test: {
     projects: [
       {
-        // Pre-bundle Lit's directive modules (re-exported by @gyral/core) so the first browser
-        // run doesn't discover them mid-test and reload.
-        optimizeDeps: {
-          include: [
-            'lit',
-            'lit/directive.js',
-            'lit/directives/class-map.js',
-            'lit/directives/keyed.js',
-            'lit/directives/live.js',
-            'lit/directives/repeat.js',
-            'lit/directives/style-map.js',
-          ],
-        },
+        // One Lit copy, and Lit's modules pre-bundled so the first browser run doesn't
+        // discover them mid-test and reload (gyral-a7r).
+        ...gyralVitePreset(),
         test: {
           name: 'browser',
           include: ['packages/*/test/**/*.test.ts', 'examples/*/test/**/*.test.ts'],

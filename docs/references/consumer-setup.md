@@ -25,28 +25,31 @@ pnpm add @gyral/ssr @lit-labs/ssr @lit-labs/ssr-client
 Import Lit helpers (`html`, `css`, `nothing`, `repeat`, `live`, …) from `@gyral/core`. Only
 import `lit` directly for plain `LitElement` classes.
 
-## Vite: dedupe Lit
+## Vite and Vitest: `gyralVitePreset()`
 
-Package managers usually dedupe peers. They can't when Gyral comes from a `link:` path or a
-second checkout (as in gyral-shop before Gyral is published), because each tree has its own
-`node_modules`. Tell Vite (and Vitest) to resolve every Lit package from your app:
+Two settings every Gyral app needs, shipped as a preset (plain data, safe in config files):
 
 ```ts
-// vite.config.ts (repeat `resolve.dedupe` in each Vitest project)
-export const LIT_PACKAGES = [
-  'lit',
-  'lit-html',
-  'lit-element',
-  '@lit/reactive-element',
-  '@lit-labs/ssr',
-  '@lit-labs/ssr-client',
-];
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { gyralVitePreset } from '@gyral/core/vite';
 
-export default defineConfig({ resolve: { dedupe: LIT_PACKAGES } });
+export default defineConfig({ ...gyralVitePreset(), build: {/* … */} });
+
+// vitest.config.ts: spread it into each browser project
+projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */} } }];
 ```
 
-Symptom if you skip this: the console warns "Multiple versions of Lit loaded", or hydration
-fails with "Hydration value mismatch" and duplicated DOM.
+- **`resolve.dedupe` (`LIT_PACKAGES`)**: package managers usually dedupe peers, but can't when
+  Gyral comes from a `link:` path or a second checkout (as in gyral-shop before Gyral is
+  published), because each tree has its own `node_modules`. Symptom if you skip it: "Multiple
+  versions of Lit loaded", or "Hydration value mismatch" with duplicated DOM.
+- **`optimizeDeps.include` (`LIT_PREBUNDLE`)**: the Lit modules Gyral imports or re-exports
+  (`lit`, `lit/directive.js`, `lit/static-html.js` for `textarea()`, and the directives behind
+  `classMap`, `keyed`, `live`, `repeat`, `styleMap`). Without it, Vite discovers them during the
+  first browser test run, reloads the page ("Vite unexpectedly reloaded a test") and the run
+  fails. If your app imports other Lit modules directly, add them:
+  `gyralVitePreset({ optimize: ['lit/directives/unsafe-html.js'] })`.
 
 ## Server rendering checklist
 
