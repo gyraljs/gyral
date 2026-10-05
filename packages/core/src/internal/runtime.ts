@@ -5,5 +5,4 @@ import { Effect, type Fiber } from 'effect';
  * provide yet, so the default runtime is enough; a ManagedRuntime with layers goes here
  * when drivers need shared resources.
  */
-export const fork = <A>(program: Effect.Effect<A>): Fiber.RuntimeFiber<A> =>
-  Effect.runFork(program);
+export const fork = <A>(program: Effect.Effect<A>): Fiber.Fiber<A> => Effect.runFork(program);

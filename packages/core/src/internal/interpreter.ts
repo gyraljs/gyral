@@ -6,7 +6,7 @@ import { fork } from './runtime.js';
 
 class DriverFailure extends Data.TaggedError('DriverFailure')<{ readonly cause: unknown }> {}
 
-type Running = Fiber.RuntimeFiber<void>;
+type Running = Fiber.Fiber<void>;
 
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
@@ -15,7 +15,7 @@ export interface Interpreter<M> {
 }
 
 const isRunning = (fiber: Running | undefined): fiber is Running =>
-  fiber !== undefined && fiber.unsafePoll() === null;
+  fiber !== undefined && fiber.pollUnsafe() === undefined;
 
 const withRetry = <A>(
   attempt: Effect.Effect<A, DriverFailure>,
@@ -25,7 +25,7 @@ const withRetry = <A>(
   const base = Duration.millis(policy.delayMs ?? 0);
   const delays: Schedule.Schedule<unknown> =
     policy.backoff === 'exponential' ? Schedule.exponential(base) : Schedule.spaced(base);
-  return Effect.retry(attempt, delays.pipe(Schedule.intersect(Schedule.recurs(policy.times))));
+  return Effect.retry(attempt, { schedule: delays, times: policy.times });
 };
 
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
@@ -90,7 +90,7 @@ const execute = <M>(
         if (msg !== undefined) dispatch(msg);
       }),
     ),
-    Effect.catchAllDefect((defect) => Effect.logError('gyral: command mapper threw', defect)),
+    Effect.catchDefect((defect: unknown) => Effect.logError('gyral: command mapper threw', defect)),
   );
 };
 
@@ -144,8 +144,8 @@ export function makeInterpreter<M>(
     }
     if (DEVTOOLS_ENABLED) report?.('issued');
     if (inFlight !== undefined) {
-      if (policy === 'switch') program = Effect.zipRight(Fiber.interrupt(inFlight), program);
-      if (policy === 'queue') program = Effect.zipRight(Fiber.await(inFlight), program);
+      if (policy === 'switch') program = Effect.andThen(Fiber.interrupt(inFlight), program);
+      if (policy === 'queue') program = Effect.andThen(Fiber.awaitAll([inFlight]), program);
     }
     track(lane, fork(program));
   };

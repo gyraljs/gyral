@@ -126,3 +126,12 @@ written the way that framework's docs recommend and checked by one shared correc
 
 The owner chose to benchmark the current runtime before revisiting this decision. Next step:
 benchmark an Effect 4 build with the same harness (`pnpm bench --only=gyral,lit`).
+
+## Experiment branch: Effect 4 on current main (2026-10-05, not a decision)
+
+Branch `exp/lit330-effect4` (local, bead gyral-bu6) applies the six changes under (c) to the
+current interpreter, which now also carries devtools tracing, with effect 4.0.1 and lit-html
+pinned to 3.3.0. No public API change: check-public-api passes. All 622 tests, `smoke:prod`
+and pack:check pass. `pnpm size`: counter 24.3 KiB gzip (effect 13.2), http-search-github
+28.4, isomorphic 29.5. The owner reviews the branch and the benchmark comparison before
+anything merges; the Decision above still stands.
