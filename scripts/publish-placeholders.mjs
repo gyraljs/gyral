@@ -89,6 +89,8 @@ Placeholders published. Now set up trusted publishing (docs/references/releasing
     1. https://www.npmjs.com/package/<name>/access → Trusted Publisher → GitHub Actions
          Organization or user: gyraljs   Repository: gyral
          Workflow filename:    release.yml   Environment name: npm
+         Allowed actions: leave "Allow npm publish" and "Allow npm dist-tag" UNCHECKED
+         (stage-only: you approve every version on npmjs.com with 2FA)
     2. Same page → Publishing access → "Require two-factor authentication and disallow tokens"
   Unscoped placeholders (gyral, gyraljs, create-gyral): step 2 only, until they get real code.
 

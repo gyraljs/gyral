@@ -47,17 +47,24 @@ npmjs.com/package/@gyral/NAME → **Settings** → **Trusted Publisher** → Git
 | Workflow filename    | `release.yml` |
 | Environment name     | `npm`         |
 
+**Allowed actions**: leave **Allow npm publish** and **Allow npm dist-tag** unchecked. The
+publisher is then stage-only: the workflow runs `npm stage publish`, and nothing goes live
+until you approve it on npmjs.com with 2FA. A compromised workflow or GitHub account can stage
+a version, but cannot publish one or move `latest`.
+
 ### 4. Lock publishing down, per package
 
 Same Settings page → **Publishing access** → **Require two-factor authentication and disallow
-tokens**. From now on only the release workflow (OIDC) or you with 2FA can publish. Do this
+tokens**. From now on the release workflow (OIDC) can only stage, and only you with 2FA can
+publish or approve. Do this
 for the unscoped placeholders too.
 
 ### 5. GitHub
 
 - **Environment**: gyraljs/gyral → Settings → Environments → New `npm`. Required reviewers:
   `mikezupper`. Deployment branches and tags: selected branches → `main`.
-- **Branch ruleset** for `main`: require a pull request, block force pushes and deletion.
+- **Branch ruleset** `main` (set 2026-10-05): block force pushes and deletion. No required
+  pull request or status checks yet: CI runs locally (ADR 0004).
 - **Tag ruleset** for `v*` and `@gyral/*`: block deletion and updates (non-fast-forward). If
   you also restrict creation, add the GitHub Actions app as a bypass actor so the workflow
   can push release tags.
@@ -74,9 +81,13 @@ for the unscoped placeholders too.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
    deployment when asked.
 4. The workflow refuses unconsumed changesets, runs `pnpm check`, builds, runs
-   `changeset publish` (provenance on, skipping versions npm already has), pushes the
-   `@gyral/*@X.Y.Z` tags and `vX.Y.Z`, and creates the GitHub release from the core changelog.
-5. Check npmjs.com shows the version with the provenance badge, then try
+   `scripts/stage-release.mjs --stage` (`pnpm pack` + `npm stage publish --provenance` for
+   each version npm does not serve yet), pushes the `vX.Y.Z` tag and creates the GitHub
+   release from the core changelog.
+5. **Approve the staged versions**: npmjs.com → the `gyral` org → Packages → **Staged
+   Packages** → review → **Approve** (2FA) for each, or `npm stage list @gyral/NAME` then
+   `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
+6. Check npmjs.com shows the version with the provenance badge, then try
    `npm create vite@latest` + `npm i @gyral/core lit` in a scratch app.
 
 The first real release must be **0.1.0** or higher: the placeholders already occupy 0.0.0.
@@ -98,9 +109,10 @@ Last recorded result (2026-10-05, 0.0.0): pack:check ok for all 7 packages; veri
 
 ## When something goes wrong
 
-- **Publish failed halfway**: fix the cause and re-run the workflow. `changeset publish` skips
-  versions that are already on npm, and tagging skips an existing `vX.Y.Z`.
+- **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
+  versions npm already serves, and tagging skips an existing `vX.Y.Z`. A version staged but
+  not approved is not live; reject it on npmjs.com before re-staging if it was wrong.
 - **Bad release**: `npm deprecate @gyral/NAME@X.Y.Z "reason"` and release a patch. Unpublish
   only within 72 hours and only if nothing depends on it.
-- **OIDC error (`E404`/`ENEEDAUTH` on publish)**: the trusted publisher fields must match
+- **OIDC error (`E404`/`ENEEDAUTH`/`E403` on stage)**: the trusted publisher fields must match
   exactly (`gyraljs` / `gyral` / `release.yml` / `npm`).
