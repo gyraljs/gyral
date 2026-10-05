@@ -198,3 +198,22 @@ refinements JSON Schema can't express still hold. `arbitraryFromJsonSchema(json)
 underlying generator (types, formats, ranges, patterns, enums, arrays, objects, unions, local
 `$ref`s); unsupported keywords throw with a remedy. The community adapters were not used:
 `zod-fast-check` supports only Zod 3 and fast-check 3, and `valibot-fast-check` is 0.1.
+
+## Tree-scoped driver overrides (gyral-czi.35, 2026-10-04)
+
+`el.drivers` substitutes drivers for one element only, so a client-rendered app's tests needed
+a mutable registry wired into every component's `spec.drivers` (found in gyral-shop's admin).
+A command's driver is now resolved in this order:
+
+1. the element's own `el.drivers`;
+2. the nearest **driver provider** above it, crossing shadow roots (an inner provider without
+   that driver lets an outer one supply it);
+3. the spec's `drivers`;
+4. the command's own driver.
+
+A provider is a `<gyral-drivers>` element with a `.drivers` property, or any element registered
+with `provideDrivers(element, drivers)` (which returns a function that removes the overrides).
+`@gyral/testing` wraps it as `withDrivers(root, drivers)`, so one call covers every component
+in a test container or a `mountSsr(...).root`. Resolution happens each time a command runs, so
+providers can change during a test. Commands never run on the server, so providers are not
+consulted there.

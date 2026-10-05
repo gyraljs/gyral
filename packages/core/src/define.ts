@@ -1,4 +1,5 @@
 import { isServer, LitElement } from 'lit';
+import { providedDriver } from './drivers-scope.js';
 import {
   DEVTOOLS_ENABLED,
   devCommands,
@@ -327,8 +328,12 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       });
     }
 
+    // el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
     #resolve = (driver: AnyDriver): AnyDriver =>
-      this.drivers[driver.name] ?? spec.drivers?.[driver.name] ?? driver;
+      this.drivers[driver.name] ??
+      providedDriver(this, driver.name) ??
+      spec.drivers?.[driver.name] ??
+      driver;
 
     #onEvent = (event: Event): void => {
       handleIntent(event, this.renderRoot, parsers, tag, this.#deliver);

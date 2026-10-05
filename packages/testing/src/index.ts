@@ -3,6 +3,7 @@ export { initial, readerOf, run, step } from './step.js';
 export { sentTo, stepStore, testStore } from './stores.js';
 export type { Ran, RunOptions, StepMessage, Stepped } from './step.js';
 export { commandsFor, inputsFor, reject, resolve } from './commands.js';
+export { withDrivers } from './drivers.js';
 export { fakeDriver } from './fake.js';
 export type { FakeCall, FakeDriver, FakeOptions } from './fake.js';
 export { customElementsIn, hydrated, mountSsr, undefinedElementsIn } from './ssr.js';
