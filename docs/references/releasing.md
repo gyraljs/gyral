@@ -28,6 +28,7 @@ npm login                                        # browser login, 2FA
 npm whoami                                       # your npm username
 node scripts/publish-placeholders.mjs            # dry run: lists what would be published
 node scripts/publish-placeholders.mjs --publish  # publishes; npm asks for 2FA as needed
+node scripts/publish-placeholders.mjs --publish --otp=123456  # when npm fails with EOTP (no interactive terminal)
 ```
 
 Names already on npm are skipped, so re-run it after any failure. It ends by printing the

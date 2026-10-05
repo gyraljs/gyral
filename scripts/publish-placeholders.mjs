@@ -4,6 +4,10 @@
 //
 //   node scripts/publish-placeholders.mjs            # dry run: what would be published
 //   node scripts/publish-placeholders.mjs --publish  # publish; npm asks for the 2FA code
+//   node scripts/publish-placeholders.mjs --publish --otp=123456  # non-interactive shells
+//
+// Outside an interactive terminal npm cannot wait for the browser 2FA prompt (EOTP), so pass
+// a fresh authenticator code with --otp; if it expires mid-run, re-run with a new one.
 //
 // Names that already exist on npm are skipped, so it is safe to re-run after a failure.
 import { spawnSync } from 'node:child_process';
@@ -14,6 +18,7 @@ import { join } from 'node:path';
 const root = join(import.meta.dirname, '..');
 const base = join(root, 'release', 'placeholders');
 const publish = process.argv.includes('--publish');
+const otp = process.argv.find((arg) => arg.startsWith('--otp='));
 
 /** release/placeholders/<name>/ and release/placeholders/@gyral/<name>/ */
 const dirs = readdirSync(base).flatMap((entry) =>
@@ -50,7 +55,13 @@ for (const dir of dirs) {
   const tmp = mkdtempSync(join(tmpdir(), 'gyral-placeholder-'));
   cpSync(dir, tmp, { recursive: true });
   copyFileSync(join(root, 'LICENSE'), join(tmp, 'LICENSE'));
-  const args = ['publish', '--access', 'public', ...(publish ? [] : ['--dry-run'])];
+  const args = [
+    'publish',
+    '--access',
+    'public',
+    ...(publish ? [] : ['--dry-run']),
+    ...(publish && otp !== undefined ? [otp] : []),
+  ];
   console.log(`${publish ? 'publish ' : 'dry-run '} ${name}@${version}`);
   const result = spawnSync('npm', args, { cwd: tmp, stdio: publish ? 'inherit' : 'ignore' });
   rmSync(tmp, { recursive: true, force: true });
