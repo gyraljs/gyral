@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { customElementsIn, hydrated, mountSsr, type MountedSsr } from '../src/index.js';
+import {
+  customElementsIn,
+  hydrated,
+  mountSsr,
+  undefinedElementsIn,
+  type MountedSsr,
+} from '../src/index.js';
 
 const DOC = `<!doctype html><html><head>
 <style>.from-head { color: rgb(1, 2, 3); }</style>
@@ -70,6 +76,23 @@ describe('mountSsr', () => {
   it('accepts a body fragment', () => {
     page = mountSsr('<p id="frag">x</p>');
     expect(page.root.querySelector('#frag')?.textContent).toBe('x');
+  });
+});
+
+describe('hydrated: elements that never upgrade (gyral-czi.32)', () => {
+  it('fails naming server-rendered elements whose module was never imported', async () => {
+    page = mountSsr(
+      '<test-never-defined><template shadowrootmode="open"><p>x</p></template></test-never-defined>',
+    );
+    await expect(hydrated(page)).rejects.toThrow(/<test-never-defined>.*allowUndefined/);
+  });
+
+  it('accepts listed tags and always allows <gyral-stores>', async () => {
+    page = mountSsr('<gyral-stores><test-never-defined-2></test-never-defined-2></gyral-stores>');
+    expect(undefinedElementsIn(page.root)).toEqual(['test-never-defined-2']);
+    await expect(
+      hydrated(page, { allowUndefined: ['test-never-defined-2'] }),
+    ).resolves.toBeUndefined();
   });
 });
 

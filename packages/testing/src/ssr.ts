@@ -126,13 +126,41 @@ const settle = (): Promise<void> =>
     setTimeout(resolve, 0);
   });
 
+export interface HydratedOptions {
+  /**
+   * Custom element tags allowed to stay undefined (never upgraded). `gyral-stores` is always
+   * allowed: in the browser it is a plain scoping element.
+   */
+  readonly allowUndefined?: readonly string[];
+}
+
+// Server-only or deliberately plain elements that are fine to leave un-upgraded.
+const ALWAYS_UNDEFINED = ['gyral-stores'];
+
+/**
+ * Server-rendered custom elements that never upgraded (gyral-czi.32): their module wasn't
+ * imported, so nothing hydrated them and a test could pass without exercising them.
+ */
+export function undefinedElementsIn(
+  root: ParentNode,
+  allow: readonly string[] = [],
+): readonly string[] {
+  const allowed = new Set([...ALWAYS_UNDEFINED, ...allow]);
+  const tags = customElementsIn(root).map((el) => el.localName);
+  return [...new Set(tags)].filter((tag) => !allowed.has(tag) && !customElements.get(tag));
+}
+
 /**
  * Waits until every Gyral/Lit element under the page (shadow roots included) has finished
  * updating, re-scanning until no new elements appear (nested children hydrate after their
- * parents). A hydration mismatch rejects. Given a `MountedSsr`, it also throws when console
- * errors/warnings or uncaught errors were recorded since mounting.
+ * parents). A hydration mismatch rejects. It throws when a server-rendered custom element
+ * never upgraded (import its module, or list it in `allowUndefined`). Given a `MountedSsr`,
+ * it also throws when console errors/warnings or uncaught errors were recorded since mounting.
  */
-export async function hydrated(page: MountedSsr | ParentNode): Promise<void> {
+export async function hydrated(
+  page: MountedSsr | ParentNode,
+  options: HydratedOptions = {},
+): Promise<void> {
   const root = 'unmount' in page ? page.root : page;
   let seen = new Set<Element>();
   for (let pass = 0; pass < 10; pass += 1) {
@@ -148,6 +176,13 @@ export async function hydrated(page: MountedSsr | ParentNode): Promise<void> {
     const stable = now.size === seen.size && [...now].every((el) => seen.has(el));
     seen = now;
     if (stable) break;
+  }
+  const never = undefinedElementsIn(root, options.allowUndefined);
+  if (never.length > 0) {
+    throw new Error(
+      `Server-rendered elements never upgraded: ${never.map((t) => `<${t}>`).join(', ')}. ` +
+        `Import their modules in the test, or pass { allowUndefined: [...] } to hydrated().`,
+    );
   }
   if ('unmount' in page && page.problems.length > 0) {
     throw new Error(`Problems during hydration:\n${page.problems.join('\n')}`);
