@@ -61,8 +61,11 @@ async function check(dir) {
     problems.push(`npm pack --dry-run lists different files:\n  ${npmFiles.join('\n  ')}`);
   }
 
+  // Copy out exactly the file's bytes: a small Buffer can be a view into Node's shared pool,
+  // so `.buffer` alone would hand publint unrelated data ("incorrect header check").
+  const bytes = readFileSync(tarball);
   const lint = await publint({
-    pack: { tarball: readFileSync(tarball).buffer },
+    pack: { tarball: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) },
     level: 'suggestion',
     strict: true,
   });
