@@ -1,10 +1,11 @@
 // ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
 import '@gyral/ssr/hydrate';
+import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// The server's real 422 response for a rejected no-JS submission (server.node.test.ts).
 import serverHtml from './fixtures/rejected.ssr.html?raw';
 
-// The server's real 422 response for a rejected no-JS submission (server.node.test.ts).
-const body = /<body>([\s\S]*)<\/body>/.exec(serverHtml)?.[1] ?? '';
+let page: MountedSsr | undefined;
 
 const errors = vi.spyOn(console, 'error');
 const warnings = vi.spyOn(console, 'warn');
@@ -22,13 +23,11 @@ const input = (id: string): HTMLInputElement => {
 const settle = () => new Promise((r) => setTimeout(r, 20));
 
 beforeAll(() => {
-  const div = document.createElement('div');
-  div.setHTMLUnsafe(body); // parses Declarative Shadow DOM, like a page load
-  document.body.append(div);
+  page = mountSsr(serverHtml);
 });
 
 afterAll(() => {
-  document.body.replaceChildren();
+  page?.unmount();
 });
 
 describe('hydrating a rejected no-JS submission', () => {
@@ -44,10 +43,10 @@ describe('hydrating a rejected no-JS submission', () => {
     const before = input('confirm');
     await import('../src/register.js');
     const el = host() as HTMLElement & {
-      updateComplete: Promise<boolean>;
       state: { errors: Record<string, readonly string[]> };
     };
-    await el.updateComplete;
+    if (page === undefined) throw new Error('not mounted');
+    await hydrated(page); // rejects on a mismatch or any console error/warning
     await settle();
     expect(input('confirm')).toBe(before);
     expect(el.state.errors['confirm']).toEqual(['The passwords do not match.']);

@@ -1,7 +1,10 @@
 // ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
 import '../src/hydrate.js';
+import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import serverHtml from './fixtures/nested.ssr.html?raw';
+
+let page: MountedSsr | undefined;
 
 const errors = vi.spyOn(console, 'error');
 // Errors thrown from custom element callbacks (upgrade, connect) are reported here.
@@ -29,19 +32,16 @@ const nested = (): Live => {
 const settle = () => new Promise((r) => setTimeout(r, 20));
 
 beforeAll(async () => {
-  const host = document.createElement('div');
-  host.setHTMLUnsafe(serverHtml); // parses Declarative Shadow DOM, like a page load
-  document.body.append(host);
+  page = mountSsr(serverHtml);
   const childBefore = nested();
   expect(childBefore.hasAttribute('defer-hydration')).toBe(true);
   await import('./support/nested.js'); // upgrade: parent hydrates, then releases the child
-  await parent().updateComplete;
-  await nested().updateComplete;
+  await hydrated(page); // waits for the nested child too; fails on mismatches/errors
   await settle();
 });
 
 afterAll(() => {
-  document.body.replaceChildren();
+  page?.unmount();
 });
 
 describe('a Gyral child server-rendered inside a parent shadow root', () => {

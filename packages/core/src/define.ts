@@ -11,7 +11,13 @@ import type { GyralElement, GyralElementClass } from './element-types.js';
 import { takeSeed, writeSeed } from './hydration.js';
 import { runInit } from './init.js';
 import { handleIntent, intentNames, listenForIntents, markGyralHost } from './intent.js';
-import { componentStyles, isLight } from './light-dom.js';
+import {
+  componentStyles,
+  hydrateSupportLoaded,
+  isLight,
+  markLightHost,
+  revealLightMarkers,
+} from './light-dom.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { readProps, restoreProps, sameProps } from './props.js';
 import { attachStates, type StateSync } from './states.js';
@@ -180,6 +186,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (onServer) {
         // Server renders run constructor, willUpdate and render only (ADR 0012).
         writeSeed(this, this.state, this.#props() as Record<string, unknown>, spec.props ?? {});
+        if (isLight(spec)) markLightHost(this);
         return;
       }
       const prev = this.#seenProps;
@@ -191,15 +198,22 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       this.#dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
     }
 
-    // Light-DOM mode (ADR 0014): render into the element itself. Server-rendered light content
-    // carries no hydration markers, so the first client update replaces it with a fresh
-    // render of the seeded state (same markup) instead of hydrating it.
+    // Light-DOM mode (ADR 0014): render into the element itself.
     protected override createRenderRoot(): HTMLElement | DocumentFragment {
       return isLight(spec) ? this : super.createRenderRoot();
     }
 
     protected override update(changed: Map<PropertyKey, unknown>): void {
-      if (isLight(spec) && !this.hasUpdated && this.#serverRendered) this.replaceChildren();
+      if (isLight(spec) && !this.hasUpdated && this.#serverRendered) {
+        // Hydrate the server's light view in place: reveal this host's own hidden markers
+        // now (not on connect: a deferred child connects mid-way through its parent's
+        // hydrate walk), then let Lit's hydrate support take over (ADR 0014 addendum).
+        if (hydrateSupportLoaded() && revealLightMarkers(this)) {
+          (this as unknown as { _$needsHydration: boolean })._$needsHydration = true;
+        } else {
+          this.replaceChildren(); // no hydrate support: fall back to a fresh render
+        }
+      }
       super.update(changed);
     }
 

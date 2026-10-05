@@ -12,8 +12,10 @@ import { http, type HttpError, type HttpRequest } from './driver.js';
 export interface SubmitFormOptions<MS, MF> {
   readonly method?: 'POST' | 'PUT' | 'PATCH';
   /**
-   * CSRF token: `{ meta: 'csrf-token' }` reads `<meta name="csrf-token">` when the request runs;
-   * `{ token }` sends a known value. The header defaults to `x-csrf-token`.
+   * CSRF token for this submission: `{ meta: 'csrf-token' }` reads `<meta name="csrf-token">`
+   * when the request runs (the same mechanism as `csrfFromMeta`); `{ token }` sends a known
+   * value. The header defaults to `x-csrf-token`. Omit it when the app gave the http driver
+   * default headers (`makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`).
    */
   readonly csrf?:
     | { readonly meta: string; readonly header?: string }

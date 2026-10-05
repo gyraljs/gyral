@@ -43,9 +43,22 @@ export type HttpError =
       readonly issues: ReadonlyArray<StandardSchemaV1.Issue>;
     };
 
+/** Headers as data, or computed when each request runs (e.g. read a CSRF `<meta>`). */
+export type HeaderSource =
+  | Readonly<Record<string, string>>
+  | ((req: HttpRequest) => Readonly<Record<string, string>> | undefined);
+
 export interface HttpDriverOptions {
   /** Driver name used for substitution (`el.drivers`). Default `'http'`. */
   readonly name?: string;
+  /**
+   * Default headers for every request through this driver: app-level concerns such as a CSRF
+   * token or an API key, so components and stores never read the DOM themselves. Per-request
+   * `headers` win over these.
+   *
+   *   el.drivers = { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) };
+   */
+  readonly headers?: HeaderSource;
   /** Resolves relative URLs. Default: the document location. */
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
@@ -76,11 +89,25 @@ const parseLoose = (text: string): unknown => {
   }
 };
 
-function csrfHeader(csrf: HttpRequest['csrf']): Record<string, string> {
-  if (csrf === undefined || typeof document === 'undefined') return {};
-  const token = document.querySelector(`meta[name="${csrf.meta}"]`)?.getAttribute('content');
-  return token == null ? {} : { [csrf.header ?? 'x-csrf-token']: token };
+/**
+ * A header source that reads a token from `<meta name=…>` when each request runs. On the
+ * server, or when the meta is missing, it adds nothing. The header defaults to `x-csrf-token`.
+ */
+export function csrfFromMeta(
+  meta: string,
+  header = 'x-csrf-token',
+): () => Readonly<Record<string, string>> {
+  return () => {
+    if (typeof document === 'undefined') return {};
+    const token = document.querySelector(`meta[name="${meta}"]`)?.getAttribute('content');
+    return token == null ? {} : { [header]: token };
+  };
 }
+
+const resolveHeaders = (
+  source: HeaderSource | undefined,
+  req: HttpRequest,
+): Readonly<Record<string, string>> => (typeof source === 'function' ? source(req) : source) ?? {};
 
 async function statusError(
   url: string,
@@ -111,7 +138,8 @@ export function makeHttpDriver(
         accept: 'application/json',
         // Form bodies set their own content type (with the multipart boundary).
         ...(asJson ? { 'content-type': 'application/json' } : {}),
-        ...csrfHeader(req.csrf),
+        ...resolveHeaders(options.headers, req),
+        ...(req.csrf === undefined ? {} : csrfFromMeta(req.csrf.meta, req.csrf.header)()),
         ...req.headers,
       },
       ...(payload === undefined ? {} : { body: asJson ? JSON.stringify(payload) : payload }),

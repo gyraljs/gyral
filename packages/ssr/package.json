@@ -37,6 +37,7 @@
     "lit": "^3.3.0"
   },
   "devDependencies": {
+    "@gyral/testing": "workspace:*",
     "@lit-labs/ssr": "4.1.0",
     "@lit-labs/ssr-client": "1.1.8",
     "lit": "3.3.3"

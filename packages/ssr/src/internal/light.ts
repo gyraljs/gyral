@@ -4,9 +4,10 @@
 // `shadow: false` components the renderer below brackets the view with two markers, and
 // LightFilter rewrites the stream: the DSD wrapper and the markers are dropped (the view
 // becomes the element's plain children), and Lit's hydration comments inside light regions
-// are stripped so an ancestor's hydration walk never sees them. Nested shadow components keep
-// their DSD and markers. The client re-renders light components instead of hydrating them.
-import { isLightComponent } from '@gyral/core';
+// are hidden (`<!--gyral:lit-part …-->`) so an ancestor's hydrate() walk ignores them. Each
+// light host reveals its own markers on its first client update and hydrates in place
+// (ADR 0014 addendum). Nested shadow components keep their DSD and markers as they are.
+import { HIDDEN_MARKER, isLightComponent } from '@gyral/core';
 import { LitElementRenderer } from '@lit-labs/ssr';
 import type { RenderInfo } from '@lit-labs/ssr';
 
@@ -102,7 +103,9 @@ export class LightFilter {
       this.#stack.pop();
       return released + token;
     }
-    // A Lit hydration comment: stripped inside light regions, kept elsewhere.
-    return this.#stack.at(-1) === 'light' ? released : released + token;
+    // A Lit hydration comment: hidden inside light regions, kept as is elsewhere.
+    return this.#stack.at(-1) === 'light'
+      ? released + token.replace('<!--', `<!--${HIDDEN_MARKER}`)
+      : released + token;
   }
 }

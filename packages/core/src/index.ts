@@ -54,7 +54,7 @@ export { runInit } from './init.js';
 export { invalid } from './invalid.js';
 export { liveBoolean } from './live-boolean.js';
 // Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
-export { isLightComponent } from './light-dom.js';
+export { HIDDEN_MARKER, isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
