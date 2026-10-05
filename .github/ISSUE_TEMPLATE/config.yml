@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://gyral.dev
+    about: Guides and API reference. Many questions are answered there.
+  - name: Report a security vulnerability
+    url: https://github.com/gyraljs/gyral/security/advisories/new
+    about: Please report security problems privately, never in a public issue.

@@ -1,0 +1,34 @@
+name: Bug report
+description: Something in a Gyral package does not work as documented.
+labels: [bug]
+body:
+  - type: input
+    id: packages
+    attributes:
+      label: Packages and versions
+      placeholder: '@gyral/core 0.1.0, @gyral/ssr 0.1.0, lit 3.3.1'
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A repository, StackBlitz link, or the smallest component that shows it.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser / runtime
+      placeholder: Chrome 140, Safari 26, Node 24.15 (SSR)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output or stack trace
+      render: text

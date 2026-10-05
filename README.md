@@ -1,5 +1,9 @@
 # Gyral
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![npm](https://img.shields.io/npm/v/@gyral/core?label=%40gyral%2Fcore)](https://www.npmjs.com/package/@gyral/core)
+[![npm provenance](https://img.shields.io/badge/npm-provenance-2ea44f?logo=npm)](https://docs.npmjs.com/generating-provenance-statements)
+
 **Model-View-Intent web components on the modern web platform.**
 _Inspired by [Cycle.js](https://cycle.js.org)._
 
@@ -52,6 +56,12 @@ pnpm examples                                # run every example; index at http:
 pnpm --filter @gyral-examples/counter dev    # run an example
 pnpm ci:local                                # run CI locally (Docker + gh act)
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) (commits need a DCO sign-off, `git commit -s`), the
+[Code of Conduct](CODE_OF_CONDUCT.md) and the [security policy](SECURITY.md). Releases:
+[docs/references/releasing.md](docs/references/releasing.md).
 
 ## License
 

@@ -38,6 +38,8 @@ First run needs `pnpm exec playwright install chromium`.
 | `scripts/`                                                             | Invariant checks (`lib/invariants.mjs` + tests)                         |
 | [docs/design-docs/](docs/design-docs/index.md)                         | Decisions and beliefs (ADRs)                                            |
 | [docs/references/consumer-setup.md](docs/references/consumer-setup.md) | How apps install Gyral: Lit as a peer, Vite dedupe                      |
+| [docs/references/releasing.md](docs/references/releasing.md)           | npm release runbook: placeholders, trusted publishing, `release.yml`    |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                     | Contributor setup, DCO sign-off, changesets, ADR process                |
 | `archive/` (gitignored)                                                | Old Cycle.js source. Reference only; never import or copy-paste blindly |
 
 ## Design docs to read before changing…

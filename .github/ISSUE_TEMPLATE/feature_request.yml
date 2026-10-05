@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a new capability or an API change.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to build, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: The API you would like, ideally as a short code example.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds
+  - type: checkboxes
+    id: adr
+    attributes:
+      label: Scope
+      options:
+        - label: This changes architecture or public API and probably needs an ADR (see CONTRIBUTING.md).

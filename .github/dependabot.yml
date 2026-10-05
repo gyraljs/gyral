@@ -1,0 +1,25 @@
+# Dependabot opens update PRs; it adds no Actions triggers (ADR 0004). Run `pnpm check`
+# locally on a Dependabot branch before merging.
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm workspace (pnpm-lock.yaml)
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      runtime-dependencies:
+        dependency-type: production
+    ignore:
+      # Effect 3 → 4 is a deliberate, tracked decision, not a routine bump.
+      - dependency-name: effect
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
