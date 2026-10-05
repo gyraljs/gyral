@@ -75,7 +75,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
     if (navigationApi) expect('navigation' in window).toBe(true);
     captured = [];
     window.addEventListener('click', guard);
-    driver = makeRouter({ navigationApi });
+    driver = makeRouter({ navigationApi, captureLinks: true });
     el = new App();
     el.drivers = { router: driver };
     document.body.append(el);

@@ -52,7 +52,7 @@ describe('memory history', () => {
   let el: InstanceType<typeof App>;
 
   beforeEach(async () => {
-    driver = makeRouter({ history: 'memory', initial: '/users/1' });
+    driver = makeRouter({ history: 'memory', initial: '/users/1', captureLinks: true });
     el = new App();
     el.drivers = { router: driver };
     document.body.append(el);
@@ -152,6 +152,51 @@ describe('memory history without a document', () => {
     controller.abort();
     await expect(listening).rejects.toThrow();
     driver.dispose();
+  });
+});
+
+describe('link capture is opt-in (ADR 0009 addendum)', () => {
+  const clickLink = (): MouseEvent => {
+    const a = document.createElement('a');
+    a.href = '/users/9';
+    document.body.append(a);
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    // Stop the real navigation when nothing intercepted it (runs after the router's listener).
+    document.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+      },
+      { once: true },
+    );
+    a.dispatchEvent(click);
+    a.remove();
+    return click;
+  };
+
+  it('does not intercept clicks by default, in either history', async () => {
+    for (const driver of [
+      makeRouter({ navigationApi: false }),
+      makeRouter({ history: 'memory', initial: '/' }),
+    ]) {
+      const controller = new AbortController();
+      const seen: string[] = [];
+      const listening = driver.run(
+        { _tag: 'Listen' },
+        {
+          signal: controller.signal,
+          emit: (location) => {
+            if (location !== undefined) seen.push(location.pathname);
+          },
+        },
+      );
+      clickLink();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(seen).not.toContain('/users/9');
+      controller.abort();
+      await expect(listening).rejects.toThrow();
+      driver.dispose();
+    }
   });
 });
 

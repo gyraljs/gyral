@@ -7,7 +7,7 @@ let driver: RouterDriver | undefined;
 
 async function mount(path: string) {
   // Memory history: the real document URL and title are never touched (ADR 0009).
-  const router = makeRouter({ history: 'memory', initial: path });
+  const router = makeRouter({ history: 'memory', initial: path, captureLinks: true });
   driver = router;
   const el = new RoutingView();
   el.drivers = { router };

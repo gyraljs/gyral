@@ -9,8 +9,14 @@ export interface MemoryOptions {
   /** Origin that relative URLs resolve against. Default `'http://localhost'`. */
   readonly origin?: string;
   /**
-   * Where to capture same-origin link clicks. Default: the global `document` when there is one
-   * (browser tests), none on a server. Pass `null` to disable.
+   * Intercept same-origin link clicks. **Default `false`** (opt in): a router that captures
+   * every link on the page breaks multi-page apps where only one component routes (ADR 0009).
+   */
+  readonly captureLinks?: boolean;
+  /**
+   * Memory history: where to capture link clicks when `captureLinks` is on. Default: the
+   * global `document` when there is one. Passing an element also turns capture on; `null`
+   * turns it off.
    */
   readonly linkRoot?: EventTarget | null;
 }
@@ -40,7 +46,9 @@ export function createMemorySource(options: MemoryOptions): Source {
 
   const linkRoot =
     options.linkRoot === undefined
-      ? (globalThis as { document?: Document }).document
+      ? options.captureLinks === true
+        ? (globalThis as { document?: Document }).document
+        : undefined
       : (options.linkRoot ?? undefined);
   const onClick = (event: Event): void => {
     if (!(event instanceof MouseEvent)) return;

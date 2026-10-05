@@ -94,3 +94,21 @@ depend on data (a product name), not only on the route, so they are computed by 
 `<title>`, which keeps server and client titles from one source (`examples/isomorphic`).
 Reducers return `setTitle(pageTitle(…))` alongside the new state, usually from `Routed`. The
 browser history sets `document.title`; the memory history records it in `snapshot().title`.
+
+## Addendum: link capture is opt-in (gyral-ud5.8, 2026-10-04)
+
+The default `router` captured every same-origin link click on the page. In a multi-page
+server-rendered app where only one component routes (gyral-shop's category listing), that
+silently turned every link on the site into a client-side navigation. **`captureLinks` now
+defaults to `false`** in both histories:
+
+- Browser history: `makeRouter({ captureLinks: true })` to intercept same-origin links.
+- Memory history: `captureLinks: true` captures on `document`; `linkRoot: element` captures
+  on that element (and turns capture on); `linkRoot: null` turns it off.
+- `navigate()`, `back()` and `listen()` are unaffected: routing commands still work without
+  capture.
+
+**Migration:** an app that owns the whole page passes its own router:
+`define(…, { drivers: { router: makeRouter({ captureLinks: true }) }, … })`, as
+`examples/routing-view` and `examples/isomorphic` now do. Tests that click links on a memory
+router add `captureLinks: true`.

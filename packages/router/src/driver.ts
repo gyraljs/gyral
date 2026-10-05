@@ -25,8 +25,6 @@ export interface RouterOptions extends MemoryOptions {
   readonly window?: Window;
   /** Browser history: use the Navigation API when present. Default `true`. */
   readonly navigationApi?: boolean;
-  /** Browser history: intercept same-origin link clicks. Default `true`. */
-  readonly captureLinks?: boolean;
 }
 
 export interface RouterDriver extends Driver<RouterInput, RouteLocation | undefined> {
@@ -98,7 +96,7 @@ function createBrowserSource(options: RouterOptions): Source {
     nav.addEventListener('navigate', onNavigate);
     nav.addEventListener('currententrychange', stream.notify);
   }
-  if (options.captureLinks !== false) win.document.addEventListener('click', onClick);
+  if (options.captureLinks === true) win.document.addEventListener('click', onClick);
 
   return {
     subscribe: stream.subscribe,

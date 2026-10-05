@@ -1,5 +1,13 @@
 import { css, define, html, nothing } from '@gyral/core';
-import { back, listen, routes, setTitle, type RouteLocation, type RouteMatch } from '@gyral/router';
+import {
+  back,
+  listen,
+  makeRouter,
+  routes,
+  setTitle,
+  type RouteLocation,
+  type RouteMatch,
+} from '@gyral/router';
 
 /** The route table: pure, typed, and reusable on a server (ADR 0009). */
 export const app = routes({ home: '/', about: '/about', contacts: '/contacts' });
@@ -47,6 +55,8 @@ export const pageTitle = (route: Route | undefined): string =>
   `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`;
 
 export const RoutingView = define<State, Msg>('gy-routing-view', {
+  // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
+  drivers: { router: makeRouter({ captureLinks: true }) },
   // One streaming command: the current location now, then every change (ADR 0009).
   init: () => [
     { location: undefined, route: undefined },
