@@ -376,6 +376,19 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
 
+  examples/undo-replay:
+    dependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@gyral/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   packages/core:
     dependencies:
       '@standard-schema/spec':
