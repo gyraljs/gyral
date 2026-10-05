@@ -84,8 +84,12 @@ export const Bmi = define<State, Msg>('gy-bmi', {
         gap: 1rem;
       }
       input[type='range'] {
-        accent-color: var(--accent);
         inline-size: 100%;
+      }
+      @supports (accent-color: var(--accent)) {
+        input[type='range'] {
+          accent-color: var(--accent);
+        }
       }
       output {
         font-variant-numeric: tabular-nums;

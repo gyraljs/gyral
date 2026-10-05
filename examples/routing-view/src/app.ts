@@ -118,7 +118,12 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
       :host {
         display: block;
         --accent: oklch(55% 0.18 300);
-        --muted: light-dark(oklch(92% 0.02 300), oklch(30% 0.03 300));
+        --muted: oklch(92% 0.02 300);
+      }
+      @supports (color: light-dark(black, white)) {
+        :host {
+          --muted: light-dark(oklch(92% 0.02 300), oklch(30% 0.03 300));
+        }
       }
       header {
         border-block-end: 1px solid var(--muted);
@@ -156,11 +161,15 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
         margin-inline: auto;
         padding: 2rem 1rem;
       }
-      h1 {
-        text-wrap: balance;
+      @supports (text-wrap: balance) {
+        h1 {
+          text-wrap: balance;
+        }
       }
-      p {
-        text-wrap: pretty;
+      @supports (text-wrap: pretty) {
+        p {
+          text-wrap: pretty;
+        }
       }
       button {
         font: inherit;

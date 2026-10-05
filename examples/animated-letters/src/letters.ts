@@ -100,6 +100,8 @@ export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
         font-size: 0;
       }
       /* Stagger entrances (capped, so a late letter never waits long). */
+      /* stylelint-disable-next-line plugin/use-baseline -- the plugin's data doesn't know
+         sibling-index() and wrongly calls this guard unnecessary; it is required. */
       @supports (transition-delay: calc(sibling-index() * 1ms)) {
         li.in {
           transition-delay: calc(min(sibling-index() - 1, 5) * var(--stagger));

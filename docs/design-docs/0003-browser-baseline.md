@@ -26,6 +26,27 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 Check a feature's current status in `web-features` / MDN before relying on it, and record the
 answer here.
 
-## Follow-up
+## CSS is checked too (gyral-8ht.5)
 
-CSS isn't checked yet: bead "Baseline enforcement for CSS in component styles".
+`pnpm lint:css` (part of `pnpm lint` and `pnpm check`) runs stylelint with
+`stylelint-plugin-use-baseline` at `available: 'widely'` (data from `web-features`) over every
+`css` template in `packages/*/src` and `examples/*/src` (through `postcss-lit`) and over
+`examples/**/*.css`. Patterns:
+
+- **Enhancement-only properties** (`text-wrap`, `accent-color`, `content-visibility`, anchor
+  positioning…) go in `@supports (property: value)`. The condition must name every guarded
+  property and value. JS feature detection for the same feature must use the same condition
+  (for example `ANCHOR_SUPPORT` in the autocomplete example).
+- **`light-dark()`**: declare the light value first, then override it in
+  `@supports (color: light-dark(black, white)) { … }`. Older browsers get the light theme.
+- **Custom states**: guard the rule with `@supports selector(:state(name))`, and keep the
+  meaning in ARIA or markup.
+- **At-rules that can't be guarded and that old browsers skip as a whole**:
+  `ignoreAtRules` in `stylelint.config.mjs`. Each one is listed here:
+
+  | At-rule           | Why it is safe                                           |
+  | ----------------- | -------------------------------------------------------- |
+  | `@starting-style` | Entry animations only; without it, elements just appear. |
+
+- **Plugin false positives** (features missing from `web-features`, such as
+  `sibling-index()`): a `stylelint-disable-next-line plugin/use-baseline -- reason` comment.

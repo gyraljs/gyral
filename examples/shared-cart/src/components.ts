@@ -46,8 +46,10 @@ export const CartBadge = define<{ readonly bumps: number }, never>('gy-cart-badg
         color: white;
         transition: scale 0.2s;
       }
-      :host(:state(bumped)) output {
-        scale: 1.15;
+      @supports selector(:state(bumped)) {
+        :host(:state(bumped)) output {
+          scale: 1.15;
+        }
       }
     }
   `,

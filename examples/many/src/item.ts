@@ -63,8 +63,12 @@ export const Item = define<ItemState, ItemMsg, { readonly item: ItemSeed }, Item
         :host {
           display: block;
           /* Off-screen items skip layout and paint: keeps 1000+ items responsive. */
-          content-visibility: auto;
           contain-intrinsic-size: auto 7rem;
+        }
+        @supports (content-visibility: auto) {
+          :host {
+            content-visibility: auto;
+          }
         }
         fieldset {
           inline-size: min(var(--width), 100%);

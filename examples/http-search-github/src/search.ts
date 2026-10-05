@@ -136,14 +136,22 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
       h2 {
         font-size: 1rem;
         margin: 0;
-        text-wrap: balance;
+      }
+      @supports (text-wrap: balance) {
+        h2 {
+          text-wrap: balance;
+        }
       }
       a {
         color: var(--accent);
       }
       p {
         margin-block: 0.5rem 0;
-        text-wrap: pretty;
+      }
+      @supports (text-wrap: pretty) {
+        p {
+          text-wrap: pretty;
+        }
       }
     }
   `,

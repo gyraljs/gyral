@@ -131,7 +131,12 @@ export const Register = define<State, Msg, Props>('gy-register', {
       :host {
         display: block;
         --accent: oklch(55% 0.18 260);
-        --danger: light-dark(oklch(50% 0.2 25), oklch(75% 0.15 25));
+        --danger: oklch(50% 0.2 25);
+      }
+      @supports (color: light-dark(black, white)) {
+        :host {
+          --danger: light-dark(oklch(50% 0.2 25), oklch(75% 0.15 25));
+        }
       }
       p {
         display: grid;
