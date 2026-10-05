@@ -217,6 +217,9 @@ importers:
         specifier: 3.3.3
         version: 3.3.3
     devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       tsx:
         specifier: 4.23.15
         version: 4.23.15
@@ -265,6 +268,9 @@ importers:
         specifier: 1.5.0
         version: 1.5.0(typescript@6.0.3)
     devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
       tsx:
         specifier: 4.23.15
         version: 4.23.15
@@ -355,6 +361,10 @@ importers:
       lit:
         specifier: 3.3.3
         version: 3.3.3
+    devDependencies:
+      '@gyral/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/testing:
     dependencies:

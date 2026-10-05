@@ -165,3 +165,14 @@ a record, or a function evaluated when each request runs (it receives the reques
 `<meta name=…>` at request time (empty on the server), so components and stores never read
 the DOM: `el.drivers = { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) }`.
 `submitForm` and `HttpRequest.csrf` use the same `csrfFromMeta` mechanism.
+
+## Server-rendered page tests (gyral-czi.22, 2026-10-04)
+
+`@gyral/testing` mounts golden SSR output the way a page load would: `mountSsr(html)` parses
+Declarative Shadow DOM, applies only `<head>` styles (shadow-root styles stay in their roots),
+restores the page-level store seed and named `<meta>`s, and records console errors, warnings and
+uncaught errors from then on. `hydrated(page)` waits for every custom element under the page,
+including those inside nested shadow roots, re-scanning until nested children have upgraded, and
+throws if any problem was recorded (Lit's dev-mode banner excepted). `mountSsr(html, { stores:
+false })` withholds the seed, to prove a test depends on it. Import component modules after
+mounting so they hydrate in place.

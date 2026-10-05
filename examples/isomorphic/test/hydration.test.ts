@@ -1,11 +1,11 @@
 // ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
 import '@gyral/ssr/hydrate';
+import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+// The server's real output for /about (kept in sync by server.node.test.ts).
 import serverHtml from './fixtures/about.ssr.html?raw';
 
-// The server's real output for /about (kept in sync by server.node.test.ts).
-const body = /<body>([\s\S]*)<\/body>/.exec(serverHtml)?.[1] ?? '';
-
+let page: MountedSsr | undefined;
 const original = location.href;
 const originalTitle = document.title;
 const errors = vi.spyOn(console, 'error');
@@ -22,15 +22,13 @@ const settle = () => new Promise((r) => setTimeout(r, 20));
 beforeAll(() => {
   // The client's router reads the real URL; match what the server rendered.
   history.replaceState(null, '', '/about');
-  const host = document.createElement('div');
-  host.setHTMLUnsafe(body); // parses Declarative Shadow DOM, like a page load
-  document.body.append(host);
+  page = mountSsr(serverHtml);
 });
 
 afterAll(() => {
   history.replaceState(null, '', original);
   document.title = originalTitle;
-  document.body.replaceChildren();
+  page?.unmount();
 });
 
 describe('hydration', () => {
@@ -42,8 +40,9 @@ describe('hydration', () => {
   it('hydrates in place: same DOM nodes, seed consumed, no mismatch', async () => {
     const h1 = $('h1');
     await import('../src/app.js');
-    const el = app() as HTMLElement & { updateComplete: Promise<boolean>; state: unknown };
-    await el.updateComplete;
+    const el = app() as HTMLElement & { state: unknown };
+    if (page === undefined) throw new Error('not mounted');
+    await hydrated(page); // rejects on a mismatch or any console error/warning
     await settle();
     expect($('h1')).toBe(h1);
     expect(app().shadowRoot?.querySelectorAll('h1')).toHaveLength(1);

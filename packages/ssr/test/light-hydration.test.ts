@@ -1,7 +1,10 @@
 // ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
 import '../src/hydrate.js';
+import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import serverHtml from './fixtures/light.ssr.html?raw';
+
+let mounted: MountedSsr | undefined;
 
 const errors = vi.spyOn(console, 'error');
 const warnings = vi.spyOn(console, 'warn');
@@ -52,9 +55,7 @@ beforeAll(async () => {
   const style = document.createElement('style');
   style.textContent = '.light-title { color: rgb(1, 2, 3); }';
   document.head.append(style);
-  const host = document.createElement('div');
-  host.setHTMLUnsafe(serverHtml); // parses Declarative Shadow DOM, like a page load
-  document.body.append(host);
+  mounted = mountSsr(serverHtml);
   // Before any component code loads: the heading is a plain child of the page element.
   titleParentBefore = document.querySelector('.light-title')?.parentElement?.localName;
   const lightItem = document.querySelector('test-light-page test-light-item');
@@ -73,12 +74,13 @@ beforeAll(async () => {
     shadowHostItemButton: shadowHostItem?.querySelector('button') ?? null,
   };
   await import('./support/light.js');
-  await page().updateComplete;
+  // Waits for every nested light/shadow component; fails on mismatches or console errors.
+  await hydrated(mounted);
   await settle();
 });
 
 afterAll(() => {
-  document.body.replaceChildren();
+  mounted?.unmount();
 });
 
 describe('light-DOM components after SSR (ADR 0014)', () => {
