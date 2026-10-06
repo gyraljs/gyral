@@ -35,6 +35,10 @@ you want a clean-room run.
   plus a one-line summary for the changelog). See [.changeset/README.md](.changeset/README.md).
 - Follow the house rules in [AGENTS.md](AGENTS.md): pure views, no runtime dependencies
   in `@gyral/core`, Baseline browser features, files under 300 lines.
+- The view layer is written clean-room ([ADR 0018](docs/design-docs/0018-view-layer.md)):
+  work from [its specs](docs/design-docs/view/README.md) and the web-platform standards, not
+  from another renderer's source. `pnpm invariants` fails on Lit markers, imports or
+  dependencies anywhere in the code, tests, examples, scripts or skill.
 
 ## Sign your commits (DCO)
 

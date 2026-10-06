@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04)
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): Gyral no longer depends on Lit, so `ui:check` has no Lit dev-mode notice to ignore. Lit-specific text below describes 0.2.x.
+
 Based on OpenAI's "Harness engineering" write-up (Feb 2026): humans steer, agents execute,
 and the repository has to make that work.
 

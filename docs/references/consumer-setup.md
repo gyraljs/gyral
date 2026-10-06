@@ -2,7 +2,8 @@
 
 Gyral renders with its own view layer ([ADR 0018](../design-docs/0018-view-layer.md),
 [view/](../design-docs/view/README.md)): templates, keyed lists, element hooks, styles, the
-element base and the scheduler all live in `@gyral/core`. There is no `lit` dependency.
+element base, the scheduler, server rendering and hydration all live in `@gyral/core`, which
+has no runtime dependencies. Upgrading from 0.2: [migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md).
 
 ## Install
 
@@ -11,7 +12,7 @@ pnpm add @gyral/core
 # Optional packages
 pnpm add @gyral/http @gyral/router @gyral/time
 pnpm add -D @gyral/testing
-# Server rendering (ADR 0012; being rewritten for 0.3.0, see below)
+# Server rendering: page shell, streaming, static generation (see "Server rendering" below)
 pnpm add @gyral/ssr
 ```
 
@@ -139,8 +140,9 @@ then fetches the hydration chunk together with the entry (`productionServer` han
 ## Removed in 0.3.0
 
 `svg` templates, `classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,
-`liveBoolean`, `textarea()`, `directive`/`ElementDirective` and Lit re-exports are gone (ADR
-0018). Use `each(items, key, row, pick?)` for keyed lists, plain bindings for form state
+`liveBoolean`, `textarea()`, `directive`/`ElementDirective` and the renderer re-exports are
+gone (ADR 0018; every change, with before/after code, in
+[migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md)). Use `each(items, key, row, pick?)` for keyed lists, plain bindings for form state
 (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), class and style strings,
 `defineHook` for element behaviours, and plain interpolation in `css`. `svg` templates,
 `classMap` and `styleMap` may return if a real need appears; inline `<svg>` inside `html`

@@ -64,5 +64,8 @@ switches exports to `dist/` on publish.
   `modern-css` skill.
 - **Markup:** semantic HTML first (`semantic-html` skill). UI-only state (popovers, dialogs,
   disclosure) belongs to the platform, not the model.
-- **Other custom elements:** any custom element (built with Lit or anything else) can sit next
-  to `define()` components. Gyral is a thin layer, not a walled garden.
+- **Other custom elements:** any custom element, whatever built it, can sit next to `define()`
+  components. Gyral is a thin layer, not a walled garden.
+- **Clean room:** the view layer is Gyral's own, written from [view/](docs/design-docs/view/README.md)
+  and the platform specs (ADR 0018); `scripts/check-provenance.mjs` (in `pnpm invariants`)
+  keeps another renderer's code, markers and packages out of the repo.

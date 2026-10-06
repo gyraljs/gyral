@@ -3,6 +3,8 @@
 Status: **accepted** (2026-10-04, approved by the project owner). Bead: gyral-czi.18. Needed by the e-commerce app (a cart
 badge in the header and a checkout page deep in the tree share one cart).
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): on the server, Gyral's own renderer keeps the request's store scope (view/06-server.md); the Lit SSR DOM-shim mechanics recorded here are gone. Lit-specific text below describes 0.2.x.
+
 ## Context
 
 Gyral components own their state (ADR 0001). State flows down as props (ADR 0007), and

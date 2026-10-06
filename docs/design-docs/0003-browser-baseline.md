@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04)
 
+> **Amended by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): the fallback tiers below come from it, and shared state is stores (ADR 0013), not a signals polyfill.
+
 ## Decision
 
 Shipped code (packages and examples) targets **Baseline widely available**: features that
@@ -19,7 +21,7 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 | Router         | History API + `popstate` + link-click capture  | Navigation API, URLPattern                                                                               |
 | Intent sources | `data-intent` with click/submit/input/change   | Invoker commands (`command=`), with a Gyral fallback event where `CommandEvent` is missing (gyral-czi.6) |
 | Overlays       | `<dialog>`, `popover` (check status when used) | Anchor positioning                                                                                       |
-| Shared state   | Signals via polyfill (`@lit-labs/signals`)     | Native TC39 signals when they ship                                                                       |
+| Shared state   | Stores (ADR 0013)                              | Native TC39 signals when they ship                                                                       |
 | Page changes   | Plain re-render                                | View Transitions (`viewTransition`)                                                                      |
 | State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`)                                                                     |
 

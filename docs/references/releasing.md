@@ -94,7 +94,7 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
    That is 9 approvals: the eight `@gyral/*` packages and `create-gyral`.
 6. Check npmjs.com shows the version with the provenance badge, then try
-   `npm create vite@latest` + `npm i @gyral/core lit` in a scratch app.
+   `npm create gyral@latest` (both templates) in a scratch directory.
 
 The first real release must be **0.1.0** or higher: the placeholders already occupy 0.0.0.
 `.changeset/first-public-release.md` is a `minor` changeset for exactly that.
@@ -106,17 +106,17 @@ The first real release must be **0.1.0** or higher: the placeholders already occ
   `npm pack --dry-run` file-list comparison.
 - `pnpm verify:install` (network, not in the gate): installs the tarballs with npm in a fresh
   temp project, imports every Node-loadable entry, server-renders a component, and starts the
-  installed `gyral-mcp` bin over stdio and calls a tool. The
-  browser-only entries (`@gyral/ssr/hydrate`, `@gyral/devtools`) are covered by the browser
+  installed `gyral-mcp` bin over stdio and calls a tool. It fails if the tarballs install any
+  Lit package (ADR 0018). The browser-only entry `@gyral/devtools` is covered by the browser
   tests instead.
 - `pnpm verify:create` (network, not in the gate): runs `create-gyral` from its packed tarball
   for each template (`basic`, `ssr`), points the app's `@gyral/*` at the tarballs, installs
   with npm and runs the generated app's `typecheck`, `build` and `test`. Run it after changing
   create-gyral or its templates, and before every release.
 
-Last recorded result (2026-10-05, 0.0.0): pack:check ok for all 7 packages; verify:install ok
-(9 entries imported, `<gy-hello>` rendered to Declarative Shadow DOM) with lit ^3.3.0,
-@lit-labs/ssr ^4.1.0, @lit-labs/ssr-client ^1.1.8, fast-check ^4.
+Last recorded result before 0.3 (2026-10-05, 0.0.0): pack:check ok for all 7 packages;
+verify:install ok (9 entries imported, `<gy-hello>` rendered to Declarative Shadow DOM), then
+with Lit and its SSR packages as peers. Since 0.3 the only peer installed is fast-check ^4.
 
 Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typecheck, build and
 pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and

@@ -16,13 +16,13 @@ Source studied: the Cycle.js monorepo (`run`, `dom`, `isolate`, `state`, `http`,
 
 | Cycle.js                                | Problem                                         | Gyral replacement                             |
 | --------------------------------------- | ----------------------------------------------- | --------------------------------------------- |
-| Streams for everything                  | Steep learning curve; mixed up events and state | Messages + reducers; signals for shared state |
+| Streams for everything                  | Steep learning curve; mixed up events and state | Messages + reducers; stores for shared state  |
 | xstream / RxJS / most adapters          | Tripled the API surface                         | No stream library                             |
 | `DOM.select('.cls').events()`           | Stringly-typed, fragile, heavy delegation code  | Typed `data-intent` names, parsed intents     |
 | `isolate()` scopes                      | The most complex part of the codebase           | Shadow DOM                                    |
-| Snabbdom VDOM                           | Diffing overhead                                | Lit templates (fine-grained parts)            |
+| Snabbdom VDOM                           | Diffing overhead                                | Gyral templates (fine-grained parts)          |
 | Sink proxies in `run()`                 | Hard to follow circular wiring                  | Element-owned loop                            |
-| `@cycle/state` lenses, `makeCollection` | Awkward lists                                   | Child elements + `repeat()`                   |
-| `@cycle/html`                           | Little SSR story                                | `@lit-labs/ssr` + Declarative Shadow DOM      |
+| `@cycle/state` lenses, `makeCollection` | Awkward lists                                   | Child elements + `each()`                     |
+| `@cycle/html`                           | Little SSR story                                | `@gyral/core/server` + Declarative Shadow DOM |
 | Cycle-only components                   | No interop                                      | Standard custom elements                      |
 | TS 3.2, tslint, karma                   | Unmaintained tooling                            | TS strict, ESLint, Vitest browser mode        |

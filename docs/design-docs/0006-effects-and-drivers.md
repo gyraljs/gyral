@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04). Implements ADR 0002. Bead: gyral-czi.2.
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): Lit is gone, so Lit add-ons such as `@lit/context` are no longer an alternative, and there is no Lit dev-mode banner. Lit-specific text below describes 0.2.x.
+
 ## Decision
 
 ### Reducers (and `init`) may return commands

@@ -6,7 +6,7 @@ description: Build web apps and components with Gyral (@gyral/core, @gyral/ssr, 
 # Building with Gyral
 
 Gyral compiles a **Model-View-Intent** spec into a standard custom element, rendered by
-Gyral's own view layer (`html`, `css`, `each` from `@gyral/core`; no Lit).
+Gyral's own view layer (`html`, `css`, `each` and hooks, all from `@gyral/core`).
 Every component is one loop: **intent** parses DOM events into typed messages, **update** is
 one pure reducer per message, **view** is a pure function of state. Side effects are
 **commands** (data) that drivers perform. Pages render on the server with Declarative Shadow
@@ -77,6 +77,9 @@ export const Counter = define<State, Msg>('my-counter', {
 npm create gyral@latest my-app -- --template basic   # client-rendered
 npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
 ```
+
+Upgrading a 0.2 app (Lit-based): follow
+https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md.
 
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
