@@ -24,11 +24,6 @@ const VIEW_SERVER_BOUNDARY =
   'view/server/ may import only view/ (ADR 0018): the server renderer must never pull browser ' +
   'or element code into a server bundle. Move shared code into view/.';
 
-const VIEW_CLEAN_ROOM =
-  "The view layer replaces Lit and is written clean-room (ADR 0018, decision J): don't import " +
-  'lit, lit-html, lit-element, @lit/* or @lit-labs/* in view/. Implement it from ' +
-  'docs/design-docs/view/ and the web-platform specs.';
-
 const PARSE5_BUILD_ONLY =
   'parse5 is a build-time-only, optional peer dependency (view/09-template-rules.md "How rule 7 ' +
   'is checked"): only the template compiler loads it (packages/core/src/compiler/parse5-check.ts), ' +
@@ -100,10 +95,10 @@ export default tseslint.config(
       ],
     },
   },
-  // The view layer (ADR 0018 "Where it lives", "Clean room"): view/ imports nothing else from
-  // core (its own `#prepare`/`#view-dev` conditions aside) and no Lit package; view/server/
-  // imports only view/. Relative imports are matched by
-  // depth, so each level gets the pattern that would climb out of view/.
+  // The view layer (ADR 0018 "Where it lives"): view/ imports nothing else from core (its own
+  // `#prepare`/`#view-dev` conditions aside); view/server/ imports only view/. Relative imports
+  // are matched by depth, so each level gets the pattern that would climb out of view/. The
+  // clean room (no other renderer's code, names or packages) is scripts/check-provenance.mjs.
   ...[
     ['packages/core/src/view/*.ts', '^\\.\\./'],
     ['packages/core/src/view/*/*.ts', '^\\.\\./\\.\\./'],
@@ -121,7 +116,6 @@ export default tseslint.config(
             { regex: escape, message: VIEW_BOUNDARY },
             { regex: '^#(?!(prepare|view-dev)$)', message: VIEW_BOUNDARY },
             parse5Imports,
-            { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },
       ],
@@ -140,7 +134,6 @@ export default tseslint.config(
             { regex: '^\\.\\./\\.\\./', message: VIEW_SERVER_BOUNDARY },
             { regex: '^#', message: VIEW_SERVER_BOUNDARY },
             parse5Imports,
-            { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },
       ],
@@ -182,11 +175,6 @@ export default tseslint.config(
               group: ['@gyral/*', '!@gyral/core', '!@gyral/router'],
               message:
                 '@gyral/ssr may only import @gyral/core and @gyral/router (ARCHITECTURE.md).',
-            },
-            {
-              group: ['lit', 'lit/*', '@lit-labs/*'],
-              message:
-                '@gyral/ssr renders with @gyral/core/server since the view-layer swap (ADR 0018); it no longer uses Lit.',
             },
           ],
         },

@@ -26,9 +26,9 @@ const FIXTURES = {
     'packages/http/src/__lint_fixture_layer__.ts',
     "export { routes } from '@gyral/router';\nexport { define } from '@gyral/core';\n",
   ],
-  ssrLabs: [
-    'packages/ssr/src/__lint_fixture_labs__.ts',
-    "export { render } from '@lit-labs/ssr';\n",
+  ssrLayer: [
+    'packages/ssr/src/__lint_fixture_layer__.ts',
+    "export { mountDevtools } from '@gyral/devtools';\nexport { routes } from '@gyral/router';\n",
   ],
   viewEscape: [
     'packages/core/src/view/__lint_fixture_escape__.ts',
@@ -41,10 +41,6 @@ const FIXTURES = {
   viewInternalImport: [
     'packages/core/src/view/__lint_fixture_hash__.ts',
     "export { DEVTOOLS_ENABLED } from '#devtools';\nexport { prepare } from '#prepare';\n",
-  ],
-  viewLit: [
-    'packages/core/src/view/__lint_fixture_lit__.ts',
-    "export { html } from 'lit';\nexport { render } from '@lit-labs/ssr';\n",
   ],
   viewServer: [
     'packages/core/src/view/server/__lint_fixture_server__.ts',
@@ -128,10 +124,10 @@ describe('ESLint guardrails', () => {
     expect(messages[0]).toContain('Layer-1 packages may only import @gyral/core');
   });
 
-  it('keeps Lit out of @gyral/ssr (ADR 0018)', () => {
-    const messages = ruleMessages('ssrLabs', 'no-restricted-imports');
+  it('lets @gyral/ssr import only @gyral/core and @gyral/router', () => {
+    const messages = ruleMessages('ssrLayer', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('no longer uses Lit');
+    expect(messages[0]).toContain('@gyral/ssr may only import @gyral/core and @gyral/router');
   });
 
   it('keeps view/ self-contained (ADR 0018), at every depth', () => {
@@ -140,12 +136,6 @@ describe('ESLint guardrails', () => {
       expect(messages, key).toHaveLength(1);
       expect(messages[0]).toContain('view/ is self-contained');
     }
-  });
-
-  it('keeps Lit out of view/ (clean room)', () => {
-    const messages = ruleMessages('viewLit', 'no-restricted-imports');
-    expect(messages).toHaveLength(2);
-    for (const m of messages) expect(m).toContain('clean-room');
   });
 
   it('lets view/server/ import only view/', () => {

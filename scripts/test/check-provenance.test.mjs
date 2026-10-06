@@ -1,9 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { CLEAN_ROOM_DIRS, findLitProvenance, LIT_MARKERS } from '../check-provenance.mjs';
+import {
+  cleanRoomFiles,
+  findLitProvenance,
+  inCleanRoom,
+  LIT_MARKERS,
+} from '../check-provenance.mjs';
 
 describe('check-provenance (ADR 0018 clean room)', () => {
-  it('covers the view layer', () => {
-    expect(CLEAN_ROOM_DIRS).toContain('packages/core/src');
+  it('covers packages, tests, examples, scripts and the skill, not design history', () => {
+    for (const path of [
+      'packages/core/src/view/render/list.ts',
+      'packages/ssr/test/render.node.test.ts',
+      'packages/core/bench/render.bench.test.ts',
+      'packages/mcp/scripts/build-corpus.mjs',
+      'packages/create-gyral/templates/ssr/src/entry-client.ts',
+      'packages/core/package.json',
+      'packages/core/README.md',
+      'examples/counter/src/counter.ts',
+      'examples/isomorphic/server/app.ts',
+      'scripts/smoke-prod.mjs',
+      'scripts/test/eslint-guardrails.test.mjs',
+      'skills/gyral/references/view.md',
+      'package.json',
+      'pnpm-workspace.yaml',
+    ]) {
+      expect(inCleanRoom(path), path).toBe(true);
+    }
+    for (const path of [
+      'docs/design-docs/0012-ssr.md',
+      'scripts/check-provenance.mjs',
+      'scripts/test/check-provenance.test.mjs',
+    ]) {
+      expect(inCleanRoom(path), path).toBe(false);
+    }
+    const files = cleanRoomFiles();
+    expect(files).toContain('packages/core/src/view/index.ts');
+    expect(files).toContain('skills/gyral/SKILL.md');
+    expect(files.some((f) => f.includes('/node_modules/') || f.includes('/dist/'))).toBe(false);
   });
 
   it('flags every Lit marker with file and line', () => {
@@ -29,6 +62,25 @@ describe('check-provenance (ADR 0018 clean room)', () => {
       'b.ts:4: imports "@lit-labs/ssr"',
       'b.ts:5: imports "@lit/reactive-element"',
       'b.ts:6: imports "lit/directives/repeat.js"',
+    ]);
+  });
+
+  it('flags Lit packages declared as dependencies or overrides', () => {
+    const manifest = JSON.stringify({
+      dependencies: { '@gyral/core': '0.3.0', 'lit-html': '3.3.0' },
+      devDependencies: { lit: '3.3.3', literally: '1.0.0' },
+      peerDependencies: { '@lit-labs/ssr': '^4.1.0' },
+      pnpm: { overrides: { 'lit-element': '4.2.2' } },
+    });
+    expect(findLitProvenance('examples/x/package.json', manifest)).toEqual([
+      'examples/x/package.json: declares "lit-html" in dependencies',
+      'examples/x/package.json: declares "lit" in devDependencies',
+      'examples/x/package.json: declares "@lit-labs/ssr" in peerDependencies',
+      'examples/x/package.json: declares "lit-element" in overrides',
+    ]);
+    const workspace = 'packages:\n  - packages/*\noverrides:\n  lit-html: 3.3.0\n';
+    expect(findLitProvenance('pnpm-workspace.yaml', workspace)).toEqual([
+      'pnpm-workspace.yaml:4: declares "lit-html"',
     ]);
   });
 
