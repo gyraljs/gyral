@@ -1,0 +1,122 @@
+# 05 — The element and its props
+
+Status: **accepted** (2026-10-06). ADR 0018 (decision E). Phase 3. Amends ADR 0007 (props).
+
+`define(tag, spec)` creates a plain `HTMLElement` subclass and registers it. There is no
+reactive-element base class: no per-property update promises, no attribute converters, no
+reflection, no controllers, no lifecycle hooks for users. The spec (intent, update, view) is the
+only API.
+
+## Props
+
+Props are declared with **Standard Schema** (`@standard-schema/spec`, already a core
+dependency), so "parse at boundaries" (core belief 3) covers component inputs too.
+
+```ts
+import { define, prop } from '@gyral/core';
+import * as v from 'valibot';
+
+define('shop-filter', {
+  props: {
+    label: prop.string({ required: true }), // attribute "label"
+    minPrice: prop.number({ default: 0 }), // attribute "min-price"
+    open: prop.boolean(), // attribute "open", presence = true
+    sort: prop.string({ schema: v.picklist(['price', 'name']), default: 'price' }),
+    filters: prop.json(Filters, { attribute: 'filters' }), // JSON in an attribute
+    items: prop.value(v.array(Item), { default: [] }), // property only
+  },
+  // …
+});
+```
+
+| Builder                     | Attribute parsing                      | Default attribute name |
+| --------------------------- | -------------------------------------- | ---------------------- |
+| `prop.string(opts?)`        | as is                                  | kebab-case of the prop |
+| `prop.number(opts?)`        | `Number(v)`; empty or `NaN` is invalid | kebab-case             |
+| `prop.boolean(opts?)`       | present → `true`, absent → `false`     | kebab-case             |
+| `prop.json(schema, opts?)`  | `JSON.parse(v)`, then the schema       | kebab-case             |
+| `prop.value(schema, opts?)` | none: property only                    | none                   |
+
+Options: `schema` (refines `string`/`number`/`boolean`), `attribute` (a name, or `false` for
+property only), `required`, `default`. The honesty rule of ADR 0007 stays: a prop whose type
+excludes `undefined` must be `required` or have a `default`. Prop types are inferred from the
+schemas' output types.
+
+The `string`/`number`/`boolean` builders carry tiny built-in schemas, so simple props need no
+schema library.
+
+### When props are validated
+
+| Input                                             | Validated                                        |
+| ------------------------------------------------- | ------------------------------------------------ |
+| An attribute (from HTML, the server, or a script) | **always**: it's an external string, a boundary  |
+| A property set (`.items=${…}`, `el.items = …`)    | development only: it comes from typed Gyral code |
+| A hydration seed (07)                             | development only: it is Gyral's own output       |
+
+- An invalid value is logged with the tag, prop and schema issues. The prop is then treated as
+  missing, so `default` or the `required` warning applies.
+- Schemas must be synchronous (a `Promise` from `validate` is a definition error) and should
+  validate rather than transform. In development, a property set whose validated output differs
+  from its input warns, because production doesn't run the schema on property sets.
+- No property-to-attribute reflection. State that CSS needs goes through custom states
+  (`spec.states`).
+
+### Accessors and upgrade capture
+
+- Each declared prop is an accessor on the class prototype. The setter compares with
+  `Object.is` and marks the host dirty on change (04).
+- **Upgrade capture:** a parent may set a property before the element's class is defined (lazy
+  chunks do this). That creates an own property that hides the accessor. In the constructor,
+  each declared prop that exists as an own property is read, deleted and set again through the
+  accessor.
+- A prop named like a built-in element property (`hidden`, `title`, `id`, …) is a definition
+  error in development and a warning in production.
+
+## Lifecycle
+
+| Callback                   | Does                                                                                                                                                                                                                                                                                                                                                |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `constructor`              | Upgrade capture. No DOM work.                                                                                                                                                                                                                                                                                                                       |
+| `connectedCallback`, first | Find the root: an existing (declarative) shadow root, or `attachShadow({ mode: 'open' })`, or the host itself for `shadow: false`. With `defer-hydration`, schedule the island and stop (07). Otherwise read the seed (resume) or run `init(props)`; add intent listeners to the root once; connect stores and the command interpreter; mark dirty. |
+| `connectedCallback`, later | A move without `moveBefore`: re-resolve stores and providers (the nearest may differ), restart the interpreter. No re-render unless something changed.                                                                                                                                                                                              |
+| `connectedMoveCallback`    | Defined and empty: a `moveBefore()` move keeps everything (03).                                                                                                                                                                                                                                                                                     |
+| `disconnectedCallback`     | Dispose the interpreter, unsubscribe stores. State is kept for a later reconnect.                                                                                                                                                                                                                                                                   |
+| `attributeChangedCallback` | Prop attributes: parse, validate, set. `defer-hydration` removed: release the island (07).                                                                                                                                                                                                                                                          |
+
+`observedAttributes` lists the props' attribute names plus `defer-hydration`.
+
+## Public instance API
+
+| Member              | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| declared props      | inputs (accessors)                                       |
+| `state` (read-only) | current model state                                      |
+| `send(msg)`         | dispatch a message                                       |
+| `drivers`, `stores` | per-instance overrides (ADR 0006, ADR 0013)              |
+| `initialMessages`   | messages applied after `init` (form re-render, ADR 0008) |
+
+Gone: `updateComplete`, `requestUpdate`, `renderRoot`, `hasUpdated`, all `LitElement`
+members. Tests use `settled()` (04).
+
+## `ElementInternals`
+
+Attached lazily and only once per element, through one internal accessor, when a feature needs
+it: custom states today, form association later.
+
+## Registration
+
+- `customElements.define(tag, Class)` unless the tag is already defined. Defining the same tag
+  with a different spec warns in development.
+- In an environment without `HTMLElement` (Node), `define()` records the spec in the server
+  registry used by `@gyral/core/server` (06) and returns a placeholder class. That check is a
+  few bytes; no export condition is needed.
+
+## Native primitives
+
+| Need                   | Primitive                                                    | Baseline                              |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------- |
+| Element                | autonomous custom elements, `observedAttributes`             | widely                                |
+| Root                   | `attachShadow`, declarative shadow roots (`this.shadowRoot`) | widely (DSD since 2026-08)            |
+| Moves without teardown | `connectedMoveCallback` with `moveBefore()`                  | not Baseline: harmless where missing  |
+| States                 | `attachInternals()`, `CustomStateSet`                        | widely; states newly (widely 2026-11) |
+| Props                  | Standard Schema (a spec, not a browser API)                  | —                                     |

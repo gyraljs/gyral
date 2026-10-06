@@ -26,6 +26,38 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 Check a feature's current status in `web-features` / MDN before relying on it, and record the
 answer here.
 
+## Fallback tiers (ADR 0018, 2026-10-06)
+
+Code is written against the native API first. When a primitive is not widely available yet,
+its fallback falls into one of three tiers:
+
+| Tier                     | Rule                                                                                                                | Examples                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 1. Degrades on its own   | No fallback code: detect and skip                                                                                   | View Transitions, custom states, `setHTMLUnsafe` → `innerHTML`      |
+| 2. Trivial (a few lines) | Inline, next to the native call                                                                                     | `moveBefore` → `insertBefore`, `requestIdleCallback` → `setTimeout` |
+| 3. A real implementation | An internal module, never a global polyfill; loaded with `import()` only when detection fails if it is ≳ 300 B gzip | `URLPattern` matcher, History API fallback, invoker-command shim    |
+
+- **Every fallback has a removal date** (when its primitive becomes widely available: 30 months
+  after newly available), tracked as a bead under the native-audit epic. On that date, delete it.
+- **Never patch globals.** Fallbacks are private to Gyral and never change `window`.
+- A lazily loaded tier-3 fallback makes that path asynchronous at startup on old browsers only
+  (for example, the router matches its first route a moment later).
+
+Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
+
+| Primitive                                                             | Newly available | Widely available |
+| --------------------------------------------------------------------- | --------------- | ---------------- |
+| Declarative shadow DOM                                                | 2024-02-20      | 2026-08-20 (now) |
+| Custom states (`:state()`)                                            | 2024-05-17      | 2026-11-17       |
+| `popover`                                                             | 2025-01-27      | 2027-07-27       |
+| `<details name>`                                                      | 2024-09-03      | 2027-03-03       |
+| `URLPattern`                                                          | 2025-09-15      | 2028-03-15       |
+| View Transitions                                                      | 2025-10-14      | 2028-04-14       |
+| Invoker commands                                                      | 2025-12-12      | 2028-06-12       |
+| Navigation API                                                        | 2026-01-13      | 2028-07-13       |
+| CSS `@scope`                                                          | 2026-03-24      | 2028-09-24       |
+| `moveBefore`, `requestIdleCallback`, `scheduler.yield`, Sanitizer API | not Baseline    | —                |
+
 ## CSS is checked too (gyral-8ht.5)
 
 `pnpm lint:css` (part of `pnpm lint` and `pnpm check`) runs stylelint with

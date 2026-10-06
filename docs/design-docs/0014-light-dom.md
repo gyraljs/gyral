@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04). Requested by gyral-shop (P1, SEO).
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): light DOM is a native output mode of the new server renderer; the stream filter and hidden markers go away. Lit-specific text below describes 0.2.x.
+
 ## Context
 
 Every Gyral component rendered into a shadow root, and on the server into Declarative Shadow

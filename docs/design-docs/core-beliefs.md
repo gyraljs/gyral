@@ -8,7 +8,7 @@
 3. **Parse at boundaries.** Events become typed messages in the intent layer. Network data is
    decoded by drivers. The model only sees valid data.
 4. **Thin layer, no walled garden.** Every Gyral component is a standard custom element that
-   works anywhere. Raw `LitElement` classes are welcome alongside `define()`.
+   works anywhere, and any custom element works alongside `define()` components (ADR 0018).
 5. **Users are never forced into a paradigm.** No streams, no Effect, no decorators are
    required to use Gyral. Those are implementation choices (ADR 0002).
 6. **Semantic HTML and accessibility are part of correctness.** Examples are judged on element
