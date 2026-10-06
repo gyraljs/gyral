@@ -1,7 +1,9 @@
-// `pnpm smoke:prod`: builds the SSR examples for production (production Lit, minified), serves
-// them with their production servers, and checks in Chromium that every page hydrates in place:
-// no page errors, the same <h1> count and the same top-level view per component as the server
-// sent. Catches production-only hydration bugs that development-Lit tests cannot (gyral-czi.41).
+// `pnpm smoke:prod`: builds the SSR examples for production (production core, minified),
+// serves them with their production servers, and checks in Chromium that every page hydrates
+// in place: no page errors or hydration warnings, the same <h1> count and the same top-level
+// view per component as the server sent, and every element the parser built (shadow roots
+// included) still in the page: hydration adopted the server's nodes instead of replacing them.
+// Catches production-only hydration bugs that development tests cannot (gyral-czi.41).
 // Not part of `pnpm check` (it builds); run it before releases and after hydration changes.
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
@@ -12,6 +14,29 @@ const EXAMPLES = [
   { name: 'isomorphic', paths: ['/', '/about'] },
   { name: 'register', paths: ['/'] },
 ];
+
+/**
+ * Runs before page scripts: once parsing is done (readyState "interactive", before module
+ * scripts run), records every element, in shadow roots too, as the server's nodes. A shadow
+ * root's <style> is left out: hydration swaps it for the shared sheet (view/08-styles.md).
+ */
+const MARK_SERVER_NODES = `document.addEventListener('readystatechange', () => {
+  if (document.readyState !== 'interactive') return;
+  const all = [];
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      if (!(el.localName === 'style' && el.parentNode instanceof ShadowRoot)) all.push(el);
+      if (el.shadowRoot) walk(el.shadowRoot);
+    }
+  };
+  walk(document);
+  window.__gyralServerNodes = all;
+});`;
+
+/** Server elements no longer in the page, described by tag. */
+const LOST_SERVER_NODES = `(window.__gyralServerNodes ?? [null])
+  .filter((el) => el === null || !el.isConnected)
+  .map((el) => (el === null ? 'not recorded' : el.localName))`;
 
 const freePort = () =>
   new Promise((resolve) => {
@@ -55,6 +80,10 @@ async function checkExample(browser, { name, paths }) {
       const page = await browser.newPage();
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e).split('\n')[0]));
+      page.on('console', (m) => {
+        if (/hydration mismatch/i.test(m.text())) errors.push(m.text().split('\n')[0]);
+      });
+      await page.addInitScript(MARK_SERVER_NODES);
       await page.goto(base + path, { waitUntil: 'networkidle' });
       await page.waitForTimeout(500);
       const fn = summarize.toString();
@@ -63,6 +92,10 @@ async function checkExample(browser, { name, paths }) {
       );
       const live = await page.evaluate(`(${fn})(document)`);
       problems.push(...compareSummaries(`${name}${path}`, server, live, errors));
+      const lost = await page.evaluate(LOST_SERVER_NODES);
+      if (lost.length > 0) {
+        problems.push(`${name}${path}: server nodes replaced by hydration: ${lost.join(', ')}`);
+      }
       await page.close();
     }
   } catch (error) {
