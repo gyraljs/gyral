@@ -4,6 +4,7 @@ import {
   checkDependencies,
   checkWorkflow,
   findEffectLeaks,
+  findEscapedBackticks,
   relativeLinks,
   workflowTriggers,
 } from '../lib/invariants.mjs';
@@ -20,6 +21,22 @@ describe('findEffectLeaks', () => {
     expect(findEffectLeaks('index.d.ts', `export declare function f(): Promise<void>;`)).toEqual(
       [],
     );
+  });
+});
+
+describe('findEscapedBackticks', () => {
+  it('flags an escaped backtick in a doc comment', () => {
+    const dts =
+      '/** The template tag: `html\\`<p>${s.text}</p>\\``. */\nexport declare function html(): void;';
+    const errors = findEscapedBackticks('template.d.ts', dts);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('template.d.ts');
+  });
+
+  it('accepts double-backtick spans and escapes outside comments', () => {
+    const dts =
+      '/** The template tag: `` html`<p>${s.text}</p>` ``. */\nexport declare const t: "\\`";';
+    expect(findEscapedBackticks('template.d.ts', dts)).toEqual([]);
   });
 });
 

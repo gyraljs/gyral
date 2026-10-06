@@ -25,7 +25,7 @@ export const isStyleSource = (value: unknown): value is StyleSource =>
   typeof value === 'object' && value !== null && STYLE in value;
 
 /**
- * Component CSS: `css\`p { margin-block: ${GAP}px; }\``. Strings and numbers are inserted as
+ * Component CSS: `` css`p { margin-block: ${GAP}px; }` ``. Strings and numbers are inserted as
  * written, so values from your own constants need no wrapper.
  */
 export function css(strings: TemplateStringsArray, ...values: readonly CssValue[]): StyleSource {

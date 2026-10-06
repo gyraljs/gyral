@@ -13,6 +13,27 @@ export function findEffectLeaks(file, text) {
   );
 }
 
+const COMMENT = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/g;
+
+/**
+ * Doc comments are Markdown, where a backslash can't escape a backtick inside a code span, so
+ * such spans render wrong in editors and on gyral.dev's API page. Use a double-backtick span
+ * or a fence.
+ */
+export function findEscapedBackticks(file, text) {
+  return [...text.matchAll(COMMENT)]
+    .filter((m) => m[0].includes('\\`'))
+    .map(
+      (m) =>
+        `${file}: a doc comment escapes a backtick (${m[0]
+          .split('\n')
+          .find((l) => l.includes('\\`'))
+          ?.trim()}). ` +
+        'Markdown code spans have no escapes: write `` html`<p>${s.text}</p>` `` (double ' +
+        'backticks with spaces) or a fenced example.',
+    );
+}
+
 /** Runtime dependencies @gyral/core may have (types-only packages). */
 export const CORE_ALLOWED_DEPENDENCIES = ['@standard-schema/spec'];
 

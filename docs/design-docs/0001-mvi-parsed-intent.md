@@ -23,8 +23,8 @@ A component is `define(tag, { props?, init, intent, update, view, styles? })`:
 
 - **Messages** are a tagged union (`{ _tag: 'Add', text }`). A message's tag is also its
   intent name.
-- **View** is `(state, i) => html\`…\``. It names intents in markup: `data-intent=${i.Add}`.
-`i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
+- **View** is `` (state, i) => html`…` ``. It names intents in markup: `data-intent=${i.Add}`.
+  `i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
 - **Intent** maps tags to parsers: `(IntentInput) => Message | undefined`. `IntentInput` holds
   the event, the element, `value`, `checked`, and `FormData` for form submissions. Returning
   `undefined` ignores the event. Parsers are where "parse, don't validate" happens for UI

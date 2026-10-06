@@ -102,7 +102,8 @@ in the browser is an error.
   - The hoisted object is the normalizer's output without `loc`; client builds also drop the
     server `segments`, SSR builds keep them.
   - Call sites are found by scope-aware analysis of each module (TypeScript included, before
-    it is compiled away): `html\`…\``or`ns.html\`…\``where`html`is imported from`@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error
+    it is compiled away): `` html`…` `` or `` ns.html`…` `` where `html` is imported from
+    `@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error
     with a code frame.
   - Template rule errors fail the build with the rule's message and a code frame at the call
     site; two different templates with one id fail it too.

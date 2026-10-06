@@ -14,7 +14,7 @@ export interface TemplateResult {
   readonly values: readonly unknown[];
 }
 
-/** The template tag: `html\`<p>${s.text}</p>\``. */
+/** The template tag: `` html`<p>${s.text}</p>` ``. */
 export function html(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult {
   return { [SOURCE]: strings, values };
 }
