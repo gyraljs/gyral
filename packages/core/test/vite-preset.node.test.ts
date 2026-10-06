@@ -29,6 +29,14 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(preset.optimizeDeps.include).toEqual([...LIT_PREBUNDLE]);
   });
 
+  it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
+    const [compiler, ...rest] = gyralVitePreset().plugins;
+    expect(rest).toEqual([]);
+    expect(compiler?.name).toBe('gyral:template-compiler');
+    expect(compiler?.apply).toBe('build');
+    expect(compiler?.enforce).toBe('pre');
+  });
+
   it('adds extra modules without duplicates', () => {
     const include = gyralVitePreset({ optimize: ['lit', 'lit/directives/unsafe-html.js'] })
       .optimizeDeps.include;

@@ -2,10 +2,18 @@
 // view/ imports only this module. Not exported from @gyral/core yet (Phase 3 swaps it in).
 export { html, compiled, isTemplateResult, templateOf, type TemplateResult } from './template.js';
 export { templateElement } from './template-element.js';
-export { normalize } from './normalize/normalize.js';
+export { normalize, analyze, type Analysis } from './normalize/normalize.js';
 export { templateId } from './normalize/id.js';
 export { TemplateError } from './normalize/errors.js';
-export type { PartSpec, Path, Segment, TemplateObject } from './normalize/types.js';
+export { shapeMismatch, repairError } from './normalize/shape.js';
+export type {
+  PartSpec,
+  Path,
+  Segment,
+  Shape,
+  ShapeNode,
+  TemplateObject,
+} from './normalize/types.js';
 export { render } from './render/render.js';
 export {
   each,

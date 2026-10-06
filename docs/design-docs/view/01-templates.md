@@ -90,13 +90,29 @@ in the browser is an error.
 - `gyralVitePreset` adds the template compiler. In `vite build` it rewrites every `html` tagged
   template, including those in dependencies, into an internal call that takes a hoisted,
   module-level template object and the values array. The result type is the same.
+  - The call is `compiled(template, values)`, imported from `@gyral/core/compiled`: an
+    internal entry point, not API, so compiled code shares the package copy of the `html` it
+    replaces. One constant per distinct template id per module.
+  - The hoisted object is the normalizer's output without `loc`; client builds also drop the
+    server `segments`, SSR builds keep them.
+  - Call sites are found by scope-aware analysis of each module (TypeScript included, before
+    it is compiled away): `html\`…\``or`ns.html\`…\``where`html`is imported from`@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error
+    with a code frame.
+  - Template rule errors fail the build with the rule's message and a code frame at the call
+    site; two different templates with one id fail it too.
 - The compiler builds paths from its own token stream. That is safe because markup the HTML
   parser would repair is a build error (09, rule 7), checked with parse5 as a **build-time-only**
-  dependency.
-- The preset sets the `gyral-compiled` resolve condition, which maps core's `#prepare` import to
-  a stub. The runtime preparer is then absent from the bundle.
+  dependency: an optional peer of `@gyral/core`, loaded by the compiler only. Without it the
+  build prints a one-time notice and relies on the normalizer's structural check.
+- The preset sets the `gyral-compiled` resolve condition in `vite build` (every environment,
+  appended to the app's conditions or to Vite's defaults), which maps core's `#prepare` import
+  to a stub. The runtime preparer is then absent from the bundle.
 - **Guarantee:** the build fails if any uncompiled `html` call remains in the client output, so
-  the stub is never reached in production.
+  the stub is never reached in production. Besides the per-module errors above, the compiler
+  checks the bundle: if the `html` export of core's template module survives tree-shaking
+  (reached through a re-export or a dynamic import it can't follow), the build fails.
+- SSR builds keep externalized dependencies out of the bundle; Node runs those with the
+  runtime normalizer (no condition applies outside the bundler), which yields the same ids.
 - The dev server uses the runtime path, where the development checks live. The compiler can run
   in dev too, but it isn't required.
 

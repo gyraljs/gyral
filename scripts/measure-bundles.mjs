@@ -4,14 +4,23 @@
 //   pnpm size counter view    → only those
 //   pnpm size --json          → machine-readable output
 //   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json
-// Each example is built once with Vite in production mode, all chunks concatenated. The "view"
-// row builds scripts/size/view-entry.js (render, html, compiled, each, raw, nothing,
-// defineHook) with the `gyral-compiled` condition, as the Vite preset does, so the runtime
-// template preparer is left out; its budget is the top-level "view" key.
+// Each example is built once with Vite in production mode and the Gyral preset (its template
+// compiler and the gyral-compiled condition, view/01-templates.md), all chunks concatenated:
+// budgets measure what apps built with the preset ship. The "view" row builds
+// scripts/size/view-entry.js (render, html, compiled, each, raw, nothing, defineHook) with the
+// `gyral-compiled` condition, so the runtime template preparer is left out; its budget is the
+// top-level "view" key.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
-import { build } from 'vite';
+import { build, runnerImport } from 'vite';
+
+// The preset is TypeScript: load it the way Vite loads a vite.config.ts. Loading sets
+// NODE_ENV=development when unset, which would give every build Lit's development code.
+const nodeEnv = process.env.NODE_ENV;
+const { module: presetModule } = await runnerImport(resolve('packages/core/src/vite.ts'));
+if (nodeEnv === undefined) delete process.env.NODE_ENV;
+else process.env.NODE_ENV = nodeEnv;
 
 const args = process.argv.slice(2);
 const json = args.includes('--json');
@@ -29,12 +38,14 @@ function entryOf(dir) {
 }
 
 async function bundleBytes(root, entry, conditions) {
+  const preset = presetModule.gyralVitePreset();
   const output = await build({
     root,
     logLevel: 'silent',
     configFile: false,
     mode: 'production',
-    ...(conditions === undefined ? {} : { resolve: { conditions } }),
+    plugins: preset.plugins,
+    resolve: conditions === undefined ? preset.resolve : { ...preset.resolve, conditions },
     build: { write: false, minify: true, modulePreload: false, rollupOptions: { input: entry } },
   });
   const outputs = Array.isArray(output) ? output : [output];
