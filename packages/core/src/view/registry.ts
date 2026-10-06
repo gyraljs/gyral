@@ -6,13 +6,6 @@
 // and functions, no DOM: it lives in view/ so view/server/ can read it.
 import type { ChildValue } from './render/values.js';
 
-/** Host attribute holding a component's JSON seed (ADR 0012); the client removes it. */
-export const SEED_ATTRIBUTE = 'data-gyral-seed';
-/** Marks a server-rendered light-DOM host (ADR 0014), so hydration knows its own content. */
-export const LIGHT_ATTRIBUTE = 'data-gyral-light';
-/** A deferred island's strategy (07 "Islands"), next to `defer-hydration`. */
-export const ISLAND_ATTRIBUTE = 'data-gyral-hydrate';
-
 /** What a server render of one component returns: its view and what its seed must carry. */
 export interface ServerRendering {
   /** `view(state, intents, ctx)` for the resolved props and state. */

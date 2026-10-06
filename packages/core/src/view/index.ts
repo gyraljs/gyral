@@ -34,10 +34,8 @@ export {
   type StyleSource,
   type Styles,
 } from './styles.js';
+export { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from './attributes.js';
 export {
-  ISLAND_ATTRIBUTE,
-  LIGHT_ATTRIBUTE,
-  SEED_ATTRIBUTE,
   registerServerComponent,
   registerServerProvider,
   serverComponent,

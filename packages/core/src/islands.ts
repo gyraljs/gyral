@@ -3,13 +3,12 @@
 // the user first reaches for it. The server marks it with `defer-hydration` plus the strategy
 // (view/06-server.md); the client removes `defer-hydration` when the strategy fires, and
 // define() finishes connecting from attributeChangedCallback (view/07-hydration.md "Islands").
-import { ISLAND_ATTRIBUTE } from './view/index.js';
 
 /** When a server-rendered component hydrates. `load` (the default) means right away. */
 export type HydrateStrategy = 'load' | 'idle' | 'visible' | 'interaction';
 
 /** Server-written strategy for a deferred island; removed when the island is released. */
-export { ISLAND_ATTRIBUTE };
+export const ISLAND_ATTRIBUTE = 'data-gyral-hydrate';
 const DEFER = 'defer-hydration';
 
 /** Events that mean the user is about to interact: they arrive before the click itself. */

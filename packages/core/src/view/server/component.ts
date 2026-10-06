@@ -2,12 +2,8 @@
 // tag (light mark, seed, island attributes), then its view, inside a declarative shadow root
 // with the component's CSS (08 "Server") or as light-DOM children (ADR 0014). The parent's
 // children of a shadow component follow in the parent's walk, after the `<template>`.
-import {
-  ISLAND_ATTRIBUTE,
-  LIGHT_ATTRIBUTE,
-  SEED_ATTRIBUTE,
-  type ServerComponent,
-} from '../registry.js';
+import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from '../attributes.js';
+import type { ServerComponent } from '../registry.js';
 import { escapeSeed, styleSafe } from './escape.js';
 import { ROOT, Writer, type Deferred, type Item } from './writer.js';
 

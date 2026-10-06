@@ -4,7 +4,9 @@
 import { createHash } from 'node:crypto';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { describe, expect, it, vi } from 'vitest';
-import { css, define, html, prop } from '../../src/index.js';
+import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, css, define, html, prop } from '../../src/index.js';
+import { SEED_ATTRIBUTE } from '../../src/hydration.js';
+import * as written from '../../src/view/attributes.js';
 import { render, renderToString, styleHashes } from '../../src/server.js';
 
 const list: StandardSchemaV1<readonly string[]> = {
@@ -141,6 +143,12 @@ describe('components (06 "Components")', () => {
   it('put development markers inside roots, before each view instance', () => {
     const out = renderToString(html`<srv-island></srv-island>`, { dev: true });
     expect(out).toMatch(/<template shadowrootmode="open"><!--gyral:[0-9a-z]+--><i>later<\/i>/);
+  });
+});
+
+describe('host attributes', () => {
+  it('are spelled the same by the server renderer and the client', () => {
+    expect({ ...written }).toEqual({ SEED_ATTRIBUTE, LIGHT_ATTRIBUTE, ISLAND_ATTRIBUTE });
   });
 });
 
