@@ -23,6 +23,10 @@
     "#devtools": {
       "development": "./src/devtools.ts",
       "default": "./src/devtools-off.ts"
+    },
+    "#prepare": {
+      "gyral-compiled": "./src/view/prepare-stub.ts",
+      "default": "./src/view/prepare.ts"
     }
   },
   "publishConfig": {
@@ -40,6 +44,10 @@
       "#devtools": {
         "development": "./dist/devtools.js",
         "default": "./dist/devtools-off.js"
+      },
+      "#prepare": {
+        "gyral-compiled": "./dist/view/prepare-stub.js",
+        "default": "./dist/view/prepare.js"
       }
     }
   },

@@ -10,6 +10,20 @@ const EFFECT_BOUNDARY =
   'Write it in plain TypeScript (Promise, AbortSignal, tagged unions); Effect integration ' +
   'belongs in an optional adapter package such as @gyral/effect, not in src/internal/.';
 
+const VIEW_BOUNDARY =
+  'packages/core/src/view/ is self-contained (ADR 0018 "Where it lives"): it imports nothing ' +
+  'from the rest of core, so it can become @gyral/view later. Move what you need into view/, ' +
+  'or have the caller pass it in; code outside view/ imports view/index.ts.';
+
+const VIEW_SERVER_BOUNDARY =
+  'view/server/ may import only view/ (ADR 0018): the server renderer must never pull browser ' +
+  'or element code into a server bundle. Move shared code into view/.';
+
+const VIEW_CLEAN_ROOM =
+  "The view layer replaces Lit and is written clean-room (ADR 0018, decision J): don't import " +
+  'lit, lit-html, lit-element, @lit/* or @lit-labs/* in view/. Implement it from ' +
+  'docs/design-docs/view/ and the web-platform specs.';
+
 const effectImports = {
   paths: [{ name: 'effect', message: EFFECT_BOUNDARY }],
   patterns: [{ group: ['effect/*', '@effect/*'], message: EFFECT_BOUNDARY }],
@@ -68,6 +82,49 @@ export default tseslint.config(
               message:
                 '@gyral/core is the bottom layer and must not import other Gyral packages (ARCHITECTURE.md). Invert the dependency.',
             },
+          ],
+        },
+      ],
+    },
+  },
+  // The view layer (ADR 0018 "Where it lives", "Clean room"): view/ imports nothing else from
+  // core and no Lit package; view/server/ imports only view/. Relative imports are matched by
+  // depth, so each level gets the pattern that would climb out of view/.
+  ...[
+    ['packages/core/src/view/*.ts', '^\\.\\./'],
+    ['packages/core/src/view/*/*.ts', '^\\.\\./\\.\\./'],
+    ['packages/core/src/view/*/*/*.ts', '^\\.\\./\\.\\./\\.\\./'],
+  ].map(([files, escape]) => ({
+    files: [files],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            { group: ['@gyral/*'], message: VIEW_BOUNDARY },
+            { regex: escape, message: VIEW_BOUNDARY },
+            { regex: '^#(?!prepare$)', message: VIEW_BOUNDARY },
+            { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
+          ],
+        },
+      ],
+    },
+  })),
+  {
+    files: ['packages/core/src/view/server/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            { group: ['@gyral/*'], message: VIEW_SERVER_BOUNDARY },
+            { regex: '^\\.\\./\\.\\./', message: VIEW_SERVER_BOUNDARY },
+            { regex: '^#', message: VIEW_SERVER_BOUNDARY },
+            { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },
       ],

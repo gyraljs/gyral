@@ -1,7 +1,7 @@
 // Proves the ESLint guardrails in eslint.config.js fire, with their remediation messages,
 // on real paths (rules are scoped by file globs, and type-aware linting needs files on disk).
 // Fixtures are written next to real sources, linted with the real config, then removed.
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
@@ -30,6 +30,26 @@ const FIXTURES = {
     'packages/ssr/src/__lint_fixture_labs__.ts',
     "export { render } from '@lit-labs/ssr';\n",
   ],
+  viewEscape: [
+    'packages/core/src/view/__lint_fixture_escape__.ts',
+    "export { define } from '../define.js';\nexport { html } from './template.js';\n",
+  ],
+  viewNestedEscape: [
+    'packages/core/src/view/normalize/__lint_fixture_escape__.ts',
+    "export { html } from '../../templates.js';\nexport { normalize } from './normalize.js';\nexport { html as h } from '../template.js';\n",
+  ],
+  viewInternalImport: [
+    'packages/core/src/view/__lint_fixture_hash__.ts',
+    "export { DEVTOOLS_ENABLED } from '#devtools';\nexport { prepare } from '#prepare';\n",
+  ],
+  viewLit: [
+    'packages/core/src/view/__lint_fixture_lit__.ts',
+    "export { html } from 'lit';\nexport { render } from '@lit-labs/ssr';\n",
+  ],
+  viewServer: [
+    'packages/core/src/view/server/__lint_fixture_server__.ts',
+    "export { html } from '../template.js';\nexport { define } from '../../define.js';\n",
+  ],
   checked: [
     'packages/core/src/__lint_fixture_checked__.ts',
     [
@@ -45,9 +65,19 @@ const FIXTURES = {
 /** @type {Record<string, import('eslint').Linter.LintMessage[]>} */
 const results = {};
 
+/** Directories created for fixtures (e.g. view/server/ before it exists), removed again. */
+const createdDirs = [];
+
+function cleanUp() {
+  for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
+  for (const dir of createdDirs.splice(0)) rmdirSync(dir);
+}
+
 beforeAll(async () => {
   for (const [file, text] of Object.values(FIXTURES)) {
-    mkdirSync(dirname(join(root, file)), { recursive: true });
+    const dir = dirname(join(root, file));
+    if (!existsSync(dir)) createdDirs.push(dir);
+    mkdirSync(dir, { recursive: true });
     writeFileSync(join(root, file), text);
   }
   try {
@@ -57,13 +87,11 @@ beforeAll(async () => {
       results[key] = linted.find((r) => r.filePath === join(root, file))?.messages ?? [];
     }
   } finally {
-    for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
+    cleanUp();
   }
 }, 120_000);
 
-afterAll(() => {
-  for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
-});
+afterAll(cleanUp);
 
 const ruleMessages = (key, ruleId) =>
   (results[key] ?? []).filter((m) => m.ruleId === ruleId).map((m) => m.message);
@@ -96,6 +124,26 @@ describe('ESLint guardrails', () => {
     const messages = ruleMessages('ssrLabs', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
     expect(messages[0]).toContain('src/internal/lit.ts');
+  });
+
+  it('keeps view/ self-contained (ADR 0018), at every depth', () => {
+    for (const key of ['viewEscape', 'viewNestedEscape', 'viewInternalImport']) {
+      const messages = ruleMessages(key, 'no-restricted-imports');
+      expect(messages, key).toHaveLength(1);
+      expect(messages[0]).toContain('view/ is self-contained');
+    }
+  });
+
+  it('keeps Lit out of view/ (clean room)', () => {
+    const messages = ruleMessages('viewLit', 'no-restricted-imports');
+    expect(messages).toHaveLength(2);
+    for (const m of messages) expect(m).toContain('clean-room');
+  });
+
+  it('lets view/server/ import only view/', () => {
+    const messages = ruleMessages('viewServer', 'no-restricted-imports');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain('view/server/ may import only view/');
   });
 
   it('rejects .checked property bindings and accepts ?checked with liveBoolean', () => {
