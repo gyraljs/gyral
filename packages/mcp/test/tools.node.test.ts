@@ -90,6 +90,22 @@ describe('api', () => {
     expect(findApi(corpus.api, 'prerender', 'ssr').matches[0]?.specifier).toBe('@gyral/ssr/static');
   });
 
+  it("teaches 0.3's view layer from the sources, examples and skill, with no Lit left", () => {
+    const at = (name: string) => findApi(corpus.api, name).matches.map((m) => m.specifier);
+    expect(at('each')).toContain('@gyral/core');
+    expect(at('prop')).toContain('@gyral/core');
+    expect(at('renderToString')).toContain('@gyral/core/server');
+    expect(at('clientAssetsFromManifest')).toContain('@gyral/ssr/static');
+    expect(corpus.api.some((e) => e.specifier === '@gyral/core/eslint')).toBe(true);
+    for (const gone of ['repeat', 'liveBoolean', 'serverHtml', 'unsafeCSS']) {
+      expect(findApi(corpus.api, gone).matches, gone).toEqual([]);
+    }
+    // Example titles and descriptions come from the docs snapshot (refreshed with mcp:refresh).
+    const sources = corpus.examples.map((e) => e.components);
+    const taught = JSON.stringify([corpus.api, sources, corpus.skill]);
+    expect(taught).not.toMatch(/from 'lit|lit-html|@lit-labs|liveBoolean|serverHtml/);
+  });
+
   it('suggests close names and lists exports', () => {
     expect(findApi(corpus.api, 'renderPge').suggestions).toContain('renderPage');
     expect(listApi(corpus.api, 'time')).toMatch(/## @gyral\/time\n- function: .*delay/);

@@ -230,8 +230,9 @@ import './${tag}.js';
       { path: 'src/entry-client.ts', code: entry },
     ],
     notes: [
-      'Needs: npm i @gyral/core @gyral/ssr. (0.3 development builds: server rendering returns with @gyral/core/server; until then renderPage throws.)',
+      'Needs: npm i @gyral/core @gyral/ssr. Hydration is built into @gyral/core: the client entry only imports the components.',
       'Mount the route in any server that speaks Request/Response (Hono, Node via productionServer, Workers), or prerender it with @gyral/ssr/static.',
+      'In production, pass clientAssetsFromManifest() results as renderPage({ scripts: [entry], modulepreload }) so the page preloads the hydration chunk.',
       'Or start from a working app: npm create gyral@latest my-app -- --template ssr.',
     ],
   };

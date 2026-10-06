@@ -1,6 +1,7 @@
 // Writes dist/corpus.json, everything the server answers from (run after tsc by `pnpm build`):
 // - docs: data/llms-full.txt (a committed snapshot of https://gyral.dev/llms-full.txt, so builds
-//   are offline and deterministic; refresh it with `pnpm mcp:refresh` before a release)
+//   are offline and deterministic; refresh it with `pnpm mcp:refresh` before a release, or with
+//   `pnpm mcp:refresh --from ../gyral.dev/dist` from a local site build)
 // - api: the public exports of every published entry point, read with the TypeScript compiler
 //   from this repo's sources (the same approach as the gyral.dev API reference)
 // - examples: examples/*, skill: skills/gyral, llmsTxt: data/llms.txt
@@ -13,13 +14,16 @@ const pkgDir = join(import.meta.dirname, '..');
 const repo = join(pkgDir, '..', '..');
 const read = (path) => readFileSync(path, 'utf8');
 
-/** Published packages and entry points, in reading order. */
+/**
+ * Published packages and entry points, in reading order (`@gyral/core/compiled` is for the
+ * template compiler's output, `@gyral/ssr/hydrate` an empty 0.2 leftover: neither is listed).
+ */
 const ENTRIES = [
-  ['core', ['.', './vite']],
+  ['core', ['.', './server', './vite', './eslint']],
   ['http', ['.', './testing']],
   ['router', ['.']],
   ['time', ['.']],
-  ['ssr', ['.', './hydrate', './static']],
+  ['ssr', ['.', './static']],
   ['testing', ['.', './arbitraries']],
   ['devtools', ['.']],
 ];

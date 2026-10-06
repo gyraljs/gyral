@@ -80,7 +80,10 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 1. Pull requests that change a package add a changeset: `pnpm changeset` (see
    [.changeset/README.md](../../.changeset/README.md)).
 2. When ready, on a branch: `pnpm mcp:refresh` (updates `@gyral/mcp`'s docs snapshot from
-   gyral.dev; review and commit the diff), then `pnpm changeset version`. It consumes the changesets, bumps every
+   gyral.dev; review and commit the diff), then `pnpm changeset version`. When the release's
+   docs aren't deployed yet, build gyral.dev locally and read the snapshot from its output
+   instead: `pnpm mcp:refresh --from ../gyral.dev/dist` (a relative path is resolved from where
+   you run pnpm; the directory must hold `llms.txt` and `llms-full.txt`). It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
