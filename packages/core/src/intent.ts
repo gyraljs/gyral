@@ -1,6 +1,6 @@
 import { commandOf, invokersSupported } from './invokers.js';
 import { hold } from './scheduler.js';
-import type { IntentInput, IntentParser, Tagged } from './types.js';
+import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
 import type { Markup } from './view/index.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010). */
@@ -181,6 +181,18 @@ export const intentNames: unknown = new Proxy(
   {},
   { get: (_target, key) => (typeof key === 'string' ? key : undefined) },
 );
+
+/**
+ * A component's intent names as a module-level constant, so pure list rows can name intents
+ * without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
+ * the view gets as `i`:
+ *
+ *   const i = intents<Msg>();
+ *   const Row = (t: Todo) => html`<input value=${t.id} data-intent=${i.Toggle} />`;
+ */
+export function intents<M extends Tagged>(): IntentNames<M> {
+  return intentNames as IntentNames<M>;
+}
 
 /**
  * Adds capture listeners for `types` to a component root, skipping those in `listening`. A

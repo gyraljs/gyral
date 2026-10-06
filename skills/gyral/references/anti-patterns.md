@@ -25,7 +25,7 @@
 | Array as the whole state                                                          | wrap it: `{ items: [...] }` (an array return means `[state, commands]`) |
 | Copying props into state in `view` or forgetting later changes                    | `init(props)` + a `PropsChanged` reducer, or read `ctx.props` directly  |
 | `.value=${s.text}` / `.checked=${s.on}` on form controls                          | `value=${s.text}` / `?checked=${s.on}` (live form state)                |
-| A list row reading `s`, `i` or `ctx` from the view                                | pass it through `each`'s `pick` (rows must be pure)                     |
+| A list row reading `s`, `i` or `ctx` from the view                                | `intents<Msg>()` at module level for names; the rest through `pick`     |
 | Parent reading or setting a child's internal state                                | props down, `emit()` outputs up, or a store                             |
 | Global singletons / module-level mutable state for shared data                    | `defineStore` + `send` + `ctx.read`                                     |
 | Booleans `isLoading`, `hasError`, `data` side by side                             | one tagged union                                                        |

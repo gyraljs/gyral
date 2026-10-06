@@ -61,7 +61,8 @@ export const Counter = define<State, Msg>('my-counter', {
    `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
    config: `vite build` then compiles templates and checks their rules.
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
-   arguments; pass view values (`i.Remove`, the selection) through `pick`. Form state uses
+   arguments and module constants; name intents with a module-level `const i = intents<Msg>()`
+   and pass view values (the selection) through `pick`. Form state uses
    attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`.
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
    real browser (Vitest browser mode) with fake drivers; `await settled()` before asserting on

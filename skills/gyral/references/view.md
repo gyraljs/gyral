@@ -35,11 +35,12 @@ Compute derived values in plain helper functions of state.
 
 `each(items, key, row, pick?)` is the only keyed list. A row re-renders only when its item
 object or its `pick` result changes, so **a row may read only its parameters, module-level
-bindings and imports**. Anything from the view's scope (`s`, `i`, `ctx`) goes through `pick`
-and arrives as the row's second argument. Plain arrays still render, by position.
+bindings and imports**. Intent names come from a module-level `const i = intents<Msg>()` (the
+same names the view gets as `i`); anything else from the view's scope (`s`, `ctx`) goes through
+`pick` and arrives as the row's second argument. Plain arrays still render, by position.
 
 ```ts
-import { define, each, html } from '@gyral/core';
+import { define, each, html, intents } from '@gyral/core';
 
 interface Todo {
   readonly id: number;
@@ -55,11 +56,14 @@ type Msg =
   | { readonly _tag: 'Toggle'; readonly id: number }
   | { readonly _tag: 'Note'; readonly note: string };
 
-// A pure row: module-level, reads only (todo, picked).
-const Row = (t: Todo, picked: { readonly intent: string; readonly selected: boolean }) =>
-  html`<li class=${picked.selected ? 'selected' : ''}>
+// Intent names as a module constant, so rows can use them and stay pure.
+const i = intents<Msg>();
+
+// A pure row: module-level, reads only (todo, selected) and module constants.
+const Row = (t: Todo, selected: boolean) =>
+  html`<li class=${selected ? 'selected' : ''}>
     <label>
-      <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${picked.intent} />
+      <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${i.Toggle} />
       ${t.text}
     </label>
   </li>`;
@@ -80,13 +84,13 @@ export const Todos = define<State, Msg>('my-todos', {
     }),
     Note: (s, m) => ({ ...s, note: m.note }),
   },
-  view: (s, i) => html`
+  view: (s) => html`
     <ul aria-label="Todos">
       ${each(
         s.todos,
         (t) => t.id,
         Row,
-        (t) => ({ intent: i.Toggle, selected: t.id === s.selected }),
+        (t) => t.id === s.selected,
       )}
     </ul>
     <label for="note">Note</label>

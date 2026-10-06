@@ -57,7 +57,21 @@ In select-row, 998 of 1,000 rows cost one comparison each; only the old and new 
 
 ## Rows must be pure
 
-Skipping is only correct if a row's output depends on nothing but `(item, picked)`. Two guards:
+Skipping is only correct if a row's output depends on nothing but `(item, picked)` and module
+constants. Intent names are such constants: `intents<Msg>()` (gyral-g1r.19) returns the same
+names object the view gets as `i`, as a module-level constant, so rows name intents without
+passing them through `pick`:
+
+```ts
+const i = intents<Msg>();
+const Row = (t: Todo, selected: boolean) =>
+  html`<li class=${selected ? 'selected' : ''}>
+    <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${i.Toggle} />
+  </li>`;
+// view: each(s.todos, (t) => t.id, Row, (t) => t.id === s.selected)
+```
+
+Two guards:
 
 1. **ESLint rule** (`@gyral/core/eslint`, works without Vite): the `row` function may reference
    only its parameters, module-level bindings and imports. A reference to anything in the view's

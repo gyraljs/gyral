@@ -57,7 +57,7 @@ command. The parent puts `data-intent` on the child element and parses outputs w
 
 ```ts
 import * as v from 'valibot';
-import { child, define, each, emit, html, prop } from '@gyral/core';
+import { child, define, each, emit, html, intents, prop } from '@gyral/core';
 
 // Child: owns its own state; reports removal up.
 type ItemOut = { readonly _tag: 'Removed' };
@@ -82,6 +82,7 @@ interface ListState {
   readonly items: readonly { readonly id: number; readonly label: string }[];
 }
 type ListMsg = { readonly _tag: 'ItemOut'; readonly id: number; readonly out: ItemOut };
+const listIntents = intents<ListMsg>();
 
 export const List = define<ListState, ListMsg>('my-list', {
   init: () => ({
@@ -96,14 +97,13 @@ export const List = define<ListState, ListMsg>('my-list', {
   update: {
     ItemOut: (s, m) => ({ items: s.items.filter((it) => it.id !== m.id) }),
   },
-  view: (s, i) =>
+  view: (s) =>
     html`<ul>
       ${each(
         s.items,
         (it) => it.id,
-        // Rows are pure: the intent name comes in through pick.
-        (it, intent) => html`<li><my-item .item=${it} data-intent=${intent}></my-item></li>`,
-        () => i.ItemOut,
+        // Rows are pure: the intent name is a module constant (listIntents below).
+        (it) => html`<li><my-item .item=${it} data-intent=${listIntents.ItemOut}></my-item></li>`,
       )}
     </ul>`,
 });
