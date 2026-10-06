@@ -22,7 +22,7 @@ function checkSpec(tag: string, spec: SpecShape): void {
   const names = Object.keys(spec.props ?? {});
   // The prop builders registered the prop feature (features.ts) if there are props.
   if (names.length > 0) features.props?.checkShadowed(tag, names);
-  if (isLight(spec) && spec.styles !== undefined) {
+  if (DEV && isLight(spec) && spec.styles !== undefined) {
     console.warn(`<${tag}> has shadow: false, so its styles are ignored; use document CSS.`);
   }
 }

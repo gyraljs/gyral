@@ -6,11 +6,9 @@ import type * as Prepare from './prepare.js';
 export const prepare: typeof Prepare.prepare = (strings) => {
   const start = strings.join('${…}').replace(/\s+/g, ' ').trim().slice(0, 80);
   throw new Error(
-    `gyral: an html template was not compiled: \`${start}\`. This build resolves the ` +
-      `gyral-compiled condition, which leaves out the runtime template preparer, so every ` +
-      `html\`…\` must go through the Gyral Vite preset's template compiler (dependencies ` +
-      `included). Make sure the module containing it is processed by Vite, or drop the ` +
-      `gyral-compiled condition to use the runtime preparer (view/01-templates.md).`,
+    `gyral: an html template was not compiled: \`${start}\`. This gyral-compiled build has no ` +
+      `runtime template preparer: compile every html\`…\` (dependencies included) with the ` +
+      `Gyral Vite preset, or drop the gyral-compiled condition (view/01-templates.md).`,
   );
 };
 

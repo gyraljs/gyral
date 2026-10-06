@@ -187,9 +187,11 @@ function runPost(): void {
 function loopError(counts: Map<HostTask, number>): RenderLoop {
   const tags = [...new Set([...counts.keys()].map((t) => `<${t.tag}>`))].join(', ');
   return new RenderLoop(
-    `gyral: rendering did not settle in one flush (a cycle between ${tags}). Components are ` +
-      'probably feeding each other props or messages; break the cycle with a condition in ' +
-      'update (docs/design-docs/view/04-scheduler.md "Loop guard").',
+    `gyral: rendering did not settle in one flush (a cycle between ${tags}).` +
+      (DEV
+        ? ' Components are probably feeding each other props or messages; break the cycle ' +
+          'with a condition in update (docs/design-docs/view/04-scheduler.md "Loop guard").'
+        : ''),
   );
 }
 

@@ -2,6 +2,7 @@
 // "Instantiation"). The browser's own parser builds it from the template HTML; the runtime
 // preparer then checks the parse (rule 7). Server templates never get one (rule 11).
 import { verify } from '#prepare';
+import { DEV } from '#view-dev';
 import { SERVER_ONLY, TemplateError } from './normalize/errors.js';
 import type { TemplateObject } from './normalize/types.js';
 
@@ -11,7 +12,12 @@ const elements = new WeakMap<TemplateObject, HTMLTemplateElement>();
 export function templateElement(template: TemplateObject): HTMLTemplateElement {
   const cached = elements.get(template);
   if (cached !== undefined) return cached;
-  if (template.server) throw new TemplateError(11, SERVER_ONLY, template.loc);
+  if (template.server) {
+    // Production keeps a short message: the class and its explanation stay out of the bundle.
+    throw DEV
+      ? new TemplateError(11, SERVER_ONLY, template.loc)
+      : new Error('gyral: a page-shell template (rule 11) can only be rendered by the server.');
+  }
   const el = document.createElement('template');
   el.innerHTML = template.html;
   verify(template, el);
