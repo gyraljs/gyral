@@ -55,7 +55,8 @@
     "prepack": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@standard-schema/spec": "1.1.0"
+    "@standard-schema/spec": "1.1.0",
+    "pipewise": "link:../../../pipewise"
   },
   "peerDependencies": {
     "lit": "^3.3.0"

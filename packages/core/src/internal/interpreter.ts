@@ -1,21 +1,33 @@
+import {
+  concatMap,
+  createStream,
+  defer,
+  exhaustMap,
+  external,
+  mergeMap,
+  subscribe,
+  switchMap,
+  type External,
+  type Observable,
+  type Operator,
+} from 'pipewise';
 import { DEVTOOLS_ENABLED } from '#devtools';
 import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 
-// The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
-// latest task per key. Interruption is `controller.abort()`, retry schedules are timers
-// that cancel on abort, and `queue` chains on the previous task's promise.
+// EXPERIMENT (ADR 0015, branch exp/pipewise): the command interpreter on pipewise
+// (Web Streams operators). Each lane is a stream of jobs piped through the lane's
+// operator: merge → mergeMap, switch → switchMap, exhaust → exhaustMap, queue →
+// concatMap. A job is a lazy inner stream (`defer` + `createStream`) whose lifetime
+// signal is the driver's AbortSignal, so switching or disposing cancels the inner
+// stream and aborts the driver. Intent → update → view stays synchronous: only the
+// command side runs through streams. Retry stays a small hand-written loop (pipewise
+// `retry` has no exponential backoff).
 
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
   readonly run: (cmd: Command<M>) => void;
   readonly dispose: () => void;
-}
-
-interface Task {
-  readonly controller: AbortController;
-  done: Promise<void>;
-  running: boolean;
 }
 
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
@@ -130,6 +142,36 @@ async function execute<M>(
   deliver(() => cmd.onSuccess(output), dispatch);
 }
 
+interface Job<M> {
+  readonly driver: AnyDriver;
+  readonly cmd: Command<M>;
+  readonly report: Report;
+}
+
+interface Lane<M> {
+  readonly policy: Concurrency;
+  readonly jobs: External<Job<M>>;
+  readonly stop: AbortController;
+  /** Jobs pushed and not yet finished; `exhaust` drops while this is above 0. */
+  pending: number;
+}
+
+const laneOperator = <M>(
+  policy: Concurrency,
+  project: (job: Job<M>) => Observable<never>,
+): Operator<Job<M>, never> => {
+  switch (policy) {
+    case 'switch':
+      return switchMap(project);
+    case 'exhaust':
+      return exhaustMap(project);
+    case 'queue':
+      return concatMap(project);
+    case 'merge':
+      return mergeMap(project);
+  }
+};
+
 export function makeInterpreter<M>(
   resolve: (driver: AnyDriver) => AnyDriver,
   dispatch: (msg: M) => void,
@@ -148,64 +190,68 @@ export function makeInterpreter<M>(
             ...(result === undefined ? {} : { result }),
           });
         };
-  const lanes = new Map<string, Task>();
-  const all = new Set<Task>();
+  const lanes = new Map<string, Lane<M>>();
+  const opened = new Set<Lane<M>>();
   let active = true;
   const guardedDispatch = (msg: M): void => {
     if (active) dispatch(msg);
   };
 
-  const start = (
-    lane: string,
-    driver: AnyDriver,
-    cmd: Command<M>,
-    report: Report,
-    after?: Task,
-  ): void => {
-    const controller = new AbortController();
-    const task: Task = { controller, running: true, done: Promise.resolve() };
-    const body = async (): Promise<void> => {
-      if (after !== undefined) await after.done;
-      if (!controller.signal.aborted) {
-        await execute(driver, cmd, controller.signal, guardedDispatch, report);
-      }
+  const openLane = (key: string, policy: Concurrency): Lane<M> => {
+    const lane: Lane<M> = {
+      policy,
+      jobs: external<Job<M>>(),
+      stop: new AbortController(),
+      pending: 0,
     };
-    task.done = body().finally(() => {
-      task.running = false;
-      all.delete(task);
-      if (lanes.get(lane) === task) lanes.delete(lane);
-    });
-    lanes.set(lane, task);
-    all.add(task);
+    // A job's inner stream: created lazily on first read, so `exhaust` never starts a
+    // driver it drops. Its lifetime signal is the driver's signal.
+    const project = (job: Job<M>): Observable<never> =>
+      defer(() =>
+        createStream<never>(async (subscriber) => {
+          try {
+            await execute(job.driver, job.cmd, subscriber.signal, guardedDispatch, job.report);
+          } finally {
+            lane.pending -= 1;
+          }
+          subscriber.complete();
+        }),
+      );
+    lane.jobs.observable
+      .pipeThrough(laneOperator<M>(policy, project))
+      .pipeTo(subscribe(), { signal: lane.stop.signal })
+      .catch(() => undefined);
+    lanes.set(key, lane);
+    opened.add(lane);
+    return lane;
   };
 
   const run = (cmd: Command<M>): void => {
     if (!active) return;
     const driver = resolve(cmd.driver);
-    const lane = cmd.key ?? driver.name;
+    const key = cmd.key ?? driver.name;
     const policy = cmd.concurrency ?? driver.concurrency ?? 'merge';
-    const previous = lanes.get(lane);
-    const inFlight = previous?.running === true ? previous : undefined;
-    const report = DEVTOOLS_ENABLED ? reporter(driver.name, lane, policy, cmd.input) : undefined;
-    if (inFlight !== undefined && policy === 'exhaust') {
+    const report = DEVTOOLS_ENABLED ? reporter(driver.name, key, policy, cmd.input) : undefined;
+    let lane = lanes.get(key);
+    if (lane !== undefined && lane.policy !== policy) {
+      // A lane's operator is fixed when it opens; a different policy on the same key
+      // starts a new lane (the old one keeps its in-flight work).
+      lane = undefined;
+    }
+    lane ??= openLane(key, policy);
+    if (policy === 'exhaust' && lane.pending > 0) {
       if (DEVTOOLS_ENABLED) report?.('dropped');
       return;
     }
     if (DEVTOOLS_ENABLED) report?.('issued');
-    if (inFlight !== undefined && policy === 'switch') inFlight.controller.abort();
-    start(
-      lane,
-      driver,
-      cmd,
-      report,
-      inFlight !== undefined && policy === 'queue' ? inFlight : undefined,
-    );
+    lane.pending += 1;
+    lane.jobs.next({ driver, cmd, report });
   };
 
   const dispose = (): void => {
     active = false;
-    for (const task of all) task.controller.abort();
-    all.clear();
+    for (const lane of opened) lane.stop.abort();
+    opened.clear();
     lanes.clear();
   };
 

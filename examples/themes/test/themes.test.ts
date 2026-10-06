@@ -34,6 +34,8 @@ it('the picker sends the chosen theme to the driver', async () => {
   await picker.updateComplete;
   picker.shadowRoot?.querySelector<HTMLInputElement>('input[value=brutalist]')?.click();
   await picker.updateComplete;
+  // pipewise lanes start drivers a few microtasks after the command is issued.
+  await new Promise((resolve) => setTimeout(resolve, 0));
   expect(theme.inputs).toEqual(['brutalist']);
 });
 

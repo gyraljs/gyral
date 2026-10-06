@@ -48,6 +48,8 @@ describe('component with a fake chart driver', () => {
     await clock.advance(1000);
     button.click();
     await el.updateComplete;
+    // pipewise lanes start drivers a few microtasks after the command is issued.
+    await clock.advance(0);
     expect(draws(fake.inputs)).toEqual([[1], [2], [2, 1]]);
 
     // Push a chart click through the running stream, as the real driver would emit it.
