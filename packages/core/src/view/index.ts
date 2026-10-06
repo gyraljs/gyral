@@ -16,7 +16,8 @@ export type {
   TemplateObject,
 } from './normalize/types.js';
 
-export { hydrate, render, renderBatch } from './render/render.js';
+export { hydrate } from './render/hydrate.js';
+export { render, renderBatch } from './render/render.js';
 export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
 export { raw } from './render/raw.js';

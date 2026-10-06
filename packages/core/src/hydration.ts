@@ -1,10 +1,11 @@
 // Server-render seeds (docs/design-docs/0012-ssr.md, view/06-server.md "Components"). The
 // server writes each component's state, plus the props an attribute can't carry, into one
-// attribute; the client reads it before its first render so both sides start from the same
-// state, then hydrates the server's DOM with that render (view/07-hydration.md).
-import { DEVTOOLS_ENABLED, devMismatch } from '#devtools';
+// attribute; the client reads it on connect, before its first render, so both sides start from
+// the same state. The walk that then hydrates the server's DOM is hydration-client.ts, which
+// core loads lazily (view/07-hydration.md "Loading").
 import { warnJsonHazard } from './json-safety.js';
-import { DEV, hydrate, HydrationMismatch, render, type ChildValue } from './view/index.js';
+import { hold } from './scheduler.js';
+import { DEV } from './view/index.js';
 
 /** Host attribute holding the JSON seed. Removed once the client has read it. */
 export const SEED_ATTRIBUTE = 'data-gyral-seed';
@@ -56,31 +57,39 @@ export function takeSeed(host: Element): Seed | undefined {
 }
 
 /**
- * Hydrates a server-rendered host's root with its first view (view/07-hydration.md "Steps").
- * A shadow root swaps styles in the same step (08 "Hydration"): the shared sheets are adopted
- * and the server's `<style>` removed. On a mismatch development throws; production recovers
- * this component only: it clears the root, renders fresh and warns.
+ * The walk and islands (hydration-client.ts) once loaded; `null` if loading failed (a stale
+ * deployment: server-rendered hosts then render fresh); undefined until then.
  */
-export function hydrateRoot(
-  host: HTMLElement,
-  tag: string,
-  view: ChildValue,
-  root: ShadowRoot | HTMLElement,
-  sheets: CSSStyleSheet[] | undefined,
-): void {
-  if (sheets !== undefined) {
-    (root as ShadowRoot).adoptedStyleSheets = sheets;
-    const first = root.firstChild;
-    if (sheets.length > 0 && first?.nodeName === 'STYLE') first.remove();
+export let hydrationCode: typeof import('./hydration-client.js') | null | undefined;
+/** Hosts waiting for the code, in connection order; undefined when no load is pending. */
+let waiting: (() => void)[] | undefined;
+
+/**
+ * Loads the hydration code (once) and runs `next` when it has loaded or failed, in call
+ * order. settled() waits meanwhile (view/07-hydration.md "Loading").
+ */
+export function whenHydrationLoads(next: () => void): void {
+  if (waiting !== undefined) {
+    waiting.push(next);
+    return;
   }
-  try {
-    hydrate(view, root, `<${tag}>`);
-  } catch (error) {
-    if (!(error instanceof HydrationMismatch)) throw error;
-    if (DEVTOOLS_ENABLED) devMismatch(host, tag, error.message);
-    if (DEV) throw error;
-    console.warn(`${error.message} <${tag}> was rendered fresh.`);
-    root.replaceChildren();
-    render(view, root);
-  }
+  waiting = [next];
+  const done = (code: typeof hydrationCode): void => {
+    hydrationCode = code;
+    const hosts = waiting ?? [];
+    waiting = undefined;
+    for (const host of hosts) {
+      try {
+        host();
+      } catch (error) {
+        reportError(error);
+      }
+    }
+  };
+  hold(
+    import('./hydration-client.js').then(done, (error: unknown) => {
+      console.error('gyral: the hydration code failed to load; rendering fresh.', error);
+      done(null);
+    }),
+  );
 }

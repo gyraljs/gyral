@@ -119,6 +119,8 @@ await settled(); // no host is dirty, no flush is scheduled, no transition updat
 - One shared promise per quiet period, not one per element. When the scheduler is idle it
   resolves after a few microtask turns (4), so follow-ups already resolving (a driver that
   answered at once, an output on its way) reach the scheduler before quiet is judged.
+- Code core loads lazily for rendering (the hydration code, 07 "Loading") counts as pending
+  until the hosts waiting for it have started (`hold()` in the scheduler).
 - It covers rendering only. Driver work (HTTP, timers) is outside it; tests drive time with
   `@gyral/testing`'s `virtualTime` and then `await settled()`.
 - `@gyral/testing`'s `hydrated()` becomes: wait for the document's islands to be released (if

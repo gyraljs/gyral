@@ -5,7 +5,8 @@ and resolved points marked "Phase 5"). ADR 0018 (decision F). Replaces the Lit p
 0012 and 0014.
 
 Hydration is built into core. There is no separate hydrate-support import, nothing patches a
-class at load time, and module evaluation order can't break it.
+class at load time, and module evaluation order can't break it. Its code (the walk and islands)
+loads lazily, with the first host that needs it ("Loading" below).
 
 ## Which hosts hydrate
 
@@ -16,6 +17,23 @@ one (06). Its root is its declarative shadow root, or the host itself in light-D
 without children) has nothing to adopt: it resumes from the seed and renders fresh. A shadow
 host that finds a declarative shadow root but no seed (hand-written DSD, an unreadable seed)
 clears it and renders fresh, so a view is never doubled.
+
+## Loading (gyral-g1r.18)
+
+The walk, the mismatch messages and islands live in one internal module
+(`hydration-client.ts`) that core loads with `import()` when the first host with a seed or with
+`defer-hydration` connects. Client-only pages never fetch it; bundlers emit it as its own chunk.
+
+- The seed is still read synchronously on connect (step 1 below): a host's `state` is the
+  server's from the start, even while the code loads.
+- Hosts that connect while it loads wait in connection order and then continue as before (an
+  island schedules its release, others start and hydrate in the next flush). Once loaded, later
+  hosts continue synchronously. Server-rendered content is already on screen, so a first
+  hydration one network round trip later is acceptable.
+- `settled()` waits for the load and the hosts it releases (the scheduler counts it as pending
+  work, 04).
+- If the module fails to load (a stale deployment whose chunks are gone), the error is logged
+  and waiting hosts render fresh: their roots are cleared, so a view is never doubled.
 
 ## Each component hydrates on its own
 
@@ -213,9 +231,14 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
   (hosts, style swap, child-first and parent-first order, islands), the `@gyral/ssr` suites
   and the examples' hydration tests (both projects), and `pnpm smoke:prod`, which now also
   checks that every element the parser built is still in the page after hydration.
-- **Phase 5, size:** hydration adds about 1.8 KiB gzip to every client bundle (the view line
-  went from 5.47 to 7.22 KiB), whether the app server-renders or not. The size pass
-  (gyral-g1r.18) should weigh loading the walk lazily when a seeded host first connects.
+- **Phase 5, size:** hydration added about 1.8 KiB gzip to every client bundle (the view line
+  went from 5.47 to 7.22 KiB), whether the app server-rendered or not. **gyral-g1r.18:** it now
+  loads lazily ("Loading"): a client-only app's initial chunk carries none of it (hello-world's
+  initial chunk 10.3 → 9.1 KiB gzip). The separate chunk is about 2.8 KiB gzip and is fetched
+  only by server-rendered pages; split from the main chunk it compresses worse, so all chunks
+  together are about 1 KiB larger than one bundle, and a server-rendered page fetches it one
+  round trip after the entry (a `modulepreload` hint from the server would remove that wait;
+  not done yet). `loading-hydration.test.ts` checks both sides.
 
 ## Native primitives
 

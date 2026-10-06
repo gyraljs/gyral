@@ -6,9 +6,8 @@ import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
 import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { HostModel, type ModelCommand } from './host-model.js';
-import { hydrateRoot, takeSeed } from './hydration.js';
+import { hydrationCode, takeSeed, whenHydrationLoads } from './hydration.js';
 import { handleIntent, hostDepth, intentNames, listenForIntents } from './intent.js';
-import { scheduleIsland } from './islands.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import type { PropFeature, PropTable } from './props.js';
@@ -28,7 +27,6 @@ import { render, sheetsFor } from './view/index.js';
 const DEFER = 'defer-hydration';
 
 type Bag = Record<string, unknown>;
-
 /** The element class for `spec` (not yet registered); define() types it for the spec. */
 export function elementClass<S, M extends Tagged, P>(
   tag: string,
@@ -139,9 +137,7 @@ export function elementClass<S, M extends Tagged, P>(
         return;
       }
       this.#resume();
-      if (this.hasAttribute(DEFER))
-        scheduleIsland(this); // released by attributeChangedCallback
-      else this.#start();
+      this.#begin();
     }
 
     /** `moveBefore()` keeps everything: no disconnect, no re-resolution (view/03-lists.md). */
@@ -156,7 +152,7 @@ export function elementClass<S, M extends Tagged, P>(
 
     attributeChangedCallback(name: string, _old: string | null, raw: string | null): void {
       if (name === DEFER) {
-        if (raw === null && this.isConnected && this.#root === undefined) this.#start();
+        if (raw === null && this.isConnected && this.#root === undefined) this.#begin();
         return;
       }
       const prop = attrs.get(name);
@@ -184,15 +180,31 @@ export function elementClass<S, M extends Tagged, P>(
       this.#serverRendered = true;
     }
 
+    /**
+     * Starts the host, or waits: for the hydration code (a server-rendered host or an island,
+     * view/07-hydration.md "Loading"), then for an island's trigger (released by
+     * attributeChangedCallback).
+     */
+    #begin(): void {
+      const defer = this.hasAttribute(DEFER);
+      if (hydrationCode === undefined && (this.#serverRendered || defer)) {
+        whenHydrationLoads(() => {
+          if (this.isConnected && this.#root === undefined) this.#begin();
+        });
+      } else if (defer && hydrationCode !== null) hydrationCode?.scheduleIsland(this);
+      else this.#start();
+    }
+
     #start(): void {
       const root = light ? this : (this.shadowRoot ?? this.attachShadow({ mode: 'open' }));
       this.#root = root;
-      this.#hydrating = this.#serverRendered && root.hasChildNodes();
+      this.#hydrating = this.#serverRendered && hydrationCode != null && root.hasChildNodes();
       sheets ??= light ? [] : sheetsFor(spec.styles);
-      // A shadow root without a seed to resume from (hand-written DSD) renders fresh.
-      if (!light && !this.#hydrating) {
-        if (!this.#serverRendered) root.replaceChildren();
-        (root as ShadowRoot).adoptedStyleSheets = sheets;
+      // Rendering fresh: a shadow root without a seed (hand-written DSD) or a server-rendered
+      // host whose hydration code failed to load starts empty.
+      if (!this.#hydrating) {
+        if (!light || this.#serverRendered) root.replaceChildren();
+        if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       listenForIntents(this.#root, spec.events ?? [], this.#onEvent);
       this.#state(); // init, unless resumed from a seed
@@ -223,7 +235,7 @@ export function elementClass<S, M extends Tagged, P>(
       this.#model.syncProps(names);
       const view = spec.view(this.state, intentNames as IntentNames<M>, this.#model.ctx());
       if (this.#hydrating) {
-        hydrateRoot(this, tag, view, root, light ? undefined : sheets);
+        hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets);
         this.#hydrating = false;
       } else render(view, root);
       if (spec.states !== undefined) afterRender(POST_STATES, this.#syncStates);

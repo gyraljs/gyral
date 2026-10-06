@@ -5,8 +5,8 @@
 // sets the attribute too on first creation (the default, so `form.reset()` returns to the
 // model's first value) and later compares with the element's live state. Constructors only
 // record nodes; hydration (view/07-hydration.md) builds the same parts over server DOM and
-// `adopt`s this render's values as committed. Adopted form state is `held`: the live
-// comparison waits until the model's value changes, so edits made before scripts ran stay.
+// adopts this render's values as committed (adopt-attr.ts). Adopted form state is `held`: the
+// live comparison waits until the model's value changes, so edits made before scripts ran stay.
 import { DEV } from '#view-dev';
 import { hookSpec, queueHook, sameArgs, type HookResult, type HookSpec } from './hooks.js';
 import { nothing, UNSET } from './values.js';
@@ -40,11 +40,8 @@ export const TEXTAREA = 9;
 /** `${hook(…)}` in a start tag. */
 export const HOOK = 10;
 
-/** Kinds whose adopted value is held until the model changes it (form state the user edits). */
-const HELD = (1 << VALUE) | (1 << CHECKED) | (1 << OPEN) | (1 << TEXTAREA);
-
 /** Input types whose `value` is a submitted value, not state the user edits. */
-const PLAIN = /^(checkbox|radio|hidden|button|submit|reset|image|file)$/;
+export const PLAIN = /^(checkbox|radio|hidden|button|submit|reset|image|file)$/;
 
 /** `String(v)`: numbers and booleans as text (objects warn in development first). */
 const text = String as (value: unknown) => string;
@@ -106,38 +103,6 @@ export class AttrPart implements Part {
     this.args = undefined;
     this.prev = undefined;
     this.held = false;
-  }
-
-  /**
-   * Hydration: takes this render's values as committed without writing (the server wrote
-   * them). Form state the user can change is held (07 "Form state"); `?indeterminate`, which
-   * no attribute carries, is set; a property is set unless a nested component already has it
-   * from its own seed. The development check of the element is adopt.ts's.
-   */
-  adopt(values: readonly unknown[]): void {
-    const v = values[this.at];
-    const el = this.el;
-    const live = el as unknown as Record<string, unknown>;
-    const name = this.name;
-    const kind = this.kind;
-    if (kind === HOOK) this.hook(v);
-    else if (kind === PROP) {
-      this.value = v;
-      const own = live[name] !== undefined && el.localName.includes('-');
-      if (!own && !Object.is(live[name], v)) live[name] = v;
-    } else if (kind === MULTI) {
-      const pieces = this.pieces as unknown[];
-      for (let i = 0; i < pieces.length; i++) pieces[i] = values[this.at + i];
-      this.value = this.join(pieces);
-    } else if (kind === ATTR || kind === VALUE) {
-      this.value = v;
-      if (kind === VALUE && PLAIN.test((el as HTMLInputElement).type)) this.kind = ATTR;
-    } else if (kind === TITLE || kind === TEXTAREA) this.value = textOf(this, v);
-    else {
-      this.value = truthy(v);
-      if (kind === STATE && live[name] !== this.value) live[name] = this.value;
-    }
-    this.held = ((HELD >> this.kind) & 1) === 1;
   }
 
   set(values: readonly unknown[]): void {
@@ -245,7 +210,7 @@ export class AttrPart implements Part {
   }
 
   /** The joined value of `pieces`, or null when one is `nothing`. */
-  private join(pieces: readonly unknown[]): string | null {
+  join(pieces: readonly unknown[]): string | null {
     const strings = this.strings as readonly string[];
     let joined = strings[0] as string;
     for (let i = 0; i < pieces.length; i++) {
@@ -258,7 +223,7 @@ export class AttrPart implements Part {
   }
 
   /** HOOK: queue the client call when the hook or its arguments changed. */
-  private hook(v: unknown): void {
+  hook(v: unknown): void {
     if (absent(v)) {
       this.spec = null;
       this.args = undefined;

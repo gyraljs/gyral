@@ -51,7 +51,7 @@ let frameTimer: ReturnType<typeof setTimeout> | undefined;
 let post: PostTask[] = [];
 let phase = IDLE;
 let transitionWanted = false;
-/** Deferred callbacks (outputs to parents) still to run; settled() waits for them. */
+/** Deferred callbacks (outputs to parents) and held loads still pending; settled() waits. */
 let deferred = 0;
 let quiet: { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } | null =
   null;
@@ -136,6 +136,18 @@ export function defer(fn: () => void): void {
       deferred -= 1;
       settle();
     }
+  });
+}
+
+/**
+ * Counts `work` (code loading with import(), whose continuation connects hosts) as pending
+ * until it settles, so settled() waits for it. `work` must not reject.
+ */
+export function hold(work: Promise<void>): void {
+  deferred += 1;
+  void work.finally(() => {
+    deferred -= 1;
+    settle();
   });
 }
 

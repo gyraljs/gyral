@@ -13,17 +13,8 @@ import { LIGHT_ATTRIBUTE } from '../attributes.js';
 import type { TemplateObject } from '../normalize/types.js';
 import { isTemplateResult, sourceOf, templateOf, type TemplateResult } from '../template.js';
 import { adoptionOf, type Adoption, type Spec } from './adopt-plan.js';
-import {
-  absent,
-  ATTR,
-  AttrPart,
-  BOOL,
-  CHECKED,
-  MULTI,
-  TEXTAREA,
-  TITLE,
-  VALUE,
-} from './attr-parts.js';
+import { adoptAttr, checkAttr } from './adopt-attr.js';
+import { AttrPart, TEXTAREA, TITLE } from './attr-parts.js';
 import { ChildPart, INSTANCE, ITEMS, LIST, RAW, TEXT } from './child-part.js';
 import { checkKeys } from './dev-check.js';
 import { Instance } from './instance.js';
@@ -196,8 +187,8 @@ function element(t: Element, a: Adoption, inst: Instance, values: readonly unkno
     const kind = a.plan.kinds[i] as number;
     const part = new AttrPart(el, kind, spec.name ?? '', a.plan.at[i] as number, spec.strings);
     inst.parts[i] = part;
-    part.adopt(values);
-    if (DEV) check(part);
+    adoptAttr(part, values);
+    if (DEV) checkAttr(part, fail);
     if (kind === TEXTAREA || kind === TITLE) whole = true; // the part owns the content
   }
   let holes = a.holes.has(t);
@@ -221,38 +212,6 @@ function element(t: Element, a: Adoption, inst: Instance, values: readonly unkno
   cur = outer;
   parent = outerParent;
   return el;
-}
-
-/**
- * Development: the element shows what `part` adopted. Form state the user edits is compared
- * by its attribute or default text, which edits don't change; `?open` isn't compared.
- */
-function check(part: AttrPart): void {
-  const { el, name, value } = part;
-  let want: unknown = value;
-  let got: unknown;
-  switch (part.kind) {
-    case ATTR:
-    case VALUE:
-    case MULTI:
-      if (part.kind !== MULTI) want = absent(value) ? null : String(value);
-      got = el.getAttribute(name);
-      break;
-    case BOOL:
-    case CHECKED:
-      got = el.hasAttribute(name);
-      break;
-    case TITLE:
-    case TEXTAREA:
-      got = el.textContent;
-      break;
-    default:
-      return;
-  }
-  if (got !== want) {
-    const what = name === '' ? 'content' : name;
-    fail(`${what} ${JSON.stringify(want)}`, `${JSON.stringify(got)} on <${el.localName}>`, el);
-  }
 }
 
 /** Rows of `each` (keyed) or items of an array (`l` undefined), one after another. */
