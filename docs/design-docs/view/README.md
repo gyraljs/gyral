@@ -58,3 +58,14 @@ it. Two properties run with fast-check over generated templates and values:
    so after an update they legitimately differ from a fresh server string.
 2. **Hydration is identity:** hydrating server output and then rendering a second result gives
    the same DOM as client-rendering the second result directly, and keeps the server's nodes.
+
+Notes from the implementations: property 1 is `core/test/view/server-conformance.test.ts`
+(Phase 4). Property 2 is `core/test/view/conformance-hydration.test.ts` (Phase 5), over the
+same generated results (nested templates, `each`, arrays, attributes, merged text, `raw()`,
+form state, tables, shadow and light components with slotted children), with development
+and production server output, and components hydrating before or after the parent's walk.
+It checks three things: hydrating server(A) with A writes no attribute, keeps every server
+node in order and gives exactly the DOM a client render of A builds, Text node boundaries
+included; after rendering B, the DOM equals a fresh client render of B (form state by live
+property); and every node survives B exactly as it does when the client rendered A first
+(same lineage). Both run in the `browser` and `browser-prod` projects.

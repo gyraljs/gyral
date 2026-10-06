@@ -32,7 +32,8 @@ update maps or completion promises.
 6. Resolve waiting `settled()` promises.
 
 **Errors:** a view or reducer that throws is logged with its tag, its previous DOM stays, and the
-flush continues with the other hosts. Post-render work that throws is logged the same way.
+flush continues with the other hosts. Post-render work that throws is logged the same way. A
+development `HydrationMismatch` (07) is such an error: the host keeps the server's DOM.
 
 Outputs a child sends to its parent (`emit`, ADR 0010) are dispatched in a microtask, outside the
 child's render; the scheduler counts them as pending work, so `settled()` waits for them and for

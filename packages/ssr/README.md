@@ -8,9 +8,8 @@ Gyral server rendering: whole pages of Gyral components rendered on the server (
 pnpm add @gyral/ssr @gyral/core
 ```
 
-> **0.3.0 in progress:** hydration in `@gyral/core` (docs/design-docs/view/07-hydration.md)
-> is still being built; until then a server-rendered component resumes from its seed and
-> renders fresh in the browser.
+Hydration is built into `@gyral/core` (docs/design-docs/view/07-hydration.md): the client
+entry imports the components and each one adopts the server's DOM in place.
 
 ## Example
 

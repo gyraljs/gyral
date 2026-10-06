@@ -92,9 +92,12 @@ for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
 - SSR builds keep the server segments of compiled templates (the Vite preset does this for
   `build.ssr`); a template compiled for the client can't be server-rendered.
 
-Hydration is being built into core (view/07-hydration.md). Until then, a server-rendered
-component resumes its state from its `data-gyral-seed`, clears the server's markup and renders
-fresh. Keep component state and props JSON-serializable: they travel in the hydration seed.
+Hydration is built into core (view/07-hydration.md): a server-rendered component resumes its
+state from its `data-gyral-seed` and adopts the server's DOM in place; there is no hydration
+import, and module order doesn't matter. Keep component state and props JSON-serializable:
+they travel in the hydration seed. A mismatch between server markup and the first client
+render throws `HydrationMismatch` in development; production builds warn and re-render only
+that component. Hydration adds about 1.8 KiB gzip to client bundles.
 
 ## Removed in 0.3.0
 

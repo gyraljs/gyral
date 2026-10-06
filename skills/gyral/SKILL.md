@@ -10,7 +10,7 @@ Gyral's own view layer (`html`, `css`, `each` from `@gyral/core`; no Lit).
 Every component is one loop: **intent** parses DOM events into typed messages, **update** is
 one pure reducer per message, **view** is a pure function of state. Side effects are
 **commands** (data) that drivers perform. Pages render on the server with Declarative Shadow
-DOM and hydrate in place (being rewritten for 0.3: see `references/ssr.md`). Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
+DOM and hydrate in place (see `references/ssr.md`). Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
 
 ## The shape of every component
 

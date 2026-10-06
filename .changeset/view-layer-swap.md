@@ -13,5 +13,7 @@ Props are declared with `prop.string/number/boolean/json/value` over Standard Sc
 `raw`, `defineHook`, `prop` and the hooks `invalid` and `labelledBy`; `svg`, `classMap`,
 `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`, `liveBoolean`, `textarea()` and
 `directive`/`ElementDirective` are gone, and `lit` is no longer a peer dependency. Server
-rendering is being rebuilt on the view layer: until then `@gyral/ssr`'s rendering throws and a
-server-rendered component resumes from its seed and renders fresh.
+rendering is Gyral's own (`@gyral/core/server`), and hydration is built into core: each
+server-rendered component adopts its DOM in place, on its own (no `@gyral/ssr/hydrate`
+needed); mismatches throw `HydrationMismatch` in development and re-render just that
+component in production. Islands may sit anywhere.

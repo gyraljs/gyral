@@ -172,3 +172,11 @@ The Gyral server renderer writes a light component's view as its children direct
 unwrap, no hidden markers), still marking the host `data-gyral-light`. Children written inside
 a light component's tag by its parent are now a server error (whitespace-only children are
 dropped), since the component owns its children. See view/06-server.md "Components".
+
+## Addendum: hydrating light hosts in core (gyral-g1r.10, 2026-10-06)
+
+A light host hydrates its own children in place with core's walk (view/07-hydration.md): no
+markers to reveal, no hydrate import, no dependence on evaluation order. `data-gyral-light`
+stays on the host after hydration; a parent's walk uses it to skip the host's content whole,
+so a light child may hydrate before or after its parent. A parent template that gives a light
+host children (other than whitespace) is a hydration mismatch, as it is a server error.

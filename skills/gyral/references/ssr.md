@@ -1,11 +1,10 @@
 # Server rendering and hydration
 
-> **0.3 status:** server rendering is Gyral's own (`@gyral/core/server`, spec:
+> **0.3:** server rendering is Gyral's own (`@gyral/core/server`, spec:
 > docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
-> `renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration in core
-> (view/07-hydration.md) is still in progress: until it lands, a host that the browser finds
-> with a `data-gyral-seed` resumes its state and props from the seed, then renders fresh
-> instead of hydrating. Write components by the rules below; they are what hydration relies on.
+> `renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration is built into
+> core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
+> place, on its own, with no hydration import.
 
 The server renders the same components to HTML: shadow components as Declarative Shadow DOM
 (`<template shadowrootmode>` with the component's CSS in a `<style>`), light components
@@ -31,8 +30,10 @@ Pages work before JavaScript loads.
    plain elements. Hydration never overwrites what the user typed before scripts ran.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
-   first and switch in the `Hydrated` reducer. A mismatch throws in development and, in
-   production, re-renders only that component.
+   first and switch in the `Hydrated` reducer. A mismatch throws `HydrationMismatch` in
+   development (logged with the tag, template location, DOM path, expected and found; the
+   component keeps the server's DOM) and, in production, warns and re-renders only that
+   component. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
    components' `<style>` elements are allowed by hash, so `style-src` needs no
    `'unsafe-inline'`: see "Content-Security-Policy" below.
@@ -157,6 +158,7 @@ export const server = await productionServer({ distDir: dist, createApp });
 instance hydrate when the browser is idle, when it scrolls into view, or on first
 pointer/focus (the server writes `defer-hydration` and `data-gyral-hydrate`). Use it for
 below-the-fold or rarely used widgets; islands may sit anywhere, also inside other components.
+Only the island waits: components nested in its view hydrate on their own at load.
 Client-only renders are unaffected.
 
 ## Light DOM pages

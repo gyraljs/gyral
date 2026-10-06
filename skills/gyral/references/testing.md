@@ -148,8 +148,10 @@ body)`, `failNext()`.
 
 ## SSR tests
 
-> **0.3 status:** hydration in core is still in progress (ssr.md); these helpers keep their
-> API. `hydrated()` releases islands if asked, then awaits `settled()`.
+`hydrated(page, { releaseIslands? })` releases islands if asked, then awaits `settled()`; it
+fails on console errors and warnings (a hydration mismatch is one) and on elements that never
+upgraded. Run SSR tests against production builds of core too: mismatches are reported
+differently there (a warning and a fresh render instead of an error).
 
 ```ts
 import { expect, it } from 'vitest';

@@ -67,6 +67,12 @@ and remove the server's `<style>` element. No paint happens between the two, so 
 flashes. Afterwards a server-rendered component is identical to a client-rendered one: one
 shared sheet and no duplicated style nodes.
 
+**Phase 5:** core's `hydrateRoot` does both right before the walk, in the host's first render
+(the `<style>` is the root's first child when the component has CSS). Until then (and for a
+pending island) the server's `<style>` styles the root on its own; the sheet is not adopted at
+connect, so styles never apply twice. A production mismatch clears the root and renders fresh
+with the sheet already adopted.
+
 ## Future
 
 - CSS `@scope` (newly available 2026-03-24, widely about 2028-09) would let light-DOM components
