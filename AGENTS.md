@@ -32,22 +32,23 @@ First run needs `pnpm exec playwright install chromium`.
 
 ## Where things are
 
-| Path                                                                                             | Contents                                                                      |
-| ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                    |
-| `packages/core`                                                                                  | `define()`, intent parsing, MVI runtime (`@gyral/core`)                       |
-| `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                |
-| `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                          |
-| `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                               |
-| [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                  |
-| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler              |
-| [docs/references/releasing.md](docs/references/releasing.md)                                     | npm release runbook: placeholders, trusted publishing, `release.yml`          |
-| [docs/references/capability-audit-2026-10-05.md](docs/references/capability-audit-2026-10-05.md) | Capability audit: docs gaps, feature gaps, spikes (epic gyral-1zd)            |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                      |
-| [skills/gyral/](skills/gyral/SKILL.md)                                                           | Agent skill for Gyral users; update it with API changes (check-skill)         |
-| [packages/mcp/](packages/mcp/README.md)                                                          | `@gyral/mcp` MCP server; `pnpm mcp:refresh` updates its docs snapshot         |
-| `.claude-plugin/marketplace.json`                                                                | Claude Code plugin marketplace serving the skill (`claude plugin validate .`) |
-| `archive/` (gitignored)                                                                          | Old Cycle.js source. Reference only; never import or copy-paste blindly       |
+| Path                                                                                             | Contents                                                                       |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                     |
+| `packages/core`                                                                                  | `define()`, intent parsing, MVI runtime (`@gyral/core`)                        |
+| `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                 |
+| `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                           |
+| `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                                |
+| [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                   |
+| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler               |
+| [docs/references/releasing.md](docs/references/releasing.md)                                     | npm release runbook: placeholders, trusted publishing, `release.yml`           |
+| [docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md)               | 0.2 → 0.3 upgrade: every breaking change, before/after (ts blocks typechecked) |
+| [docs/references/capability-audit-2026-10-05.md](docs/references/capability-audit-2026-10-05.md) | Capability audit: docs gaps, feature gaps, spikes (epic gyral-1zd)             |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                       |
+| [skills/gyral/](skills/gyral/SKILL.md)                                                           | Agent skill for Gyral users; update it with API changes (check-skill)          |
+| [packages/mcp/](packages/mcp/README.md)                                                          | `@gyral/mcp` MCP server; `pnpm mcp:refresh` updates its docs snapshot          |
+| `.claude-plugin/marketplace.json`                                                                | Claude Code plugin marketplace serving the skill (`claude plugin validate .`)  |
+| `archive/` (gitignored)                                                                          | Old Cycle.js source. Reference only; never import or copy-paste blindly        |
 
 ## Design docs to read before changing…
 

@@ -196,7 +196,8 @@ What further cuts would cost (largest first):
   3. Size: `view/` and smallest-app budgets met.
   4. Speed: no benchmark operation slower than 0.2.0; better geomean.
   5. Clean room: provenance check clean; no `lit` in any dependency tree.
-- Release **0.3.0** with a short "0.2 → 0.3" note.
+- Release **0.3.0** with a short "0.2 → 0.3" note:
+  [migrating-0.2-to-0.3.md](../references/migrating-0.2-to-0.3.md) (Phase 7).
 
 ## Consequences
 

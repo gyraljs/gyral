@@ -1,7 +1,8 @@
-// Typechecks every ```ts block in the Gyral agent skill (skills/gyral) against the workspace
-// packages, so the skill can't drift from the real API (gyral-7se.1). Each block is compiled as
-// its own module: write complete snippets (imports included), or use a ```text fence for
-// fragments that are not meant to compile.
+// Typechecks every ```ts block in the Gyral agent skill (skills/gyral) and in the user-facing
+// references listed in DOCS against the workspace packages, so they can't drift from the real
+// API (gyral-7se.1). Each block is compiled as its own module: write complete snippets (imports
+// included), or use a ```text fence for fragments that are not meant to compile (0.2 "before"
+// code in the migration note).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -10,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const skillDir = join(root, 'skills', 'gyral');
 const outDir = join(root, '.skill-check');
+
+/** User-facing references whose ts blocks are checked too. */
+export const DOCS = ['docs/references/migrating-0.2-to-0.3.md'];
 
 /** Every `ts`/`typescript` fenced block in a markdown file, with its line number. */
 export function tsBlocks(markdown) {
@@ -54,9 +58,9 @@ function main() {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
   const sources = [];
-  for (const file of markdownFiles(skillDir)) {
+  for (const file of [...markdownFiles(skillDir), ...DOCS.map((doc) => join(root, doc))]) {
     for (const block of tsBlocks(readFileSync(file, 'utf8'))) {
-      const name = `${relative(skillDir, file).replace(/[^a-z0-9]+/gi, '_')}_L${String(block.line)}.ts`;
+      const name = `${relative(root, file).replace(/[^a-z0-9]+/gi, '_')}_L${String(block.line)}.ts`;
       writeFileSync(join(outDir, name), `${block.code}\n`);
       sources.push({ name, origin: `${relative(root, file)}:${String(block.line)}` });
     }
@@ -86,7 +90,7 @@ function main() {
       (text, s) => text.replaceAll(`.skill-check/${s.name}`, `${s.origin} (block)`),
       output,
     );
-    console.error(`check-skill: skill code blocks don't typecheck:\n${named}`);
+    console.error(`check-skill: skill or reference code blocks don't typecheck:\n${named}`);
     process.exitCode = 1;
     return;
   }
