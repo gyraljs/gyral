@@ -52,6 +52,7 @@ describe('element hooks (view/02 "Element hooks")', () => {
         ${each(
           [1, 2],
           (n) => n,
+          // eslint-disable-next-line gyral/each-row-purity -- a test-local hook (apps define hooks at module level)
           (n) => html`<i ${probe(`row${String(n)}`)}>${n}</i>`,
         )}
       </div>`,

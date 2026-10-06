@@ -19,7 +19,8 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./vite": "./src/vite.ts",
-    "./compiled": "./src/view/compiled.ts"
+    "./compiled": "./src/view/compiled.ts",
+    "./eslint": "./src/eslint/index.ts"
   },
   "imports": {
     "#devtools": {
@@ -52,6 +53,10 @@
       "./compiled": {
         "types": "./dist/view/compiled.d.ts",
         "default": "./dist/view/compiled.js"
+      },
+      "./eslint": {
+        "types": "./dist/eslint/index.d.ts",
+        "default": "./dist/eslint/index.js"
       }
     },
     "imports": {
@@ -84,10 +89,14 @@
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
+    "eslint": "^9.0.0 || ^10.0.0",
     "parse5": "^7.0.0 || ^8.0.0",
     "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
+    "eslint": {
+      "optional": true
+    },
     "parse5": {
       "optional": true
     },
@@ -96,6 +105,7 @@
     }
   },
   "devDependencies": {
+    "eslint": "10.12.0",
     "lit": "3.3.3",
     "parse5": "8.0.1",
     "vite": "8.3.2"

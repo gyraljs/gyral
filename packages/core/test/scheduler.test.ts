@@ -115,6 +115,7 @@ describe('the flush', () => {
   it('shares the each() dev-check budget between all hosts of one flush', async () => {
     let rows = 0;
     const Row = (n: number) => {
+      // eslint-disable-next-line gyral/each-row-purity -- counts row renders on purpose
       rows += 1;
       return html`<li>${n}</li>`;
     };

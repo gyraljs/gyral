@@ -30,13 +30,23 @@ Compute derived values in plain helper functions of state.
   need appears; inline `<svg>` inside `html` works.)
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
   time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
+- `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages, and
+  flags `each` rows that read the view's scope (`gyral/each-row-purity`). Enable it once:
+
+```ts
+// eslint.config.ts (eslint.config.js works the same)
+import gyral from '@gyral/core/eslint';
+
+export default [{ files: ['src/**/*.ts'], ...gyral.configs.recommended }];
+```
 
 ## Lists: `each` with pure rows
 
 `each(items, key, row, pick?)` is the only keyed list. A row re-renders only when its item
 object or its `pick` result changes, so **a row may read only its parameters, module-level
 bindings and imports**. Anything from the view's scope (`s`, `i`, `ctx`) goes through `pick`
-and arrives as the row's second argument. Plain arrays still render, by position.
+and arrives as the row's second argument (the ESLint rule says which name to move). Plain
+arrays still render, by position.
 
 ```ts
 import { define, each, html } from '@gyral/core';

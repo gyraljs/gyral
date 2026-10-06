@@ -4,6 +4,11 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import compat from 'eslint-plugin-compat';
 import globals from 'globals';
+// Gyral's own ESLint plugin, straight from its TypeScript source (no build step).
+import './scripts/lib/load-ts.mjs';
+
+/** @type {import('./packages/core/src/eslint/index.ts').GyralPlugin} */
+const gyral = (await import('./packages/core/src/eslint/index.ts')).default;
 
 const EFFECT_BOUNDARY =
   'Gyral has no Effect dependency since 0.2.0 (docs/design-docs/0015-runtime-size-spike.md). ' +
@@ -57,21 +62,21 @@ export default tseslint.config(
     },
     rules: {
       'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
-      'no-restricted-syntax': [
-        'error',
-        {
-          // Form state has one spelling (view/02-bindings.md "Live form state", rule 4 of
-          // view/09-template-rules.md): property bindings are dropped on the server.
-          selector:
-            'TaggedTemplateExpression[tag.name=/^(html|serverHtml)$/] TemplateElement[value.raw=/\\.(checked|selected|open|indeterminate|defaultChecked)=$/]',
-          message:
-            'Bind boolean form state with ?checked=${x} (also ?selected, ?open, ?indeterminate; live form state, docs/design-docs/view/02-bindings.md), not a .checked property binding: the server drops property bindings on plain elements (rule 4, view/09-template-rules.md).',
-        },
-      ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
       'no-restricted-imports': ['error', effectImports],
     },
+  },
+  {
+    // The template rules (view/09-template-rules.md) and pure each() rows (view/03-lists.md),
+    // from @gyral/core/eslint: the same checks as the template compiler and the dev runtime.
+    files: [
+      'packages/*/src/**/*.ts',
+      'packages/*/test/**/*.ts',
+      'packages/*/bench/**/*.ts',
+      'examples/*/{src,server,test}/**/*.ts',
+    ],
+    ...gyral.configs.recommended,
   },
   {
     // Layer 0: @gyral/core may not depend on any other Gyral package (ARCHITECTURE.md).

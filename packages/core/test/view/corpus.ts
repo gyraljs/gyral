@@ -9,6 +9,8 @@ const sources = import.meta.glob<string>(
     '!../../../core/{src,test}/view/**',
     // The compiler's sources and tests hold templates inside strings (messages, fixture apps).
     '!../../../core/{src,test}/compiler/**',
+    // So do the ESLint plugin's (messages, deliberately broken templates in RuleTester cases).
+    '!../../../core/{src,test}/eslint/**',
     // Written and deleted by scripts/test/eslint-guardrails.test.mjs while tests run.
     '!../../../*/src/**/__lint_fixture_*',
     '!../../../create-gyral/**',

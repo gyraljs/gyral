@@ -19,10 +19,11 @@ export const CORE_ALLOWED_DEPENDENCIES = ['@standard-schema/spec'];
 /** @gyral/core's runtime peer dependencies: none since the view layer (ADR 0018). */
 export const CORE_PEERS = [];
 /**
- * Optional peers that only `@gyral/core/vite` loads, at build time (view/01-templates.md
- * "Compiled"): never imported by browser or server code, so they are no runtime dependency.
+ * Optional peers that only core's build-time tools load: `@gyral/core/vite` (parse5, vite;
+ * view/01-templates.md "Compiled") and `@gyral/core/eslint` (eslint; view/09-template-rules.md).
+ * Never imported by browser or server code, so they are no runtime dependency.
  */
-export const CORE_BUILD_TIME_PEERS = ['parse5', 'vite'];
+export const CORE_BUILD_TIME_PEERS = ['eslint', 'parse5', 'vite'];
 
 /**
  * Dependency rules (docs/design-docs/0015-runtime-size-spike.md): no package depends on
@@ -58,15 +59,15 @@ export function checkDependencies(file, manifest) {
       if (!CORE_BUILD_TIME_PEERS.includes(dep)) {
         errors.push(
           `${file}: @gyral/core's only peers are the build-time-only ` +
-            `${CORE_BUILD_TIME_PEERS.join(', ')}. Remove the "${dep}" peer, or, if only the ` +
-            `Vite compiler loads it at build time, add it to CORE_BUILD_TIME_PEERS ` +
-            `(scripts/lib/invariants.mjs) with a reason.`,
+            `${CORE_BUILD_TIME_PEERS.join(', ')}. Remove the "${dep}" peer, or, if only a ` +
+            `build-time tool (@gyral/core/vite or @gyral/core/eslint) loads it, add it to ` +
+            `CORE_BUILD_TIME_PEERS (scripts/lib/invariants.mjs) with a reason.`,
         );
       } else if (manifest.peerDependenciesMeta?.[dep]?.optional !== true) {
         errors.push(
           `${file}: the build-time peer "${dep}" must be optional ` +
             `(peerDependenciesMeta: { "${dep}": { "optional": true } }): apps that never ` +
-            `use @gyral/core/vite don't install it.`,
+            `use @gyral/core/vite or @gyral/core/eslint don't install it.`,
         );
       }
     }

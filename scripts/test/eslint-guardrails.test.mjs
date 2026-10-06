@@ -59,6 +59,15 @@ const FIXTURES = {
       '',
     ].join('\n'),
   ],
+  impureRow: [
+    'packages/http/src/__lint_fixture_row__.ts',
+    [
+      "import { each, html } from '@gyral/core';",
+      'export const view = (s: { readonly rows: readonly number[]; readonly selected: number }) =>',
+      '  html`<ul>${each(s.rows, (n) => n, (n) => html`<li>${n === s.selected}</li>`)}</ul>`;',
+      '',
+    ].join('\n'),
+  ],
 };
 
 /** @type {Record<string, import('eslint').Linter.LintMessage[]>} */
@@ -145,10 +154,18 @@ describe('ESLint guardrails', () => {
     expect(messages[0]).toContain('view/server/ may import only view/');
   });
 
-  it('rejects .checked property bindings and accepts ?checked (live form state)', () => {
-    const messages = results.checked?.filter((m) => m.ruleId === 'no-restricted-syntax') ?? [];
+  it('rejects .checked property bindings and accepts ?checked (gyral/template, rule 4)', () => {
+    const messages = results.checked?.filter((m) => m.ruleId === 'gyral/template') ?? [];
     expect(messages).toHaveLength(1);
     expect(messages[0]?.line).toBe(2);
-    expect(messages[0]?.message).toContain('?checked=${x}');
+    expect(messages[0]?.message).toContain('[gyral template rule 4]');
+    expect(messages[0]?.message).toContain('?checked=${…}');
+  });
+
+  it("checks each() rows in the repo's own code (gyral/each-row-purity)", () => {
+    const messages = ruleMessages('impureRow', 'gyral/each-row-purity');
+    expect(messages).toEqual([
+      '`row` reads `s.selected`; return it from `pick` and take it as the second argument (view/03-lists.md).',
+    ]);
   });
 });

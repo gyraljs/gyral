@@ -39,8 +39,9 @@ try {
 import { renderToString } from '@gyral/ssr';
 import { html } from 'lit';
 const entries = [
-  '@gyral/core', '@gyral/core/vite', '@gyral/http', '@gyral/http/testing', '@gyral/router',
-  '@gyral/time', '@gyral/ssr/static', '@gyral/testing', '@gyral/testing/arbitraries',
+  '@gyral/core', '@gyral/core/vite', '@gyral/core/eslint', '@gyral/http', '@gyral/http/testing',
+  '@gyral/router', '@gyral/time', '@gyral/ssr/static', '@gyral/testing',
+  '@gyral/testing/arbitraries',
 ];
 for (const entry of entries) {
   const mod = await import(entry);

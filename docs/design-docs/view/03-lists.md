@@ -54,10 +54,12 @@ In select-row, 998 of 1,000 rows cost one comparison each; only the old and new 
 
 Skipping is only correct if a row's output depends on nothing but `(item, picked)`. Two guards:
 
-1. **ESLint rule** (`@gyral/core/eslint`, works without Vite): the `row` function may reference
-   only its parameters, module-level bindings and imports. A reference to anything in the view's
-   scope (`s`, `i`, `ctx`, locals) is an error: "`row` reads `s.selected`; return it from `pick`
-   and take it as the second argument."
+1. **ESLint rule** (`gyral/each-row-purity` in `@gyral/core/eslint`, works without Vite; 09
+   "ESLint"): the `row` function may reference only its parameters, its own locals,
+   module-level bindings and imports. A reference to anything in the view's scope (`s`, `i`,
+   `ctx`, locals) is an error: "`row` reads `s.selected`; return it from `pick` and take it as
+   the second argument." A helper function declared beside the row is followed instead of
+   flagged: calling it is fine when it, too, reads only those.
 2. **Development check:** skipped rows are re-evaluated anyway and their template results
    compared with the committed ones (template id and values, recursively). A difference warns
    once per call site: "a row depends on something not passed through `item` or `pick`". It

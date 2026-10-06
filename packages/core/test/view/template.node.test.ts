@@ -49,6 +49,7 @@ describe('template results (view/01)', () => {
   });
 
   it('throw the template rules on first use', () => {
+    // eslint-disable-next-line gyral/template -- breaks rule 1 on purpose: the runtime must throw
     expect(() => templateOf(html`<button @click=${() => 1}></button>`)).toThrow(/rule 1/);
   });
 });
