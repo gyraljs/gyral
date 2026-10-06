@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html } from '@gyral/core';
-import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+import { renderPage, type CspOptions } from '@gyral/ssr';
 import '../src/home-page.js';
 
 export interface AppOptions {
@@ -24,13 +24,14 @@ export const staticPaths: readonly string[] = ['/'];
 
 /**
  * A Content-Security-Policy whose style-src allows the page's and the components' <style>
- * elements by hash, so no 'unsafe-inline' is needed. Hashes are cached after the first call.
+ * elements by hash, so no 'unsafe-inline' is needed. renderPage builds it when the page
+ * renders (every component imported by then); add your other directives here.
  */
-const csp = () => contentSecurityPolicy({ styles });
+const csp: CspOptions = {};
 
 export function createApp(options: AppOptions): Hono {
   const app = new Hono();
-  app.get('/', async () =>
+  app.get('/', () =>
     renderPage({
       title: 'Gyral app',
       description: 'A Gyral app rendered on the server and hydrated in the browser.',
@@ -38,10 +39,10 @@ export function createApp(options: AppOptions): Hono {
       body: html`<app-home></app-home>`,
       scripts: [options.clientEntry],
       modulepreload: options.modulepreload ?? [],
-      csp: await csp(),
+      csp,
     }),
   );
-  app.notFound(async () =>
+  app.notFound(() =>
     renderPage(
       {
         title: 'Not found',
@@ -50,7 +51,7 @@ export function createApp(options: AppOptions): Hono {
           <h1>Not found</h1>
           <p><a href="/">Go home</a></p>
         </main>`,
-        csp: await csp(),
+        csp,
       },
       { status: 404 },
     ),

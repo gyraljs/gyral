@@ -45,7 +45,7 @@ Everything a view needs comes from `@gyral/core`:
 
 New exports: `each`, `raw`, `defineHook`, `prop`, `intents`, `settled`, `HydrationMismatch` and
 their types from `@gyral/core`; the entry points `@gyral/core/server`, `@gyral/core/eslint` and
-`@gyral/core/compiled` (used by compiled output); `contentSecurityPolicy` and
+`@gyral/core/compiled` (used by compiled output); `contentSecurityPolicy`, `renderPage({ csp })` and
 `page({ modulepreload })` in `@gyral/ssr`; `clientAssets` and `clientAssetsFromManifest` in
 `@gyral/ssr/static`; the `renderOnFrame` spec field (bursty sources render once per frame).
 
@@ -300,30 +300,31 @@ dev-mode console banner.
 
 ## Server rendering
 
-Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime with
-WebCrypto. `@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`,
+Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime. `@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`,
 `formAction` and `@gyral/ssr/static`, and writes every template with core's `html`:
 
 ```ts
 import { html } from '@gyral/core';
-import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+import { renderPage } from '@gyral/ssr';
 
 const styles = ':root { color-scheme: light dark; }';
 
-export async function home(): Promise<Response> {
+export function home(): Response {
   return renderPage({
     title: 'Home',
     styles,
     head: html`<link rel="icon" href="/favicon.svg" />`, // was serverHtml`…`
     body: html`<my-home></my-home>`,
     scripts: ['/src/entry-client.ts'],
-    csp: await contentSecurityPolicy({ styles, directives: { 'default-src': "'self'" } }),
+    csp: { directives: { 'default-src': "'self'" } }, // built when the page renders
   });
 }
 ```
 
 - **CSP helper:** shadow components' `<style>` elements are allowed by hash, so `style-src`
-  needs no `'unsafe-inline'` any more.
+  needs no `'unsafe-inline'` any more. `renderPage({ csp: { directives } })` builds the header
+  when the page renders; `contentSecurityPolicy()` builds it ahead of time, for the
+  components registered by then.
 - **Preloading:** in production, read the entry and its preloads from the Vite manifest with
   `clientAssetsFromManifest()` and pass `modulepreload` to `renderPage`
   ([ssr reference](../../skills/gyral/references/ssr.md)); `productionServer` hands

@@ -12,6 +12,7 @@ import {
   type AnyStoreInstance,
   type ChildValue,
 } from '@gyral/core';
+import type { CspOptions } from './csp.js';
 
 export interface RenderOptions {
   /**
@@ -50,10 +51,13 @@ export interface PageOptions extends RenderOptions {
    */
   readonly modulepreload?: readonly string[];
   /**
-   * `renderPage` only: a `Content-Security-Policy` header value, usually from
-   * `await contentSecurityPolicy({ styles })`, which allows the page's `<style>` elements by hash.
+   * `renderPage` only: the `Content-Security-Policy` header. Pass `contentSecurityPolicy()`'s
+   * options (`{ directives }`; the page's `styles` are included) to build it when the page
+   * renders, with every component registered by then and the `<style>` elements allowed by
+   * hash; or a header value, e.g. from `await contentSecurityPolicy({ styles })` (development
+   * warns when it lacks a registered component's hash).
    */
-  readonly csp?: string;
+  readonly csp?: string | CspOptions;
 }
 
 /** The page-level store seed the client restores before components hydrate (ADR 0013). */

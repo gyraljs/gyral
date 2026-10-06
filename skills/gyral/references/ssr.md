@@ -71,25 +71,30 @@ anywhere in a view is an error: load data first.
 
 ## Content-Security-Policy
 
-`contentSecurityPolicy({ styles?, directives? })` returns a header value whose `style-src`
-lists the SHA-256 hash of every shadow component's `<style>` and of the page's global
-`styles`. Pass it to `renderPage({ …, csp })`; hashes are cached, so computing it per request
-is cheap:
+Pass `csp: { directives }` to `renderPage`: it sets a `Content-Security-Policy` header whose
+`style-src` lists the SHA-256 hash of every shadow component's `<style>` and of the page's
+`styles`, built when the page renders (so every component the page uses is registered).
+Hashes are cached, so this is cheap per request:
 
 ```ts
 import { html } from '@gyral/core';
-import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+import { renderPage } from '@gyral/ssr';
 
 const styles = ':root { color-scheme: light dark; }';
 
-export async function home(): Promise<Response> {
-  const csp = await contentSecurityPolicy({
+export function home(): Response {
+  return renderPage({
+    title: 'Home',
     styles,
-    directives: { 'default-src': "'self'", 'script-src': "'self'" },
+    body: html`<my-home></my-home>`,
+    csp: { directives: { 'default-src': "'self'", 'script-src': "'self'" } },
   });
-  return renderPage({ title: 'Home', styles, body: html`<my-home></my-home>`, csp });
 }
 ```
+
+`await contentSecurityPolicy({ styles, directives })` returns the same header ahead of time,
+for the components registered when it is called: import them first (in development
+`renderPage` warns when a header it is given lacks a registered component's hash).
 
 Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
 CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()`.

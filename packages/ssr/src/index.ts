@@ -3,7 +3,8 @@
 // Rendering is `@gyral/core/server`'s; this package adds the page shell, streaming with the
 // request's store scope (ADR 0013), static generation and form actions.
 import { StoreRegistry, withStoreScope, type ChildValue } from '@gyral/core';
-import { render, renderToString as renderString } from '@gyral/core/server';
+import { development, render, renderToString as renderString } from '@gyral/core/server';
+import { checkPolicy, policyAtRender } from './csp.js';
 import { page, type PageOptions, type RenderOptions } from './page.js';
 
 export { page, type PageOptions, type RenderOptions } from './page.js';
@@ -52,12 +53,19 @@ export function renderToStream(
   });
 }
 
-/** A streaming HTML `Response` for a full page. */
+/**
+ * A streaming HTML `Response` for a full page. `csp` sets the `Content-Security-Policy`
+ * header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
+ * component registered by the time the page renders (and the page's `styles`).
+ */
 export function renderPage(options: PageOptions, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
   if (!headers.has('content-type')) headers.set('content-type', 'text/html; charset=utf-8');
-  if (options.csp !== undefined && !headers.has('content-security-policy')) {
-    headers.set('content-security-policy', options.csp);
+  const { csp } = options;
+  if (csp !== undefined && !headers.has('content-security-policy')) {
+    const header = typeof csp === 'string' ? csp : policyAtRender(csp, options.styles);
+    if (typeof csp === 'string' && (options.dev ?? development)) checkPolicy(csp);
+    headers.set('content-security-policy', header);
   }
   return new Response(renderToStream(page(options), options), { ...init, headers });
 }

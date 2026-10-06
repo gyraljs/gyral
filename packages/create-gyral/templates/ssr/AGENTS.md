@@ -22,7 +22,7 @@ This file tells coding agents how the project works.
 - `src/entry-client.ts`: browser entry: imports the components (hydration is built in).
 - `server/app.ts`: renders each page with `renderPage`. Add a route there, and its path to
   `staticPaths` to prerender it. `server/app.test.ts` tests the rendered HTML. Pages send a
-  `Content-Security-Policy` whose `style-src` lists style hashes (`contentSecurityPolicy`):
+  `Content-Security-Policy` whose `style-src` lists style hashes (`renderPage({ csp })`):
   put CSS in `src/styles.css` or a component's `styles`, not in `style="…"` attributes.
 
 ## Gyral rules (follow them in every change)

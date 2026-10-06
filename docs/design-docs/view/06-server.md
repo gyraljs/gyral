@@ -12,7 +12,7 @@ and no VM: the renderer walks template objects (01) and writes strings.
 - No `@lit-labs/ssr`, no DOM shim, no parse5 at runtime.
 - Light DOM and Declarative Shadow DOM are both native output modes, so ADR 0014's stream filter
   and hidden markers go away.
-- Runtime-agnostic: no Node-only APIs (WebCrypto, not `node:crypto`; no `Buffer`), so it runs in
+- Runtime-agnostic: no Node-only APIs (no `node:crypto`, no `Buffer`), so it runs in
   Node, Deno and Workers alike.
 
 ## API (`@gyral/core/server`)
@@ -22,6 +22,9 @@ render(value: ChildValue, options?: { dev?: boolean }): Iterable<string>; // syn
 renderToString(value: ChildValue, options?: { dev?: boolean }): string;
 styleHashes(): Promise<readonly string[]>; // 'sha256-…' for every registered component (08)
 styleHash(text: string): Promise<string>; // the same hash for any <style> text (Phase 4)
+styleHashSync(text: string): string; // the same, synchronously (2026-10-06)
+componentStyles(): ReadonlyMap<string, string>; // tag → <style> text of registered components
+development: boolean; // core resolved with the `development` condition (`dev`'s default)
 StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope (Phase 4)
 ```
 
@@ -189,27 +192,38 @@ place:
 
 ## CSP
 
-`styleHashes()` hashes each registered component's CSS text (SHA-256, WebCrypto) once. The page
+`styleHashes()` hashes each registered component's CSS text (SHA-256) once. The page
 helper in `@gyral/ssr` adds them to the `Content-Security-Policy` header's `style-src`, so DSD
 `<style>` elements work without `'unsafe-inline'` (08).
 
-**Phase 4, the API:** hashing is asynchronous (WebCrypto) and `renderPage` returns its
-`Response` synchronously, so the policy is built first and passed in:
+**The API (2026-10-06, replacing Phase 4's build-it-first):** a policy built before a
+component's module was imported silently lacked that component's hash, and the browser
+blocked its styles (found migrating gyral-shop). So `renderPage` builds the header itself,
+when the page renders, after every component the page uses is registered:
 
 ```ts
-const csp = await contentSecurityPolicy({ styles, directives: { 'default-src': "'self'" } });
-return renderPage({ title, body, styles, csp }); // sets Content-Security-Policy: csp
+return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'self'" } } });
 ```
 
-`contentSecurityPolicy({ styles?, directives? })` (`@gyral/ssr`) returns the header value:
-the given directives, and `style-src` = the given one (default `'self'`) plus the hashes of
-every registered shadow component's `<style>` and of each `page({ styles })` entry (as
-written, `</style` escaped). Hashes are cached per text, so building it per request is
-cheap. `style` attributes and hand-written `<style>` elements in `head` are not covered.
-Verified (Phase 4) with a real header in Chromium 153, Firefox 155 and WebKit 26.6: a hashed
-`<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
-constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is
-a test (`core/test/view/server-csp.test.ts`).
+- `csp` takes `contentSecurityPolicy()`'s options. The header is the given directives, and
+  `style-src` = the given one (default `'self'`) plus the hashes of every registered shadow
+  component's `<style>` and of each `page({ styles })` entry (as written, `</style` escaped);
+  `styles` defaults to the page's own. It is cached per options object until another
+  component registers.
+- Hashing is synchronous for this (`styleHashSync`, a small SHA-256 in JavaScript,
+  `view/server/sha256.ts`, checked against `node:crypto`): WebCrypto's `digest` is
+  asynchronous and `renderPage` returns its `Response` synchronously. Hashes are cached per
+  text, so building the header per request is cheap.
+- `contentSecurityPolicy({ styles?, directives? })` stays for static use (a header set by
+  something else, `prerender`): it returns the same header for the components registered
+  when it is called. A string `csp` is set as is; in development `renderPage` warns, once per
+  component, when a header that allows styles by hash (and not `'unsafe-inline'`) lacks the
+  hash of a registered component.
+- `style` attributes and hand-written `<style>` elements in `head` are not covered.
+  Verified (Phase 4) with a real header in Chromium 153, Firefox 155 and WebKit 26.6: a hashed
+  `<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
+  constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is
+  a test (`core/test/view/server-csp.test.ts`).
 
 ## Conformance (Phase 4)
 
@@ -227,9 +241,9 @@ within one template.
 
 ## Native primitives
 
-| Need                  | Primitive                            | Baseline                   |
-| --------------------- | ------------------------------------ | -------------------------- |
-| Shadow roots in HTML  | `<template shadowrootmode="open">`   | widely (since 2026-08-20)  |
-| Style hashes          | `crypto.subtle.digest('SHA-256', …)` | WebCrypto, server runtimes |
-| CSP for inline styles | `style-src 'sha256-…'`               | widely (CSP)               |
-| Streaming             | `ReadableStream` (in `@gyral/ssr`)   | server runtimes            |
+| Need                  | Primitive                           | Baseline                  |
+| --------------------- | ----------------------------------- | ------------------------- |
+| Shadow roots in HTML  | `<template shadowrootmode="open">`  | widely (since 2026-08-20) |
+| Style hashes          | SHA-256 in JavaScript (synchronous) | any runtime               |
+| CSP for inline styles | `style-src 'sha256-…'`              | widely (CSP)              |
+| Streaming             | `ReadableStream` (in `@gyral/ssr`)  | server runtimes           |

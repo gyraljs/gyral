@@ -50,7 +50,8 @@ Declarative shadow roots can't reference a shared sheet yet. A declarative form 
   repeated identical blocks well. The shop has 3 shadow components and gyral.dev 2, so the cost
   is small.
 - `styleHashes()` (06) returns a SHA-256 hash for each registered component's CSS. The
-  `@gyral/ssr` page helper puts them in `Content-Security-Policy: style-src …`, so a strict CSP
+  `@gyral/ssr` page helper puts them in `Content-Security-Policy: style-src …` (built when the
+  page renders, `renderPage({ csp: { directives } })`, 06 "CSP"), so a strict CSP
   needs no `'unsafe-inline'`. ADR 0012's note that DSD styles require `'unsafe-inline'` is
   superseded. **Verified in Phase 4** (Chromium 153, Firefox 155, WebKit 26.6, real
   `Content-Security-Policy` header): hashes apply to `<style>` inside declarative shadow roots,

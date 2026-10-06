@@ -4,17 +4,25 @@
 // `<gyral-stores>` provider.
 import { registerRecordedSpecs } from './server-component.js';
 import { storesProvider } from './stores-provider.js';
-import { registerServerProvider, type ChildValue } from './view/index.js';
+import { DEV, registerServerProvider, type ChildValue } from './view/index.js';
 import {
+  componentStyles as styles,
   render as renderChunks,
   renderToString as renderString,
   styleHash,
   styleHashes as hashes,
+  styleHashSync,
   type ServerRenderOptions,
 } from './view/server/index.js';
 
 export type { ServerRenderOptions };
-export { styleHash };
+export { styleHash, styleHashSync };
+
+/**
+ * Whether `@gyral/core` resolved with the `development` condition (Vite's dev server and its
+ * SSR, Vitest): the default of `render`'s `dev` option (view/06-server.md "Development markers").
+ */
+export const development: boolean = DEV;
 export { StoreRegistry, withStoreScope } from './store-scope.js';
 
 function prepare(): void {
@@ -45,4 +53,13 @@ export function renderToString(value: ChildValue, options?: ServerRenderOptions)
 export function styleHashes(): Promise<readonly string[]> {
   prepare();
   return hashes();
+}
+
+/**
+ * Tag → declarative-shadow-root `<style>` text of every registered shadow component with CSS
+ * (recorded specs registered first), for checking or building a CSP at render time.
+ */
+export function componentStyles(): ReadonlyMap<string, string> {
+  prepare();
+  return styles();
 }

@@ -1,10 +1,11 @@
 // The server renderer (view/06-server.md "API"): synchronous, chunked, runtime-agnostic (no
-// DOM, no Node-only APIs: WebCrypto for the style hashes). `@gyral/core/server` wraps these,
+// DOM, no Node-only APIs: a JavaScript SHA-256 for the style hashes). `@gyral/core/server` wraps these,
 // registering recorded specs first; code outside view/ may import only this module of view/server/.
 import { DEV } from '../flags.js';
 import { serverComponents } from '../registry.js';
 import type { ChildValue } from '../render/values.js';
 import { expand, styleText } from './component.js';
+import { sha256 } from './sha256.js';
 import { ROOT, Writer, type Item } from './writer.js';
 
 export interface ServerRenderOptions {
@@ -44,27 +45,39 @@ export function renderToString(value: ChildValue, options?: ServerRenderOptions)
   return html;
 }
 
-const hashes = new Map<string, Promise<string>>();
+const hashes = new Map<string, string>();
 
-/** `'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text). */
-export function styleHash(text: string): Promise<string> {
+/**
+ * `'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text).
+ * Synchronous (sha256.ts), so a page can build its policy while it renders.
+ */
+export function styleHashSync(text: string): string {
   let hash = hashes.get(text);
   if (hash === undefined) {
     // The parser turns CR and CRLF into LF before the browser hashes the element's text.
-    const bytes = new TextEncoder().encode(text.replace(/\r\n?/g, '\n'));
-    hash = crypto.subtle.digest('SHA-256', bytes).then((digest) => {
-      let binary = '';
-      for (const byte of new Uint8Array(digest)) binary += String.fromCharCode(byte);
-      return `'sha256-${btoa(binary)}'`;
-    });
+    const digest = sha256(new TextEncoder().encode(text.replace(/\r\n?/g, '\n')));
+    let binary = '';
+    for (const byte of digest) binary += String.fromCharCode(byte);
+    hash = `'sha256-${btoa(binary)}'`;
     hashes.set(text, hash);
   }
   return hash;
 }
 
+/** `styleHashSync`, as a promise (the API before it existed). */
+export const styleHash = (text: string): Promise<string> => Promise.resolve(styleHashSync(text));
+
+/** Tag → `<style>` text of every registered shadow component with CSS (08 "Server"). */
+export function componentStyles(): ReadonlyMap<string, string> {
+  const styles = new Map<string, string>();
+  for (const component of serverComponents()) {
+    const text = styleText(component);
+    if (text !== '') styles.set(component.tag, text);
+  }
+  return styles;
+}
+
 /** The hashes of every registered shadow component's `<style>` (08 "Server"), deduplicated. */
 export function styleHashes(): Promise<readonly string[]> {
-  const texts = new Set(serverComponents().map(styleText));
-  texts.delete('');
-  return Promise.all([...texts].map(styleHash));
+  return Promise.resolve([...new Set([...componentStyles().values()].map(styleHashSync))]);
 }

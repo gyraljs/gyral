@@ -118,11 +118,11 @@ transitions included (view/04-scheduler.md). It replaces 0.2's `el.updateComplet
 ## Server rendering
 
 `@gyral/core/server` renders template results and components to HTML without a DOM
-(view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (WebCrypto,
-no Node-only APIs). It is server-only: never import it from client code, so client bundles
+(view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (no
+Node-only APIs). It is server-only: never import it from client code, so client bundles
 carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
-`renderToString` (with per-request `stores`), `page()`, `contentSecurityPolicy()` (style hashes
-for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
+`renderToString` (with per-request `stores`), `page()`, `renderPage({ csp })` and
+`contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
 
 - Register components on the server by importing their modules: `define()` records the spec
   outside the browser, and the renderer renders it in place of its tag.
