@@ -6,7 +6,10 @@
 //   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json
 // Each example is built once with Vite in production mode and the Gyral preset (its template
 // compiler and the gyral-compiled condition, view/01-templates.md), all chunks concatenated:
-// budgets measure what apps built with the preset ship. The "view" row builds
+// budgets measure what apps built with the preset ship. The `initial` column is what a page
+// downloads before any import() runs: the entry chunk and its static imports. Lazily loaded
+// chunks (hydration for server-rendered pages, tier-3 fallbacks, route chunks) count only in
+// `gzip`; a client-only app never fetches the hydration chunk (view/07-hydration.md). The "view" row builds
 // scripts/size/view-entry.js (render, html, compiled, each, raw, nothing, defineHook) with the
 // `gyral-compiled` condition, so the runtime template preparer is left out; its budget is the
 // top-level "view" key.
@@ -49,17 +52,30 @@ async function bundleBytes(root, entry, conditions) {
     build: { write: false, minify: true, modulePreload: false, rollupOptions: { input: entry } },
   });
   const outputs = Array.isArray(output) ? output : [output];
-  const code = outputs
-    .flatMap((o) => o.output)
-    .filter((chunk) => chunk.type === 'chunk')
-    .map((chunk) => chunk.code)
-    .join('\n');
-  const raw = Buffer.from(code);
+  const chunks = outputs.flatMap((o) => o.output).filter((chunk) => chunk.type === 'chunk');
+  const raw = Buffer.from(chunks.map((chunk) => chunk.code).join('\n'));
   return {
     min: raw.length,
     gzip: gzipSync(raw, { level: 9 }).length,
     brotli: brotliCompressSync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length,
+    initial: gzipSync(Buffer.from(initialCode(chunks)), { level: 9 }).length,
   };
+}
+
+/** The entry chunks and everything they import statically, in output order. */
+function initialCode(chunks) {
+  const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
+  const wanted = new Set();
+  const visit = (chunk) => {
+    if (chunk === undefined || wanted.has(chunk)) return;
+    wanted.add(chunk);
+    for (const name of chunk.imports) visit(byName.get(name));
+  };
+  for (const chunk of chunks) if (chunk.isEntry) visit(chunk);
+  return chunks
+    .filter((chunk) => wanted.has(chunk))
+    .map((chunk) => chunk.code)
+    .join('\n');
 }
 
 const examples = readdirSync('examples', { withFileTypes: true })
@@ -84,6 +100,7 @@ for (const t of targets) {
     minKb: size.min / 1024,
     gzipKb: size.gzip / 1024,
     brotliKb: size.brotli / 1024,
+    initialKb: size.initial / 1024,
     budgetKb: budgets[t.name],
   });
 }
@@ -93,14 +110,17 @@ if (json) {
 } else {
   const kb = (n) => (n === undefined ? '-' : n.toFixed(1)).padStart(8);
   console.log(
-    `${'example'.padEnd(22)}${'min'.padStart(8)}${'gzip'.padStart(8)}${'brotli'.padStart(8)}${'budget'.padStart(8)}`,
+    `${'example'.padEnd(22)}${'min'.padStart(8)}${'gzip'.padStart(8)}${'brotli'.padStart(8)}${'initial'.padStart(8)}${'budget'.padStart(8)}`,
   );
   for (const r of rows) {
     console.log(
-      `${r.example.padEnd(22)}${kb(r.minKb)}${kb(r.gzipKb)}${kb(r.brotliKb)}${kb(r.budgetKb)}`,
+      `${r.example.padEnd(22)}${kb(r.minKb)}${kb(r.gzipKb)}${kb(r.brotliKb)}${kb(r.initialKb)}${kb(r.budgetKb)}`,
     );
   }
-  console.log('Sizes in KiB. budget: max gzip KiB from scripts/size-budget.json.');
+  console.log(
+    'Sizes in KiB. gzip/brotli: all chunks; initial: gzip of the entry and its static imports ' +
+      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json.',
+  );
 }
 
 if (check) {
