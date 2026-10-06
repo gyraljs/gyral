@@ -172,7 +172,7 @@ export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>(
 ```
 
 - One store instance per page in the browser, per request on the server (pass instances to
-  `renderPage({ stores: [cart.instance(seed)] })`; see ssr.md for the 0.3 status), per test
+  `renderPage({ stores: [cart.instance(seed)] })`, see ssr.md), per test
   (`testStore(cart)`).
 - Store names key seeds and overrides: keep them unique.
 - A store may `send` to another store; writes are always commands, never direct mutation.

@@ -192,3 +192,18 @@ both sides. Two Lit SSR (4.1) details shaped this:
 is just `<slot>`. On first use its scope reads `data-gyral-stores`. Seeded stores are restored
 from it, and win over instances passed in `.instances`, so hydration matches the server.
 `.instances` supplies the rest.
+
+## Addendum: the Gyral server renderer (gyral-g1r.9, 2026-10-06)
+
+Behaviour is unchanged; the mechanism follows the new renderer (view/06-server.md):
+
+- **Per-step scope:** `@gyral/core/server`'s `render` yields at every component boundary and
+  runs each component's `init` and view in the step that writes it. `@gyral/ssr` wraps every
+  step (each `ReadableStream` pull, and the whole of `renderToString`) in
+  `withStoreScope(registry, …)`. The interleaved-streams and concurrent-pages tests still prove
+  isolation.
+- **Providers:** `<gyral-stores>` is a server _provider_ registered with the renderer, not an
+  element that receives bubbling events. Its registry is passed down the walk to every
+  component inside it (`ServerRenderInput.scope`), across shadow roots, so it holds across
+  streamed chunks without a global. It writes `data-gyral-stores` (the `.instances`' states) as
+  before; `defineStoresProvider()` is removed.

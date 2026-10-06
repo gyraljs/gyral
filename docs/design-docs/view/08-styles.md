@@ -52,8 +52,10 @@ Declarative shadow roots can't reference a shared sheet yet. A declarative form 
 - `styleHashes()` (06) returns a SHA-256 hash for each registered component's CSS. The
   `@gyral/ssr` page helper puts them in `Content-Security-Policy: style-src …`, so a strict CSP
   needs no `'unsafe-inline'`. ADR 0012's note that DSD styles require `'unsafe-inline'` is
-  superseded. **To verify in Phase 4:** hashes apply to `<style>` inside declarative shadow
-  roots in Chromium, Firefox and Safari, and `style-src` does not block constructed sheets.
+  superseded. **Verified in Phase 4** (Chromium 153, Firefox 155, WebKit 26.6, real
+  `Content-Security-Policy` header): hashes apply to `<style>` inside declarative shadow roots,
+  an unhashed one is blocked, and `style-src` does not block constructed sheets. A component's
+  CSS texts are written as one `<style>`, joined with newlines (06 "Components").
 - Revisit `<link rel="stylesheet">` inside shadow roots only if a real page shows inline styles
   hurting. It's cached across pages but doesn't block rendering inside a shadow root, so it
   flashes unstyled content unless the same link is also in `<head>`.

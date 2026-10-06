@@ -155,9 +155,7 @@ export const ZipInput = define<State, Msg>('my-zip', {
   `.initialMessages=${[rejected]}`, so the same `IntentRejected` reducer renders the errors.
   JSON clients get `422` with the issues instead.
 
-> **0.3 status:** `@gyral/ssr` is being rewritten on Gyral's own server renderer
-> (`@gyral/core/server`, docs/design-docs/view/06-server.md). `formAction`, `rejectWith` and
-> `seeOther` keep their API; rendering the page (`renderPage`) returns with that renderer.
+The re-rendered page seeds the rejected state, so hydration resumes with the errors shown.
 
 ```ts
 import { defineForm, html, type IntentRejected } from '@gyral/core';

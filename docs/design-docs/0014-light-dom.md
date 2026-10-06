@@ -165,3 +165,10 @@ Before the fix, six light-DOM hydration tests failed there; they all pass now.
 
 **Remaining private API.** None for light DOM. The czi.31 monitor (upstream light-DOM SSR)
 still applies to the marker-hiding SSR filter.
+
+## Addendum: native light-DOM output (gyral-g1r.9, 2026-10-06)
+
+The Gyral server renderer writes a light component's view as its children directly (no DSD to
+unwrap, no hidden markers), still marking the host `data-gyral-light`. Children written inside
+a light component's tag by its parent are now a server error (whitespace-only children are
+dropped), since the component owns its children. See view/06-server.md "Components".

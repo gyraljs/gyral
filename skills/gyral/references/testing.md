@@ -148,8 +148,8 @@ body)`, `failNext()`.
 
 ## SSR tests
 
-> **0.3 status:** server rendering and hydration are being rewritten (ssr.md); these helpers
-> keep their API. `hydrated()` releases islands if asked, then awaits `settled()`.
+> **0.3 status:** hydration in core is still in progress (ssr.md); these helpers keep their
+> API. `hydrated()` releases islands if asked, then awaits `settled()`.
 
 ```ts
 import { expect, it } from 'vitest';

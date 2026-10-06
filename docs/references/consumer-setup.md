@@ -77,12 +77,24 @@ transitions included (view/04-scheduler.md). It replaces 0.2's `el.updateComplet
 
 ## Server rendering
 
-Server rendering and hydration are being rebuilt on the view layer for 0.3.0:
-`@gyral/core/server` renders specs to strings without a DOM (view/06-server.md), and hydration
-is built into core (view/07-hydration.md). Until then, a server-rendered component resumes its
-state from its `data-gyral-seed`, clears the server's markup and renders fresh, and
-`@gyral/ssr`'s rendering functions throw. Keep component state and props JSON-serializable:
-they travel in the hydration seed.
+`@gyral/core/server` renders template results and components to HTML without a DOM
+(view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (WebCrypto,
+no Node-only APIs). It is server-only: never import it from client code, so client bundles
+carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
+`renderToString` (with per-request `stores`), `page()`, `contentSecurityPolicy()` (style hashes
+for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
+
+- Register components on the server by importing their modules: `define()` records the spec
+  outside the browser, and the renderer renders it in place of its tag.
+- Development output (the `development` export condition: Vite's dev server, Vitest) carries
+  `<!--gyral:ID-->` markers and runs development checks; plain `node`/`tsx` gets production
+  output. Pass `{ dev: true | false }` to override.
+- SSR builds keep the server segments of compiled templates (the Vite preset does this for
+  `build.ssr`); a template compiled for the client can't be server-rendered.
+
+Hydration is being built into core (view/07-hydration.md). Until then, a server-rendered
+component resumes its state from its `data-gyral-seed`, clears the server's markup and renders
+fresh. Keep component state and props JSON-serializable: they travel in the hydration seed.
 
 ## Removed in 0.3.0
 

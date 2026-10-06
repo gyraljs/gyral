@@ -1,13 +1,11 @@
 # Server rendering and hydration
 
-> **0.3 status: in progress.** Gyral 0.3 replaces Lit with its own view layer. Server
-> rendering moves to `@gyral/core/server` (spec: docs/design-docs/view/06-server.md) and
-> hydration into core itself (view/07-hydration.md). Until both land, `@gyral/ssr` keeps its
-> API (`renderPage`, `page`, `renderToString`, `renderToStream`, `formAction`,
-> `@gyral/ssr/static`) but its rendering is being rewritten, and a host that the browser finds
+> **0.3 status:** server rendering is Gyral's own (`@gyral/core/server`, spec:
+> docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
+> `renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration in core
+> (view/07-hydration.md) is still in progress: until it lands, a host that the browser finds
 > with a `data-gyral-seed` resumes its state and props from the seed, then renders fresh
-> instead of hydrating. Write components by the rules below; they are what the new renderer
-> and hydration rely on.
+> instead of hydrating. Write components by the rules below; they are what hydration relies on.
 
 The server renders the same components to HTML: shadow components as Declarative Shadow DOM
 (`<template shadowrootmode>` with the component's CSS in a `<style>`), light components
@@ -35,9 +33,12 @@ Pages work before JavaScript loads.
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
    first and switch in the `Hydrated` reducer. A mismatch throws in development and, in
    production, re-renders only that component.
-6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). The 0.3
-   server renderer hashes each component's CSS (`styleHashes()`) so `style-src` needs no
-   `'unsafe-inline'`.
+6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
+   components' `<style>` elements are allowed by hash, so `style-src` needs no
+   `'unsafe-inline'`: see "Content-Security-Policy" below.
+7. **Light components own their children.** Don't write children inside a `shadow: false`
+   component's tag (the server throws); pass data as props. Shadow components take children
+   for their `<slot>`s.
 
 ## Request handler
 
@@ -62,7 +63,35 @@ export function home(request: Request): Response {
 ```
 
 Also available: `page(options)` (the document template), `renderToString(value, { stores })`
-and `renderToStream(value, { stores })`.
+and `renderToStream(value, { stores })`. Head content (`head`) is written with core's `html`
+too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
+for hydration's checks; production output is the template HTML plus values. A `Promise`
+anywhere in a view is an error: load data first.
+
+## Content-Security-Policy
+
+`contentSecurityPolicy({ styles?, directives? })` returns a header value whose `style-src`
+lists the SHA-256 hash of every shadow component's `<style>` and of the page's global
+`styles`. Pass it to `renderPage({ …, csp })`; hashes are cached, so computing it per request
+is cheap:
+
+```ts
+import { html } from '@gyral/core';
+import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+
+const styles = ':root { color-scheme: light dark; }';
+
+export async function home(): Promise<Response> {
+  const csp = await contentSecurityPolicy({
+    styles,
+    directives: { 'default-src': "'self'", 'script-src': "'self'" },
+  });
+  return renderPage({ title: 'Home', styles, body: html`<my-home></my-home>`, csp });
+}
+```
+
+Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
+CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()`.
 
 ## Client entry
 

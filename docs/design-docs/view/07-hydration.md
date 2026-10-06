@@ -67,6 +67,33 @@ an unchanged model must not undo the user's edit: `value`, `checked`, `selected`
 `indeterminate` and textarea content keep what the user did before scripts ran. The model's next
 change writes as usual.
 
+### The server markup the walk meets (from Phase 4)
+
+What `@gyral/core/server` writes (06), as input for the walk. Open points are marked **Phase 5**.
+
+- A host's root starts with its view: in a shadow root after the one `<style>` (when the
+  component has CSS), in a light host right after its start tag. In development the view is
+  preceded by `<!--gyral:ID-->`, and so is every nested instance (rows and array items too).
+- Anchors are exactly the template HTML's; `raw()` adds its own start anchor `<!---->` before
+  the markup; empty strings and `nothing` write nothing; lists write no markers.
+- Adjacent text is merged by the parser (`Hi ${name}!` → one Text node before the anchor).
+- Seeds are single-quoted JSON (`&` and `'` escaped); `<gyral-stores>` carries its own seed
+  in a double-quoted `data-gyral-stores`.
+- Islands carry `defer-hydration data-gyral-hydrate="…"`; nested components never get
+  `defer-hydration`.
+- A light host's whitespace-only children (from the parent's template) are dropped.
+- `?indeterminate` writes nothing; `value`, `checked`, `selected`, `open` and textarea
+  content are attributes or text from the model.
+- **Phase 5:** children a parent writes inside a nested **shadow** host (slotted content)
+  are the parent's template content, after the host's `<template>`: the parent's walk must
+  descend into the host's light children (not its shadow root). The table's "does not
+  descend" holds for the shadow root and for light hosts' own content.
+- **Phase 5:** development markers depend on the server's mode (06 "Development markers"). A
+  development client hydrating production output (no markers) must decide: skip the id check
+  when no marker is present, or report it. Today only same-mode pairs are tested.
+- **Phase 5:** a parent's walk sees a nested host's `data-gyral-seed`/`data-gyral-light`
+  attributes, which the parent's template doesn't have: ignore them in the attribute check.
+
 ## Mismatches
 
 Causes that remain once templates are shared: a view that isn't deterministic (`Date.now()`,

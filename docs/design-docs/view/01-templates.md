@@ -76,9 +76,15 @@ interface TemplateObject {
   readonly html: string; // normalized template HTML, bound attributes removed
   readonly parts: readonly PartSpec[]; // see 02 for kinds
   readonly server: boolean; // contains document-level tags (<!doctype>, <html>, <head>, <body>)
+  readonly segments?: readonly Segment[]; // the server's writing plan (06); not in client builds
   readonly loc?: string; // development only: file:line:column of the call site
 }
 ```
+
+`segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
+strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
+attributes decoded, for props). A child op carries `in`, its parent element's local name
+(absent at the template root), so the server can check text in table structure (06).
 
 A `server` template (a page shell) may only be rendered by `@gyral/core/server`. Rendering one
 in the browser is an error.

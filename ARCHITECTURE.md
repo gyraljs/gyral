@@ -35,7 +35,7 @@ Dependencies only point **down** this list. Nothing points up or sideways except
 | 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                                                                                              |
 | 1     | `@gyral/router`  | v0 work | core                                                                                                                                    |
 | 1     | `@gyral/time`    | v0 work | core                                                                                                                                    |
-| 2     | `@gyral/ssr`     | v0 work | core, router; `@lit-labs/ssr` until its Phase 4 rewrite onto `@gyral/core/server` (behind `src/internal/`; ADR 0012, 0018)              |
+| 2     | `@gyral/ssr`     | v0 work | core (incl. `@gyral/core/server`), router (ADR 0012, 0018)                                                                              |
 | 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                                                                                             |
 | tool  | `create-gyral`   | v0 work | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                           |
 | tool  | `@gyral/mcp`     | v0 work | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill) |

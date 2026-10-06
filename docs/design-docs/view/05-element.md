@@ -126,6 +126,13 @@ it: custom states today, form association later.
 initialMessages? }) → { view, seed } }`; `render` parses props as the browser does, runs
   `init` (commands dropped) and `initialMessages`, and computes the seed (06 "Seed"). Core's
   `server-component.ts` builds it from a spec.
+- **Phase 4:** the render input also carries `scope`, the nearest provider's scope (opaque to
+  `view/`; `ctx.read` uses it, else the request's). Providers register with
+  `registerServerProvider({ tag, open(input) → { scope, attributes } })` / `serverProvider(tag)`:
+  `<gyral-stores>` is one (06). The host attribute names (`SEED_ATTRIBUTE`, `LIGHT_ATTRIBUTE`,
+  `ISLAND_ATTRIBUTE`) live in `view/registry.ts` so the client and the server renderer share
+  them. `@gyral/core/server` calls `registerRecordedSpecs()` before each render; it registers
+  only specs not registered yet.
 
 ## Native primitives
 
