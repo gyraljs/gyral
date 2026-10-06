@@ -69,14 +69,14 @@ const ruleMessages = (key, ruleId) =>
   (results[key] ?? []).filter((m) => m.ruleId === ruleId).map((m) => m.message);
 
 describe('ESLint guardrails', () => {
-  it('rejects Effect outside src/internal with the boundary remediation', () => {
+  it('rejects Effect imports with the ADR 0015 remediation', () => {
     const messages = ruleMessages('coreEffect', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('0002-effect-boundary.md');
-    expect(messages[0]).toContain('src/internal/');
+    expect(messages[0]).toContain('0015-runtime-size-spike.md');
+    expect(messages[0]).toContain('@gyral/effect');
   });
 
-  it('allows Effect inside src/internal', () => {
+  it('leaves src/internal to the dependency check (Labs adapters live there)', () => {
     expect(ruleMessages('internalEffect', 'no-restricted-imports')).toEqual([]);
   });
 

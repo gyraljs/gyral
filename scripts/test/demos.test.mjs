@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseArgs, sceneStem, validateDemo } from '../lib/demos.mjs';
+import { parseArgs, sceneStem, trimArgs, trimSeconds, validateDemo } from '../lib/demos.mjs';
 
 describe('demos:record arguments', () => {
   it('defaults to every demo, port 5600, light', () => {
@@ -47,5 +47,20 @@ describe('demo modules', () => {
   it('names one-scene demos after the example', () => {
     expect(sceneStem('themes', 'main', 1)).toBe('themes');
     expect(sceneStem('no-js-first', 'js-off', 2)).toBe('no-js-first-js-off');
+  });
+});
+
+describe('trimming the unready start (gyral-xpd)', () => {
+  it('cuts from the page opening to when it was ready, never negative', () => {
+    expect(trimSeconds(1000, 1650.4)).toBe(0.65);
+    expect(trimSeconds(1000, 900)).toBe(0);
+  });
+
+  it('builds a frame-accurate ffmpeg cut without audio', () => {
+    const args = trimArgs('raw.webm', 'out.webm', 0.65);
+    expect(args.indexOf('-ss')).toBeGreaterThan(args.indexOf('-i'));
+    expect(args[args.indexOf('-ss') + 1]).toBe('0.650');
+    expect(args).toContain('-an');
+    expect(args.at(-1)).toBe('out.webm');
   });
 });

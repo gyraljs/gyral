@@ -7885,3 +7885,70 @@ export const Demo = define<State, Msg>('gy-devtools-demo', {
 ## A whole application
 
 [gyral-shop](https://github.com/gyraljs/gyral-shop) is a department store built with Gyral: catalog, search, cart, checkout, accounts and an admin area, server-rendered with forms that work without JavaScript, and four switchable themes.
+
+---
+
+# What you can build with Gyral
+
+> What Gyral makes easy, shown as short recordings of examples: undo and replay, type-ahead without stale results, pages that work before JavaScript, live themes and animated transitions.
+
+Source: https://gyral.dev/what-you-can-build/
+
+Gyral treats every interaction as data. That makes these easy. Each demo is a recording of an example in the Gyral repository; the text below describes what each recording shows.
+
+## Undo, redo and replay
+
+Undo, redo, a scrubbable timeline and replay in a few lines: every edit is a message kept as data, so history is a list and the picture is a fold over it.
+
+The usual way: Undo is a feature you build: command objects, inverse operations and snapshots kept in sync with mutable state.
+
+The recording: A heart is painted pixel by pixel. Six presses of Undo leave the removed pixels as dashed ghosts, Redo brings one back, the timeline slider scrubs back to an empty grid, and Replay repaints the whole session.
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/undo-replay
+- Explained in: [Model and update](https://gyral.dev/docs/update/)
+
+## Type-ahead without stale results
+
+Type-ahead that never shows results for something you are no longer typing: one word, concurrency: switch, cancels the request in flight.
+
+The usual way: Each keystroke fires a fetch and whichever answer lands last wins; fixing it means AbortControllers, request ids and "is this still current?" checks.
+
+The recording: One search box feeds two result panels backed by the same slow server. Typed slowly, both panels agree. Typed quickly, the panel without cancellation ends up showing results for "w" because that slow answer arrived last, while the panel using switch cancels the older requests and shows results for "work".
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/typeahead-race
+- Explained in: [Effects and drivers](https://gyral.dev/docs/effects/#concurrency-lanes)
+
+## Works before JavaScript loads
+
+One page that works completely with JavaScript off, then checks as you type and submits without a reload once JavaScript loads: same markup, same schema on both sides.
+
+The usual way: You pick one: a server-rendered form, or a client app that is blank until its bundle runs, and validation rules written twice.
+
+Recording (JavaScript off): With JavaScript disabled, an RSVP form is filled in and sent. The server answers with the error "Grace already replied with that email" and keeps the typed values; a second reply goes through and the page says "You're on the list".
+
+Recording (JavaScript on): The same page with JavaScript: "Enter a valid email address" appears while the email is still being typed, disappears once it is valid, and the reply is sent without reloading the page.
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/no-js-first
+- Explained in: [Forms](https://gyral.dev/docs/forms/)
+
+## One app, four looks
+
+One app, four completely different looks, switched live without losing state: components read design tokens, and a theme is nothing but tokens.
+
+The usual way: A redesign means touching every component: hard-coded colours, per-theme class names, or a second component library.
+
+The recording: A task list switches live between four themes, Calm, Midnight, Paper and Brutalist, with completely different colours, type and shapes. Tasks ticked off along the way stay ticked through every switch.
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/themes
+- Explained in: [Styling and themes](https://gyral.dev/docs/styling/#a-whole-site-as-a-theme)
+
+## Animated transitions between states
+
+Cards that glide to their new places when sorted and grow into a detail view: the component asks for View Transitions with one option, and the browser animates.
+
+The usual way: This is FLIP code or an animation library: measure every element before and after, then tween positions by hand.
+
+The recording: A grid of colour cards is sorted by hue, by lightness, reversed and sorted by name, and each time the cards glide to their new places. Opening a card grows its swatch into a detail view, and going back shrinks it into the grid again.
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/view-transitions
+- Explained in: [Model and update](https://gyral.dev/docs/update/#state-in-css-and-in-transitions)

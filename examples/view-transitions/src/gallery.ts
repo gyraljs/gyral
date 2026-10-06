@@ -1,5 +1,4 @@
 import { define, focus, html, liveBoolean, repeat, styleMap } from '@gyral/core';
-import { delay } from '@gyral/time';
 import { ORDERS, css, findPigment, isOrder, sorted, type Order, type Pigment } from './pigments.js';
 
 export interface State {
@@ -13,8 +12,7 @@ export type Msg =
   | { readonly _tag: 'Sort'; readonly order: Order }
   | { readonly _tag: 'Reverse' }
   | { readonly _tag: 'Open'; readonly id: string }
-  | { readonly _tag: 'Close' }
-  | { readonly _tag: 'Focus'; readonly selector: string; readonly preventScroll: boolean };
+  | { readonly _tag: 'Close' };
 
 const LABELS: Readonly<Record<Order, string>> = {
   name: 'Name',
@@ -29,14 +27,6 @@ const LABELS: Readonly<Record<Order, string>> = {
  */
 const named = (p: Pigment) =>
   styleMap({ 'view-transition-name': `pigment-${p.id}`, background: css(p) });
-
-/**
- * Moves focus one turn later. WORKAROUND: a focus() command returned by a reducer whose change
- * renders inside a View Transition runs before that render, so it finds nothing to focus
- * (reported against @gyral/core). Deferring it to its own message lets it wait for the render.
- */
-const focusSoon = (selector: string, preventScroll = false) =>
-  delay<Msg>(0, { _tag: 'Focus', selector, preventScroll });
 
 const card = (p: Pigment, open: string) =>
   html`<li>
@@ -61,7 +51,7 @@ const card = (p: Pigment, open: string) =>
 export const Gallery = define<State, Msg>('gy-pigment-gallery', {
   shadow: false,
   init: () => ({ order: 'name', reversed: false, open: undefined }),
-  // Animate every change of state (Focus changes none).
+  // Animate every change of state.
   viewTransition: (prev, next) => prev !== next,
   intent: {
     Sort: ({ value }) => (isOrder(value) ? { _tag: 'Sort', order: value } : undefined),
@@ -75,13 +65,13 @@ export const Gallery = define<State, Msg>('gy-pigment-gallery', {
   update: {
     Sort: (s, m) => ({ ...s, order: m.order }),
     Reverse: (s) => ({ ...s, reversed: !s.reversed }),
-    Open: (s, m) => [{ ...s, open: m.id }, [focusSoon('.back')]],
+    // focus() runs after the render inside the View Transition, so the new view's elements exist.
+    Open: (s, m) => [{ ...s, open: m.id }, [focus('.back')]],
     // Back in the grid, focus returns to the card that was opened.
     Close: (s) =>
       s.open === undefined
         ? s
-        : [{ ...s, open: undefined }, [focusSoon(`[data-id="${s.open}"]`, true)]],
-    Focus: (s, m) => [s, [focus(m.selector, { preventScroll: m.preventScroll })]],
+        : [{ ...s, open: undefined }, [focus(`[data-id="${s.open}"]`, { preventScroll: true })]],
   },
   view: (s, i) => {
     const pigment = findPigment(s.open);

@@ -1,6 +1,6 @@
 // Effects as data (docs/design-docs/0006-effects-and-drivers.md). Plain TypeScript only:
 import type { IntentRejected } from './types.js';
-// the Effect-based interpreter lives in ./internal/.
+// the interpreter lives in ./internal/ (ADR 0015).
 
 /** How commands in the same lane interact. See ADR 0006 for the table. */
 export type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';

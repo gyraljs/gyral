@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { makeHttpDriver } from '@gyral/http';
-import { initial } from '@gyral/testing';
+import { initial, step } from '@gyral/testing';
 import { Rsvp } from '../src/rsvp.js';
 
 const props = { attendees: [{ name: 'Grace', guests: 1 }], joined: undefined };
@@ -28,6 +28,14 @@ async function mount(answer: () => Response = () => Response.json({})) {
 }
 
 describe('no-js-first with JavaScript on', () => {
+  it('the Hydrated reducer switches the form to enhanced, as a pure step', () => {
+    const start = initial(Rsvp.spec, props).state;
+    expect(start.enhanced).toBe(false);
+    const live = step(Rsvp.spec, start, { _tag: 'Hydrated', serverRendered: true });
+    expect(live.state.enhanced).toBe(true);
+    expect(live.commands).toEqual([]);
+  });
+
   it('starts as the server renders it and switches on once live in the browser', async () => {
     expect(initial(Rsvp.spec, props).state.enhanced).toBe(false);
     const { el, root } = await mount();

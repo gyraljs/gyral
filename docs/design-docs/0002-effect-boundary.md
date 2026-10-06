@@ -1,6 +1,10 @@
 # ADR 0002 — Effect inside, plain TypeScript outside
 
-Status: **accepted** (2026-10-04)
+Status: **superseded** by [ADR 0015](0015-runtime-size-spike.md) (2026-10-05). Gyral 0.2.0
+has no Effect dependency: measurements showed Effect was most of a small app's JavaScript and
+bought no runtime speed. The public-API half of this ADR still holds (plain TypeScript,
+Promises, `AbortSignal`); `@gyral/effect` becomes an optional adapter for Effect users.
+Originally accepted 2026-10-04.
 
 ## Context
 
@@ -45,5 +49,5 @@ That skill governs code inside `src/internal/` only. Outside it, these are inten
 
 ## Version
 
-Pinned to the **3.x** line. Effect 4.0.0 is now published on npm, so tracking the upgrade is
-bead gyral-d0x. The bundle-size spike runs after v0.1.
+**4.x** from 0.2.0 (ADR 0015 decision addendum, 2026-10-05); 0.1.0 shipped on 3.x. Effect 4
+renamed APIs the effect-fp-skill (written for 3.x) still uses; see AGENTS.md.

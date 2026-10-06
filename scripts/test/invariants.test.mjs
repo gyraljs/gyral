@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  checkDependencies,
   checkWorkflow,
   findEffectLeaks,
   relativeLinks,
@@ -11,13 +12,45 @@ describe('findEffectLeaks', () => {
     const dts = `import type { Effect } from 'effect';\nexport declare const x: import("@effect/platform").HttpClient;`;
     const errors = findEffectLeaks('index.d.ts', dts);
     expect(errors).toHaveLength(2);
-    expect(errors[0]).toContain('0002-effect-boundary.md');
+    expect(errors[0]).toContain('0015-runtime-size-spike.md');
   });
 
   it('accepts plain declarations', () => {
     expect(findEffectLeaks('index.d.ts', `export declare function f(): Promise<void>;`)).toEqual(
       [],
     );
+  });
+});
+
+describe('checkDependencies', () => {
+  it('rejects effect in any package', () => {
+    const errors = checkDependencies('packages/http/package.json', {
+      name: '@gyral/http',
+      dependencies: { effect: '^4.0.0' },
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('ADR 0015');
+  });
+
+  it('keeps @gyral/core free of runtime dependencies besides the allowlist', () => {
+    const manifest = {
+      name: '@gyral/core',
+      dependencies: { '@standard-schema/spec': '1.1.0', 'left-pad': '1.0.0' },
+      peerDependencies: { lit: '^3.3.0' },
+    };
+    const errors = checkDependencies('packages/core/package.json', manifest);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('left-pad');
+  });
+
+  it('accepts the real core manifest shape', () => {
+    expect(
+      checkDependencies('packages/core/package.json', {
+        name: '@gyral/core',
+        dependencies: { '@standard-schema/spec': '1.1.0' },
+        peerDependencies: { lit: '^3.3.0' },
+      }),
+    ).toEqual([]);
   });
 });
 

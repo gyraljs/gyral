@@ -103,8 +103,10 @@ export type {
   Update,
 } from './types.js';
 
-// The view layer is Lit. Re-exported so most apps need a single import.
-export { css, html, nothing, svg, unsafeCSS } from 'lit';
+// The view layer is Lit. Re-exported so most apps need a single import. `html` and `svg` are
+// Lit's tags with indentation whitespace removed (template-whitespace.ts, gyral-9rf).
+export { css, nothing, unsafeCSS } from 'lit';
+export { html, svg } from './templates.js';
 export { directive } from 'lit/directive.js';
 export { classMap } from 'lit/directives/class-map.js';
 export { keyed } from 'lit/directives/keyed.js';

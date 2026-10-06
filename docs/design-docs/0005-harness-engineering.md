@@ -14,7 +14,7 @@ and the repository has to make that work.
 - **Beads is the system of record** for _what/when_. This replaces the article's checked-in
   `exec-plans/` and `tech-debt-tracker.md`: use epics for plans and the `tech-debt` label
   for debt. No plan or TODO files.
-- **Mechanical invariants over prose.** Layer edges, the Effect boundary, file size, Baseline
+- **Mechanical invariants over prose.** Layer edges, the dependency allowlist (no Effect, ADR 0015), file size, Baseline
   compatibility and workflow triggers are lints or scripts. Their error messages carry the
   remediation, so an agent can fix them without asking.
 - **Legibility.** Every example runs with `pnpm --filter … dev`, and tests run in a real

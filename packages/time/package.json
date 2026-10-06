@@ -1,6 +1,6 @@
 {
   "name": "@gyral/time",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gyral time: delays, debounces, periodic ticks and animation frames as commands.",
   "license": "MIT",
   "author": "Mike Zupper",

@@ -35,7 +35,7 @@ First run needs `pnpm exec playwright install chromium`.
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                    |
 | `packages/core`                                                                                  | `define()`, intent parsing, MVI runtime (`@gyral/core`)                       |
-| `packages/*/src/internal`                                                                        | The only place Effect may be imported                                         |
+| `packages/*/src/internal`                                                                        | Implementation details (interpreter, Lit Labs adapters); never exported       |
 | `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                          |
 | `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                               |
 | [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                  |
@@ -75,13 +75,11 @@ First run needs `pnpm exec playwright install chromium`.
 - `lit-web-apps` — components, SSR, routing, testing (Lit is the view layer).
 - `modern-css` — all component and example styles.
 - `semantic-html` — markup in views and examples (element choice, a11y, i18n).
-- `effect-fp-skill` — **only** inside `packages/*/src/internal/**` (see ADR 0002 for the
-  exceptions to that skill: the public API is plain TypeScript and uses Promises).
 - `beads` — work tracking.
 
 ## Hard rules (enforced by `pnpm check`)
 
-- No `effect` / `@effect/*` imports outside `src/internal/`; no Effect types in public `.d.ts`.
+- No runtime dependencies in `@gyral/core` besides `lit` (peer); no package depends on `effect` (ADR 0015).
 - `@gyral/core` imports no other `@gyral/*` package.
 - Views are pure: name intents with `data-intent=${i.Tag}`, never attach closures.
 - Browser code must pass the Baseline policy (`.browserslistrc`), or feature-detect.

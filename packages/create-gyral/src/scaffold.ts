@@ -39,7 +39,22 @@ export interface Manifest {
   readonly scripts: Readonly<Record<string, string>>;
   readonly dependencies: Readonly<Record<string, string>>;
   readonly devDependencies: Readonly<Record<string, string>>;
+  readonly overrides: Readonly<Record<string, string>>;
+  readonly pnpm: { readonly overrides: Readonly<Record<string, string>> };
+  readonly resolutions: Readonly<Record<string, string>>;
 }
+
+/**
+ * lit-html 3.3.1+ leaks a DOM comment per removed repeat() item (lit/lit#5298, gyral-9y6).
+ * New apps pin the last good release for every package manager: `overrides` (npm, bun),
+ * `pnpm.overrides` and `resolutions` (yarn). Remove once upstream ships a fix.
+ */
+const LIT_HTML_PIN = { 'lit-html': '3.3.0' } as const;
+const pins = {
+  overrides: LIT_HTML_PIN,
+  pnpm: { overrides: LIT_HTML_PIN },
+  resolutions: LIT_HTML_PIN,
+};
 
 /** The generated app's package.json. */
 export function manifest(template: Template, name: string, gyralVersion: string): Manifest {
@@ -60,6 +75,7 @@ export function manifest(template: Template, name: string, gyralVersion: string)
         '@gyral/testing': gyral,
         ...pick(['@vitest/browser-playwright', 'playwright', 'typescript', 'vite', 'vitest']),
       },
+      ...pins,
     };
   }
   return {
@@ -80,6 +96,7 @@ export function manifest(template: Template, name: string, gyralVersion: string)
       '@gyral/testing': gyral,
       ...pick(['@types/node', 'tsx', 'typescript', 'vite', 'vitest']),
     },
+    ...pins,
   };
 }
 

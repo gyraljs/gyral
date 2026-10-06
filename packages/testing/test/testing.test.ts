@@ -83,6 +83,25 @@ describe('pure stepping', () => {
     expect(rejected).toEqual({ state: s0, commands: [] });
   });
 
+  it('step() and run() accept Hydrated, with or without a reducer (gyral-evw)', () => {
+    const s0: State = { id: 'u1', user: undefined, error: undefined };
+    // Profile has no Hydrated reducer: state is unchanged, as in the element.
+    expect(step(Profile.spec, s0, { _tag: 'Hydrated', serverRendered: true })).toEqual({
+      state: s0,
+      commands: [],
+    });
+    const Live = define<{ readonly live: boolean }, never>('test-hydrated-step', {
+      init: () => ({ live: false }),
+      intent: {},
+      update: { Hydrated: (s, m) => ({ ...s, live: m.serverRendered }) },
+      view: () => html`<p>live</p>`,
+    });
+    expect(
+      step(Live.spec, { live: false }, { _tag: 'Hydrated', serverRendered: true }).state,
+    ).toEqual({ live: true });
+    expect(run(Live.spec, [{ _tag: 'Hydrated', serverRendered: true }]).state.live).toBe(true);
+  });
+
   it('run() folds messages and collects every command, including init', () => {
     const result = run(
       Profile.spec,

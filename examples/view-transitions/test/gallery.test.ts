@@ -18,22 +18,11 @@ it('sorts by name, hue or lightness, and reverses, without touching the data', (
 it('opening a card asks to focus Back; closing returns focus to the card', () => {
   const opened = step(Gallery.spec, initial(Gallery.spec).state, { _tag: 'Open', id: 'teal' });
   expect(opened.state.open).toBe('teal');
-  expect(opened.commands.map((c) => c.onSuccess(undefined))).toEqual([
-    { _tag: 'Focus', selector: '.back', preventScroll: false },
-  ]);
+  expect(opened.commands.map((c) => c.input)).toEqual([{ selector: '.back' }]);
   const closed = step(Gallery.spec, opened.state, { _tag: 'Close' });
   expect(closed.state.open).toBeUndefined();
-  expect(closed.commands.map((c) => c.onSuccess(undefined))).toEqual([
-    { _tag: 'Focus', selector: '[data-id="teal"]', preventScroll: true },
-  ]);
-  const focusing = step(Gallery.spec, closed.state, {
-    _tag: 'Focus',
-    selector: '.back',
-    preventScroll: false,
-  });
-  expect(focusing.state).toBe(closed.state);
-  expect(focusing.commands.map((c) => c.input)).toEqual([
-    { selector: '.back', preventScroll: false },
+  expect(closed.commands.map((c) => c.input)).toEqual([
+    { selector: '[data-id="teal"]', preventScroll: true },
   ]);
   expect(run(Gallery.spec, [{ _tag: 'Reverse' }, { _tag: 'Reverse' }]).state.reversed).toBe(false);
 });
@@ -41,7 +30,7 @@ it('opening a card asks to focus Back; closing returns focus to the card', () =>
 it('asks for a view transition on every change of state', () => {
   const s = initial(Gallery.spec).state;
   expect(Gallery.spec.viewTransition?.(s, { ...s, order: 'hue' }, { _tag: 'Sort' })).toBe(true);
-  expect(Gallery.spec.viewTransition?.(s, s, { _tag: 'Focus' })).toBe(false);
+  expect(Gallery.spec.viewTransition?.(s, s, { _tag: 'Reverse' })).toBe(false);
 });
 
 it('renders in the light DOM, re-orders cards and keeps each swatch name', async () => {

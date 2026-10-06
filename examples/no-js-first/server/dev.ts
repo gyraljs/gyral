@@ -3,6 +3,7 @@
 import http from 'node:http';
 import { getRequestListener } from '@hono/node-server';
 import { createServer as createViteServer } from 'vite';
+import { devFetch } from '../../shared/dev-fetch.js';
 
 const port = Number(process.env['PORT'] ?? 5173);
 // HMR_PORT lets several SSR examples run side by side (Vite's default is 24678). In middleware
@@ -13,15 +14,15 @@ const vite = await createViteServer({
   appType: 'custom',
 });
 
-// Created once: the app below is re-created per request, the replies must outlive it.
-let replies: import('./app.js').Reply[] | undefined;
-
-const ssr = getRequestListener(async (request) => {
-  // Re-loaded per request, so server-rendered output follows source edits.
-  const mod = (await vite.ssrLoadModule('/server/app.ts')) as typeof import('./app.js');
-  replies ??= mod.sampleReplies();
-  return mod.createApp({ clientEntry: '/src/entry-client.ts', replies }).fetch(request);
-});
+// The app module is re-loaded per request, so server-rendered output follows source edits;
+// its in-memory state is created once (examples/shared/dev-fetch.ts).
+const ssr = getRequestListener(
+  devFetch(
+    async () => (await vite.ssrLoadModule('/server/app.ts')) as typeof import('./app.js'),
+    (mod) => mod.sampleReplies(),
+    (mod, replies) => mod.createApp({ clientEntry: '/src/entry-client.ts', replies }),
+  ),
+);
 
 http
   .createServer((req, res) => {

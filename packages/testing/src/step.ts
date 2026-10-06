@@ -4,6 +4,7 @@ import {
   type Command,
   type ComponentSpec,
   type Ctx,
+  type Hydrated,
   type IntentRejected,
   type Next,
   type PropsChanged,
@@ -19,9 +20,9 @@ export interface Stepped<S, M> {
 }
 
 /** Any message `update` accepts: the component's own, or a framework message. */
-export type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged;
+export type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated;
 
-const FRAMEWORK = new Set(['PropsChanged', 'IntentRejected', 'StoreChanged']);
+const FRAMEWORK = new Set(['PropsChanged', 'IntentRejected', 'StoreChanged', 'Hydrated']);
 
 /** `ctx.read` over the given store instances (ADR 0013); unknown stores fail loudly. */
 export function readerOf(stores: readonly AnyStoreInstance[]): StoreReader {
@@ -59,8 +60,8 @@ export function initial<S, M extends Tagged, P>(
 
 /**
  * Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
- * `IntentRejected`, `StoreChanged`) without a reducer leave state unchanged, as in the
- * element. `stores` are the instances `ctx.read()` sees.
+ * `IntentRejected`, `StoreChanged`, `Hydrated`) without a reducer leave state unchanged, as in
+ * the element. `stores` are the instances `ctx.read()` sees.
  */
 export function step<S, M extends Tagged, P>(
   spec: ComponentSpec<S, M, P>,

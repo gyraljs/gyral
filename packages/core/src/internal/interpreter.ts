@@ -1,12 +1,10 @@
-import { Data, Duration, Effect, Fiber, Schedule } from 'effect';
 import { DEVTOOLS_ENABLED } from '#devtools';
 import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
-import { fork } from './runtime.js';
 
-class DriverFailure extends Data.TaggedError('DriverFailure')<{ readonly cause: unknown }> {}
-
-type Running = Fiber.RuntimeFiber<void>;
+// The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
+// latest task per key. Interruption is `controller.abort()`, retry schedules are timers
+// that cancel on abort, and `queue` chains on the previous task's promise.
 
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
@@ -14,85 +12,123 @@ export interface Interpreter<M> {
   readonly dispose: () => void;
 }
 
-const isRunning = (fiber: Running | undefined): fiber is Running =>
-  fiber !== undefined && fiber.unsafePoll() === null;
-
-const withRetry = <A>(
-  attempt: Effect.Effect<A, DriverFailure>,
-  policy: RetryPolicy | undefined,
-): Effect.Effect<A, DriverFailure> => {
-  if (policy === undefined || policy.times <= 0) return attempt;
-  const base = Duration.millis(policy.delayMs ?? 0);
-  const delays: Schedule.Schedule<unknown> =
-    policy.backoff === 'exponential' ? Schedule.exponential(base) : Schedule.spaced(base);
-  return Effect.retry(attempt, delays.pipe(Schedule.intersect(Schedule.recurs(policy.times))));
-};
+interface Task {
+  readonly controller: AbortController;
+  done: Promise<void>;
+  running: boolean;
+}
 
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
 type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
 
-const execute = <M>(
+/** Internal rejection for an aborted task; callers check `signal.aborted`, never this. */
+class Interrupted extends Error {}
+
+/** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
+const aborted = (signal: AbortSignal): Promise<never> => {
+  const promise = new Promise<never>((_resolve, reject) => {
+    const interrupt = (): void => {
+      reject(new Interrupted('gyral: command interrupted'));
+    };
+    if (signal.aborted) interrupt();
+    else signal.addEventListener('abort', interrupt, { once: true });
+  });
+  promise.catch(() => undefined);
+  return promise;
+};
+
+/** Waits `ms`, or rejects as soon as `signal` aborts. */
+const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
+  Promise.race([
+    new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+        },
+        { once: true },
+      );
+    }),
+    aborted(signal),
+  ]);
+
+/** Delay before retry number `retry` (0-based): fixed, or doubling from `delayMs`. */
+const delayFor = (policy: RetryPolicy, retry: number): number => {
+  const base = policy.delayMs ?? 0;
+  return policy.backoff === 'exponential' ? base * 2 ** retry : base;
+};
+
+async function attemptWithRetry(
   driver: AnyDriver,
-  cmd: Command<M>,
-  dispatch: (msg: M) => void,
-  report: Report,
-): Effect.Effect<void> => {
-  const deliver = (output: unknown): void => {
+  cmd: Command<unknown>,
+  signal: AbortSignal,
+  emit: (output: unknown) => void,
+): Promise<unknown> {
+  const policy = driver.retry;
+  for (let retry = 0; ; retry += 1) {
     try {
-      const msg = cmd.onSuccess(output);
-      if (msg !== undefined) dispatch(msg);
-    } catch (defect) {
-      console.error('gyral: command mapper threw', defect);
-    }
-  };
-  const attempt = Effect.tryPromise({
-    try: (signal) => {
-      let settled = false;
-      const emit = (output: unknown): void => {
-        if (!settled && !signal.aborted) deliver(output);
-      };
       // The input type was erased by command(); it was built for this driver's name.
       const result = Promise.resolve(driver.run(cmd.input as never, { signal, emit }));
-      return result.finally(() => {
-        settled = true;
-      });
-    },
-    catch: (cause) => new DriverFailure({ cause }),
-  });
-  const traced =
-    DEVTOOLS_ENABLED && report !== undefined
-      ? withRetry(attempt, driver.retry).pipe(
-          Effect.onInterrupt(() =>
-            Effect.sync(() => {
-              report('interrupted');
-            }),
-          ),
-        )
-      : withRetry(attempt, driver.retry);
-  return traced.pipe(
-    Effect.matchEffect({
-      onSuccess: (output) => {
-        if (DEVTOOLS_ENABLED) report?.('settled', output);
-        return Effect.succeed(cmd.onSuccess(output));
-      },
-      onFailure: (failure) => {
-        const error = driver.toError === undefined ? failure.cause : driver.toError(failure.cause);
-        if (DEVTOOLS_ENABLED) report?.('failed', error);
-        return cmd.onFailure === undefined
-          ? Effect.logWarning(`gyral: unhandled failure from driver "${driver.name}"`, error).pipe(
-              Effect.as(undefined),
-            )
-          : Effect.succeed(cmd.onFailure(error));
-      },
-    }),
-    Effect.flatMap((msg) =>
-      Effect.sync(() => {
-        if (msg !== undefined) dispatch(msg);
-      }),
-    ),
-    Effect.catchAllDefect((defect) => Effect.logError('gyral: command mapper threw', defect)),
-  );
+      return await Promise.race([result, aborted(signal)]);
+    } catch (cause) {
+      if (signal.aborted || policy === undefined || retry >= policy.times) throw cause;
+      await sleep(delayFor(policy, retry), signal);
+    }
+  }
+}
+
+/** Maps a result to a message and dispatches it; a throwing mapper is logged, not fatal. */
+const deliver = <M>(map: () => M | undefined, dispatch: (msg: M) => void): void => {
+  try {
+    const msg = map();
+    if (msg !== undefined) dispatch(msg);
+  } catch (defect) {
+    console.error('gyral: command mapper threw', defect);
+  }
 };
+
+async function execute<M>(
+  driver: AnyDriver,
+  cmd: Command<M>,
+  signal: AbortSignal,
+  dispatch: (msg: M) => void,
+  report: Report,
+): Promise<void> {
+  let settled = false;
+  const emit = (output: unknown): void => {
+    if (!settled && !signal.aborted) deliver(() => cmd.onSuccess(output), dispatch);
+  };
+  if (DEVTOOLS_ENABLED && report !== undefined) {
+    signal.addEventListener(
+      'abort',
+      () => {
+        if (!settled) report('interrupted');
+      },
+      { once: true },
+    );
+  }
+  let output: unknown;
+  try {
+    output = await attemptWithRetry(driver, cmd, signal, emit);
+  } catch (cause) {
+    if (signal.aborted) return; // interrupted: reported by the abort listener
+    settled = true;
+    const error = driver.toError === undefined ? cause : driver.toError(cause);
+    if (DEVTOOLS_ENABLED) report?.('failed', error);
+    if (cmd.onFailure === undefined) {
+      console.warn(`gyral: unhandled failure from driver "${driver.name}"`, error);
+      return;
+    }
+    const onFailure = cmd.onFailure;
+    deliver(() => onFailure(error), dispatch);
+    return;
+  }
+  if (signal.aborted) return;
+  settled = true;
+  if (DEVTOOLS_ENABLED) report?.('settled', output);
+  deliver(() => cmd.onSuccess(output), dispatch);
+}
 
 export function makeInterpreter<M>(
   resolve: (driver: AnyDriver) => AnyDriver,
@@ -112,21 +148,35 @@ export function makeInterpreter<M>(
             ...(result === undefined ? {} : { result }),
           });
         };
-  const lanes = new Map<string, Running>();
-  const all = new Set<Running>();
+  const lanes = new Map<string, Task>();
+  const all = new Set<Task>();
   let active = true;
   const guardedDispatch = (msg: M): void => {
     if (active) dispatch(msg);
   };
 
-  const track = (lane: string, fiber: Running): void => {
-    if (!isRunning(fiber)) return;
-    lanes.set(lane, fiber);
-    all.add(fiber);
-    fiber.addObserver(() => {
-      all.delete(fiber);
-      if (lanes.get(lane) === fiber) lanes.delete(lane);
+  const start = (
+    lane: string,
+    driver: AnyDriver,
+    cmd: Command<M>,
+    report: Report,
+    after?: Task,
+  ): void => {
+    const controller = new AbortController();
+    const task: Task = { controller, running: true, done: Promise.resolve() };
+    const body = async (): Promise<void> => {
+      if (after !== undefined) await after.done;
+      if (!controller.signal.aborted) {
+        await execute(driver, cmd, controller.signal, guardedDispatch, report);
+      }
+    };
+    task.done = body().finally(() => {
+      task.running = false;
+      all.delete(task);
+      if (lanes.get(lane) === task) lanes.delete(lane);
     });
+    lanes.set(lane, task);
+    all.add(task);
   };
 
   const run = (cmd: Command<M>): void => {
@@ -135,24 +185,26 @@ export function makeInterpreter<M>(
     const lane = cmd.key ?? driver.name;
     const policy = cmd.concurrency ?? driver.concurrency ?? 'merge';
     const previous = lanes.get(lane);
-    const inFlight = isRunning(previous) ? previous : undefined;
+    const inFlight = previous?.running === true ? previous : undefined;
     const report = DEVTOOLS_ENABLED ? reporter(driver.name, lane, policy, cmd.input) : undefined;
-    let program = execute(driver, cmd, guardedDispatch, report);
     if (inFlight !== undefined && policy === 'exhaust') {
       if (DEVTOOLS_ENABLED) report?.('dropped');
       return;
     }
     if (DEVTOOLS_ENABLED) report?.('issued');
-    if (inFlight !== undefined) {
-      if (policy === 'switch') program = Effect.zipRight(Fiber.interrupt(inFlight), program);
-      if (policy === 'queue') program = Effect.zipRight(Fiber.await(inFlight), program);
-    }
-    track(lane, fork(program));
+    if (inFlight !== undefined && policy === 'switch') inFlight.controller.abort();
+    start(
+      lane,
+      driver,
+      cmd,
+      report,
+      inFlight !== undefined && policy === 'queue' ? inFlight : undefined,
+    );
   };
 
   const dispose = (): void => {
     active = false;
-    fork(Fiber.interruptAll([...all]));
+    for (const task of all) task.controller.abort();
     all.clear();
     lanes.clear();
   };

@@ -51,6 +51,30 @@ projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */}
   fails. If your app imports other Lit modules directly, add them:
   `gyralVitePreset({ optimize: ['lit/directives/unsafe-html.js'] })`.
 
+## Template whitespace
+
+Gyral's `html` and `svg` tags are Lit's, with indentation whitespace removed (gyral-9rf). Lit
+keeps every newline and indent between tags as a DOM text node; a benchmark table row had 12
+of them in 25 nodes, and removing them made creating, replacing and clearing rows 11-24%
+faster. The strings are minified once per call site, at runtime, so the server and the browser
+build identical templates in any toolchain (Vite, tsx, plain Node) and hydration digests match.
+There is no build step and nothing to configure.
+
+- Whitespace-only text that contains a newline is removed next to a template edge, a
+  block-level tag (`div`, `p`, `li`, `tr`, `td`, …), or the inside edge of a `<button>` or
+  `<select>`. CSS never renders whitespace there.
+- Between two inline neighbours (`span`, `b`, `a`, custom elements, `${bindings}`,
+  comments) it becomes one space, so `Hello <b>${name}</b>` on two lines still reads
+  "Hello Ada again".
+- Other runs of whitespace in text become one space.
+- Unchanged: `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` contents, tags,
+  attribute values and comments.
+
+**When to opt out.** If an element shows text with CSS `white-space: pre`, `pre-wrap` or
+`break-spaces` outside `<pre>`/`<textarea>`, write that template with `html` from `lit`, which
+keeps whitespace exactly. Use the same import on the server and the client (it is the same
+module), so hydration still matches.
+
 ## Server rendering checklist
 
 - Import `@gyral/ssr/hydrate` **first** in the client entry, before anything that imports
@@ -66,7 +90,19 @@ DOM per removed item (upstream [lit/lit#5010](https://github.com/lit/lit/issues/
 [#5298](https://github.com/lit/lit/issues/5298), open as of 2026-10-05). Lists that churn
 keep growing the DOM, and bulk changes get slow: in the Gyral benchmark, clearing 1,000 rows
 took about 3,700 ms on lit-html 3.3.3 and 56 ms on 3.3.0. It affects every Lit-based app,
-not only Gyral. Tracked in gyral-9y6, which decides between pinning, a Gyral-side
-workaround and an upstream fix. Until then, an app with long, frequently changing lists can
-pin lit-html with an override (pnpm: `"pnpm": { "overrides": { "lit-html": "3.3.0" } }` in
-`package.json`; npm: `"overrides": { "lit-html": "3.3.0" }`).
+not only Gyral. Tracked in gyral-9y6.
+
+**Gyral's own workspace pins lit-html 3.3.0** with an override in `pnpm-workspace.yaml`, so
+Gyral's tests and examples run on the fixed version, and
+`packages/core/test/repeat-leak.test.ts` fails if a leaking lit-html comes back (1,002
+comment nodes after clearing 1,000 rows on 3.3.3, 2 on 3.3.0). Gyral can't pin lit-html
+inside your app, because it arrives through `lit`. Apps with long, frequently changing lists
+should add the same override until upstream fixes it:
+
+- pnpm 10 (`pnpm-workspace.yaml`): `overrides:` then `  lit-html: 3.3.0`
+- pnpm (`package.json`): `"pnpm": { "overrides": { "lit-html": "3.3.0" } }`
+- npm (`package.json`): `"overrides": { "lit-html": "3.3.0" }`
+
+From 0.2.0, development builds of `@gyral/core` check `globalThis.litHtmlVersions` when the
+first component connects and log one `console.warn` if a leaking lit-html (3.3.1 or later)
+is loaded. Production builds don't include the check.

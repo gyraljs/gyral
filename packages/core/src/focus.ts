@@ -46,3 +46,22 @@ export function runFocus(root: ParentNode, tag: string, input: FocusInput): void
     (target as HTMLInputElement).select();
   }
 }
+
+/** What focusAfterUpdate needs from a component: Lit's update promise and its render root. */
+export interface FocusHost {
+  readonly updateComplete: Promise<boolean>;
+  readonly isConnected: boolean;
+  readonly renderRoot: ParentNode;
+}
+
+/**
+ * Runs a focus command after the render the same update caused, view transition included:
+ * define() runs commands before #dispatch registers that update's view transition, so wait a
+ * microtask first, then for updateComplete, which waits for the transition (gyral-6zz).
+ */
+export function focusAfterUpdate(host: FocusHost, tag: string, input: FocusInput): void {
+  void Promise.resolve().then(async () => {
+    await host.updateComplete;
+    if (host.isConnected) runFocus(host.renderRoot, tag, input);
+  });
+}

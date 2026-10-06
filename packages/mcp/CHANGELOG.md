@@ -1,4 +1,4 @@
-# @gyral/http
+# @gyral/mcp
 
 ## 0.2.0
 
@@ -21,19 +21,8 @@
 
 ### Patch Changes
 
-- a7275e8: Copyright and package author are Mike Zupper.
-- Updated dependencies [a7275e8]
-- Updated dependencies [fa0156a]
-- Updated dependencies [74054b3]
-  - @gyral/core@0.2.0
-
-## 0.1.0
-
-### Minor Changes
-
-- 8b5f5ca: First public release.
-
-### Patch Changes
-
-- Updated dependencies [8b5f5ca]
-  - @gyral/core@0.1.0
+- ba8b229: New package: `@gyral/mcp`, an MCP server for coding agents (`npx -y @gyral/mcp`). Tools:
+  `search_docs`, `get_doc`, `get_api`, `list_examples`, `get_example`, `scaffold_component` and
+  `check_snippet`; resources for llms.txt and the Gyral skill; a `build-gyral-component` prompt.
+  A patch changeset on purpose: the packages release in lockstep, so a minor here would move
+  every package to 0.2.0.

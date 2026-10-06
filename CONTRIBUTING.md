@@ -21,7 +21,7 @@ listed in [AGENTS.md](AGENTS.md#commands).
 ## The gate
 
 `pnpm check` is the single quality gate: typecheck, ESLint and stylelint, Prettier,
-repository invariants (docs map, workflow triggers, no Effect types in public declarations),
+repository invariants (docs map, workflow triggers, dependency allowlist, public declarations),
 the browser and Node test suites, fixture stability, and `pnpm pack:check` (the published
 tarballs). Run it locally before you push. Every pull request also runs it on GitHub (the
 `pnpm check` job of the `ci` workflow, [ADR 0004](docs/design-docs/0004-local-ci.md)), and a
@@ -33,8 +33,8 @@ you want a clean-room run.
 - Keep each PR to one change, with tests. Bugs get a failing test first.
 - If a published package changes, add a changeset: `pnpm changeset` (patch, minor or major,
   plus a one-line summary for the changelog). See [.changeset/README.md](.changeset/README.md).
-- Follow the house rules in [AGENTS.md](AGENTS.md): pure views, Effect only under
-  `src/internal/`, Baseline browser features, files under 300 lines.
+- Follow the house rules in [AGENTS.md](AGENTS.md): pure views, no runtime dependencies
+  in `@gyral/core` besides Lit, Baseline browser features, files under 300 lines.
 
 ## Sign your commits (DCO)
 

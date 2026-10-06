@@ -16,7 +16,7 @@ import {
   type Next,
 } from './command.js';
 import { dispatchOutput, EMIT } from './children.js';
-import { FOCUS, runFocus, type FocusInput } from './focus.js';
+import { FOCUS, focusAfterUpdate, type FocusInput } from './focus.js';
 import type { GyralElement, GyralElementClass } from './element-types.js';
 import { fillEmptyTextParts, takeSeed, writeSeed } from './hydration.js';
 import { markIsland, scheduleIsland } from './islands.js';
@@ -294,7 +294,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       for (const cmd of commands) {
         if (cmd.driver === EMIT) dispatchOutput(this, cmd.input);
         else if (cmd.driver === STORE_SEND) this.#binding.send(cmd.input as StoreSendInput);
-        else if (cmd.driver === FOCUS) this.#focusAfterUpdate(cmd.input as FocusInput);
+        else if (cmd.driver === FOCUS) focusAfterUpdate(this, tag, cmd.input as FocusInput);
         else if (this.#interpreter === undefined) this.#pending.push(cmd);
         else this.#interpreter.run(cmd);
       }
@@ -334,13 +334,6 @@ export function define<S, M extends Tagged, P extends object = object, O extends
           this.#dispatch({ _tag: 'Hydrated', serverRendered: this.#serverRendered } as Tagged);
         }
         if (commands.length > 0) this.#apply([this.state, commands]);
-      });
-    }
-
-    // After the render this reducer caused (also the first render, for init's commands).
-    #focusAfterUpdate(input: FocusInput): void {
-      void this.updateComplete.then(() => {
-        if (this.isConnected) runFocus(this.renderRoot, tag, input);
       });
     }
 
