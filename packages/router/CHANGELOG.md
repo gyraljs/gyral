@@ -1,5 +1,27 @@
 # @gyral/router
 
+## 0.3.0
+
+### Minor Changes
+
+- 2da293e: Released with Gyral 0.3's own view layer (ADR 0018). No API changes in this package; upgrade
+  every `@gyral/*` package to 0.3 together, and an app installs no Lit packages:
+  [docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+
+### Patch Changes
+
+- Updated dependencies [fe849f8]
+- Updated dependencies [595e1c4]
+- Updated dependencies [49ff2ad]
+- Updated dependencies [9c6c8bd]
+- Updated dependencies [ca68fe8]
+- Updated dependencies [784bd2f]
+- Updated dependencies [8803ef3]
+- Updated dependencies [6971fbe]
+- Updated dependencies [b2ae8e5]
+- Updated dependencies [d3f540a]
+  - @gyral/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

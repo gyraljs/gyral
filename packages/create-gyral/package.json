@@ -1,6 +1,6 @@
 {
   "name": "create-gyral",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Create a Gyral app: npm create gyral@latest.",
   "keywords": [
     "gyral",
