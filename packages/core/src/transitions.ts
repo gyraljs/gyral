@@ -1,5 +1,6 @@
 // View Transitions for define() components (ADR 0001 addendum). An ADR 0003 enhancement:
 // without the API, or with reduced motion requested, updates render normally.
+import { trackWork } from './settled.js';
 
 interface ViewTransitionLike {
   readonly ready: Promise<unknown>;
@@ -25,13 +26,15 @@ export function canTransition(): boolean {
  * Runs `update` inside `document.startViewTransition` when allowed, otherwise directly.
  * `update` must resolve once the DOM reflects the new state. The returned promise settles when
  * `update` has run. A transition skipped by a newer one still runs its update (per spec); its
- * rejected `ready` is expected and swallowed.
+ * rejected `ready` is expected and swallowed. settled() waits for it.
  */
 export function withViewTransition(update: () => Promise<void>): Promise<void> {
-  if (!canTransition() || !supportsViewTransitions(document)) return update();
-  return new Promise((resolve, reject) => {
-    const transition = document.startViewTransition(() => update().then(resolve, reject));
-    transition.ready.catch(ignore);
-    transition.finished.catch(ignore);
-  });
+  if (!canTransition() || !supportsViewTransitions(document)) return trackWork(update());
+  return trackWork(
+    new Promise((resolve, reject) => {
+      const transition = document.startViewTransition(() => update().then(resolve, reject));
+      transition.ready.catch(ignore);
+      transition.finished.catch(ignore);
+    }),
+  );
 }

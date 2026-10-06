@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { Panel, type Props, type State } from '../src/panel.js';
 import '../src/race.js';
@@ -64,14 +65,13 @@ it('typing fast: the naive panel ends stale, the switch panel shows the final qu
   clock = virtualTime();
   const race = document.createElement('gy-typeahead-race');
   document.body.append(race);
-  await race.updateComplete;
+  await settled();
   const input = race.shadowRoot?.querySelector('input');
   if (!(input instanceof HTMLInputElement)) throw new Error('no input');
   await typeFast('view', input, clock);
   await clock.advance(1000); // every answer is back
   const [naive, switched] = [...(race.shadowRoot?.querySelectorAll('gy-search-panel') ?? [])];
-  await naive?.updateComplete;
-  await switched?.updateComplete;
+  await settled();
   expect(naive?.state.results?.query).toBe('v'); // the slowest, oldest answer arrived last
   expect(naive?.shadowRoot?.querySelector('section')?.dataset['verdict']).toBe('stale');
   expect(switched?.state.results?.query).toBe('view');

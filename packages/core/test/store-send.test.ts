@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, defineStore, html, send, StoreRegistry } from '../src/index.js';
+import { define, defineStore, html, send, settled, StoreRegistry } from '../src/index.js';
 
 interface Log {
   readonly events: readonly string[];
@@ -73,11 +73,9 @@ describe('store-to-store send() (gyral-czi.20)', () => {
 describe('server-rendered <gyral-stores> on the client (gyral-czi.20)', () => {
   const mount = async (provider: HTMLElement) => {
     document.body.append(provider);
-    const el = provider.querySelector('send-owner') as HTMLElement & {
-      updateComplete: Promise<boolean>;
-    };
-    await el.updateComplete;
-    return el.shadowRoot?.querySelector('p')?.textContent;
+    const el = provider.querySelector('send-owner');
+    await settled();
+    return el?.shadowRoot?.querySelector('p')?.textContent;
   };
 
   it("restores a provider's stores from its data-gyral-stores seed", async () => {

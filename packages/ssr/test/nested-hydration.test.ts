@@ -16,7 +16,6 @@ window.addEventListener('error', (event) => {
 
 interface Live extends HTMLElement {
   readonly state: Record<string, unknown>;
-  readonly updateComplete: Promise<boolean>;
 }
 
 const parent = (): Live => {

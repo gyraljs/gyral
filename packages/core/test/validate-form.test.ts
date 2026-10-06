@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as v from 'valibot';
 import { z } from 'zod';
-import { define, defineForm, fieldErrors, html, validateForm } from '../src/index.js';
+import { define, defineForm, fieldErrors, html, settled, validateForm } from '../src/index.js';
 import type { IntentRejected } from '../src/index.js';
 
 const Contact = defineForm(v.object({ email: v.pipe(v.string(), v.email('Bad email')) }));
@@ -75,7 +75,7 @@ describe('initialMessages', () => {
     const el = new Seeded();
     el.initialMessages = [rejected];
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(el.state).toEqual({ errors: { email: ['Bad email'] }, inits: 1 });
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('Bad email');
   });

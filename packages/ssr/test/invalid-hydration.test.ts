@@ -2,11 +2,11 @@
 import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/invalid.ssr.html?raw';
 
 interface Live extends HTMLElement {
   readonly state: { readonly saves: number };
-  readonly updateComplete: Promise<boolean>;
   send(msg: { readonly _tag: string }): void;
 }
 
@@ -29,7 +29,7 @@ const form = (): HTMLFormElement => {
 const settle = () => new Promise((r) => setTimeout(r, 10));
 const reject = async () => {
   host().send({ _tag: 'Reject' });
-  await host().updateComplete;
+  await settled();
   expect(field().validity.customError).toBe(true);
 };
 
@@ -61,7 +61,7 @@ describe('invalid() after hydration', () => {
   it('clears when the model clears the error', async () => {
     await reject();
     host().send({ _tag: 'Clear' });
-    await host().updateComplete;
+    await settled();
     expect(field().validity.valid).toBe(true);
     expect(field().hasAttribute('aria-invalid')).toBe(false);
   });

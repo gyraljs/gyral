@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run, step } from '@gyral/testing';
 import { Folder } from '../src/folder.js';
 
 type FolderEl = InstanceType<typeof Folder>;
-
-const settle = () => new Promise((r) => setTimeout(r, 0));
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -47,16 +46,14 @@ describe('in the browser', () => {
     );
     if (button === undefined) throw new Error(`no "${label}" in ${el.folderId}`);
     button.click();
-    await settle();
-    await el.updateComplete;
-    await Promise.all(kids(el).map((k) => k.updateComplete));
+    await settled();
   };
 
   async function mount() {
     const root = document.createElement('gy-folder');
     root.setAttribute('folder-id', '1');
     document.body.append(root);
-    await root.updateComplete;
+    await settled();
     return root;
   }
 
@@ -79,14 +76,12 @@ describe('in the browser', () => {
     expect(kid(grandchild, 0).folderId).toBe('1.1.1.1');
 
     await press(grandchild, 'Remove me');
-    await settle();
-    await first.updateComplete;
+    await settled();
     expect(first.state.children).toEqual([]);
     expect(root.state.children).toEqual(['1.1', '1.2']);
 
     await press(kid(root, 1), 'Remove me');
-    await settle();
-    await root.updateComplete;
+    await settled();
     expect(root.state.children).toEqual(['1.1']);
     expect(kids(root)).toEqual([first]);
   });

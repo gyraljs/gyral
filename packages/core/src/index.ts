@@ -19,6 +19,7 @@ export { ISLAND_ATTRIBUTE } from './islands.js';
 export type { HydrateStrategy } from './islands.js';
 export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
+export { settled } from './settled.js';
 export { changed, defineStore, send } from './store.js';
 export type {
   AnyStore,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { css, define, html, isLightComponent } from '../src/index.js';
+import { css, define, html, isLightComponent, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Hit' };
 interface State {
@@ -22,12 +22,12 @@ const Inner = counter('test-ld-inner', false);
 const LightOuter = counter('test-ld-light-outer', false, 'inner');
 const ShadowOuter = counter('test-ld-shadow-outer', true, 'inner');
 
-type Live = HTMLElement & { readonly state: State; readonly updateComplete: Promise<boolean> };
+type Live = HTMLElement & { readonly state: State };
 
 async function mount(tag: string): Promise<Live> {
   const el = document.createElement(tag) as Live;
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return el;
 }
 
@@ -51,7 +51,7 @@ describe('shadow: false (ADR 0014)', () => {
   it('keeps intents of a nested light child out of a light parent', async () => {
     const outer = await mount('test-ld-light-outer');
     const inner = outer.querySelector('test-ld-inner') as Live;
-    await inner.updateComplete;
+    await settled();
     (inner.querySelector('.hit') as HTMLElement).click();
     expect(inner.state.hits).toBe(1);
     expect(outer.state.hits).toBe(0);
@@ -63,7 +63,7 @@ describe('shadow: false (ADR 0014)', () => {
   it('keeps intents of a nested light child out of a shadow parent', async () => {
     const outer = await mount('test-ld-shadow-outer');
     const inner = outer.shadowRoot?.querySelector('test-ld-inner') as Live;
-    await inner.updateComplete;
+    await settled();
     (inner.querySelector('.hit') as HTMLElement).click();
     expect(inner.state.hits).toBe(1);
     expect(outer.state.hits).toBe(0);

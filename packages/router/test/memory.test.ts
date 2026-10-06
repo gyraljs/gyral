@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import {
   back,
   forward,
@@ -56,7 +56,7 @@ describe('memory history', () => {
     el = new App();
     el.drivers = { router: driver };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await vi.waitFor(() => {
       expect(el.state.seen).toEqual(['/users/1']);
     });

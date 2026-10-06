@@ -4,6 +4,7 @@ import {
   define,
   defineDriver,
   html,
+  settled,
   type Concurrency,
   type Driver,
   type RetryPolicy,
@@ -65,7 +66,7 @@ async function mount(driver: Driver<string, string, string>) {
   const el = new Fx();
   el.drivers = { work: driver };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await vi.waitFor(() => {
     expect(el.state.log).toEqual(['done:init']);
   });

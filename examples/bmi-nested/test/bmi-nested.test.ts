@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run, step } from '@gyral/testing';
 import { BmiNested, bmiOf } from '../src/bmi-nested.js';
 import { LabeledSlider } from '../src/labeled-slider.js';
-
-const settle = () => new Promise((r) => setTimeout(r, 0));
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -29,7 +28,7 @@ describe('in the browser', () => {
   async function mount() {
     const el = new BmiNested();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const slider = (id: string) => {
       const found = el.shadowRoot?.querySelector(`#${id}`);
       if (!(found instanceof LabeledSlider)) throw new Error(`no slider #${id}`);
@@ -41,7 +40,7 @@ describe('in the browser', () => {
   it('passes values down as props', async () => {
     const { slider } = await mount();
     const weight = slider('weight');
-    await weight.updateComplete;
+    await settled();
     expect(weight.value).toBe(70);
     expect(weight.min).toBe(40);
     expect(weight.shadowRoot?.querySelector('output')?.textContent).toBe('70 kg');
@@ -50,14 +49,12 @@ describe('in the browser', () => {
   it('turns slider outputs into parent state and re-renders both levels', async () => {
     const { el, slider } = await mount();
     const height = slider('height');
-    await height.updateComplete;
+    await settled();
     const input = height.shadowRoot?.querySelector('input');
     if (input == null) throw new Error('no input');
     input.value = '200';
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    await settle();
-    await el.updateComplete;
-    await height.updateComplete;
+    await settled();
     expect(el.state).toEqual({ weight: 70, height: 200 });
     expect(el.shadowRoot?.querySelector('h2 output')?.textContent).toBe('18');
     expect(height.shadowRoot?.querySelector('output')?.textContent).toBe('200 cm');

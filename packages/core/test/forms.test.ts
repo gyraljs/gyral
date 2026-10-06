@@ -10,6 +10,7 @@ import {
   formDataToObject,
   html,
   invalid,
+  settled,
 } from '../src/index.js';
 
 const Signup = defineForm(
@@ -60,7 +61,7 @@ const settle = () => new Promise((r) => setTimeout(r, 10));
 async function mount() {
   const el = new SignupEl();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const $ = (sel: string) => {
     const found = el.shadowRoot?.querySelector(sel);
     if (!(found instanceof HTMLInputElement || found instanceof HTMLFormElement)) {
@@ -72,8 +73,7 @@ async function mount() {
   const submit = async (values: Record<string, string>) => {
     for (const [k, val] of Object.entries(values)) input(`form input[name=${k}]`).value = val;
     ($('form') as HTMLFormElement).requestSubmit();
-    await settle();
-    await el.updateComplete;
+    await settled();
   };
   return { el, input, submit, $ };
 }
@@ -120,7 +120,7 @@ describe('form() and field() (ADR 0008)', () => {
     email.value = 'fixed@b.co';
     email.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     el.send({ _tag: 'Nick', nick: 'rerender' }); // same errors array: must not re-apply
-    await el.updateComplete;
+    await settled();
     expect(email.validity.valid).toBe(true);
     expect(email.hasAttribute('aria-invalid')).toBe(false);
   });
@@ -174,8 +174,7 @@ describe('schema messages for required fields (gyral-czi.37)', () => {
   it('shows the schema message once Hydrated adds novalidate', async () => {
     const el = new NameEl();
     document.body.append(el);
-    await settle();
-    await el.updateComplete;
+    await settled();
     const formEl = el.shadowRoot?.querySelector('form');
     if (formEl == null) throw new Error('no form');
     expect(formEl.noValidate).toBe(true);

@@ -1,7 +1,7 @@
 // Browser tests for server-rendered pages (gyral-czi.22): put real server output into the
 // document the way a page load would, then import components so they hydrate in place.
 // Server output usually comes from golden fixtures written by Node route tests.
-import { resetDocumentStores } from '@gyral/core';
+import { resetDocumentStores, settled } from '@gyral/core';
 
 export interface MountSsrOptions {
   /** Restore the page-level store seed (`data-gyral-stores`). Default `true`. */
@@ -121,11 +121,6 @@ export function customElementsIn(root: ParentNode): Element[] {
   ]);
 }
 
-const settle = (): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
 export interface HydratedOptions {
   /**
    * Custom element tags allowed to stay undefined (never upgraded). `gyral-stores` is always
@@ -151,7 +146,8 @@ export function undefinedElementsIn(
 }
 
 /**
- * Waits until every Gyral/Lit element under the page (shadow roots included) has finished
+ * Waits until every Gyral component has settled (`settled()` from `@gyral/core`) and every other
+ * element under the page with an `updateComplete` promise (shadow roots included) has finished
  * updating, re-scanning until no new elements appear (nested children hydrate after their
  * parents). Elements still deferred (lazy islands and their children) are skipped. A
  * hydration mismatch rejects. It throws when a server-rendered custom element never upgraded
@@ -176,7 +172,7 @@ export async function hydrated(
           (el as Partial<{ updateComplete: Promise<unknown> }>).updateComplete ?? Promise.resolve(),
       ),
     );
-    await settle();
+    await settled();
     const now = new Set(ready());
     const stable = now.size === seen.size && [...now].every((el) => seen.has(el));
     seen = now;

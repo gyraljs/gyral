@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html } from '@gyral/core';
+import { command, define, defineDriver, html, settled } from '@gyral/core';
 import {
   commandsFor,
   fakeDriver,
@@ -138,7 +138,7 @@ describe('fakeDriver', () => {
     Object.assign(el, { userId: 'u1' });
     el.drivers = { users: fake };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     return el;
   }
 
@@ -153,7 +153,7 @@ describe('fakeDriver', () => {
     expect(fake.concurrency).toBe('switch');
     fake.resolveNext({ name: 'Ada' });
     await flush();
-    await el.updateComplete;
+    await settled();
     expect(text(el)).toBe('Ada');
   });
 
@@ -253,7 +253,7 @@ describe('virtualTime', () => {
     time = virtualTime();
     const el = new Timer();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await time.advance(59_999);
     expect(el.state.fired).toBe(0);
     await time.advance(1);
@@ -275,7 +275,7 @@ describe('virtualTime', () => {
     Object.assign(el, { userId: 'u1' });
     el.drivers = { users: flaky };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await time.advance(999);
     expect(attempts).toBe(1);
     await time.runAll();

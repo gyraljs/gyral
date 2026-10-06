@@ -1,6 +1,7 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 import { render } from 'lit';
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, directive, ElementDirective, html, keyed } from '../src/index.js';
+import { define, directive, ElementDirective, html, keyed, settled } from '../src/index.js';
 
 const applied: { tag: string; value: string }[] = [];
 
@@ -32,9 +33,9 @@ describe('ElementDirective and keyed', () => {
   it('applies to its element on every render with typed arguments', async () => {
     const el = new Host();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Next' });
-    await el.updateComplete;
+    await settled();
     expect(applied).toEqual([
       { tag: 'p', value: 'v0' },
       { tag: 'p', value: 'v1' },
@@ -52,10 +53,10 @@ describe('ElementDirective and keyed', () => {
   it('keyed() replaces the element when the key changes', async () => {
     const el = new Host();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const first = el.shadowRoot?.querySelector('span');
     el.send({ _tag: 'Next' });
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.querySelector('span')).not.toBe(first);
   });
 });

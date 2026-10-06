@@ -1,7 +1,7 @@
 // gyral-6zz: focus() returned by a reducer whose update runs inside a View Transition must
 // run after the transition's DOM update, not before it.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { define, focus, html } from '../src/index.js';
+import { define, focus, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Open'; readonly id: string };
 
@@ -53,10 +53,9 @@ describe('focus() inside a view transition update', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const el = new Cards();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Open', id: 'swatch-3' });
-    await el.updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
+    await settled(); // waits for the transition's update and the focus command after it
     expect(warn).not.toHaveBeenCalled();
     expect(el.shadowRoot?.activeElement?.id).toBe('detail');
   });

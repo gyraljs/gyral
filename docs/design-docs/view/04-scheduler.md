@@ -70,6 +70,8 @@ await settled(); // no host is dirty, no flush is scheduled, no transition updat
   `@gyral/testing`'s `virtualTime` and then `await settled()`.
 - `@gyral/testing`'s `hydrated()` becomes: wait for the document's islands to be released (if
   asked), then `await settled()`. No polling passes.
+- Shipped before the swap (gyral-g1r.4), backed by Lit in `packages/core/src/settled.ts`, so
+  tests are renderer-agnostic first. The scheduler then implements the same contract.
 - Replaces `el.updateComplete` everywhere (about 270 test sites, the scaffold's `AGENTS.md`, the
   docs and the skill).
 

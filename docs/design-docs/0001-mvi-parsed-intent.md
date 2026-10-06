@@ -68,8 +68,8 @@ the caret); they must not do other side effects.
 render happens inside `document.startViewTransition`. It is a pure predicate over state, so the
 model still owns "what changed"; CSS (`::view-transition-*`) owns how it looks. It is an ADR
 0003 enhancement: skipped without the API or when `prefers-reduced-motion: reduce` matches.
-`updateComplete` waits for the transition's update callback, so callers and tests see the new
-DOM. A transition skipped by a newer one still runs its update (per spec).
+`settled()` (before it, `updateComplete`) waits for the transition's update callback, so callers
+and tests see the new DOM. A transition skipped by a newer one still runs its update (per spec).
 
 ## Addendum: model state as CSS custom states (gyral-czi.4, 2026-10-04)
 

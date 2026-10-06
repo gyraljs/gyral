@@ -1,5 +1,6 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, repeat } from '../src/index.js';
+import { define, html, repeat, settled } from '../src/index.js';
 
 // lit-html >= 3.3.1 leaves one comment node in the DOM for every item that repeat()
 // removes (lit/lit#5010, #5298; gyral-9y6). The workspace pins lit-html 3.3.0 until
@@ -44,17 +45,17 @@ describe('repeat() list churn (gyral-9y6)', () => {
   it('leaves no comment node behind per removed row', async () => {
     const el = new List();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const root = el.shadowRoot;
     if (root === null) throw new Error('expected a shadow root');
     const empty = comments(root);
 
     el.send({ _tag: 'Fill' });
-    await el.updateComplete;
+    await settled();
     expect(root.querySelectorAll('li')).toHaveLength(ROWS);
 
     el.send({ _tag: 'Clear' });
-    await el.updateComplete;
+    await settled();
     expect(root.querySelectorAll('li')).toHaveLength(0);
     // Only Lit's own part markers remain: the same count as before the list was filled.
     expect(comments(root)).toBe(empty);

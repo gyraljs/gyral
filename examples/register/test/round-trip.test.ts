@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import { makeHttpDriver } from '@gyral/http';
 import '../src/register.js';
 
@@ -14,7 +15,7 @@ async function mount(answer: () => Response) {
   const el = document.createElement('gy-register');
   el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'http://localhost/' }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const root = el.shadowRoot;
   for (const [name, value] of Object.entries(valid)) {
     const field = root?.querySelector(`input[name=${name}]`);
@@ -53,7 +54,7 @@ describe('register JS path: the server decides', () => {
     await vi.waitFor(() => {
       expect(el.state.errors).toEqual({ email: ['That email is already registered.'] });
     });
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.querySelector('#email-error')?.textContent).toBe(
       'That email is already registered.',
     );

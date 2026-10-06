@@ -18,7 +18,6 @@ export function lightHydrationSuite(label = ''): void {
 
   interface Live extends HTMLElement {
     readonly state: Record<string, unknown>;
-    readonly updateComplete: Promise<boolean>;
   }
   const one = (sel: string, root: ParentNode = document): Live => {
     const el = root.querySelector(sel);

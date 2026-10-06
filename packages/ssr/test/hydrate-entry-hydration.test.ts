@@ -1,3 +1,4 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 // `@gyral/ssr/hydrate` registers Lit's public hydrate() where core looks for it
 // (gyral-czi.38). Runs in both the development and production browser projects.
 import '../src/hydrate.js';

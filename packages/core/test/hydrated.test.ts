@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, type Hydrated } from '../src/index.js';
+import { define, html, settled, type Hydrated } from '../src/index.js';
 import { SEED_ATTRIBUTE } from '../src/hydration.js';
 
 interface State {
@@ -43,10 +43,9 @@ describe('Hydrated framework message', () => {
   it('arrives once after the first client render, with serverRendered: false', async () => {
     const el = new Enhance();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(renders[0]).toBe(false); // the first render is the no-JS UI
-    await settle();
-    await el.updateComplete;
+    await settled();
     expect(el.state.heard).toEqual([{ _tag: 'Hydrated', serverRendered: false }]);
     expect(el.shadowRoot?.querySelector('.enhanced')).not.toBeNull();
     el.remove();
@@ -62,7 +61,7 @@ describe('Hydrated framework message', () => {
       JSON.stringify({ state: { enhanced: false, heard: [] }, props: {} }),
     );
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(renders[0]).toBe(false); // matches the server markup
     await settle();
     expect(el.state.heard).toEqual([{ _tag: 'Hydrated', serverRendered: true }]);
@@ -75,7 +74,7 @@ describe('Hydrated framework message', () => {
     try {
       const el = new Plain();
       document.body.append(el);
-      await el.updateComplete;
+      await settled();
       await settle();
     } finally {
       console.warn = warn;

@@ -1,5 +1,6 @@
 import { run } from '@gyral/testing';
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { ShoppingList } from '../src/shopping-list.js';
 
 afterEach(() => {
@@ -18,14 +19,14 @@ it('applies commands purely', () => {
 it('adds and clears through invoker buttons, and opens the help dialog natively', async () => {
   const el = document.createElement('gy-shopping-list');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const button = (name: string) =>
     [...(el.shadowRoot?.querySelectorAll('button') ?? [])].find((b) => b.textContent === name);
   button('Add item')?.click();
-  await el.updateComplete;
+  await settled();
   expect(el.shadowRoot?.querySelector('h2')?.textContent).toBe('List (3)');
   button('Clear')?.click();
-  await el.updateComplete;
+  await settled();
   expect(el.state.items).toEqual([]);
   button('Help')?.click();
   expect(el.shadowRoot?.querySelector('dialog')?.open).toBe(true);

@@ -2,11 +2,11 @@
 import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/islands.ssr.html?raw';
 
 interface Live extends HTMLElement {
   readonly state: Record<string, unknown>;
-  readonly updateComplete: Promise<boolean>;
 }
 
 let page: MountedSsr | undefined;
@@ -50,32 +50,31 @@ describe('lazy hydration islands (gyral-4k7.4)', () => {
     await vi.waitFor(() => {
       expect(deferred('test-island-idle')).toBe(false);
     });
-    await el('test-island-idle').updateComplete;
+    await settled();
     expect(button('test-island-idle')).toBe(nodesBefore.get('idle'));
     button('test-island-idle').click();
-    await el('test-island-idle').updateComplete;
+    await settled();
     expect(el('test-island-idle').state['count']).toBe(1);
-    await el('test-island-store').updateComplete;
+    await settled();
     expect(el('test-island-store').shadowRoot?.querySelector('output')?.textContent).toBe('41');
   });
 
   it('hydrates interaction islands on first pointer contact, before the click lands', async () => {
     const target = button('test-island-interaction');
     target.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
-    await el('test-island-interaction').updateComplete;
+    await settled();
     expect(deferred('test-island-interaction')).toBe(false);
     expect(button('test-island-interaction')).toBe(nodesBefore.get('interaction'));
     target.click();
-    await el('test-island-interaction').updateComplete;
+    await settled();
     expect(el('test-island-interaction').state['count']).toBe(1);
   });
 
   it('releases nested components together with their island', async () => {
     const parent = el('test-island-parent');
     parent.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
-    await parent.updateComplete;
+    await settled();
     const nested = parent.shadowRoot?.querySelector('test-island-load');
-    await (nested as Live | null)?.updateComplete;
     expect(nested?.hasAttribute('defer-hydration')).toBe(false);
     expect((nested as Live | null)?.state['hydrated']).toBe(true);
   });
@@ -86,7 +85,7 @@ describe('lazy hydration islands (gyral-4k7.4)', () => {
     await vi.waitFor(() => {
       expect(deferred('test-island-visible')).toBe(false);
     });
-    await el('test-island-visible').updateComplete;
+    await settled();
     expect(button('test-island-visible')).toBe(nodesBefore.get('visible'));
     expect(page?.problems).toEqual([]);
   });

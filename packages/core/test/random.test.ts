@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, random, randomDriver, randomInt, toInt } from '../src/index.js';
+import { define, html, random, randomDriver, randomInt, settled, toInt } from '../src/index.js';
 
 describe('toInt', () => {
   it('maps [0, 1) onto min..max inclusively', () => {
@@ -39,7 +39,7 @@ describe('random commands', () => {
     const el = new Dice();
     el.drivers = { random: { name: 'random', run: () => [0.99] } };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Roll' });
     await settle();
     expect(el.state.rolls).toEqual([6]);

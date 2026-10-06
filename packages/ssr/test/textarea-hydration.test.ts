@@ -1,12 +1,13 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 // ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
 import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/textarea.ssr.html?raw';
 
 interface Live extends HTMLElement {
   readonly state: { readonly message: string; readonly invalid: boolean };
-  readonly updateComplete: Promise<boolean>;
   send(msg: { readonly _tag: string }): void;
 }
 
@@ -44,21 +45,21 @@ describe('textarea() hydration (gyral-czi.34)', () => {
   it('turns typing into intents and model changes into the live value', async () => {
     area().value = 'new text';
     area().dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    await host().updateComplete;
+    await settled();
     expect(host().state.message).toBe('new text');
     expect(area()).toBe(before);
     host().shadowRoot?.querySelector('button')?.click();
-    await host().updateComplete;
+    await settled();
     expect(area().value).toBe('');
     expect(area()).toBe(before);
   });
 
   it('keeps attributes in sync', async () => {
     host().send({ _tag: 'Flag' });
-    await host().updateComplete;
+    await settled();
     expect(area().getAttribute('aria-invalid')).toBe('true');
     host().send({ _tag: 'Flag' });
-    await host().updateComplete;
+    await settled();
     expect(area().hasAttribute('aria-invalid')).toBe(false);
   });
 });

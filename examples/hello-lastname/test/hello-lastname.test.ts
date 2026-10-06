@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run } from '@gyral/testing';
 import { fullName, HelloLastname } from '../src/hello-lastname.js';
 
@@ -29,13 +30,13 @@ it('update stores each field', () => {
 it('greets once both inputs are valid', async () => {
   const el = document.createElement('gy-hello-lastname');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const type = async (id: string, value: string) => {
     const input = el.shadowRoot?.querySelector<HTMLInputElement>(`#${id}`);
     if (input == null) throw new Error(`missing #${id}`);
     input.value = value;
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    await el.updateComplete;
+    await settled();
   };
   const greeting = () => el.shadowRoot?.querySelector('output')?.textContent;
   await type('first', 'Ada');
