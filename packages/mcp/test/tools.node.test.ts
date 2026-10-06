@@ -48,8 +48,12 @@ describe('docs', () => {
   });
 
   it('ranks the guide section first for a conceptual query', () => {
+    // Two guides have a `Lazy hydration` section (server rendering, code-splitting); either
+    // beats a page that only mentions it.
     const [first] = searchDocs(corpus.docs, 'lazy hydration', 3);
-    expect(first?.url).toBe('https://gyral.dev/docs/server-rendering/#lazy-hydration');
+    expect(first?.url).toMatch(
+      /^https:\/\/gyral\.dev\/docs\/(server-rendering|code-splitting)\/#lazy-hydration$/,
+    );
     expect(searchDocs(corpus.docs, 'switch concurrency', 1)[0]?.url).toBe(
       'https://gyral.dev/docs/effects/#concurrency-lanes',
     );
