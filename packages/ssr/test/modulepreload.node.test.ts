@@ -48,6 +48,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
     expect(clientAssets(workspace, 'src/entry-client.ts')).toEqual({
       entry: '/assets/entry-client-Dc.js',
       modulepreload: [
+        '/assets/entry-client-Dc.js',
         '/assets/render-bG.js',
         '/assets/define-D8.js',
         '/assets/hydration-client-B8.js',
@@ -66,6 +67,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
         'src/main.ts': { file: 'assets/main.js', dynamicImports: [key] },
       };
       expect(clientAssets(manifest, 'src/main.ts').modulepreload).toEqual([
+        '/assets/main.js',
         '/assets/dep.js',
         '/assets/hydration-client-X.js',
       ]);
@@ -79,6 +81,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
       '_form.js': { file: 'assets/form.js' },
     };
     expect(clientAssets(lazy, 'src/entry-client.ts', ['src/contact.ts']).modulepreload).toEqual([
+      '/assets/entry-client-Dc.js',
       '/assets/render-bG.js',
       '/assets/define-D8.js',
       '/assets/hydration-client-B8.js',
@@ -90,7 +93,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
     );
   });
 
-  it('preloads nothing extra for an entry without imports, and handles import cycles', () => {
+  it('preloads nothing for an entry without imports, the entry first otherwise, and handles cycles', () => {
     expect(clientAssets({ 'a.ts': { file: 'a.js' } }, 'a.ts')).toEqual({
       entry: '/a.js',
       modulepreload: [],
@@ -100,7 +103,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
       '_b.js': { file: 'b.js', imports: ['_c.js'] },
       '_c.js': { file: 'c.js', imports: ['_b.js', 'a.ts'] },
     };
-    expect(clientAssets(cycle, 'a.ts').modulepreload).toEqual(['/c.js', '/b.js']);
+    expect(clientAssets(cycle, 'a.ts').modulepreload).toEqual(['/a.js', '/c.js', '/b.js']);
     expect(() => clientAssets(cycle, 'missing.ts')).toThrow(/not an entry/);
   });
 });

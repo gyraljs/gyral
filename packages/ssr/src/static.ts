@@ -96,8 +96,9 @@ export interface ClientAssets {
   /** The entry chunk's URL, for `page({ scripts })`. */
   readonly entry: string;
   /**
-   * Chunks the entry is known to need, for `page({ modulepreload })`: its static imports and
-   * Gyral's lazily loaded hydration chunk with its imports. Without the hints the browser
+   * Chunks the entry is known to need, for `page({ modulepreload })`: the entry itself first
+   * (when there is anything else), then its static imports and Gyral's lazily loaded hydration
+   * chunk with its imports. Without the hints the browser
    * finds them only after it has fetched and parsed the entry (a server-rendered page would
    * fetch the hydration chunk a round trip later still).
    */
@@ -151,7 +152,11 @@ export function clientAssets(
     addImports(lazy);
     urls.push(`/${lazy.file}`);
   }
-  return { entry: `/${root.file}`, modulepreload: urls };
+  const url = `/${root.file}`;
+  // When anything is preloaded, the entry itself comes first: with route chunks added (`also`)
+  // it would otherwise queue behind them on HTTP/1.1's six connections and start later than
+  // with no preloads at all (found in gyral-shop).
+  return { entry: url, modulepreload: urls.length === 0 ? [] : [url, ...urls] };
 }
 
 /**

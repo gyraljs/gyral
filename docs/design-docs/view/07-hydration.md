@@ -36,8 +36,10 @@ The walk, the mismatch messages and islands live in one internal module
   and waiting hosts render fresh: their roots are cleared, so a view is never doubled.
 - **Preloading (gyral-g1r.21):** a server-rendered page knows it will need the chunk, so the
   server says so up front. `clientAssetsFromManifest(manifest, entry)` (`@gyral/ssr/static`)
-  reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry's
-  static imports (depth first) and the hydration chunk (the dynamic import whose source is
+  reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry
+  itself first (when anything else is listed: with route chunks added it would otherwise queue
+  behind them on HTTP/1.1's six connections — measured in gyral-shop, the buy box defined at
+  979 ms instead of 698 ms), then its static imports (depth first) and the hydration chunk (the dynamic import whose source is
   core's `hydration-client`, from `packages/core/src/` or an installed `@gyral/core/dist/`)
   with its own imports. The app's own lazy chunks are not included unless named:
   `clientAssets(manifest, entry, also)` adds those modules (manifest keys such as a route's
