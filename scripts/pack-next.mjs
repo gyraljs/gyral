@@ -4,25 +4,17 @@
 //   pnpm pack:next                 → ../gyral-tarballs/<name>-0.3.0-next.0.tgz
 //   pnpm pack:next 0.3.0-next.2    → another prerelease number
 //   GYRAL_TARBALLS=/path pnpm pack:next
+// Older prereleases' tarballs stay; @gyral/* entries in every dependency field (dev included)
+// are pinned to the prerelease (lib/pack-next.mjs).
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { prereleaseManifest } from './lib/pack-next.mjs';
 
 const version = process.argv[2] ?? '0.3.0-next.0';
 const out = resolve(process.env.GYRAL_TARBALLS ?? '../gyral-tarballs');
 const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, encoding: 'utf8' }).trim();
-
-/** Every @gyral/* (and create-gyral) dependency points at the same prerelease. */
-function pin(deps) {
-  if (deps === undefined) return deps;
-  return Object.fromEntries(
-    Object.entries(deps).map(([name, range]) => [
-      name,
-      name.startsWith('@gyral/') || name === 'create-gyral' ? version : range,
-    ]),
-  );
-}
 
 mkdirSync(out, { recursive: true });
 const tmp = mkdtempSync(join(tmpdir(), 'gyral-pack-'));
@@ -34,11 +26,7 @@ try {
     const work = mkdtempSync(join(tmp, 'x-'));
     run('tar', ['-xzf', tarball, '-C', work]);
     const manifestPath = join(work, 'package', 'package.json');
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    manifest.version = version;
-    for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies']) {
-      manifest[field] = pin(manifest[field]);
-    }
+    const manifest = prereleaseManifest(JSON.parse(readFileSync(manifestPath, 'utf8')), version);
     writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
     const name = `${manifest.name.replace('@', '').replace('/', '-')}-${version}.tgz`;
     rmSync(join(out, name), { force: true });
@@ -51,8 +39,8 @@ try {
 
 const commit = run('git', ['rev-parse', 'HEAD'], '.');
 const dirty = run('git', ['status', '--porcelain'], '.') !== '';
-writeFileSync(
-  join(out, 'SOURCE.json'),
-  `${JSON.stringify({ commit, dirty, version, packed: new Date().toISOString(), files: packed }, null, 2)}\n`,
-);
+const source = `${JSON.stringify({ commit, dirty, version, packed: new Date().toISOString(), files: packed }, null, 2)}\n`;
+// SOURCE.json describes the latest pack; SOURCE-<version>.json stays with its tarballs.
+writeFileSync(join(out, 'SOURCE.json'), source);
+writeFileSync(join(out, `SOURCE-${version}.json`), source);
 console.log(`pack:next: ${String(packed.length)} tarballs (${version}) in ${out}`);
