@@ -48,7 +48,7 @@
     "playwright": "1.63.0",
     "pngjs": "7.0.0",
     "postcss": "8.5.28",
-    "postcss-lit": "1.4.1",
+    "postcss-styled-syntax": "0.7.3",
     "prettier": "3.9.9",
     "publint": "0.3.25",
     "stylelint": "17.16.0",

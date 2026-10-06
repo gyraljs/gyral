@@ -97,7 +97,6 @@ describe('listExamples', () => {
 describe('console, overflow and axe', () => {
   it('fails on errors and warnings except the expected dev messages and allowed patterns', () => {
     const entries = [
-      { type: 'warning', text: 'Lit is in dev mode. Not recommended for production!' },
       { type: 'debug', text: '[vite] connected.' },
       { type: 'log', text: 'hello' },
       { type: 'error', text: 'Failed to load resource: 404' },

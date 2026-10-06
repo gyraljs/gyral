@@ -62,7 +62,7 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 
 `pnpm lint:css` (part of `pnpm lint` and `pnpm check`) runs stylelint with
 `stylelint-plugin-use-baseline` at `available: 'widely'` (data from `web-features`) over every
-`css` template in `packages/*/src` and `examples/*/src` (through `postcss-lit`) and over
+`css` template in `packages/*/src` and `examples/*/src` (through `postcss-styled-syntax`) and over
 `examples/**/*.css`. Patterns:
 
 - **Enhancement-only properties** (`text-wrap`, `accent-color`, `content-visibility`, anchor

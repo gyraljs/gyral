@@ -1,6 +1,6 @@
 // The view layer's in-browser benchmarks (not part of `pnpm check`): `pnpm bench:view`.
-// Production conditions: core's `#view-dev` resolves to dev-off.ts and lit-html (the
-// black-box baseline) to its production build, so neither pays for development checks.
+// Production conditions: core's `#view-dev` resolves to dev-off.ts, so the renderer doesn't pay
+// for development checks.
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 

@@ -148,6 +148,26 @@ renderer benchmark); with the two-ended scan only, "replace first and last" take
 of 0.13 ms. Bench rerun after the size pass: (a) 0.150 / 0.125, (b) 0.070 / 0.625, (c) 0.070 /
 0.130 ms (swap / replace first and last).
 
+### The renderer against lit-html (last in-repo run, 2026-10-06)
+
+Until Phase 7 `pnpm bench:view` also rendered the js-framework-benchmark rows with lit-html 3.3.0
+(`repeat`, production build, run as a black box) to check that no operation got slower than
+0.2.0's renderer. Lit left the repository's dependency tree with Phase 7 (ADR 0018 merge gate 5),
+so the bench now times Gyral alone, and comparisons with other frameworks, Lit included, live in
+the gyral-benchmarks repository. The last run (Chromium, cross-origin isolated, medians of 25
+runs after 5 warm-ups, in ms):
+
+| Operation             | Gyral | lit-html | Ratio |
+| --------------------- | ----- | -------- | ----- |
+| create 1k rows        | 4.49  | 6.15     | 0.73  |
+| replace 1k rows       | 5.02  | 7.57     | 0.66  |
+| update every 10th row | 0.13  | 0.24     | 0.55  |
+| swap rows (1, 998)    | 0.13  | 0.17     | 0.71  |
+| select row            | 0.05  | 0.14     | 0.34  |
+| remove row            | 0.04  | 0.14     | 0.28  |
+| append 1k rows        | 4.25  | 6.13     | 0.69  |
+| clear 1k rows         | 0.47  | 1.30     | 0.36  |
+
 ### Fast paths
 
 - **Create into empty:** build all rows into one `DocumentFragment` and insert it once.

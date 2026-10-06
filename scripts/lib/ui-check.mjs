@@ -12,7 +12,7 @@ export const SCHEMES = ['light', 'dark'];
 export const PRIMARY = { viewport: 'desktop', scheme: 'light' };
 
 /** Console messages that are expected in development and never fail a run. */
-export const IGNORED_CONSOLE = [/Lit is in dev mode/, /^\[vite\]/];
+export const IGNORED_CONSOLE = [/^\[vite\]/];
 
 const USAGE = `Usage: pnpm ui:check [example…] [--baseline] [--compare] [--threshold=0.1] [--max-diff=0.001] [--port=5700]
   --baseline     save this run's screenshots as the baseline (.ui-check/baseline/)

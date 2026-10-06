@@ -20,7 +20,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 import { build, runnerImport } from 'vite';
 
 // The preset is TypeScript: load it the way Vite loads a vite.config.ts. Loading sets
-// NODE_ENV=development when unset, which would give every build Lit's development code.
+// NODE_ENV=development when unset, which would give every build Gyral's development code.
 const nodeEnv = process.env.NODE_ENV;
 const { module: presetModule } = await runnerImport(resolve('packages/core/src/vite.ts'));
 if (nodeEnv === undefined) delete process.env.NODE_ENV;

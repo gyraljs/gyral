@@ -1,4 +1,4 @@
-// The template corpus for the browser check (prepare.test.ts): every `html`/`serverHtml`
+// The template corpus for the browser check (prepare.test.ts): every `html`
 // tagged template in the examples (views, servers, tests) and the packages' sources and tests, extracted from their sources with a
 // small template-literal scanner (cooked strings, nested templates found separately).
 
@@ -73,10 +73,10 @@ function readTemplate(src: string, start: number): { strings: string[]; end: num
   return { strings, end: src.length };
 }
 
-/** Every `html`/`serverHtml` tagged template in `src`. */
+/** Every `html` tagged template in `src`. */
 export function extractTemplates(src: string): string[][] {
   const found: string[][] = [];
-  for (const match of src.matchAll(/\b(?:html|serverHtml)`/g)) {
+  for (const match of src.matchAll(/\bhtml`/g)) {
     found.push(readTemplate(src, match.index + match[0].length - 1).strings);
   }
   return found;

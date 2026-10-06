@@ -1,4 +1,5 @@
-// Kept as an entry point during the view-layer swap (ADR 0018). Until 0.3.0 this module made
-// Lit hydrate server-rendered DOM; hydration is now built into @gyral/core
-// (view/07-hydration.md), so importing it does nothing and pulls nothing into client bundles.
+// Hydration is built into @gyral/core since 0.3.0 (view/07-hydration.md): each server-rendered
+// component adopts its DOM on its own. This entry point stays so 0.2's
+// `import '@gyral/ssr/hydrate'` keeps resolving; it exports nothing and adds nothing to client
+// bundles. Remove the import (docs/references/migrating-0.2-to-0.3.md).
 export {};

@@ -6,7 +6,7 @@ import { normalize, type TemplateObject } from '../../src/view/index.js';
 import { corpus } from '../view/corpus.js';
 import { buildApp, importBuilt, VIEW } from './fixture.js';
 
-/** Corpus templates the normalizer accepts (Lit-era ones may break the new rules). */
+/** Corpus templates the normalizer accepts (client templates; page shells are server-only). */
 const valid = corpus
   .map((t) => t.strings)
   .filter((strings) => {

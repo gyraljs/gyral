@@ -2,5 +2,5 @@
 export default {
   once: true,
   allowConsole: [/Failed to load resource/],
-  steps: [{ fill: { label: 'Repository name' }, value: 'lit' }, { wait: 2500 }],
+  steps: [{ fill: { label: 'Repository name' }, value: 'cyclejs' }, { wait: 2500 }],
 };

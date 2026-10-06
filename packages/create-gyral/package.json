@@ -8,7 +8,6 @@
     "scaffold",
     "starter",
     "web-components",
-    "lit",
     "mvi"
   ],
   "license": "MIT",

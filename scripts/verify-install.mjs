@@ -3,16 +3,14 @@
 // then imports every published entry point from Node and server-renders a tiny page.
 // Run before a first publish and after packaging changes; it is too slow for `pnpm check`.
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const PEERS = [
-  'lit@^3.3.0',
-  '@lit-labs/ssr@^4.1.0',
-  '@lit-labs/ssr-client@^1.1.8',
-  'fast-check@^4',
-];
+// Optional peers the smoke test touches (@gyral/testing/arbitraries uses fast-check).
+const PEERS = ['fast-check@^4'];
+/** Packages no Gyral install may bring in (ADR 0018: Gyral renders with its own view layer). */
+const FORBIDDEN = ['lit', 'lit-html', 'lit-element', '@lit/reactive-element', '@lit-labs/ssr'];
 
 const dir = mkdtempSync(join(tmpdir(), 'gyral-install-'));
 const tarballs = join(dir, 'tarballs');
@@ -31,24 +29,25 @@ try {
   );
   const tgz = readdirSync(tarballs).map((f) => join(tarballs, f));
   sh('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error', ...tgz, ...PEERS], app);
+  const found = FORBIDDEN.filter((name) => existsSync(join(app, 'node_modules', name)));
+  if (found.length > 0) throw new Error(`the tarballs installed ${found.join(', ')}`);
 
   writeFileSync(
     join(app, 'smoke.mjs'),
     `
-// @gyral/ssr installs Lit's server DOM shim, so it loads first (as on a real server).
+// Plain Node, no DOM: define() records the spec and the server renderer renders it.
+import { define, html } from '@gyral/core';
 import { renderToString } from '@gyral/ssr';
-import { html } from 'lit';
 const entries = [
-  '@gyral/core', '@gyral/core/vite', '@gyral/core/eslint', '@gyral/http', '@gyral/http/testing',
-  '@gyral/router', '@gyral/time', '@gyral/ssr/static', '@gyral/testing',
-  '@gyral/testing/arbitraries',
+  '@gyral/core', '@gyral/core/server', '@gyral/core/vite', '@gyral/core/eslint',
+  '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time',
+  '@gyral/ssr', '@gyral/ssr/static', '@gyral/testing', '@gyral/testing/arbitraries',
 ];
 for (const entry of entries) {
   const mod = await import(entry);
   if (Object.keys(mod).length === 0) throw new Error(entry + ' has no exports');
   console.log('import ok  ' + entry + ' (' + Object.keys(mod).length + ' exports)');
 }
-const { define } = await import('@gyral/core');
 define('gy-hello', {
   init: () => ({ name: 'world' }),
   intent: {},
@@ -83,7 +82,9 @@ console.log('mcp ok     gyral-mcp answered over stdio (' + tools.length + ' tool
 `,
   );
   execFileSync('node', ['mcp.mjs'], { cwd: app, stdio: 'inherit' });
-  console.log(`verify:install ok (${tgz.length} tarballs, peers: ${PEERS.join(' ')})`);
+  console.log(
+    `verify:install ok (${tgz.length} tarballs, peers: ${PEERS.join(' ')}; no ${FORBIDDEN.join(', ')})`,
+  );
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

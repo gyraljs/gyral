@@ -1,9 +1,8 @@
-// Gyral's renderer against lit-html 3.3.0 (run as a black box, ADR 0018 "Clean room") on the
-// js-framework-benchmark row template: `pnpm bench:view`. Times the synchronous render call
-// (DOM work included; layout and paint excluded, they're the same DOM for both), median of
-// several runs after warm-up. Not part of `pnpm check`.
-import { html as litHtml, render as litRender } from 'lit';
-import { repeat } from 'lit/directives/repeat.js';
+// Gyral's renderer on the js-framework-benchmark row template: `pnpm bench:view`. Times the
+// synchronous render call (DOM work included; layout and paint excluded), median of several
+// runs after warm-up. Not part of `pnpm check`. Compare runs of this file before and after a
+// renderer change; comparisons with other frameworks live in the gyral-benchmarks repository
+// (the last in-repo comparison, against lit-html 3.3.0, is recorded in view/03-lists.md).
 import { it } from 'vitest';
 import { each, html, render } from '../src/view/index.js';
 import { buildRows, median, type Row } from './rows.js';
@@ -40,22 +39,6 @@ function gyral(host: HTMLElement): Lib {
     name: 'gyral',
     draw: (rows, selected) => {
       render(app(rows, selected), host);
-    },
-  };
-}
-
-function lit(host: HTMLElement): Lib {
-  const app = (rows: readonly Row[], selected: number) =>
-    litHtml`<table class="table table-hover table-striped test-data"><tbody>${repeat(
-      rows,
-      (r) => r.id,
-      (r) =>
-        litHtml`<tr class=${r.id === selected ? 'danger' : ''}><td class="col-md-1">${r.id}</td><td class="col-md-4"><a data-intent="select">${r.label}</a></td><td class="col-md-1"><a data-intent="remove"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span></a></td><td class="col-md-6"></td></tr>`,
-    )}</tbody></table>`;
-  return {
-    name: 'lit-html',
-    draw: (rows, selected) => {
-      litRender(app(rows, selected), host);
     },
   };
 }
@@ -169,19 +152,13 @@ function measure(lib: Lib, op: Op): number {
   return median(samples);
 }
 
-it('renders the benchmark rows faster than lit-html', () => {
-  const hosts = [document.createElement('div'), document.createElement('div')];
-  for (const host of hosts) document.body.append(host);
-  const libs = [gyral(hosts[0] as HTMLElement), lit(hosts[1] as HTMLElement)];
-  const lines = [
-    `${'operation'.padEnd(24)}${'gyral ms'.padStart(10)}${'lit ms'.padStart(10)}  ratio`,
-  ];
+it('renders the benchmark rows', () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const lib = gyral(host);
+  const lines = [`${'operation'.padEnd(24)}${'gyral ms'.padStart(10)}`];
   for (const op of OPS) {
-    // Interleave the libraries per operation so drift affects both alike.
-    const [g, l] = libs.map((lib) => measure(lib, op)) as [number, number];
-    lines.push(
-      `${op.name.padEnd(24)}${g.toFixed(2).padStart(10)}${l.toFixed(2).padStart(10)}  ${(g / l).toFixed(2)}`,
-    );
+    lines.push(`${op.name.padEnd(24)}${measure(lib, op).toFixed(2).padStart(10)}`);
   }
   console.log(`crossOriginIsolated: ${String(crossOriginIsolated)}\n${lines.join('\n')}`);
 });

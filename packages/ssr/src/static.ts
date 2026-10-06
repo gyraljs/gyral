@@ -1,7 +1,7 @@
 /// <reference types="node" />
 // Static generation and production serving helpers (gyral-4k7.3, ADR 0016). Server-only and
 // Node-only, so they live on their own subpath (`@gyral/ssr/static`) and the main entry stays
-// runtime-neutral. One route table, three modes (lit-web-apps skill):
+// runtime-neutral. One route table, three modes:
 // - `ssg`: rendered at build time by the same app that serves `ssr` routes, written as files;
 // - `ssr`: rendered per request;
 // - `csr`: not prerendered; the client renders it.

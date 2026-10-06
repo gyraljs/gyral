@@ -48,7 +48,7 @@ describe('gyral/template', () => {
       // Rule 11 is the runtime's: a page shell is fine on the server.
       `${IMPORT}export const page = (b) => html\`<!doctype html><html><body>\${b}</body></html>\`;`,
       // Not Gyral's html: another library's, a shadowing local, an untagged template.
-      "import { html } from 'lit';\nexport const v = html`<div/>`;",
+      "import { html } from 'other-renderer';\nexport const v = html`<div/>`;",
       `${IMPORT}export const f = (html) => html\`<div/>\`;`,
       `${IMPORT}export const s = \`<div/>\`;`,
       'const html = (s) => s;\nexport const v = html`<div/>`;',

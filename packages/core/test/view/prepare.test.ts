@@ -13,9 +13,6 @@ import { template } from './arbitrary.js';
 import { corpus } from './corpus.js';
 import { t } from './helpers.js';
 
-/** Rules the examples still break until they migrate to the new bindings (Phase 7). */
-const MIGRATION_RULES = new Set([4]);
-
 function ruleOf(run: () => unknown): number | undefined {
   try {
     run();
@@ -70,12 +67,12 @@ describe('the runtime preparer in the browser (view/01)', () => {
         templateElement(object);
         checked++;
       });
-      if (rule !== undefined && !MIGRATION_RULES.has(rule)) {
+      if (rule !== undefined) {
         failures.push(`${file}: rule ${String(rule)}: ${strings.join('${…}').slice(0, 100)}`);
       }
     }
     expect(failures).toEqual([]);
-    // 244 templates on 2026-10-06; the ones skipped break rule 4 until Phase 7 migrates them.
+    // 244 templates on 2026-10-06.
     expect(checked).toBeGreaterThan(200);
   });
 

@@ -148,7 +148,8 @@ Against the targets above:
   2.4–5.4 KiB below its 0.2.0 bundle (`scripts/size-budget.json` now caps both).
 - Apps that use a feature ship it: hello-world shed 5.4 KiB, no-js-first (forms, stores, lists,
   hooks, commands, server-rendered) 2.5 KiB.
-- Renderer speed unchanged: every `pnpm bench:view` operation stays faster than lit-html.
+- Renderer speed unchanged: every `pnpm bench:view` operation stays faster than lit-html (the
+  last in-repo comparison, before Phase 7 removed Lit, is in view/03-lists.md).
 
 What further cuts would cost (largest first):
 
