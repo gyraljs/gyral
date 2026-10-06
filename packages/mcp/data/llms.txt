@@ -1,6 +1,6 @@
 # Gyral
 
-> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Inspired by Cycle.js. Components are standard custom elements rendered by Gyral's own view layer: messages come in from DOM events (intent), a pure `update` makes the next state and describes side effects as data (commands run by drivers), and a pure `view` renders it. Pages render on the server or prerender to static HTML and hydrate in place. The public API is plain TypeScript. Current version: 0.3.0-next.2.
+> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Inspired by Cycle.js. Components are standard custom elements rendered by Gyral's own view layer: messages come in from DOM events (intent), a pure `update` makes the next state and describes side effects as data (commands run by drivers), and a pure `view` renders it. Pages render on the server or prerender to static HTML and hydrate in place. The public API is plain TypeScript. Current version: 0.3.0-next.5.
 
 Start a project with `npm create gyral@latest my-app -- --template ssr` (or `--template basic`). In Claude Code, install the Gyral skill with `/plugin marketplace add gyraljs/gyral`, then `/plugin install gyral@gyral`. Every link below is a Markdown page; https://gyral.dev/llms-full.txt has the docs, API reference and examples in one file.
 

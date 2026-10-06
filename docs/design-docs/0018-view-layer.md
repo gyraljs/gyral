@@ -199,6 +199,27 @@ objects keep their ids; the renderer gained one comparison on a template switch)
   `frameworks/gyral` (published 0.2.0) and a `frameworks/gyral-next` variant (tarballs packed
   from `next`, never published) are measured **in the same run**, and compared only within it.
 
+## Result (Phase 8, 2026-10-06)
+
+One gyral-benchmarks run measured published 0.2.0 and 0.3.0-next.6 (commit 2cc2704) together
+with Lit, Solid, Svelte, Vue, Preact and React (`results/2026-10-06-gyral-0.3-final/` on the
+benchmark repo's `gyral-next` branch; calibration spread 3.3%, no drift flag).
+
+- **Speed gate: pass.** 0.3 is slower than 0.2.0 on no operation (Mann–Whitney and bootstrap
+  CI per operation); faster beyond noise on create 1k (−3%), replace (−5%), update (−4%),
+  swap (−22%), create 10k (−4%), append (−6%) and clear (−24%); select and remove within
+  noise. Geomean vs fastest: **Gyral 0.3 1.03**, Svelte 1.07, Solid 1.08, Vue 1.20, Gyral 0.2.0
+  1.20, Lit 1.31, Preact 1.40, React 1.53.
+- **Size:** floor app 8.6 KiB gzip for the entry chunk (11.6 counting the lazy hydration and
+  invoker chunks client-only pages never fetch) vs 0.2.0's 11.9; todo 10.5 / 13.6 vs 13.6;
+  search and table are 1.0 / 0.2 KiB larger than 0.2.0 when every chunk is counted. The
+  ≤ 8 KiB floor target is not met (8.6).
+- **Memory / startup:** heap after load 1.18 MB (0.2.0: 1.26); todo interactive cold 425 ms
+  (0.2.0: 445; Lit 410, Solid 407).
+- **Apps:** gyral-shop server rendering 2.6–3.7× faster (category 12.1 → 3.3 ms), entry chunk
+  10.2 → 7.9 KiB, every page downloads less JS; gyral.dev island entry 17.6 → 14.1 KB gzip
+  plus a 2.9 KB preloaded hydration chunk, strict CSP without `'unsafe-inline'` styles.
+
 ## Migration (decision K)
 
 - **Phase 0 on `main`:** this ADR and the specs; size budget in CI from the 0.2.0 baseline;

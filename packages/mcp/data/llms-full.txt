@@ -1,4 +1,4 @@
-# Gyral 0.3.0-next.2: complete documentation
+# Gyral 0.3.0-next.5: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Inspired by Cycle.js.
 
@@ -1095,10 +1095,18 @@ browser:
 | `<details>`, `<dialog>` | `?open=${s.open}`                            |
 | `<textarea>`            | `<textarea name="note">${s.note}</textarea>` |
 
-These bindings are live: the model wins whenever its value changes, even after the user has
-edited the control, and the view compares with what the control shows now, not with what it
-rendered last. On the server they write the attribute, so the page is right before JavaScript
-loads, and hydration never overwrites what the user typed before scripts ran.
+A binding writes the control only when the model's value for it changes. Then the model wins,
+even after the user has edited the control (the view compares with what the control shows now
+and writes only if they differ). A render for any other reason, such as another field's
+message or a reducer that refused the edit, leaves what the user typed or toggled alone. On the
+server the bindings write the attribute, so the page is right before JavaScript loads, and
+hydration keeps what the user typed before scripts ran until the model's value changes.
+
+To put a control back after a refused edit, change the model: clamp or normalize to a value
+that differs from the one rendered last, or re-create the form with a key. Keep a counter in
+the state, bump it on reset, and render the fields as a one-item list,
+`each([s], (x) => x.formKey, (x) => fields(x))`: the new key brings fresh elements with the
+model's values. `form.reset()` is no substitute; it restores the first values, not the model's.
 
 Never bind form state as a property (`.value=`, `.checked=`): the server can't write a
 property, so the page would arrive empty. The compiler rejects it. A checkbox's `value` and a
@@ -1293,8 +1301,8 @@ Styles in a shadow root don't leak out, and page styles don't leak in. Rendered 
 they travel inside the component's Declarative Shadow DOM as one `<style>` element, so they
 apply before any JavaScript runs. When the component hydrates, Gyral swaps that element for the
 shared sheet in the same step, so nothing flashes. A strict Content Security Policy doesn't need
-`'unsafe-inline'` for them: `contentSecurityPolicy()` from `@gyral/ssr` lists each component's
-`<style>` by its hash (see [Server rendering](https://gyral.dev/docs/server-rendering/#content-security-policy)).
+`'unsafe-inline'` for them: `renderPage({ csp })` and `contentSecurityPolicy()` from `@gyral/ssr`
+list each component's `<style>` by its hash (see [Server rendering](https://gyral.dev/docs/server-rendering/#content-security-policy)).
 
 ## Theming with custom properties
 
@@ -2391,7 +2399,8 @@ switch to the enhanced one.
 The seed carries state as JSON, so keep state and props JSON-serializable. The server warns,
 with the exact path, when a value won't survive the trip (a `Date`, a `Map`, `NaN`). State that
 equals `init(props)` isn't written twice. Form controls keep what the user typed before scripts
-ran: hydration never overwrites it.
+ran: hydration never overwrites it, and a control is written again only when the model's value
+for it changes.
 
 ## Mismatches
 
@@ -2432,38 +2441,42 @@ CSS styles it. See [Styling](https://gyral.dev/docs/styling/#light-dom-component
 ## Content-Security-Policy
 
 Seeds are attributes, not scripts, so `script-src 'self'` is enough. A shadow component's styles
-arrive as an inline `<style>` in its Declarative Shadow DOM, and `contentSecurityPolicy()` allows
-each of them by its SHA-256 hash, so `style-src` needs no `'unsafe-inline'`:
+arrive as an inline `<style>` in its Declarative Shadow DOM. Pass `csp: { directives }` to
+`renderPage` and it sends a `Content-Security-Policy` header that allows each of them by its
+SHA-256 hash, so `style-src` needs no `'unsafe-inline'`:
 
 ```ts
 // server/home.ts
 import { html } from '@gyral/core';
-import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+import { renderPage } from '@gyral/ssr';
 import '../src/counter.js';
 
 const styles = ':root { color-scheme: light dark; }';
 
-export async function home(): Promise<Response> {
-  // Hashes are cached, so computing the policy per request is cheap.
-  const csp = await contentSecurityPolicy({
-    styles,
-    directives: { 'default-src': "'self'", 'script-src': "'self'", 'object-src': "'none'" },
-  });
+export function home(): Response {
   return renderPage({
     title: 'Home',
     styles,
     body: html`<my-counter></my-counter>`,
     scripts: ['/src/entry-client.ts'],
-    csp,
+    // Built when the page renders; cached until another component registers.
+    csp: {
+      directives: { 'default-src': "'self'", 'script-src': "'self'", 'object-src': "'none'" },
+    },
   });
 }
 ```
 
-The policy lists every registered shadow component and each entry of `styles`. Inline `style="…"`
-attributes and `<style>` elements you write in `head` aren't covered: move that CSS into
-`styles` or a stylesheet. For a static site, write the same value into your host's headers file
-at build time (see [Static sites](https://gyral.dev/docs/static-sites/#headers-and-csp)). This site does exactly
-that.
+The header is built when the page renders, so it lists every shadow component registered by
+then, also those whose modules were imported lazily after startup, plus each entry of the
+page's `styles`. Inline `style="…"` attributes and `<style>` elements you write in `head` aren't
+covered: move that CSS into `styles` or a stylesheet.
+
+`contentSecurityPolicy({ directives, styles? })` builds the same value ahead of time, for the
+components imported before the call. Use it where no page renders per request: a static site
+writes it into the host's headers file at build time (see
+[Static sites](https://gyral.dev/docs/static-sites/#headers-and-csp)), as this site does. In development,
+`renderPage` warns when a header string it is given lacks a registered component's hash.
 
 ## Static generation
 
@@ -2475,8 +2488,10 @@ to ship either, see [Deploying](https://gyral.dev/docs/deploying/).
 ## Lower level: @gyral/core/server
 
 `@gyral/ssr` covers most apps. Underneath, `@gyral/core/server` exports `render(value)`, which
-yields the HTML in chunks synchronously, `renderToString(value)` and `styleHashes()`. Import it
-only from server code, never from a client entry, so client bundles carry no server renderer.
+yields the HTML in chunks synchronously, `renderToString(value)`, `styleHashes()` and
+`styleHashSync(css)` for a CSP, `componentStyles()` (each shadow component's `<style>` text) and
+`development` (whether it resolved with the `development` condition). Import it only from
+server code, never from a client entry, so client bundles carry no server renderer.
 
 ## Production checklist
 
@@ -2485,7 +2500,7 @@ only from server code, never from a client entry, so client bundles carry no ser
 - Bind form state with `value=${…}`, `?checked=${…}` and `<textarea>${…}</textarea>`, never
   `.value=` or `.checked=`, which the server can't write.
 - Load data before rendering; never put a `Promise` in a view.
-- Send a CSP from `contentSecurityPolicy()`; you don't need `'unsafe-inline'`.
+- Send a CSP with `renderPage({ csp: { directives } })`; you don't need `'unsafe-inline'`.
 - Preload the entry's chunks and the hydration chunk with `modulepreload`.
 - Test hydration against a production build, not only the dev server. `@gyral/testing`'s
   `mountSsr` and `hydrated` make that a unit test (see [Testing](https://gyral.dev/docs/testing/#ssr-and-hydration-tests)).
@@ -2604,7 +2619,9 @@ export default defineConfig({
   URL of your client entry (`entry`, for example `/assets/entry-client-Ab12.js`) and the chunks
   it needs (`modulepreload`): its static imports and Gyral's hydration chunk.
   `renderPage({ modulepreload })` writes a `<link rel="modulepreload">` for each, so the browser
-  fetches them alongside the entry instead of a round trip later.
+  fetches them alongside the entry instead of a round trip later. A third argument lists
+  modules a page imports lazily, by source path (`['src/routes/product.ts']`); they are
+  preloaded too, each with its static imports.
 - The client entry is the one from [Server rendering](https://gyral.dev/docs/server-rendering/#hydration-and-the-client-entry):
   it imports your components, and each one hydrates on its own.
 - `@gyral/ssr/static` reads and writes files, so it runs in Node at build time. Your pages
@@ -2628,7 +2645,8 @@ see [lazy hydration](https://gyral.dev/docs/server-rendering/#lazy-hydration) an
 ## Headers and CSP
 
 A static host can't compute headers per request, but most read a headers file from the output:
-Cloudflare Pages and Netlify read `_headers`. Build the `Content-Security-Policy` with
+Cloudflare Pages and Netlify read `_headers`. Where a server renders per request,
+`renderPage({ csp })` builds the policy as the page renders; here, build it ahead of time with
 `contentSecurityPolicy()` from `@gyral/ssr` in the same build step and write it there. Its
 `style-src` lists the hash of each component's Declarative Shadow DOM `<style>`, so it needs no
 `'unsafe-inline'`:
@@ -2744,6 +2762,13 @@ await loadComponentsIn(document);
 Each `import()` becomes its own chunk, so a page without a gallery never downloads it. Until
 its module loads, a server-rendered `<my-gallery>` is the server's HTML, already showing its
 first state; when the module defines the element, it hydrates in place, with no flash.
+
+A page that you know needs a lazy chunk can preload it with the entry instead of finding it
+only after the entry has run. `clientAssetsFromManifest(manifest, entry, also)` from
+`@gyral/ssr/static` takes the source paths of those modules (`['src/widgets.ts']`) and adds
+them, with their static imports, to `modulepreload`; on a server, `productionServer` hands your
+app a `preload(modules)` that does the same per page (see
+[Deploying](https://gyral.dev/docs/deploying/#node)).
 
 [gyral-shop](https://github.com/gyraljs/gyral-shop/blob/main/src/client/lazy.ts) uses this
 pattern for every page-specific component (listing, product gallery, checkout, admin), and adds
@@ -2902,7 +2927,9 @@ serve({ fetch: app.fetch, port: Number(process.env['PORT'] ?? 3000) });
 `productionServer({ distDir, createApp })` expects Vite's output in `dist/client/` (with
 `build.manifest: true`) and prerendered pages in `dist/static/`. It reads the manifest once and
 hands `createApp` the client entry and the chunks to preload with it, Gyral's hydration chunk
-included. It answers:
+included. A page whose route module is imported lazily passes
+`preload(['src/routes/product.ts'])` (also given to `createApp`) as `modulepreload` instead:
+the same list plus that module and its imports. It answers:
 
 | Request                        | Served from                | `cache-control`                       |
 | ------------------------------ | -------------------------- | ------------------------------------- |
@@ -2935,7 +2962,7 @@ How far each one is tested today:
 - **Bun**: `renderPage` with Declarative Shadow DOM output and `contentSecurityPolicy()` were
   checked by hand on Bun 1.3.14 with Gyral 0.3. It isn't part of Gyral's CI.
 - **Deno and Cloudflare Workers**: not tested yet. The renderer uses no Node-only APIs (it
-  hashes with WebCrypto and has no DOM shim), but check it there before you rely on it.
+  hashes in plain JavaScript and has no DOM shim), but check it there before you rely on it.
 - **`@gyral/ssr/static`** (`prerender`, `productionServer`) reads and writes files with
   `node:fs`. Use it in Node at build time; on an edge runtime, serve the static files from the
   platform's asset hosting instead.
@@ -2984,10 +3011,11 @@ Gyral works under a strict policy:
   elements, and your client entry is a module file.
 - **No `'unsafe-inline'` for styles.** Declarative Shadow DOM writes each component's styles as
   a `<style>` element inside its `<template>`, and `renderPage`'s `styles` option writes
-  `<style>` in the head. `contentSecurityPolicy()` from `@gyral/ssr` lists all of them by hash
-  (see [Server rendering](https://gyral.dev/docs/server-rendering/#content-security-policy)).
+  `<style>` in the head. `renderPage({ csp: { directives } })` lists all of them by hash in the
+  header it sends, and `contentSecurityPolicy()` from `@gyral/ssr` builds the same value for a
+  static headers file (see [Server rendering](https://gyral.dev/docs/server-rendering/#content-security-policy)).
 
-A good starting point, with the hashes appended by `contentSecurityPolicy()`:
+A good starting point, with the hashes appended by Gyral:
 
 ```text
 Content-Security-Policy: default-src 'self'; script-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; style-src 'self' 'sha256-…'
@@ -3005,8 +3033,9 @@ put the policy in a `<meta http-equiv="Content-Security-Policy">` element throug
   bundled builds. `@gyral/testing`'s `mountSsr` and `hydrated` make that a
   [unit test](https://gyral.dev/docs/testing/#ssr-and-hydration-tests).
 - Cache hashed assets for a year and pages not at all (or with revalidation).
-- Serve a CSP header built with `contentSecurityPolicy()`. Gyral needs no `'unsafe-inline'` and
-  no `'unsafe-eval'`.
+- Serve a CSP header: `renderPage({ csp: { directives } })` per request, or
+  `contentSecurityPolicy()` written into a static host's headers file. Gyral needs no
+  `'unsafe-inline'` and no `'unsafe-eval'`.
 
 ---
 
@@ -3763,7 +3792,8 @@ feature-detected and used as enhancements.
   [Deploying](https://gyral.dev/docs/deploying/#bun-deno-and-cloudflare-workers)).
 - **Without a preload hint, the hydration chunk loads one round trip after the entry** on
   server-rendered pages. Pass `clientAssetsFromManifest()`'s `modulepreload` to `renderPage` (see
-  [Static sites](https://gyral.dev/docs/static-sites/#a-static-build)); `productionServer` hands it to your app.
+  [Static sites](https://gyral.dev/docs/static-sites/#a-static-build)); `productionServer` hands it to your app,
+  with a `preload(modules)` that adds a page's lazily imported route chunks.
 
 ---
 
@@ -3852,8 +3882,8 @@ Everything a view needs comes from `@gyral/core`:
 New in `@gyral/core`: `each`, `raw`, `defineHook`, `prop`, `intents`, `settled`,
 `HydrationMismatch`, the `renderOnFrame` spec field (messages from bursty sources render once
 per animation frame), and the entry points `@gyral/core/server` and `@gyral/core/eslint`. New in
-`@gyral/ssr`: `contentSecurityPolicy` and `page({ modulepreload })`; in `@gyral/ssr/static`:
-`clientAssets` and `clientAssetsFromManifest`.
+`@gyral/ssr`: `contentSecurityPolicy`, `renderPage({ csp })` and `page({ modulepreload })`; in
+`@gyral/ssr/static`: `clientAssets` and `clientAssetsFromManifest`.
 
 ## Build: the Vite preset compiles templates
 
@@ -3908,6 +3938,10 @@ Attributes: `null` and `undefined` remove an attribute, so `href=${s.url ?? noth
 
 One spelling per piece of state, the same on the server and in the browser. The model wins
 whenever it changes, and hydration never overwrites what the user typed before scripts ran.
+Unlike 0.2's `live()`, a control is written only when the model's value for it changes: a
+re-render for any other reason (another field's message, a refused edit) leaves what the user
+typed alone. To put a control back, change the model or re-create the form with a key (see
+[Views](https://gyral.dev/docs/views/#form-state)).
 
 ```text
 // 0.2
@@ -4110,41 +4144,45 @@ development console banner.
 
 ## Server rendering
 
-Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime with
-WebCrypto. `@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`,
+Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime.
+`@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`,
 `formAction` and `@gyral/ssr/static`, and every template is written with core's `html`:
 
 ```ts
 // server/home.ts
 import { html } from '@gyral/core';
-import { contentSecurityPolicy, renderPage } from '@gyral/ssr';
+import { renderPage } from '@gyral/ssr';
 
 const styles = ':root { color-scheme: light dark; }';
 
-export async function home(): Promise<Response> {
+export function home(): Response {
   return renderPage({
     title: 'Home',
     styles,
     head: html`<link rel="icon" href="/favicon.svg" />`, // was serverHtml`…`
     body: html`<my-home></my-home>`,
     scripts: ['/src/entry-client.ts'],
-    csp: await contentSecurityPolicy({ styles, directives: { 'default-src': "'self'" } }),
+    csp: { directives: { 'default-src': "'self'" } }, // built when the page renders
   });
 }
 ```
 
-- **The CSP helper** allows shadow components' `<style>` elements by hash, so `style-src`
-  needs no `'unsafe-inline'` any more. See
+- **The CSP** allows shadow components' `<style>` elements by hash, so `style-src` needs no
+  `'unsafe-inline'` any more. `renderPage({ csp: { directives } })` builds the header when the
+  page renders, with every component registered by then; `contentSecurityPolicy()` builds it
+  ahead of time (a static `_headers` file), for the components imported before the call. See
   [Server rendering](https://gyral.dev/docs/server-rendering/#content-security-policy).
 - **Preloading:** in production, read the entry and its preloads from the Vite manifest with
   `clientAssetsFromManifest()` and pass `modulepreload` to `renderPage`; `productionServer` now
-  hands `{ clientEntry, modulepreload }` to `createApp`. See
+  hands `{ clientEntry, modulepreload }` to `createApp`, and a `preload(modules)` for pages
+  whose route module is imported lazily. See
   [Static sites](https://gyral.dev/docs/static-sites/#a-static-build).
 - A `Promise` anywhere in a view is an error: load data in the handler first, as before.
 - Development output (Vite's dev server, Vitest) carries `<!--gyral:ID-->` markers; production
-  output is the template HTML plus values. Regenerate golden SSR fixtures. A server that imports
-  `@gyral/core` through Node without the `development` condition gets production output; pass
-  `{ dev: true }` to `renderPage` or `renderToStream` in development to get the markers.
+  output is the template HTML plus values. Regenerate golden SSR fixtures. The Vite preset keeps
+  `@gyral/*` out of SSR externalization in the dev server, so server code loaded with
+  `ssrLoadModule` gets development output without options. A server run by plain Node gets
+  production output; `{ dev: true }` on `renderPage` or `renderToStream` turns the markers on.
 
 ## Hydration
 
@@ -4177,7 +4215,7 @@ builders), so small apps shed the most. If you keep a size budget, budget the fi
 lazy hydration chunk (about 2.8 KiB) only loads on server-rendered pages.
 
 This site moved too. Its two islands, the home page counter and the search box, shipped as one
-17.2 KiB chunk on 0.2.0 (gzip at level 9). On 0.3 the entry is 13.9 KiB, and the hydration
+17.2 KiB chunk on 0.2.0 (gzip at level 9). On 0.3 the entry is 13.7 KiB, and the hydration
 chunk, 2.8 KiB, is preloaded alongside it on the two pages that have islands. Docs pages still
 ship no framework JavaScript at all.
 
@@ -5711,11 +5749,22 @@ for framework messages. Reducers may return commands.
 
 | Name | Summary |
 | --- | --- |
+| [`componentStyles`](#core-server-componentstyles) | Tag → declarative-shadow-root `<style>` text of every registered shadow component with CSS (recorded specs registered first), for checking or building a CSP at render time. |
 | [`render`](#core-server-render) | Renders `value` to HTML chunks, synchronously and lazily: each step of the iterator writes up to the next component boundary, running that component's `init` and view. |
 | [`renderToString`](#core-server-rendertostring) | Renders `value` to one HTML string. |
-| [`styleHash`](#core-server-stylehash) | `'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text). |
+| [`styleHash`](#core-server-stylehash) | `styleHashSync`, as a promise (the API before it existed). |
 | [`styleHashes`](#core-server-stylehashes) | `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`, for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server"). |
+| [`styleHashSync`](#core-server-stylehashsync) | `'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text). |
 | [`withStoreScope`](#core-server-withstorescope) | Runs `fn` with `registry` as the server's store scope. |
+
+#### `componentStyles`
+
+```ts
+function componentStyles(): ReadonlyMap<string, string>;
+```
+
+Tag → declarative-shadow-root `<style>` text of every registered shadow component with CSS
+(recorded specs registered first), for checking or building a CSP at render time.
 
 #### `render`
 
@@ -5738,10 +5787,10 @@ Renders `value` to one HTML string.
 #### `styleHash`
 
 ```ts
-function styleHash(text: string): Promise<string>;
+const styleHash: (text: string) => Promise<string>
 ```
 
-`'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text).
+`styleHashSync`, as a promise (the API before it existed).
 
 #### `styleHashes`
 
@@ -5751,6 +5800,15 @@ function styleHashes(): Promise<readonly string[]>;
 
 `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`,
 for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server").
+
+#### `styleHashSync`
+
+```ts
+function styleHashSync(text: string): string;
+```
+
+`'sha256-…'` of a `<style>` element's text, for a CSP `style-src` (cached per text).
+Synchronous (sha256.ts), so a page can build its policy while it renders.
 
 #### `withStoreScope`
 
@@ -5780,6 +5838,21 @@ class StoreRegistry {
 
 A set of store instances by store name, created on demand from optional seeds.
 
+### Constants
+
+| Name | Summary |
+| --- | --- |
+| [`development`](#core-server-development) | Whether `@gyral/core` resolved with the `development` condition (Vite's dev server and its SSR, Vitest): the default of `render`'s `dev` option (view/06-server.md "Development markers"). |
+
+#### `development`
+
+```ts
+const development: boolean
+```
+
+Whether `@gyral/core` resolved with the `development` condition (Vite's dev server and its
+SSR, Vitest): the default of `render`'s `dev` option (view/06-server.md "Development markers").
+
 ### Types and interfaces
 
 | Name | Summary |
@@ -5806,8 +5879,33 @@ interface ServerRenderOptions {
 
 | Name | Summary |
 | --- | --- |
+| [`gyralDependents`](#core-vite-gyraldependents) | The app's direct dependencies that depend on a Gyral package (a design system, say). |
+| [`gyralDevServer`](#core-vite-gyraldevserver) | Development output from the dev server's SSR (`ssrLoadModule`, view/06 "Development markers"). |
 | [`gyralTemplateCompiler`](#core-vite-gyraltemplatecompiler) | The template compiler alone (`gyralVitePreset()` includes it). |
 | [`gyralVitePreset`](#core-vite-gyralvitepreset) | Spread into a Vite config, or into each Vitest project: |
+
+#### `gyralDependents`
+
+```ts
+function gyralDependents(root: string): string[];
+```
+
+The app's direct dependencies that depend on a Gyral package (a design system, say). They
+import
+
+#### `gyralDevServer`
+
+```ts
+function gyralDevServer(): Plugin;
+```
+
+Development output from the dev server's SSR (`ssrLoadModule`, view/06 "Development
+markers"). Vite externalizes installed packages there and Node imports them itself, resolving
+core's `#view-dev` without the `development` condition (Vite's `externalConditions` only pick
+the entry file, not the package's own imports), so the server rendered production output.
+In serve mode this plugin keeps Gyral's packages, and the app's dependencies that use them,
+out of externalization in server environments: Vite resolves them with its conditions
+(`development` in dev), and they all share one copy of core. `vite build` is unaffected.
 
 #### `gyralTemplateCompiler`
 
@@ -5839,6 +5937,7 @@ With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
 | [`CLIENT_CONDITIONS`](#core-vite-client_conditions) | Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser). |
 | [`COMPILED_CONDITION`](#core-vite-compiled_condition) | The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). |
 | [`DEFAULT_TEMPLATE_SOURCES`](#core-vite-default_template_sources) | Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3). |
+| [`GYRAL_PACKAGES`](#core-vite-gyral_packages) | Gyral's packages: the dev server runs them through Vite, never Node (view/06). |
 | [`SERVER_CONDITIONS`](#core-vite-server_conditions) |  |
 
 #### `CLIENT_CONDITIONS`
@@ -5864,6 +5963,14 @@ const DEFAULT_TEMPLATE_SOURCES: readonly string[]
 ```
 
 Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3).
+
+#### `GYRAL_PACKAGES`
+
+```ts
+const GYRAL_PACKAGES: RegExp
+```
+
+Gyral's packages: the dev server runs them through Vite, never Node (view/06).
 
 #### `SERVER_CONDITIONS`
 
@@ -6833,7 +6940,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/ssr`](#gy
 
 | Name | Summary |
 | --- | --- |
-| [`contentSecurityPolicy`](#ssr-contentsecuritypolicy) | A `Content-Security-Policy` header value whose `style-src` allows Gyral's `<style>` elements by hash. |
+| [`contentSecurityPolicy`](#ssr-contentsecuritypolicy) | A `Content-Security-Policy` header value whose `style-src` allows Gyral's `<style>` elements by hash, for the components registered when it is called (import them first). |
 | [`formAction`](#ssr-formaction) | A request handler for a `<form method="post">` that works with JavaScript disabled, and answers the JS path (`submitForm` in |
 | [`page`](#ssr-page) | The server-only document shell around the hydratable body. |
 | [`rejectWith`](#ssr-rejectwith) | Rejects a submission that passed the schema but failed a server-only check (email taken, wrong password). |
@@ -6849,8 +6956,10 @@ function contentSecurityPolicy(options?: CspOptions): Promise<string>;
 ```
 
 A `Content-Security-Policy` header value whose `style-src` allows Gyral's `<style>`
-elements by hash. Pass it to `renderPage({ …, csp })` or set it on any response. Other
-inline styles (`style` attributes, hand-written `<style>` in `head`) are not covered.
+elements by hash, for the components registered when it is called (import them first).
+`renderPage({ …, csp: options })` builds it at render time instead; pass this result to
+`renderPage({ …, csp })` or set it on any response. Other inline styles (`style`
+attributes, hand-written `<style>` in `head`) are not covered.
 
 #### `formAction`
 
@@ -6885,7 +6994,9 @@ the same `IntentRejected` as a schema failure, on both the no-JS and the JS path
 function renderPage(options: PageOptions, init?: ResponseInit): Response;
 ```
 
-A streaming HTML `Response` for a full page.
+A streaming HTML `Response` for a full page. `csp` sets the `Content-Security-Policy`
+header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
+component registered by the time the page renders (and the page's `styles`).
 
 #### `renderToStream`
 
@@ -6942,7 +7053,10 @@ interface CspOptions {
      * and the hashes are appended; without one it is `'self'` plus the hashes.
      */
     readonly directives?: CspDirectives;
-    /** The page's global styles, exactly as passed to `page({ styles })`, hashed too. */
+    /**
+     * The page's global styles, exactly as passed to `page({ styles })`, hashed too. In
+     * `renderPage({ csp })` it defaults to the page's own `styles`.
+     */
     readonly styles?: string | readonly string[];
 }
 ```
@@ -7010,10 +7124,13 @@ interface PageOptions extends RenderOptions {
      */
     readonly modulepreload?: readonly string[];
     /**
-     * `renderPage` only: a `Content-Security-Policy` header value, usually from
-     * `await contentSecurityPolicy({ styles })`, which allows the page's `<style>` elements by hash.
+     * `renderPage` only: the `Content-Security-Policy` header. Pass `contentSecurityPolicy()`'s
+     * options (`{ directives }`; the page's `styles` are included) to build it when the page
+     * renders, with every component registered by then and the `<style>` elements allowed by
+     * hash; or a header value, e.g. from `await contentSecurityPolicy({ styles })` (development
+     * warns when it lacks a registered component's hash).
      */
-    readonly csp?: string;
+    readonly csp?: string | CspOptions;
 }
 ```
 
@@ -7043,7 +7160,7 @@ interface RenderOptions {
 | Name | Summary |
 | --- | --- |
 | [`clientAssets`](#ssr-static-clientassets) | `ClientAssets` for `entry`, from a manifest already in memory. |
-| [`clientAssetsFromManifest`](#ssr-static-clientassetsfrommanifest) | `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). |
+| [`clientAssetsFromManifest`](#ssr-static-clientassetsfrommanifest) | `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also` as for `clientAssets`. |
 | [`clientEntryFromManifest`](#ssr-static-cliententryfrommanifest) | The URL of a built entry chunk (e.g. |
 | [`prerender`](#ssr-static-prerender) | Renders each path through the app (exactly what a request would get) and writes the HTML. |
 | [`productionServer`](#ssr-static-productionserver) | A production request handler (framework-neutral: mount its `fetch` in Hono, Node, …): - `GET /assets/*`: content-hashed client build output, cached immutable; - `GET` of a prerendered path: the `static/` file, revalidated on every use; - everything else (other GETs, POSTs): the request-time app, `no-cache` unless it set one. |
@@ -7052,18 +7169,21 @@ interface RenderOptions {
 #### `clientAssets`
 
 ```ts
-function clientAssets(manifest: ViteManifest, entry: string): ClientAssets;
+function clientAssets(manifest: ViteManifest, entry: string, also?: readonly string[]): ClientAssets;
 ```
 
-`ClientAssets` for `entry`, from a manifest already in memory.
+`ClientAssets` for `entry`, from a manifest already in memory. `also`: manifest keys of
+modules the page will import lazily (a route's module, by source path such as
+`src/routes/product.ts`), preloaded too, each with its static imports, after the entry's.
 
 #### `clientAssetsFromManifest`
 
 ```ts
-function clientAssetsFromManifest(manifestPath: string, entry: string): Promise<ClientAssets>;
+function clientAssetsFromManifest(manifestPath: string, entry: string, also?: readonly string[]): Promise<ClientAssets>;
 ```
 
-`ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`).
+`ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also`
+as for `clientAssets`.
 
 #### `clientEntryFromManifest`
 
@@ -7207,10 +7327,13 @@ interface ProductionOptions {
     /**
      * Builds the request-time renderer (the same app the prerender step used). Pass
      * `modulepreload` on to `renderPage({ modulepreload })` so pages preload what the entry needs.
+     * A page that imports modules lazily (a route's chunk) passes `preload(modules)` instead:
+     * the same list plus those modules and their imports (`clientAssets`' `also`).
      */
     readonly createApp: (options: {
         readonly clientEntry: string;
         readonly modulepreload: readonly string[];
+        readonly preload: (modules: readonly string[]) => readonly string[];
     }) => FetchApp;
 }
 ```
