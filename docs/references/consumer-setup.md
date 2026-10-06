@@ -51,6 +51,30 @@ projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */}
   fails. If your app imports other Lit modules directly, add them:
   `gyralVitePreset({ optimize: ['lit/directives/unsafe-html.js'] })`.
 
+## Template whitespace
+
+Gyral's `html` and `svg` tags are Lit's, with indentation whitespace removed (gyral-9rf). Lit
+keeps every newline and indent between tags as a DOM text node; a benchmark table row had 12
+of them in 25 nodes, and removing them made creating, replacing and clearing rows 11-24%
+faster. The strings are minified once per call site, at runtime, so the server and the browser
+build identical templates in any toolchain (Vite, tsx, plain Node) and hydration digests match.
+There is no build step and nothing to configure.
+
+- Whitespace-only text that contains a newline is removed next to a template edge, a
+  block-level tag (`div`, `p`, `li`, `tr`, `td`, …), or the inside edge of a `<button>` or
+  `<select>`. CSS never renders whitespace there.
+- Between two inline neighbours (`span`, `b`, `a`, custom elements, `${bindings}`,
+  comments) it becomes one space, so `Hello <b>${name}</b>` on two lines still reads
+  "Hello Ada again".
+- Other runs of whitespace in text become one space.
+- Unchanged: `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` contents, tags,
+  attribute values and comments.
+
+**When to opt out.** If an element shows text with CSS `white-space: pre`, `pre-wrap` or
+`break-spaces` outside `<pre>`/`<textarea>`, write that template with `html` from `lit`, which
+keeps whitespace exactly. Use the same import on the server and the client (it is the same
+module), so hydration still matches.
+
 ## Server rendering checklist
 
 - Import `@gyral/ssr/hydrate` **first** in the client entry, before anything that imports
