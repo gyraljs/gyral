@@ -42,8 +42,8 @@ to a different template id replaces the instance.
 
 A child part must always know where to insert. It inserts before its **reference node**:
 
-- the next static sibling **element** in the template, if there is one (static elements never
-  move);
+- the next static sibling **element or comment** in the template, if there is one (static
+  nodes never move);
 - otherwise the end of the parent (`null`), if the hole is its parent's last child;
 - otherwise an **anchor**: an empty comment `<!---->` emitted after the hole in the template
   HTML. That happens only when the hole is followed by static text or by another child hole.

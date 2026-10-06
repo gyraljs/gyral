@@ -103,11 +103,14 @@ in the browser is an error.
 ### Runtime (no build step, the dev server, Node, tests)
 
 - First render of a call site: run the normalizer, then let the **browser's own parser** build
-  the DOM: set the template HTML (with temporary part markers) as the `innerHTML` of a
-  `<template>` element, locate the markers, record paths, remove the markers.
+  the DOM (`innerHTML` of a `<template>` element) and compare that whole parse with the shape
+  the normalizer expects. A difference means the browser repaired the markup: rule 7.
 - Cached in a `WeakMap` keyed by the strings array, which is unique per call site.
-- Costs about 1.5–2 KB gzip of preparer code plus one parse per template (estimate; measured in
-  Phase 1). Production builds made with the preset don't pay either.
+- Costs about 9–10 KB gzip of preparer code (measured in Phase 1: tokenizer, tree builder, repair
+  rules, whitespace, ~2 KB of messages) plus about 50 µs per template, once. The compiled path
+  costs 0.84 KB. Production builds made with the preset don't pay the preparer; the size budget
+  measures builds made with the preset. Messages may later move behind the `development`
+  condition.
 - Node and the server renderer never parse HTML: they only need the normalizer's output.
 
 Both paths produce identical ids, so a precompiled server and a runtime client (or the reverse)
