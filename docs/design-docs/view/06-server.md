@@ -64,8 +64,12 @@ The server writes the template HTML (01), putting each value in at its hole:
   head-only whitespace rules this takes 34 bytes (28 of them anchors) off the production shell
   of `examples/isomorphic` (614 → 580 bytes); a gyral.dev page shell had 12-13 anchors
   (84-91 bytes) before.
-- **Escaping:** text escapes `&`, `<`, `>`; double-quoted attribute values escape `&` and `"`;
-  the seed attribute is single-quoted and escapes `&` and `'` (below).
+- **Escaping:** text escapes `&`, `<`, `>`; double-quoted attribute values escape `&`, `"`,
+  `<` and `>`; the seed attribute is single-quoted and escapes `&`, `'`, `<` and `>` (below).
+  Only `&` and the quote can end a quoted value, so `<`/`>` are escaped for safety alone
+  (2026-10-06): no markup such as `<script>` appears raw in an attribute, whatever later
+  reads the page (a raw-text context, naive tooling, a filter). The browser decodes them, so
+  values and hydration are unchanged (`packages/ssr/test/fixtures/textarea.ssr.html`).
 - Per template, the renderer caches the template HTML split at its holes, keyed by template id.
   **Phase 4:** that split is the template object's `segments` (01), already cached with the
   template object (per call site, or a compiled module constant), so the renderer keeps no
@@ -162,7 +166,8 @@ place:
 ```
 
 - **Seed** (ADR 0012, kept): `props` that no attribute carries (property holes) and `state`
-  unless it equals `init(props)`'s state. Single-quoted JSON, so its double quotes stay raw.
+  unless it equals `init(props)`'s state. Single-quoted JSON, so its double quotes stay raw
+  (`&`, `'`, `<` and `>` are escaped).
   The JSON-hazard check runs in development.
 - **Phase 4:** `.initialMessages=${[…]}` on a component is passed as `initialMessages`, not
   as a prop. Attribute order: the tag's own attributes, then `data-gyral-light` (light),

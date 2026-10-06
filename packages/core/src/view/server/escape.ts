@@ -1,11 +1,13 @@
 // Escaping for the server renderer (view/06-server.md "Escaping"). Text escapes `&`, `<` and
-// `>`; double-quoted attribute values escape `&` and `"`; the single-quoted seed attribute
-// escapes `&` and `'` (so its JSON's double quotes stay raw). WHATWG HTML "Serializing HTML
-// fragments" escapes the same characters; nothing else can end a text run or a quoted value.
+// `>`; double-quoted attribute values escape `&`, `"`, `<` and `>`; the single-quoted seed
+// attribute escapes `&`, `'`, `<` and `>` (so its JSON's double quotes stay raw). Only `&` and
+// the quote can end a quoted value; `<` and `>` are escaped too (as newer revisions of WHATWG
+// HTML's "Serializing HTML fragments" do), so no markup appears raw in an attribute, whatever
+// later reads the page (raw-text contexts, naive tooling, filters).
 
 const TEXT = /[&<>]/g;
-const ATTR = /[&"]/g;
-const SEED = /[&']/g;
+const ATTR = /[&"<>]/g;
+const SEED = /[&'<>]/g;
 
 const ENTITY: Readonly<Record<string, string>> = {
   '&': '&amp;',

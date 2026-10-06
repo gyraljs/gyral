@@ -11,6 +11,9 @@ type Msg =
   | { readonly _tag: 'Reset' }
   | { readonly _tag: 'Flag' };
 
+/** Markup characters in a bound attribute: the server escapes `<` and `>` there too (06). */
+export const PLACEHOLDER = 'Say <hi> & "bye"';
+
 export const Note = define<State, Msg>('test-note', {
   init: () => ({ message: 'Hello </textarea><b>x</b> & "q"', invalid: false }),
   intent: {
@@ -29,6 +32,7 @@ export const Note = define<State, Msg>('test-note', {
         name="message"
         rows="3"
         required
+        placeholder=${PLACEHOLDER}
         aria-invalid=${s.invalid ? 'true' : null}
         data-intent=${i.Typed}
       >

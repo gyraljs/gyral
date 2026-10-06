@@ -59,7 +59,12 @@ define<{ readonly items: readonly string[] }, never, { readonly items: readonly 
 
 // The seed is single-quoted and escapes only & and ' (view/06-server.md "Escaping").
 const SEED = /data-gyral-seed='([^']*)'/;
-const decode = (attr: string) => attr.replaceAll('&#39;', "'").replaceAll('&amp;', '&');
+const decode = (attr: string) =>
+  attr
+    .replaceAll('&#39;', "'")
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&');
 
 function seedOf(out: string): unknown {
   const match = SEED.exec(out);

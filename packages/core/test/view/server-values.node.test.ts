@@ -113,7 +113,9 @@ describe('child values (02 "Child values")', () => {
 
 describe('attributes (02 "Attribute values", "Boolean attributes", "Properties")', () => {
   it('escapes & and " in double-quoted values', () => {
-    expect(prod(html`<a title=${`"<&>'`}></a>`)).toBe(`<a title="&quot;<&amp;>'"></a>`);
+    expect(prod(html`<a title=${`"<&>'`}></a>`)).toBe(`<a title="&quot;&lt;&amp;&gt;'"></a>`);
+    // `<` and `>` too: no markup appears raw in an attribute (06 "Escaping").
+    expect(prod(html`<a title="x ${'<script>'}"></a>`)).toBe(`<a title="x &lt;script&gt;"></a>`);
   });
 
   it('writes strings, numbers and booleans; leaves null, undefined and nothing out', () => {

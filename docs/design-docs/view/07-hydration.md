@@ -167,8 +167,8 @@ are resolved (marked **Phase 5**).
   the markup; empty strings and `nothing` write nothing; lists write no markers. Page shells
   (`server` templates, never walked) carry no anchors, nor do `raw()` values in their holes.
 - Adjacent text is merged by the parser (`Hi ${name}!` → one Text node before the anchor).
-- Seeds are single-quoted JSON (`&` and `'` escaped); `<gyral-stores>` carries its own seed
-  in a double-quoted `data-gyral-stores`.
+- Seeds are single-quoted JSON (`&`, `'`, `<` and `>` escaped); `<gyral-stores>` carries its
+  own seed in a double-quoted `data-gyral-stores`.
 - Islands carry `defer-hydration data-gyral-hydrate="…"`; nested components never get
   `defer-hydration`.
 - A light host's whitespace-only children (from the parent's template) are dropped.

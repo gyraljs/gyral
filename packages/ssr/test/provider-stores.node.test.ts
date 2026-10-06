@@ -32,7 +32,12 @@ define<{ readonly x: number }, never>('ssr-island', {
 const owners = (out: string): string[] =>
   [...out.matchAll(/<p>(?:<!--[^>]*-->)*([a-z]+)/g)].map((m) => m[1] ?? '');
 
-const decode = (s: string) => s.replaceAll('&quot;', '"').replaceAll('&amp;', '&');
+const decode = (s: string) =>
+  s
+    .replaceAll('&quot;', '"')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&amp;', '&');
 
 describe('<gyral-stores> providers on the server (gyral-czi.20)', () => {
   it('scopes components inside a provider to its instances; others use the request scope', async () => {

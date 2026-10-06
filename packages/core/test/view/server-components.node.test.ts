@@ -68,7 +68,14 @@ const prod = (v: unknown) => renderToString(v as never, { dev: false });
 /** The seed attribute's JSON, decoded (single-quoted; only & and ' escaped). */
 const seeds = (out: string): unknown[] =>
   [...out.matchAll(/data-gyral-seed='([^']*)'/g)].map(
-    (m) => JSON.parse((m[1] ?? '').replaceAll('&#39;', "'").replaceAll('&amp;', '&')) as unknown,
+    (m) =>
+      JSON.parse(
+        (m[1] ?? '')
+          .replaceAll('&#39;', "'")
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&amp;', '&'),
+      ) as unknown,
   );
 
 describe('components (06 "Components")', () => {
@@ -97,14 +104,15 @@ describe('components (06 "Components")', () => {
     warn.mockRestore();
   });
 
-  it("carry property-hole props and changed state in the seed, escaping & and '", () => {
-    const tags = [`it's`, 'a&b', '"q"'];
+  it("carry property-hole props and changed state in the seed, escaping & ' < >", () => {
+    const tags = [`it's`, 'a&b', '"q"', '</script>'];
     const out = prod(
       html`<srv-counter .tags=${tags} .initialMessages=${[{ _tag: 'Add', n: 2 }]}></srv-counter>`,
     );
     expect(out).toContain(`data-gyral-seed='{"state":{"count":2},"props":{"tags":["it&#39;s"`);
+    expect(out).toContain(`"&lt;/script&gt;"]}}'`);
     expect(seeds(out)).toEqual([{ state: { count: 2 }, props: { tags } }]);
-    expect(out).toContain(`it's,a&amp;b,"q"</p>`); // text escapes only & < >
+    expect(out).toContain(`it's,a&amp;b,"q",&lt;/script&gt;</p>`); // text escapes only & < >
   });
 
   it('write parent-provided children after the shadow root', () => {

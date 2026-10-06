@@ -37,6 +37,7 @@ describe('<textarea> hydration (gyral-czi.34)', () => {
   it('hydrates in place and keeps what was typed before the script loaded', () => {
     expect(area()).toBe(before);
     expect(area().value).toBe('typed before hydration');
+    expect(area().placeholder).toBe('Say <hi> & "bye"'); // escaped attribute, parsed back
   });
 
   it('turns typing into intents and model changes into the live value', async () => {
