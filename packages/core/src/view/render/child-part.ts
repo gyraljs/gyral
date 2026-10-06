@@ -6,10 +6,10 @@
 import { DEV } from '#view-dev';
 import { isTemplateResult, sourceOf, templateOf, type TemplateResult } from '../template.js';
 import { Instance } from './instance.js';
-import { clearList, commitItems, commitList, type List } from './list.js';
-import { isList, nothing, rawHtml } from './values.js';
-import { removeRange } from './nodes.js';
-import { badChild, warnRaw, warnTrue } from './warn.js';
+import { clearList, commitItems, type List } from './list.js';
+import { EACH, isList, isRaw, MARKUP, nothing } from './values.js';
+import type { RawRange } from './raw.js';
+import { badChild, warnTrue } from './warn.js';
 
 /** What a child part holds. */
 export const EMPTY = 0;
@@ -25,38 +25,8 @@ export interface Owner {
   endFor(index: number): Node | null;
 }
 
-/** Parsed `raw()` markup: the start anchor, the last node, and the string. */
-export class RawRange {
-  constructor(
-    readonly start: Comment,
-    public end: Node,
-    public html: string,
-  ) {}
-
-  first(): Node {
-    return this.start;
-  }
-
-  last(): Node {
-    return this.end;
-  }
-
-  remove(): void {
-    removeRange(this.start, this.end);
-  }
-}
-
 /** What a child part's content can be, besides text. */
 type Span = Instance | List | RawRange;
-
-let parser: HTMLTemplateElement | undefined;
-
-/** `html` parsed by a <template> (its content is reused: read it before the next call). */
-export function parse(html: string): DocumentFragment {
-  parser ??= document.createElement('template');
-  parser.innerHTML = html;
-  return parser.content;
-}
 
 export class ChildPart {
   /** The parent element, when fixed (holes inside an element, the render root). */
@@ -141,19 +111,16 @@ export class ChildPart {
           return;
         }
         if (isList(value)) {
-          commitList(this, value);
+          value[EACH](this, value);
           return;
         }
         if (Array.isArray(value)) {
           commitItems(this, value);
           return;
         }
-        {
-          const html = rawHtml(value);
-          if (html !== undefined) {
-            this.raw(html);
-            return;
-          }
+        if (isRaw(value)) {
+          value[MARKUP](this, value.html);
+          return;
         }
         if (DEV) badChild(value);
         break;
@@ -221,28 +188,6 @@ export class ChildPart {
     instance.insert(this.parent(), this.end());
     this.kind = INSTANCE;
     this.content = instance;
-  }
-
-  private raw(html: string): void {
-    if (DEV) warnRaw();
-    if (this.kind === RAW) {
-      const range = this.content as RawRange;
-      if (range.html === html) return;
-      if (range.end !== range.start) removeRange(range.start.nextSibling as Node, range.end);
-      const frag = parse(html);
-      range.end = frag.lastChild ?? range.start;
-      range.html = html;
-      range.start.after(frag);
-      return;
-    }
-    if (this.kind !== EMPTY) this.clear();
-    const start = document.createComment('');
-    const frag = parse(html);
-    const end = frag.lastChild ?? start;
-    frag.prepend(start);
-    this.parent().insertBefore(frag, this.end());
-    this.kind = RAW;
-    this.content = new RawRange(start, end, html);
   }
 
   /** Removes the content; the part becomes empty. */

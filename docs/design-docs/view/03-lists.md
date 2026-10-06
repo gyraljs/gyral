@@ -35,6 +35,11 @@ view: (s) =>
 work in child holes (positional, 02); use `each` whenever items can be inserted, removed or
 reordered.
 
+**Size (gyral-g1r.18):** the result of `each` carries the function that commits it, so the keyed
+path (reconciliation, the two-ended scan and LIS, row skipping) is bundled only by apps that call
+`each`: about 1.2 KiB gzip that an app without keyed lists doesn't ship. Positional arrays stay
+in core.
+
 ## Row skipping
 
 Gyral state is immutable, so an unchanged item object means an unchanged item. A row

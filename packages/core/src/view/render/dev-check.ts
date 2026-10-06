@@ -2,6 +2,7 @@
 // unique strings or numbers. Skipped rows are re-evaluated and compared with what is committed
 // (template id and values, recursively); a difference warns once per row function. At most 200
 // rows are checked per flush (per render call outside one), rotating through each list. Only reached under `if (DEV)`.
+import { DEV } from '#view-dev';
 import { isTemplateResult, templateOf } from '../template.js';
 import {
   BOOL,
@@ -17,7 +18,8 @@ import {
   type AttrPart,
   type Part,
 } from './attr-parts.js';
-import { ChildPart, EMPTY, INSTANCE, ITEMS, LIST, RAW, TEXT, type RawRange } from './child-part.js';
+import { ChildPart, EMPTY, INSTANCE, ITEMS, LIST, RAW, TEXT } from './child-part.js';
+import type { RawRange } from './raw.js';
 import { hookSpec, sameArgs, type HookResult } from './hooks.js';
 import type { Instance } from './instance.js';
 import { samePick, type List } from './rows.js';
@@ -34,7 +36,9 @@ export function resetRowChecks(): void {
   budget = ROW_CHECKS;
 }
 
+/** Keys are unique strings or numbers. Guarded here too: the lazy hydration chunk calls it. */
 export function checkKeys(items: readonly unknown[], key: (item: unknown) => unknown): void {
+  if (!DEV) return;
   const seen = new Set<unknown>();
   for (let i = 0; i < items.length; i++) {
     const k = key(items[i]);

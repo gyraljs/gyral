@@ -3,13 +3,14 @@
 // node range, with no markers. Fast paths: create into empty (one fragment), clear
 // (replaceChildren when the list is its parent's only content), the common prefix and suffix,
 // insert-only (append, prepend, insert) and remove-only. What remains is reordered by
-// reorder.ts. Rows commit in document order.
+// reorder.ts. Rows commit in document order. `each` is here: its result carries `commitList`,
+// so the keyed path (this, rows.ts, reorder.ts, place.ts) is bundled only by apps that call it.
 import { DEV } from '#view-dev';
 import { ChildPart, EMPTY, ITEMS, LIST } from './child-part.js';
 import { checkKeys, recheckRows } from './dev-check.js';
 import { reorder } from './reorder.js';
 import { firstFrom, List, newRow, updateRow } from './rows.js';
-import type { ListResult } from './values.js';
+import { EACH, type ChildValue, type ListResult } from './values.js';
 
 export { List } from './rows.js';
 
@@ -57,7 +58,44 @@ export function createRows(
   part.parent().insertBefore(frag, end);
 }
 
-export function commitList(part: ChildPart, l: ListResult): void {
+/**
+ * A keyed list (view/03-lists.md). `key` must give each item a unique string or number; `row`
+ * must depend only on its arguments: a row re-renders only when its item object or its `pick`
+ * result changes.
+ */
+export function each<T>(
+  items: readonly T[],
+  key: (item: T) => string | number,
+  row: (item: T) => ChildValue,
+): ListResult;
+export function each<T, P>(
+  items: readonly T[],
+  key: (item: T) => string | number,
+  row: (item: T, picked: P) => ChildValue,
+  pick: (item: T) => P,
+): ListResult;
+export function each<T, P>(
+  items: readonly T[],
+  key: (item: T) => string | number,
+  row: (item: T, picked: P) => ChildValue,
+  pick?: (item: T) => P,
+): ListResult {
+  if (DEV && typeof key !== 'function') {
+    throw new TypeError(
+      'gyral: each() needs a key function as its second argument: ' +
+        'each(items, (x) => x.id, Row) (docs/design-docs/view/03-lists.md "Keys", rule 9).',
+    );
+  }
+  return {
+    [EACH]: commitList,
+    items,
+    key: key as (item: unknown) => unknown,
+    row: row as (item: unknown, picked: unknown) => unknown,
+    pick: pick as ((item: unknown) => unknown) | undefined,
+  };
+}
+
+function commitList(part: ChildPart, l: ListResult): void {
   const list = listOf(part, LIST);
   const n = l.items.length;
   if (DEV) checkKeys(l.items, l.key);

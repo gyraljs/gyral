@@ -15,16 +15,12 @@ export type {
   ShapeNode,
   TemplateObject,
 } from './normalize/types.js';
+
 export { hydrate, render, renderBatch } from './render/render.js';
 export { HydrationMismatch } from './render/mismatch.js';
-export {
-  each,
-  nothing,
-  raw,
-  type ChildValue,
-  type ListResult,
-  type RawResult,
-} from './render/values.js';
+export { each } from './render/list.js';
+export { raw } from './render/raw.js';
+export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
 export { defineHook, type HookAttributes, type HookResult, type HookSpec } from './render/hooks.js';
 export {
   css,

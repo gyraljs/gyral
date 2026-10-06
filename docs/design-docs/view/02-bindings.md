@@ -152,6 +152,8 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
   only when the string changes.
 - A `raw()` value in a component that renders in the browser is a development warning (09):
   every change re-parses it.
+- Like `each` (03), its result carries the code that commits it: apps that never call `raw`
+  don't bundle it.
 
 ## `nothing`
 

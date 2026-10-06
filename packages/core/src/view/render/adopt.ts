@@ -24,14 +24,14 @@ import {
   TITLE,
   VALUE,
 } from './attr-parts.js';
-import { ChildPart, INSTANCE, ITEMS, LIST, parse, RAW, RawRange, TEXT } from './child-part.js';
+import { ChildPart, INSTANCE, ITEMS, LIST, RAW, TEXT } from './child-part.js';
 import { checkKeys } from './dev-check.js';
 import { Instance } from './instance.js';
 import { mismatch } from './mismatch.js';
 import { ROOT, SOLE } from './plan.js';
+import { parse, RawRange } from './raw.js';
 import { List } from './rows.js';
-import { isList, nothing, rawHtml, type ListResult } from './values.js';
-import { badChild, warnTrue } from './warn.js';
+import { isList, rawHtml, type ListResult } from './values.js';
 
 /** The walk's position: the next DOM node; null at the end of `parent`'s children. */
 let cur: Node | null = null;
@@ -76,14 +76,13 @@ function content(part: ChildPart, v: unknown): void {
       else {
         const markup = rawHtml(v);
         if (markup !== undefined) raw(part, markup);
-        else if (DEV) badChild(v);
+        else if (DEV) part.commit(v);
       }
       return;
-    case 'boolean':
-      if (DEV && v) warnTrue(part);
-      return;
     default:
-      if (DEV && v !== undefined && v !== nothing) badChild(v);
+      // Development: a value no hole renders throws (or warns, for `true`) as on the client.
+      // Called through the part, so this chunk imports no development-only function.
+      if (DEV) part.commit(v);
   }
 }
 
