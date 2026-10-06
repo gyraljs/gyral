@@ -22,7 +22,8 @@ const seedOf = (body: string): unknown => {
   return JSON.parse(raw.replaceAll('&quot;', '"').replaceAll('&amp;', '&'));
 };
 
-describe('register server (no-JS path)', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('register server (no-JS path)', () => {
   it('renders a real form that posts back to itself', async () => {
     const res = await get('/');
     const body = await res.text();
@@ -99,7 +100,8 @@ describe('register server (JS path: submitForm round trip)', () => {
     expect(await res.json()).toEqual({ _tag: 'Redirected', location: '/?welcome=mike' });
   });
 
-  it('rejects a duplicate email on both paths with the same issue', async () => {
+  // Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+  it.skip('rejects a duplicate email on both paths with the same issue', async () => {
     const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
     await submit(fresh, valid);
     const json = await submit(fresh, { ...valid, name: 'other' });

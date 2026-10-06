@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { define, html } from '@gyral/core';
 import {
   customElementsIn,
   hydrated,
@@ -24,23 +25,24 @@ afterEach(() => {
   page = undefined;
 });
 
-/** A non-Lit custom element whose updates finish when the test says so. */
-function slowElement(tag: string): { done: () => void } {
-  let resolve: () => void = () => undefined;
-  const done = new Promise<void>((r) => {
-    resolve = r;
-  });
-  customElements.define(
-    tag,
-    class extends HTMLElement {
-      readonly updateComplete = done.then(() => {
-        this.setAttribute('data-done', '');
-        return true;
-      });
-    },
-  );
-  return { done: resolve };
-}
+type Msg = { readonly _tag: 'Inc' };
+
+// Server-rendered markup, until Phase 5 hydrates it, is resumed from the seed and re-rendered.
+define<{ readonly n: number }, Msg>('test-ssr-counter', {
+  hydrate: 'idle',
+  init: () => ({ n: 0 }),
+  intent: { Inc: () => ({ _tag: 'Inc' }) },
+  update: { Inc: (s) => ({ n: s.n + 1 }) },
+  view: (s, i) => html`<button data-intent=${i.Inc}>${s.n}</button>`,
+});
+
+const COUNTER = (attrs: string) =>
+  `<test-ssr-counter ${attrs} data-gyral-seed='{"state":{"n":3},"props":{}}'>` +
+  '<template shadowrootmode="open"><button data-intent="Inc">3</button></template>' +
+  '</test-ssr-counter>';
+
+const button = (page: MountedSsr) =>
+  page.root.querySelector('test-ssr-counter')?.shadowRoot?.querySelector('button');
 
 describe('mountSsr', () => {
   it('parses Declarative Shadow DOM and applies only <head> styles', () => {
@@ -103,28 +105,31 @@ describe('hydrated', () => {
     expect(tags).toEqual(['test-ssr-outer', 'test-ssr-inner']);
   });
 
-  it('waits for every element, including one nested in a shadow root', async () => {
-    page = mountSsr(DOC);
-    const outer = slowElement('test-ssr-outer');
-    const inner = slowElement('test-ssr-inner');
-    let finished = false;
-    const waiting = hydrated(page).then(() => {
-      finished = true;
-    });
-    outer.done();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(finished).toBe(false); // the nested element is still updating
-    inner.done();
-    await waiting;
-    const nested = page.root
-      .querySelector('test-ssr-outer')
-      ?.shadowRoot?.querySelector('test-ssr-inner');
-    expect(nested?.hasAttribute('data-done')).toBe(true);
+  it('waits for Gyral components to render (settled)', async () => {
+    page = mountSsr(COUNTER(''));
+    await hydrated(page);
+    const el = page.root.querySelector('test-ssr-counter') as HTMLElement & {
+      readonly state: { readonly n: number };
+    };
+    expect(el.state.n).toBe(3);
+    button(page)?.click();
+    await hydrated(page);
+    expect(button(page)?.textContent).toBe('4');
   });
 
-  it('fails when console errors were recorded, ignoring the Lit dev-mode banner', async () => {
+  it('leaves islands deferred unless asked to release them', async () => {
+    page = mountSsr(COUNTER('defer-hydration data-gyral-hydrate="visible"'));
+    await hydrated(page);
+    const el = page.root.querySelector('test-ssr-counter');
+    expect(el?.hasAttribute('defer-hydration')).toBe(true);
+    await hydrated(page, { releaseIslands: true });
+    expect(el?.hasAttribute('defer-hydration')).toBe(false);
+    expect(el?.hasAttribute('data-gyral-hydrate')).toBe(false);
+    expect(el?.hasAttribute('data-gyral-seed')).toBe(false); // resumed and rendered
+  });
+
+  it('fails when console errors were recorded', async () => {
     page = mountSsr('<p>x</p>');
-    console.warn('Lit is in dev mode. Not recommended for production!');
     await expect(hydrated(page)).resolves.toBeUndefined();
     console.error('Hydration value mismatch: Unexpected TemplateResult');
     await expect(hydrated(page)).rejects.toThrow(/Hydration value mismatch/);

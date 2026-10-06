@@ -3,7 +3,8 @@ import { html } from '@gyral/core';
 import { renderToString } from '../src/index.js';
 import { echoCalls } from './support/nested.js';
 
-describe('a Gyral child inside a server-rendered shadow root', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('a Gyral child inside a server-rendered shadow root', () => {
   it('renders both with seeds, defers the child, runs no commands', async () => {
     const out = await renderToString(html`<test-nest-parent></test-nest-parent>`);
     expect(out).toMatch(/<test-nest-child[^>]*defer-hydration/);

@@ -16,7 +16,8 @@ const afterOpen = (out: string, tag: string): string => {
     .slice(0, 60);
 };
 
-describe('light-DOM components on the server (ADR 0014)', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('light-DOM components on the server (ADR 0014)', () => {
   it('render the view as plain children, with no Declarative Shadow DOM', async () => {
     const out = await render();
     expect(afterOpen(out, 'test-light-page')).toMatch(/^<h1 class="light-title">Light page/);

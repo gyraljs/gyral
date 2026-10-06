@@ -1,6 +1,6 @@
-// A component with a model-driven <textarea> (gyral-czi.34): rendered by
-// textarea.node.test.ts, hydrated by textarea-hydration.test.ts.
-import { define, html, textarea } from '@gyral/core';
+// A component with a model-driven <textarea> (gyral-czi.34, view/02-bindings.md "Live form
+// state"): rendered by textarea.node.test.ts, hydrated by textarea-hydration.test.ts.
+import { define, html } from '@gyral/core';
 
 interface State {
   readonly message: string;
@@ -24,16 +24,14 @@ export const Note = define<State, Msg>('test-note', {
   },
   view: (s, i) =>
     html`<label for="msg">Message</label>
-      ${textarea({
-        value: s.message,
-        attrs: {
-          id: 'msg',
-          name: 'message',
-          rows: 3,
-          required: true,
-          'aria-invalid': s.invalid ? 'true' : false,
-          'data-intent': i.Typed,
-        },
-      })}
+      <textarea
+        id="msg"
+        name="message"
+        rows="3"
+        required
+        aria-invalid=${s.invalid ? 'true' : null}
+        data-intent=${i.Typed}
+      >
+${s.message}</textarea>
       <button type="button" data-intent=${i.Reset}>Reset</button>`,
 });

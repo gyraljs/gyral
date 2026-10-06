@@ -5,14 +5,19 @@ Gyral server rendering: whole pages of Gyral components rendered to Declarative 
 ## Install
 
 ```sh
-pnpm add @gyral/ssr @gyral/core lit @lit-labs/ssr @lit-labs/ssr-client
+pnpm add @gyral/ssr @gyral/core
 ```
+
+> **0.3.0 in progress:** server rendering is being rebuilt on Gyral's own view layer
+> (`@gyral/core/server`, docs/design-docs/view/06-server.md). Until it lands, `renderPage`,
+> `renderToStream` and `renderToString` throw; `formAction`, `page()` and the static helpers
+> keep their API.
 
 ## Example
 
 ```ts
 // server.ts
-import { html } from 'lit';
+import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
 import './app.js'; // defines <my-app>
 
@@ -23,8 +28,7 @@ export const handle = (req: Request): Response =>
     scripts: ['/client.js'],
   });
 
-// client.ts: import the hydration support first
-import '@gyral/ssr/hydrate';
+// client.ts: hydration is built into @gyral/core
 import './app.js';
 ```
 

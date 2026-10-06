@@ -1,4 +1,4 @@
-import { css, define, html, nothing, repeat } from '@gyral/core';
+import { css, define, each, html, nothing } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
 import { debounce } from '@gyral/time';
 import { searchRepos, type Repo } from './github.js';
@@ -73,7 +73,7 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
           type="search"
           autocomplete="off"
           spellcheck="false"
-          .value=${s.query}
+          value=${s.query}
           data-intent=${i.Typed}
         />
       </form>
@@ -82,7 +82,7 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
     ${
       s.results._tag === 'Found'
         ? html`<ol>
-            ${repeat(s.results.repos, (r) => r.id, repoItem)}
+            ${each(s.results.repos, (r) => r.id, repoItem)}
           </ol>`
         : nothing
     }

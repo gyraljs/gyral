@@ -1,5 +1,12 @@
-import { changed, css, define, html, nothing, repeat, send, type Stateless } from '@gyral/core';
-import { cart, count, money, totalCents, type Product } from './cart.js';
+import { changed, css, define, each, html, nothing, send, type Stateless } from '@gyral/core';
+import { cart, count, money, totalCents, type Line, type Product } from './cart.js';
+
+/** A cart line (pure: it reads only its item and the intent name passed through pick). */
+const LineRow = (l: Line, remove: string) =>
+  html`<li>
+    ${l.name} × ${l.qty}
+    <button type="button" value=${l.sku} data-intent=${remove}>Remove</button>
+  </li>`;
 
 export const PRODUCTS: readonly Product[] = [
   { sku: 'mug', name: 'Enamel mug', priceCents: 1400 },
@@ -117,14 +124,11 @@ export const CartPanel = define<Stateless, PanelMsg>('gy-cart-panel', {
     if (c.lines.length === 0) return html`<p>Your cart is empty.</p>`;
     return html`
       <ul>
-        ${repeat(
+        ${each(
           c.lines,
           (l) => l.sku,
-          (l) =>
-            html`<li>
-              ${l.name} × ${l.qty}
-              <button type="button" value=${l.sku} data-intent=${i.RemoveLine}>Remove</button>
-            </li>`,
+          LineRow,
+          () => i.RemoveLine,
         )}
       </ul>
       <p>Total: <output>${money(totalCents(c))}</output></p>

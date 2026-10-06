@@ -1,4 +1,4 @@
-import { directive, ElementDirective } from '@gyral/core';
+import { defineHook } from '@gyral/core';
 
 /**
  * Must match the `@supports` condition in styles.ts: every anchor feature the CSS uses.
@@ -18,23 +18,24 @@ export const enhanced = (): boolean =>
   typeof CSS !== 'undefined' &&
   CSS.supports(ANCHOR_SUPPORT);
 
-/**
- * Shows or hides a `popover="manual"` element to match model state. Without platform support it
- * does nothing, and the list stays an in-flow element shown and hidden by `?hidden`.
- */
-class PopoverOpen extends ElementDirective<[open: boolean]> {
-  readonly #enabled = enhanced();
+let supported: boolean | undefined;
 
-  apply(el: Element, [open]: [open: boolean]): void {
-    if (!this.#enabled || !(el instanceof HTMLElement)) return;
+/**
+ * An element hook (view/02-bindings.md "Element hooks") that shows or hides a
+ * `popover="manual"` element to match model state. Without platform support it does nothing,
+ * and the list stays an in-flow element shown and hidden by `?hidden`.
+ */
+export const popoverOpen = defineHook<[open: boolean]>({
+  client: (el, [open]) => {
+    supported ??= enhanced();
+    if (!supported || !(el instanceof HTMLElement)) return;
     if (!el.hasAttribute('popover')) el.setAttribute('popover', 'manual');
     const shown = el.matches(':popover-open');
-    // After the hidden attribute changes in this render, so the popover is displayable.
+    // Hooks run after the commit, so the hidden attribute already changed in this render; a
+    // microtask keeps the order the directive had (show after layout sees it displayable).
     queueMicrotask(() => {
       if (open && !shown && el.isConnected) el.showPopover();
       if (!open && shown) el.hidePopover();
     });
-  }
-}
-
-export const popoverOpen = directive(PopoverOpen);
+  },
+});

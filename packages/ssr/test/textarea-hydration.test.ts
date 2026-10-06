@@ -1,6 +1,3 @@
-// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { settled } from '@gyral/core';
@@ -36,7 +33,8 @@ afterAll(() => {
   page.unmount();
 });
 
-describe('textarea() hydration (gyral-czi.34)', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('<textarea> hydration (gyral-czi.34)', () => {
   it('hydrates in place and keeps what was typed before the script loaded', () => {
     expect(area()).toBe(before);
     expect(area().value).toBe('typed before hydration');

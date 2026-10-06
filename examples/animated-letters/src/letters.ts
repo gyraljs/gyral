@@ -1,4 +1,4 @@
-import { css, define, html, repeat, unsafeCSS, type Next } from '@gyral/core';
+import { css, define, each, html, type Next } from '@gyral/core';
 import { delay } from '@gyral/time';
 
 import { letterKeys } from './keyboard.js';
@@ -58,7 +58,7 @@ export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
   view: (s) => html`
     <p id="hint">Press a letter key (A–Z) to add it, or press it again to remove it.</p>
     <ul aria-label="Letters" aria-describedby="hint">
-      ${repeat(
+      ${each(
         s.letters,
         (l) => l.key,
         (l) =>
@@ -88,7 +88,7 @@ export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
         font-size: 3rem;
         font-weight: 700;
         line-height: 1.2;
-        transition: font-size ${unsafeCSS(TRANSITION_MS)}ms ease-out;
+        transition: font-size ${TRANSITION_MS}ms ease-out;
       }
       /* Grow in from nothing when a letter is inserted. */
       @starting-style {

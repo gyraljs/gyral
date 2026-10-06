@@ -5,7 +5,7 @@ The Gyral HTTP driver: fetch requests as commands, typed errors (`HttpStatusErro
 ## Install
 
 ```sh
-pnpm add @gyral/http @gyral/core lit
+pnpm add @gyral/http @gyral/core
 ```
 
 ## Example

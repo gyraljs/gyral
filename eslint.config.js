@@ -60,11 +60,12 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          // Lit SSR serializes `.checked=${false}` as checked="false", which checks the box.
+          // Form state has one spelling (view/02-bindings.md "Live form state", rule 4 of
+          // view/09-template-rules.md): property bindings are dropped on the server.
           selector:
             'TaggedTemplateExpression[tag.name=/^(html|serverHtml)$/] TemplateElement[value.raw=/\\.(checked|selected|open|indeterminate|defaultChecked)=$/]',
           message:
-            'Bind boolean form state with ?checked=${liveBoolean(x)} (from @gyral/core), not a .checked property binding: server rendering turns .checked=${false} into checked="false" (docs/design-docs/0012-ssr.md).',
+            'Bind boolean form state with ?checked=${x} (also ?selected, ?open, ?indeterminate; live form state, docs/design-docs/view/02-bindings.md), not a .checked property binding: the server drops property bindings on plain elements (rule 4, view/09-template-rules.md).',
         },
       ],
       '@typescript-eslint/no-explicit-any': 'error',
@@ -178,9 +179,9 @@ export default tseslint.config(
                 '@gyral/ssr may only import @gyral/core and @gyral/router (ARCHITECTURE.md).',
             },
             {
-              group: ['@lit-labs/ssr', '@lit-labs/ssr/*'],
+              group: ['lit', 'lit/*', '@lit-labs/*'],
               message:
-                'Labs APIs stay behind packages/ssr/src/internal/lit.ts (ADR 0005). Add what you need there.',
+                '@gyral/ssr renders with @gyral/core/server since the view-layer swap (ADR 0018); it no longer uses Lit.',
             },
           ],
         },
@@ -188,8 +189,8 @@ export default tseslint.config(
     },
   },
   {
-    // Internal modules host the Labs adapters (ssr/src/internal/lit.ts); Effect is still
-    // excluded there by the dependency check in scripts/check-public-api.mjs.
+    // Internal modules are implementation details; Effect is still excluded there by the
+    // dependency check in scripts/check-public-api.mjs.
     files: ['packages/*/src/internal/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },

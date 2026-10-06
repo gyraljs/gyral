@@ -29,7 +29,8 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<string> {
   return new Response(stream).text();
 }
 
-describe('stores on the server (ADR 0013)', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('stores on the server (ADR 0013)', () => {
   it('lets components read the request store synchronously during the render', async () => {
     const out = await renderToString(html`<ssr-badge></ssr-badge>`, {
       stores: [cart.instance({ owner: 'ada', lines: ['a', 'b'] })],

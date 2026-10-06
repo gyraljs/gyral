@@ -1,4 +1,4 @@
-import { define, html, nothing, repeat, type Next } from '@gyral/core';
+import { define, each, html, nothing, type Next } from '@gyral/core';
 import { debounce, delay } from '@gyral/time';
 import { popoverOpen } from './popover.js';
 import { styles } from './styles.js';
@@ -77,6 +77,18 @@ function statusText(s: State): string {
   return `${String(n)} suggestion${n === 1 ? '' : 's'}. Use the up and down arrows to choose.`;
 }
 
+/** One suggestion; pure: its index, highlight and intent come through `pick`. */
+const option = (title: string, [index, highlighted, pick]: readonly [number, boolean, string]) =>
+  html`<li
+    id="option-${String(index)}"
+    role="option"
+    aria-selected=${highlighted ? 'true' : 'false'}
+    data-index=${index}
+    data-intent=${pick}
+  >
+    ${title}
+  </li>`;
+
 export const Autocomplete = define<State, Msg>('gy-autocomplete', {
   init: () => ({ query: '', suggestions: [], highlighted: undefined, open: false, status: 'idle' }),
   intent: {
@@ -142,7 +154,7 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
             aria-activedescendant=${
               s.highlighted === undefined ? nothing : `option-${String(s.highlighted)}`
             }
-            .value=${s.query}
+            value=${s.query}
             data-intent=${i.Typed}
           />
         </span>
@@ -153,19 +165,14 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
           ?hidden=${!s.open}
           ${popoverOpen(s.open)}
         >
-          ${repeat(
+          ${each(
             s.suggestions,
             (title) => title,
-            (title, index) =>
-              html`<li
-                id="option-${String(index)}"
-                role="option"
-                aria-selected=${index === s.highlighted ? 'true' : 'false'}
-                data-index=${index}
-                data-intent=${i.Pick}
-              >
-                ${title}
-              </li>`,
+            option,
+            (title) => {
+              const index = s.suggestions.indexOf(title);
+              return [index, index === s.highlighted, i.Pick] as const;
+            },
           )}
         </ul>
       </span>

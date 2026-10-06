@@ -1,5 +1,7 @@
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '../src/hydrate.js';
+import { describe } from 'vitest';
 import { lightHydrationSuite } from './support/light-suite.js';
 
-lightHydrationSuite();
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('light-DOM hydration', () => {
+  lightHydrationSuite();
+});

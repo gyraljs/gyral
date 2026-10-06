@@ -1,4 +1,4 @@
-import { define, html, nothing, type Next, type PropsChanged } from '@gyral/core';
+import { define, html, nothing, prop, type Next, type PropsChanged } from '@gyral/core';
 import { latency, search, type Results } from './search.js';
 import { panelStyles } from './styles.js';
 
@@ -55,10 +55,22 @@ function found(s: State, results: Results): State {
   return { results: results.query.trim() === '' ? undefined : results, requests };
 }
 
+const isMode = (value: unknown): value is Mode => value === 'naive' || value === 'switch';
+
+/** The `mode` attribute's values, as a tiny Standard Schema (no schema library needed). */
+const modeSchema = {
+  '~standard': {
+    version: 1 as const,
+    vendor: 'gy-search-panel',
+    validate: (value: unknown) =>
+      isMode(value) ? { value } : { issues: [{ message: 'expected "naive" or "switch"' }] },
+  },
+};
+
 export const Panel = define<State, Msg, Props>('gy-search-panel', {
   props: {
-    query: { type: String, default: '' },
-    mode: { type: String, default: 'naive' },
+    query: prop.string({ default: '' }),
+    mode: prop.string({ schema: modeSchema, default: 'naive' }),
   },
   init: () => ({ results: undefined, requests: [] }),
   intent: {},

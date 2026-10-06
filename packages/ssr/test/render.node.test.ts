@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html } from '@gyral/core';
+import * as v from 'valibot';
+import { command, define, defineDriver, html, prop } from '@gyral/core';
 import { page, renderPage, renderToString, serverHtml } from '../src/index.js';
 
 const runs: string[] = [];
@@ -26,7 +27,10 @@ type Msg =
 const HOSTILE = '</script><script>alert(1)</script>';
 
 define<State, Msg, Props>('ssr-card', {
-  props: { label: { type: String, required: true }, items: { attribute: false, required: true } },
+  props: {
+    label: prop.string({ required: true }),
+    items: prop.value(v.array(v.string()), { required: true }),
+  },
   init: (p) => [
     { title: p.label.toUpperCase(), note: '' },
     [command(load, p.label, { onSuccess: (id) => ({ _tag: 'Loaded', id }) })],
@@ -45,7 +49,7 @@ define<State, Msg, Props>('ssr-card', {
 define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>(
   'ssr-copy',
   {
-    props: { items: { attribute: false, required: true } },
+    props: { items: prop.value(v.array(v.string()), { required: true }) },
     init: (p) => ({ items: p.items }),
     intent: {},
     update: {},
@@ -66,7 +70,8 @@ function seedOf(out: string): unknown {
   return JSON.parse(decode(match[1]));
 }
 
-describe('server rendering (ADR 0012)', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('server rendering (ADR 0012)', () => {
   it('renders define() elements as Declarative Shadow DOM from init(props)', async () => {
     const out = await renderToString(html`<ssr-card label="hi" .items=${['a', 'b']}></ssr-card>`);
     expect(out).toContain('<template shadowroot="open" shadowrootmode="open">');

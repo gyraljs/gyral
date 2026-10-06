@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { html, nothing } from 'lit';
+import { html, nothing } from '@gyral/core';
 import type { IntentRejected } from '@gyral/core';
 import { formAction, rejectWith, renderPage, seeOther, serverHtml } from '@gyral/ssr';
 import '../src/rsvp.js'; // registers <gy-rsvp> so the server can render it

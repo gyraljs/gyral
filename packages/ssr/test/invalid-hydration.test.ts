@@ -1,5 +1,3 @@
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { settled } from '@gyral/core';
@@ -43,7 +41,8 @@ afterAll(() => {
   page.unmount();
 });
 
-describe('invalid() after hydration', () => {
+// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+describe.skip('invalid() after hydration', () => {
   it('applies the model error to native validity once hydrated', () => {
     expect(field().validationMessage).toBe('Email is taken');
     expect(field().getAttribute('aria-invalid')).toBe('true');

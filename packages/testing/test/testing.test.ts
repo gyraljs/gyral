@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html, settled } from '@gyral/core';
+import { command, define, defineDriver, html, prop, settled } from '@gyral/core';
 import {
   commandsFor,
   fakeDriver,
@@ -41,7 +41,7 @@ const loadUser = (id: string) =>
   );
 
 const Profile = define<State, Msg, { readonly userId: string }>('test-profile', {
-  props: { userId: { type: String, required: true } },
+  props: { userId: prop.string({ required: true }) },
   init: (props) => [
     { id: props.userId, user: undefined, error: undefined },
     [loadUser(props.userId)],

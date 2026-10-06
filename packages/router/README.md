@@ -5,7 +5,7 @@ The Gyral router: typed route tables, navigation as commands, and the History AP
 ## Install
 
 ```sh
-pnpm add @gyral/router @gyral/core lit
+pnpm add @gyral/router @gyral/core
 ```
 
 ## Example

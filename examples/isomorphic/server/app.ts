@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { html } from 'lit';
+import { html } from '@gyral/core';
 import { renderPage, serverHtml } from '@gyral/ssr';
 import '../src/app.js'; // registers <gy-iso-app> so the server can render it
 import '../src/contact.js'; // and <gy-iso-contact>, rendered inside it on /about

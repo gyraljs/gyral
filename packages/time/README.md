@@ -5,7 +5,7 @@ Gyral time: delays, debounces, periodic ticks and animation frames as commands, 
 ## Install
 
 ```sh
-pnpm add @gyral/time @gyral/core lit
+pnpm add @gyral/time @gyral/core
 ```
 
 ## Example

@@ -53,10 +53,9 @@ const FIXTURES = {
   checked: [
     'packages/core/src/__lint_fixture_checked__.ts',
     [
-      "import { html } from 'lit';",
-      "import { liveBoolean } from './live-boolean.js';",
+      "import { html } from './view/index.js';",
       'export const bad = (on: boolean) => html`<input type="checkbox" .checked=${on} />`;',
-      'export const good = (on: boolean) => html`<input type="checkbox" ?checked=${liveBoolean(on)} />`;',
+      'export const good = (on: boolean) => html`<input type="checkbox" ?checked=${on} />`;',
       '',
     ].join('\n'),
   ],
@@ -120,10 +119,10 @@ describe('ESLint guardrails', () => {
     expect(messages[0]).toContain('Layer-1 packages may only import @gyral/core');
   });
 
-  it('keeps @lit-labs/ssr behind the internal adapter', () => {
+  it('keeps Lit out of @gyral/ssr (ADR 0018)', () => {
     const messages = ruleMessages('ssrLabs', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('src/internal/lit.ts');
+    expect(messages[0]).toContain('no longer uses Lit');
   });
 
   it('keeps view/ self-contained (ADR 0018), at every depth', () => {
@@ -146,10 +145,10 @@ describe('ESLint guardrails', () => {
     expect(messages[0]).toContain('view/server/ may import only view/');
   });
 
-  it('rejects .checked property bindings and accepts ?checked with liveBoolean', () => {
+  it('rejects .checked property bindings and accepts ?checked (live form state)', () => {
     const messages = results.checked?.filter((m) => m.ruleId === 'no-restricted-syntax') ?? [];
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.line).toBe(3);
-    expect(messages[0]?.message).toContain('liveBoolean');
+    expect(messages[0]?.line).toBe(2);
+    expect(messages[0]?.message).toContain('?checked=${x}');
   });
 });
