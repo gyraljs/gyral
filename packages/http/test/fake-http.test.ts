@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as v from 'valibot';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { request, type HttpError } from '../src/index.js';
 import { FakeHttpResponderError, fakeHttp } from '../src/testing.js';
 
@@ -45,7 +45,7 @@ async function mount() {
   const el = new Loader();
   el.drivers = { http };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   el.send({ _tag: 'Load' });
   await vi.waitFor(() => {
     expect(http.requests).toHaveLength(1);
@@ -73,7 +73,7 @@ describe('fakeHttp() decodes like the real driver (gyral-czi.36)', () => {
     await vi.waitFor(() => {
       expect(el.state.error?._tag).toBe('HttpDecodeError');
     });
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('HttpDecodeError');
   });
 
@@ -102,7 +102,7 @@ describe('fakeHttp() decodes like the real driver (gyral-czi.36)', () => {
     const el = new Loader();
     el.drivers = { http: auto };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Load' });
     await vi.waitFor(() => {
       expect(el.state.count).toBe(7);
@@ -138,7 +138,7 @@ describe('fakeHttp() decodes like the real driver (gyral-czi.36)', () => {
     const el = new Loader();
     el.drivers = { http: broken };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Load' });
     await vi.waitFor(() => {
       expect(el.state.error?._tag).toBe('HttpNetworkError');

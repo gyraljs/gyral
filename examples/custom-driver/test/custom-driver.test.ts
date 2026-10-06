@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { fakeDriver, inputsFor, run, virtualTime, type VirtualTime } from '@gyral/testing';
 import { barAt, chart, layout, makeChartDriver, type ChartInput } from '../src/chart-driver.js';
 import { Clicks } from '../src/clicks.js';
@@ -40,21 +41,21 @@ describe('component with a fake chart driver', () => {
     const el = document.createElement('gy-clicks');
     el.drivers = { chart: fake };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const button = el.shadowRoot?.querySelector('button');
     if (button == null) throw new Error('missing button');
     button.click();
     button.click();
     await clock.advance(1000);
     button.click();
-    await el.updateComplete;
+    await settled();
     expect(draws(fake.inputs)).toEqual([[1], [2], [2, 1]]);
 
     // Push a chart click through the running stream, as the real driver would emit it.
     const stream = fake.calls.find((c) => c.input._tag === 'Clicks');
     expect(stream?.signal.aborted).toBe(false);
     stream?.emit(0);
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.textContent).toContain('Bar 0:');
     expect(el.shadowRoot?.querySelectorAll('output')[1]?.textContent).toBe('2');
 

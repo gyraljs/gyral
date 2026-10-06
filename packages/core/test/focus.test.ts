@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, focus, html } from '../src/index.js';
+import { define, focus, html, settled } from '../src/index.js';
 
 interface State {
   readonly page: number;
@@ -32,11 +32,6 @@ const spec = {
 const Shadowed = define<State, Msg>('test-focus', spec);
 const Light = define<State, Msg>('test-focus-light', { ...spec, shadow: false });
 
-const settle = async (el: { updateComplete: Promise<boolean> }) => {
-  await el.updateComplete;
-  await Promise.resolve();
-};
-
 afterEach(() => {
   document.body.replaceChildren();
 });
@@ -45,9 +40,9 @@ describe('focus() command (gyral-czi.28)', () => {
   it('focuses an element in the shadow root after the render the reducer caused', async () => {
     const el = new Shadowed();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Next' });
-    await settle(el);
+    await settled();
     const heading = el.shadowRoot?.querySelector('h2');
     expect(el.shadowRoot?.activeElement).toBe(heading);
     expect(heading?.textContent).toBe('Page 2');
@@ -56,9 +51,9 @@ describe('focus() command (gyral-czi.28)', () => {
   it('waits for an element the same update renders, and can select its text', async () => {
     const el = new Shadowed();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Edit' });
-    await settle(el);
+    await settled();
     const input = el.shadowRoot?.querySelector('input');
     expect(el.shadowRoot?.activeElement).toBe(input);
     expect([input?.selectionStart, input?.selectionEnd]).toEqual([0, 5]);
@@ -67,9 +62,9 @@ describe('focus() command (gyral-czi.28)', () => {
   it('works for light-DOM components', async () => {
     const el = new Light();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Next' });
-    await settle(el);
+    await settled();
     expect(document.activeElement).toBe(el.querySelector('h2'));
   });
 
@@ -82,9 +77,9 @@ describe('focus() command (gyral-czi.28)', () => {
     try {
       const el = new Shadowed();
       document.body.append(el);
-      await el.updateComplete;
+      await settled();
       el.send({ _tag: 'Lost' });
-      await settle(el);
+      await settled();
     } finally {
       console.warn = original;
     }

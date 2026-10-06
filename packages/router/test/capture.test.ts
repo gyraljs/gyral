@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { listen, makeRouter, type RouteLocation, type RouterDriver } from '../src/index.js';
 
 interface State {
@@ -27,7 +27,7 @@ async function mountWith(driver: RouterDriver): Promise<InstanceType<typeof List
   const el = new Listener();
   el.drivers = { router: driver };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await vi.waitFor(() => {
     expect(el.state.seen.length).toBeGreaterThan(0);
   });

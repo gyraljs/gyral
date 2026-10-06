@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import { makeHttpDriver } from '@gyral/http';
 import { initial, step } from '@gyral/testing';
 import { Rsvp } from '../src/rsvp.js';
@@ -15,7 +16,7 @@ async function mount(answer: () => Response = () => Response.json({})) {
   el.attendees = props.attendees;
   el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'http://localhost/' }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const root = el.shadowRoot;
   const input = (name: string) => root?.querySelector<HTMLInputElement>(`[name=${name}]`);
   const type = (name: string, value: string) => {
@@ -42,7 +43,7 @@ describe('no-js-first with JavaScript on', () => {
     await vi.waitFor(() => {
       expect(el.state.enhanced).toBe(true);
     });
-    await el.updateComplete;
+    await settled();
     expect(root?.querySelector('.mode strong')?.textContent).toBe('JavaScript on.');
   });
 
@@ -52,7 +53,7 @@ describe('no-js-first with JavaScript on', () => {
     await vi.waitFor(() => {
       expect(el.state.errors).toEqual({ email: ['Enter a valid email address.'] });
     });
-    await el.updateComplete;
+    await settled();
     expect(root?.querySelector('#email-error')?.textContent).toBe('Enter a valid email address.');
     type('email', 'ada@example.com');
     await vi.waitFor(() => {
@@ -72,7 +73,7 @@ describe('no-js-first with JavaScript on', () => {
     });
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(el.state.attendees.map((a) => a.name)).toEqual(['Grace', 'Ada']);
-    await el.updateComplete;
+    await settled();
     // A fresh, empty form for the next reply.
     expect(root?.querySelector<HTMLInputElement>('[name=email]')?.value).toBe('');
   });

@@ -8,6 +8,7 @@ import {
   devtoolsEnabled,
   html,
   send,
+  settled,
   type DevEvent,
 } from '../src/index.js';
 import { resetDocumentStores } from '../src/store-scope.js';
@@ -83,7 +84,7 @@ const kinds = () => events.map((e) => (e.kind === 'command' ? `command:${e.phase
 async function mount() {
   const el = new Probe();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await settle();
   return el;
 }

@@ -62,7 +62,8 @@ export const Counter = define<State, Msg>('my-counter', {
    `lit` or `@gyral/core`. Boolean form state uses `?checked=${liveBoolean(x)}`, never
    `.checked=${x}` (Lit SSR writes `checked="false"`, which checks the box).
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
-   real browser (Vitest browser mode) with fake drivers. No jsdom.
+   real browser (Vitest browser mode) with fake drivers; `await settled()` before asserting on
+   the DOM. No jsdom.
 10. **Page-level content uses light DOM** (`shadow: false`) so crawlers and document CSS see
     it; widgets keep shadow DOM and `styles`.
 
@@ -108,6 +109,6 @@ for SSR, `@gyral/http @gyral/router @gyral/time` as needed, `-D @gyral/testing`)
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
-- `references/testing.md` — `step`/`run`, command assertions, fake drivers, `fakeHttp`, virtual time, SSR tests
+- `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR tests
 - `references/devtools.md` — the dev-only timeline panel
 - `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes

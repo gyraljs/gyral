@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
 
 type Msg =
   | { readonly _tag: 'Key'; readonly key: string }
@@ -41,7 +41,7 @@ const Keys = define<{ readonly log: readonly string[] }, Msg>('test-events', {
 async function mount() {
   const el = new Keys();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const $ = <T extends Element>(sel: string, type: new () => T): T => {
     const found = el.shadowRoot?.querySelector(sel);
     if (!(found instanceof type)) throw new Error(sel);

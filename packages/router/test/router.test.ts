@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import {
   back,
   listen,
@@ -79,7 +79,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
     el = new App();
     el.drivers = { router: driver };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await vi.waitFor(() => {
       expect(el.state.seen).toHaveLength(1); // the initial location is delivered at once
     });

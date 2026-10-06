@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
-import { child, define, emit, html, repeat, type GyralElementClass } from '../src/index.js';
+import {
+  child,
+  define,
+  emit,
+  html,
+  repeat,
+  settled,
+  type GyralElementClass,
+} from '../src/index.js';
 import { ctxOf } from './ctx.js';
 
 interface Item {
@@ -83,14 +91,11 @@ const settle = () => new Promise((r) => setTimeout(r, 0));
 async function mount() {
   const list = new TestList();
   document.body.append(list);
-  await list.updateComplete;
+  await settled();
   const items = () => [...(list.shadowRoot?.querySelectorAll('test-item') ?? [])] as ItemEl[];
-  await Promise.all(items().map((el) => el.updateComplete));
   const press = async (el: ItemEl, cls: string) => {
     el.shadowRoot?.querySelector<HTMLButtonElement>(`.${cls}`)?.click();
-    await settle();
-    await list.updateComplete;
-    await Promise.all(items().map((x) => x.updateComplete));
+    await settled();
   };
   return { list, items, press };
 }
@@ -124,7 +129,7 @@ describe('child components (ADR 0010)', () => {
     if (a === undefined) throw new Error('no item');
     await press(a, 'poke');
     list.shadowRoot?.querySelector<HTMLButtonElement>('#reverse')?.click();
-    await list.updateComplete;
+    await settled();
     const [first, second] = items();
     expect(first?.item.id).toBe('b');
     expect(second).toBe(a);
@@ -199,14 +204,14 @@ describe('child() with a lazy source', () => {
     const root = new Tree();
     root.nodeId = 'r';
     document.body.append(root);
-    await root.updateComplete;
+    await settled();
     root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
     root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
-    await root.updateComplete;
+    await settled();
     expect(root.state.kids).toEqual(['r.0', 'r.1']);
     const first = root.shadowRoot?.querySelector('test-tree');
     if (!(first instanceof Tree)) throw new Error('no child tree');
-    await first.updateComplete;
+    await settled();
     first.shadowRoot?.querySelector<HTMLButtonElement>('.rm')?.click();
     await settle();
     expect(root.state.kids).toEqual(['r.1']);

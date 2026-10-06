@@ -1,3 +1,4 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 // ORDER IS DELIBERATELY WRONG (gyral-czi.41): Lit (through @gyral/testing → @gyral/core) loads
 // BEFORE `@gyral/ssr/hydrate`, the way a bundler that moves shared code into an earlier chunk
 // evaluates it (seen in gyral-shop's production build). Lit's own hydrate support then never
@@ -17,7 +18,6 @@ window.addEventListener('error', (event) => {
 
 interface Live extends HTMLElement {
   readonly state: Record<string, unknown>;
-  readonly updateComplete: Promise<boolean>;
 }
 
 const parent = (): Live => {

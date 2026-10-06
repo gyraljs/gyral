@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { HttpError, HttpRequest } from '@gyral/http';
-import { randomDriver } from '@gyral/core';
+import { randomDriver, settled } from '@gyral/core';
 import { fakeDriver, step } from '@gyral/testing';
 import { RandomUser } from '../src/random-user.js';
 import { USER_COUNT, userUrl } from '../src/users.js';
@@ -24,12 +24,12 @@ async function mount() {
   const el = new RandomUser();
   el.drivers = { http, random };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const button = el.shadowRoot?.querySelector('button');
   if (button == null) throw new Error('missing button');
   const settle = async () => {
     await tick();
-    await el.updateComplete;
+    await settled();
   };
   return { el, http, random, button, settle };
 }

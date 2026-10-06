@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/rejected.ssr.html?raw';
 
 // The no-JS path (server.node.test.ts golden file) and the JS path (form() intent in the
@@ -39,7 +40,7 @@ describe('JS and no-JS rejections render the same markup', () => {
     await import('../src/register.js');
     const el = document.createElement('gy-register');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const root = el.shadowRoot;
     for (const [name, value] of Object.entries(rejected)) {
       const field = root?.querySelector(`input[name=${name}]`);
@@ -47,7 +48,7 @@ describe('JS and no-JS rejections render the same markup', () => {
     }
     root?.querySelector('form')?.requestSubmit();
     await new Promise((r) => setTimeout(r, 20));
-    await el.updateComplete;
+    await settled();
     const form = root?.querySelector('form');
     if (form == null) throw new Error('no client form');
     expect(el.state.errors).toEqual({

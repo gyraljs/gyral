@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { LitElement } from 'lit';
-import { define, html } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
 import { ctxOf } from './ctx.js';
 
 interface Todo {
@@ -55,7 +55,7 @@ define<{ readonly n: number }, { readonly _tag: 'Clear' }>('test-child', {
 async function mount(): Promise<InstanceType<typeof TodoEl>> {
   const el = new TodoEl();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return el;
 }
 
@@ -74,7 +74,7 @@ describe('define()', () => {
     const el = await mount();
     q(el, 'input[name=text]', HTMLInputElement).value = 'milk';
     q(el, 'form', HTMLFormElement).requestSubmit();
-    await el.updateComplete;
+    await settled();
     expect(el.state.items).toEqual(['milk']);
     expect(q(el, 'li', HTMLLIElement).textContent).toBe('milk');
   });
@@ -99,7 +99,7 @@ describe('define()', () => {
     const el = await mount();
     el.send({ _tag: 'Add', text: 'keep' });
     const child = q(el, 'test-child', LitElement);
-    await child.updateComplete;
+    await settled();
     q(child, 'button', HTMLButtonElement).click();
     expect(el.state.items).toEqual(['keep']);
   });

@@ -2,6 +2,7 @@
 // asks for it with a command; define() runs it against the component's own render root after
 // the render that the same reducer caused, so the element to focus already exists.
 import type { Command } from './command.js';
+import { trackWork } from './settled.js';
 
 /** Marker driver: `define()` handles focus commands itself. */
 export const FOCUS = {
@@ -60,8 +61,10 @@ export interface FocusHost {
  * microtask first, then for updateComplete, which waits for the transition (gyral-6zz).
  */
 export function focusAfterUpdate(host: FocusHost, tag: string, input: FocusInput): void {
-  void Promise.resolve().then(async () => {
-    await host.updateComplete;
-    if (host.isConnected) runFocus(host.renderRoot, tag, input);
-  });
+  void trackWork(
+    Promise.resolve().then(async () => {
+      await host.updateComplete;
+      if (host.isConnected) runFocus(host.renderRoot, tag, input);
+    }),
+  );
 }

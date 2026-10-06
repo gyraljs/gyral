@@ -6,6 +6,7 @@ import {
   html,
   live,
   runInit,
+  settled,
   styleMap,
   type Stateless,
 } from '../src/index.js';
@@ -47,7 +48,7 @@ describe('ergonomics', () => {
     const el = new Badge();
     el.label = 'gyral';
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const button = el.shadowRoot?.querySelector('button');
     expect(button?.classList.contains('long')).toBe(true);
     expect(button?.style.color).toBe('rgb(1, 2, 3)');
@@ -65,13 +66,13 @@ describe('ergonomics', () => {
   it('re-exports live() so controlled inputs follow the model', async () => {
     const el = new Capped();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const input = el.shadowRoot?.querySelector('input');
     if (input == null) throw new Error('no input');
     input.value = '99';
     input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     el.requestUpdate();
-    await el.updateComplete;
+    await settled();
     expect(el.state.value).toBe(5);
     expect(input.value).toBe('5');
   });

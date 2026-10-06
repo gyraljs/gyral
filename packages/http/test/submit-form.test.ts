@@ -7,6 +7,7 @@ import {
   form,
   html,
   redirectedTo,
+  settled,
   type IntentRejected,
 } from '@gyral/core';
 import { makeHttpDriver, submitForm } from '../src/index.js';
@@ -59,7 +60,7 @@ async function mount(answer: Answer) {
   const el = new LoginEl();
   el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'https://shop.test/' }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const submit = async (email: string, password: string) => {
     const root = el.shadowRoot;
     const set = (name: string, value: string) => {
@@ -151,7 +152,7 @@ describe('submitForm()', () => {
     const el = new LoginEl();
     el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'https://shop.test/' }) };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const fd = new FormData();
     el.send({ _tag: 'Login', form: fd });
     el.send({ _tag: 'Login', form: fd });

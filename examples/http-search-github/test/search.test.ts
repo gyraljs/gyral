@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import type { HttpError, HttpRequest } from '@gyral/http';
 import {
   fakeDriver,
@@ -28,7 +29,7 @@ async function mount({ realDebounce = false } = {}) {
     ? { http: github }
     : { http: github, time: fakeDriver(timeDriver, { impl: () => undefined }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return { el, github };
 }
 
@@ -103,7 +104,7 @@ describe('<gy-github-search>', () => {
   it('does not search for blank input', async () => {
     const { el, github } = await mount();
     type(el, '   ');
-    await el.updateComplete;
+    await settled();
     await new Promise((r) => setTimeout(r, 10));
     expect(github.calls).toHaveLength(0);
     expect(shadowText(el, 'output')).toEqual(['Type to search.']);

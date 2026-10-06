@@ -126,7 +126,7 @@ Set as budgets in Phase 0 from measurements; these are estimates, not commitment
 - **Speed:** the baseline is gyral-benchmarks `results/2026-10-06-release-0.2.0-a3` (drift
   flagged, so used for orientation only). The Phase 8 gate is a fresh run in which
   `frameworks/gyral` (published 0.2.0) and a `frameworks/gyral-next` variant (tarballs packed
-  from `next`) are measured **in the same run**, and compared only within it.
+  from `next`, never published) are measured **in the same run**, and compared only within it.
 
 ## Migration (decision K)
 
@@ -136,8 +136,9 @@ Set as budgets in Phase 0 from measurements; these are estimates, not commitment
   scheduler (with a flush-timing spike) → server renderer → hydration → Vite compiler and ESLint
   rules → migrate examples, devtools, `@gyral/ssr`, `create-gyral`, docs, skill and MCP corpus;
   remove `lit` everywhere.
-- **Apps:** pnpm `link:` overrides while iterating; `0.3.0-next.N` prereleases (npm tag `next`)
-  from Phase 5. gyral.dev migrates first (server-heavy, 2 islands), gyral-shop second (light DOM,
+- **Apps:** pnpm `link:` overrides while iterating; from Phase 5, tarballs packed from `next`
+  (`pnpm pack`, consumed with `file:`), so the apps test the exact published artifact. **Nothing
+  is published to npm before 0.3.0** (owner decision, 2026-10-06). gyral.dev migrates first (server-heavy, 2 islands), gyral-shop second (light DOM,
   islands, lazy chunks, 28 form actions, SSG).
 - **Merge gates (`next` → `main`):**
   1. Correctness: all package and example tests green in browser mode and against production

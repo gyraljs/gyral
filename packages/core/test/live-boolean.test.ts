@@ -1,3 +1,4 @@
+// Lit-specific: delete at the view-layer swap (gyral-g1r.12, ADR 0018).
 import { afterEach, describe, expect, it } from 'vitest';
 import { render } from 'lit';
 import { html, liveBoolean } from '../src/index.js';

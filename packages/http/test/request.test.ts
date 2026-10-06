@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { get, makeHttpDriver, type HttpError } from '../src/index.js';
 
 type Msg =
@@ -37,7 +37,7 @@ it.each([
   const el = new Loader();
   el.drivers = { http: makeHttpDriver({ fetch: () => Promise.resolve(response) }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   el.shadowRoot?.querySelector('button')?.click();
   await vi.waitFor(() => {
     expect(el.state.status).toBe(expected);

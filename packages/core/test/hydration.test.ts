@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html } from '../src/index.js';
+import { command, define, defineDriver, html, settled } from '../src/index.js';
 import { SEED_ATTRIBUTE } from '../src/hydration.js';
 
 let calls: string[] = [];
@@ -39,8 +39,6 @@ const Seeded = define<State, Msg, Props>('test-seeded', {
   },
 });
 
-const settle = () => new Promise((r) => setTimeout(r, 0));
-
 afterEach(() => {
   document.body.replaceChildren();
   calls = [];
@@ -59,7 +57,7 @@ describe('resuming from a server seed (ADR 0012)', () => {
       }),
     );
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(firstRenderState?.title).toBe('from server');
     expect(el.items).toEqual(['a', 'b']);
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('a,b');
@@ -74,10 +72,8 @@ describe('resuming from a server seed (ADR 0012)', () => {
       JSON.stringify({ state: { title: 't', heard: [], renders: 0 }, props: {} }),
     );
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(firstRenderState?.heard).toEqual([]);
-    await settle();
-    await el.updateComplete;
     expect(calls).toEqual(['x']);
     expect(el.state.heard).toEqual(['x']);
   });
@@ -86,7 +82,7 @@ describe('resuming from a server seed (ADR 0012)', () => {
     const el = new Seeded();
     el.setAttribute('label', 'csr');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(el.state.title).toBe('init:csr');
   });
 
@@ -98,7 +94,7 @@ describe('resuming from a server seed (ADR 0012)', () => {
       const el = new Seeded();
       el.setAttribute(SEED_ATTRIBUTE, '{not json');
       document.body.append(el);
-      await el.updateComplete;
+      await settled();
       expect(el.state.title).toBe('init:');
       expect(errors).toHaveLength(1);
     } finally {
@@ -111,11 +107,10 @@ describe('resuming from a server seed (ADR 0012)', () => {
     el.setAttribute('label', 'derived');
     el.setAttribute(SEED_ATTRIBUTE, JSON.stringify({ props: { items: ['z'] } }));
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
+    // init's commands waited for the first render, then ran.
     expect(firstRenderState).toEqual({ title: 'init:derived', heard: [], renders: 0 });
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('z');
-    expect(calls).toEqual([]); // init's commands still wait for the first render
-    await settle();
     expect(calls).toEqual(['derived']);
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, findInScope, html, labelledBy, type Stateless } from '../src/index.js';
+import { define, findInScope, html, labelledBy, settled, type Stateless } from '../src/index.js';
 
 interface Props {
   readonly target: string;
@@ -27,8 +27,8 @@ type Reflecting = Element & { ariaLabelledByElements?: readonly Element[] | null
 
 const supported = 'ariaLabelledByElements' in Element.prototype;
 
-const formIn = async (host: Element & { updateComplete?: Promise<boolean> }) => {
-  await host.updateComplete;
+const formIn = async (host: Element) => {
+  await settled();
   const form = host.shadowRoot?.querySelector('form');
   if (form == null) throw new Error('no form');
   return form as Reflecting;
@@ -54,11 +54,9 @@ describe('labelledBy() across shadow roots (gyral-czi.26)', () => {
 
   it('resolves the id through nested shadow roots', async () => {
     document.body.innerHTML = '<h1 id="page-title">Checkout</h1>';
-    const outer = document.createElement('test-named-outer') as HTMLElement & {
-      updateComplete: Promise<boolean>;
-    };
+    const outer = document.createElement('test-named-outer');
     document.body.append(outer);
-    await outer.updateComplete;
+    await settled();
     const inner = outer.shadowRoot?.querySelector('test-named');
     if (inner == null) throw new Error('no inner');
     const form = await formIn(inner);

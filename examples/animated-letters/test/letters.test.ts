@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { inputsFor, run, step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { time } from '@gyral/time';
 import { AnimatedLetters, TRANSITION_MS, type State } from '../src/letters.js';
@@ -58,17 +59,17 @@ describe('<gy-animated-letters>', () => {
     clock = virtualTime();
     const el = document.createElement('gy-animated-letters');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await clock.advance(0);
     expect(rendered(el)).toEqual(['A', 'G', 'L', 'R', 'Y']);
 
     press('KeyB');
     press('KeyG');
-    await el.updateComplete;
+    await settled();
     expect(rendered(el)).toEqual(['A', 'B', '-G', 'L', 'R', 'Y']);
 
     await clock.advance(TRANSITION_MS);
-    await el.updateComplete;
+    await settled();
     expect(rendered(el)).toEqual(['A', 'B', 'L', 'R', 'Y']);
   });
 
@@ -76,12 +77,12 @@ describe('<gy-animated-letters>', () => {
     clock = virtualTime();
     const el = document.createElement('gy-animated-letters');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await clock.advance(0);
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB', ctrlKey: true }));
     press('Digit1');
     press('Space');
-    await el.updateComplete;
+    await settled();
     expect(rendered(el)).toEqual(['A', 'G', 'L', 'R', 'Y']);
   });
 
@@ -89,7 +90,7 @@ describe('<gy-animated-letters>', () => {
     clock = virtualTime();
     const el = document.createElement('gy-animated-letters');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     await clock.advance(0);
     el.remove();
     await clock.advance(0);

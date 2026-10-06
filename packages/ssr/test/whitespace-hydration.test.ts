@@ -2,11 +2,11 @@
 import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/whitespace.ssr.html?raw';
 
 interface Live extends HTMLElement {
   send(msg: { _tag: 'Rename'; name: string }): void;
-  readonly updateComplete: Promise<boolean>;
 }
 
 let page: MountedSsr | undefined;
@@ -34,7 +34,7 @@ describe('indented templates hydrate in place (gyral-9rf)', () => {
   it('hydrates without mismatch and stays live', async () => {
     const before = root('test-ws-table').querySelector('tr');
     el('test-ws-table').send({ _tag: 'Rename', name: 'Grace' });
-    await el('test-ws-table').updateComplete;
+    await settled();
     expect(root('test-ws-table').querySelector('tr')).toBe(before);
     expect(root('test-ws-table').querySelector('b')?.textContent).toBe('Grace');
     expect(errors).not.toHaveBeenCalled();

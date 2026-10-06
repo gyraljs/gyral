@@ -1,10 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { randomDriver } from '@gyral/core';
+import { randomDriver, settled } from '@gyral/core';
 import { fakeDriver, run, step } from '@gyral/testing';
 import { Item } from '../src/item.js';
 import { List, seedsFrom } from '../src/list.js';
-
-const settle = () => new Promise((r) => setTimeout(r, 0));
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -57,22 +55,18 @@ describe('in the browser', () => {
       }),
     };
     document.body.append(list);
-    await list.updateComplete;
+    await settled();
     const items = () => [...(list.shadowRoot?.querySelectorAll('gy-many-item') ?? [])];
-    const ready = () => Promise.all(items().map((el) => el.updateComplete));
-    await ready();
     const click = async (value: string) => {
       button(value).click();
-      await settle();
-      await list.updateComplete;
-      await ready();
+      await settled();
     };
     const button = (value: string) => {
       const b = list.shadowRoot?.querySelector<HTMLButtonElement>(`button[value="${value}"]`);
       if (b == null) throw new Error(`no button ${value}`);
       return b;
     };
-    return { list, items, ready, button, click };
+    return { list, items, button, click };
   }
 
   it('adds one item', async () => {
@@ -93,8 +87,7 @@ describe('in the browser', () => {
     slider.value = '777';
     slider.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
     second.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
-    await settle();
-    await list.updateComplete;
+    await settled();
     expect(items()).toHaveLength(2);
     expect(items()[0]).toBe(first);
     expect(first.state.width).toBe(777);
@@ -102,7 +95,7 @@ describe('in the browser', () => {
   });
 
   it('adds 1000 items and stays responsive', async () => {
-    const { list, items, click } = await mount();
+    const { items, click } = await mount();
     const start = performance.now();
     await click('1000');
     const added = performance.now() - start;
@@ -112,8 +105,7 @@ describe('in the browser', () => {
     if (last === undefined) throw new Error('no items');
     const removeStart = performance.now();
     last.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
-    await settle();
-    await list.updateComplete;
+    await settled();
     const removed = performance.now() - removeStart;
     expect(items()).toHaveLength(1000);
 

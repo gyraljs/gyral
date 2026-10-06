@@ -83,7 +83,7 @@ describe('search model', () => {
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { get } from '@gyral/http';
 import { fakeHttp } from '@gyral/http/testing';
 
@@ -119,7 +119,7 @@ it('loads the user when clicked', async () => {
   const el = new Who();
   el.drivers = { http: api };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
 
   el.shadowRoot?.querySelector('button')?.click();
   await vi.waitFor(() => {
@@ -132,6 +132,9 @@ it('loads the user when clicked', async () => {
 });
 ```
 
+- `await settled()` (from `@gyral/core`) waits until every component has rendered: child props,
+  outputs reaching parents, focus commands and view transitions included. It doesn't wait for
+  drivers: answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`.
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
   `signal`, so you can assert that `switch` aborted it.

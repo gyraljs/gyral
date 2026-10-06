@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import { step } from '@gyral/testing';
 import { makeRouter, type RouterDriver } from '@gyral/router';
 import { app, pageTitle, RoutingView } from '../src/app.js';
@@ -12,11 +13,11 @@ async function mount(path: string) {
   const el = new RoutingView();
   el.drivers = { router };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await vi.waitFor(() => {
     expect(el.state.location).toBeDefined();
   });
-  await el.updateComplete;
+  await settled();
   const $ = (sel: string) => el.shadowRoot?.querySelector(sel);
   const link = (name: string) => {
     const a = [...(el.shadowRoot?.querySelectorAll('nav a') ?? [])].find(
@@ -77,7 +78,7 @@ describe('routing-view', () => {
     await vi.waitFor(() => {
       expect(el.state.route?.name).toBe('contacts');
     });
-    await el.updateComplete;
+    await settled();
     expect(new URL(router.snapshot().href).pathname).toBe('/contacts');
     await vi.waitFor(() => {
       expect(router.snapshot().title).toBe('Contacts — Gyral routing');

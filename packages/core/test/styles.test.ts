@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { css, define, html, type Stateless } from '../src/index.js';
+import { css, define, html, settled, type Stateless } from '../src/index.js';
 
 const sheet = new CSSStyleSheet();
 sheet.replaceSync('b { font-weight: 900; }');
@@ -35,7 +35,7 @@ describe('define() styles (gyral-czi.24)', () => {
   it('accepts plain CSS strings, CSSStyleSheets and css`` templates in nested arrays', async () => {
     const el = new Styled();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const style = (sel: string) => {
       const node = el.shadowRoot?.querySelector(sel);
       if (node == null) throw new Error(`missing ${sel}`);
@@ -49,7 +49,7 @@ describe('define() styles (gyral-czi.24)', () => {
   it('keeps one shared CSSStyleSheet instance across components', async () => {
     const el = new Styled();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.adoptedStyleSheets).toContain(sheet);
   });
 });

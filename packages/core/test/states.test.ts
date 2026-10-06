@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { css, define, html } from '../src/index.js';
+import { css, define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Toggle' };
 
@@ -31,11 +31,11 @@ describe('custom states (spec.states)', () => {
   it('mirrors boolean state facts onto :state() after each render', async () => {
     const el = new Lamp();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(el.matches(':state(off)')).toBe(true);
     expect(el.matches(':state(on)')).toBe(false);
     el.send({ _tag: 'Toggle' });
-    await el.updateComplete;
+    await settled();
     expect(el.matches(':state(on)')).toBe(true);
     expect(el.matches(':state(off)')).toBe(false);
     const button = el.shadowRoot?.querySelector('button');
@@ -46,7 +46,7 @@ describe('custom states (spec.states)', () => {
   it('leaves ElementInternals free for components that do not declare states', async () => {
     const el = new Plain();
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(() => el.attachInternals()).not.toThrow();
   });
 });

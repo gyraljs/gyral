@@ -2,6 +2,7 @@
 import '@gyral/ssr/hydrate';
 import { hydrated, mountSsr } from '@gyral/testing';
 import { afterAll, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/about.ssr.html?raw';
 
 const original = location.href;
@@ -26,7 +27,7 @@ it('hydrates the server state first, then applies what init commands report', as
   if (!(el instanceof App)) throw new Error('not upgraded');
   await hydrated(page); // rejects on "Hydration value mismatch" or console errors
   await new Promise((r) => setTimeout(r, 20));
-  await el.updateComplete;
+  await settled();
 
   expect(el.state).toEqual({ path: '/' });
   expect(el.shadowRoot?.querySelector('h1')?.textContent).toBe('The homepage');

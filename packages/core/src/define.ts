@@ -39,6 +39,7 @@ import {
   shadowedBuiltins,
   type PropTable,
 } from './props.js';
+import { trackHost, trackWork, untrackHost } from './settled.js';
 import { attachStates, type StateSync } from './states.js';
 import { STORE_SEND, type AnyStore, type StoreOverrides, type StoreSendInput } from './store.js';
 import { StoreBinding } from './store-binding.js';
@@ -210,6 +211,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     #connect(): void {
       // Re-resolve on every connect: the nearest <gyral-stores> may differ after a move.
       if (this.#binding.connect()) this.requestUpdate();
+      trackHost(this); // settled() waits for its updates from now on
       this.#interpreter = makeInterpreter<M | IntentRejected>(
         this.#resolve,
         (msg) => {
@@ -228,6 +230,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 
     override disconnectedCallback(): void {
       super.disconnectedCallback();
+      untrackHost(this);
       this.#binding.disconnect();
       this.#interpreter?.dispose();
       this.#interpreter = undefined;
@@ -328,8 +331,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
       if (commands.length === 0 && !wantsHydrated) return;
       this.#afterHydration = [];
       // After the first (possibly hydrating) update has fully completed, so whatever these
-      // change starts a fresh update instead of diverging from the server markup.
-      void this.updateComplete.then(() => {
+      // change starts a fresh update instead of diverging from the server markup. Tracked, so
+      // settled() also waits for the update the Hydrated message causes.
+      void trackWork(this.updateComplete).then(() => {
         if (wantsHydrated) {
           this.#dispatch({ _tag: 'Hydrated', serverRendered: this.#serverRendered } as Tagged);
         }

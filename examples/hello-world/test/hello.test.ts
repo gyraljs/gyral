@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { Hello } from '../src/hello.js';
 
 afterEach(() => {
@@ -19,14 +20,14 @@ it('update stores the typed name', () => {
 it('greets whatever is typed', async () => {
   const el = document.createElement('gy-hello');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const output = () => el.shadowRoot?.querySelector('output')?.textContent;
   expect(output()).toBe('Hello ');
   const input = el.shadowRoot?.querySelector('input');
   if (input == null) throw new Error('missing input');
   input.value = 'Ada';
   input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-  await el.updateComplete;
+  await settled();
   expect(output()).toBe('Hello Ada');
   expect(el.shadowRoot?.querySelector('label')?.htmlFor).toBe(input.id);
 });

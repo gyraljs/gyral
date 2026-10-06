@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import { initial, run, step } from '@gyral/testing';
 import { Gallery } from '../src/gallery.js';
 import { PIGMENTS, sorted } from '../src/pigments.js';
@@ -36,7 +37,7 @@ it('asks for a view transition on every change of state', () => {
 it('renders in the light DOM, re-orders cards and keeps each swatch name', async () => {
   const el = document.createElement('gy-pigment-gallery');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   expect(el.shadowRoot).toBeNull();
   const names = () => [...el.querySelectorAll('.card .name')].map((n) => n.textContent);
   expect(names()[0]).toBe('Cerulean');

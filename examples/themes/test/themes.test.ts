@@ -1,5 +1,6 @@
 import axe from 'axe-core';
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { commandsFor, fakeDriver, run } from '@gyral/testing';
 import { Board } from '../src/board.js';
 import { Picker } from '../src/picker.js';
@@ -31,9 +32,9 @@ it('the picker sends the chosen theme to the driver', async () => {
   const picker = document.createElement('gy-theme-picker');
   picker.drivers = { theme };
   document.body.append(picker);
-  await picker.updateComplete;
+  await settled();
   picker.shadowRoot?.querySelector<HTMLInputElement>('input[value=brutalist]')?.click();
-  await picker.updateComplete;
+  await settled();
   expect(theme.inputs).toEqual(['brutalist']);
 });
 
@@ -42,8 +43,7 @@ it.each(THEMES)('the %s theme passes axe, contrast included', async (theme) => {
   const picker = document.createElement('gy-theme-picker');
   const board = document.createElement('gy-team-board');
   document.body.append(picker, board);
-  await picker.updateComplete;
-  await board.updateComplete;
+  await settled();
   const result = await axe.run(document.body, { runOnly: ['wcag2a', 'wcag2aa'] });
   expect(
     result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html).join(' | ')}`),

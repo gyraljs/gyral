@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { inputsFor, step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { animationFrames, debounce, delay, makeTime, periodic, time } from '../src/index.js';
 
@@ -45,7 +45,7 @@ async function mount() {
   clock = virtualTime();
   const el = new Clock();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return { el, advance: (ms: number) => (clock as VirtualTime).advance(ms) };
 }
 

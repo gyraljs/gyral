@@ -8,6 +8,7 @@ import {
   html,
   resetDocumentStores,
   send,
+  settled,
   STORE_SEED_ATTRIBUTE,
   type AnyStoreInstance,
 } from '../src/index.js';
@@ -78,9 +79,7 @@ const text = (el: Element | null | undefined, sel: string) =>
 async function mountIn(container: HTMLElement, markup: string): Promise<void> {
   container.innerHTML = markup;
   document.body.append(container);
-  for (const el of container.querySelectorAll('*')) {
-    await (el as Partial<{ updateComplete: Promise<unknown> }>).updateComplete;
-  }
+  await settled();
 }
 
 afterEach(() => {
@@ -147,10 +146,8 @@ describe('components and stores (ADR 0013)', () => {
     const add = document.querySelector('test-add');
     add?.shadowRoot?.querySelector('button')?.click();
     add?.shadowRoot?.querySelector('button')?.click();
-    const badge = document.querySelector('test-badge') as HTMLElement & {
-      updateComplete: Promise<unknown>;
-    };
-    await badge.updateComplete;
+    const badge = document.querySelector('test-badge');
+    await settled();
     expect(text(badge, 'output')).toBe('2');
     expect(text(badge, 'span')).toBe('2'); // StoreChanged reducer ran per change
   });
@@ -168,14 +165,12 @@ describe('components and stores (ADR 0013)', () => {
     pl.innerHTML = '<test-badge></test-badge><test-add></test-add>';
     pr.innerHTML = '<div><test-badge></test-badge></div>';
     document.body.append(root);
-    for (const el of root.querySelectorAll('test-badge, test-add')) {
-      await (el as unknown as { updateComplete: Promise<unknown> }).updateComplete;
-    }
+    await settled();
     const [bl, br] = [...root.querySelectorAll('test-badge')];
     expect(text(bl, 'output')).toBe('1');
     expect(text(br, 'output')).toBe('2');
     root.querySelector('test-add')?.shadowRoot?.querySelector('button')?.click();
-    await (bl as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    await settled();
     expect(left.state.lines).toHaveLength(2);
     expect(right.state.lines).toHaveLength(2);
     expect(text(bl, 'output')).toBe('2');
@@ -185,11 +180,10 @@ describe('components and stores (ADR 0013)', () => {
     const mine = cart.instance({ lines: ['a', 'b', 'c'] });
     const badge = document.createElement('test-badge') as HTMLElement & {
       stores: Record<string, AnyStoreInstance>;
-      updateComplete: Promise<unknown>;
     };
     badge.stores = { [cart.name]: mine };
     document.body.append(badge);
-    await badge.updateComplete;
+    await settled();
     expect(text(badge, 'output')).toBe('3');
   });
 

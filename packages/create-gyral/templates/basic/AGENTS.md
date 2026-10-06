@@ -43,7 +43,7 @@ Vite. This file tells coding agents how the project works.
   `run(Component.spec, [msgs])`; assert on returned commands with `inputsFor`/`resolve`.
 - Test the element in the browser with fake drivers: `el.drivers = { http: fakeHttp() }`
   (`@gyral/http/testing`), `fakeDriver(...)` and `virtualTime()` from `@gyral/testing`.
-- No jsdom. Await `el.updateComplete` before asserting.
+- No jsdom. `await settled()` (from `@gyral/core`) before asserting on the DOM.
 
 ## Learn more
 

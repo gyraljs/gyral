@@ -6,6 +6,7 @@ import {
   DRIVERS_ELEMENT,
   html,
   provideDrivers,
+  settled,
   type AnyDriver,
 } from '../src/index.js';
 
@@ -47,13 +48,12 @@ const WithSpec = define<State, Msg>('test-drivers-spec', {
 type GyralEl = HTMLElement & {
   readonly state: State;
   send(msg: Msg): void;
-  readonly updateComplete: Promise<unknown>;
 };
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
 
 async function goOn(el: GyralEl): Promise<readonly string[]> {
-  await el.updateComplete;
+  await settled();
   el.send({ _tag: 'Go' });
   await settle();
   return el.state.got;
@@ -70,7 +70,7 @@ describe('tree-scoped driver overrides (gyral-czi.35)', () => {
     root.innerHTML = '<test-drivers-parent></test-drivers-parent>';
     document.body.append(root);
     const parent = root.firstElementChild as GyralEl;
-    await parent.updateComplete;
+    await settled();
     const leaf = parent.shadowRoot?.querySelector('test-drivers-leaf');
     if (!(leaf instanceof Leaf)) throw new Error('no leaf');
     expect(await goOn(leaf)).toEqual(['tree:x']);
