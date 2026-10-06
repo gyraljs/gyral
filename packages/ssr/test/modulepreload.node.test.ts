@@ -72,6 +72,24 @@ describe('clientAssets (gyral-g1r.21)', () => {
     }
   });
 
+  it('preloads lazily imported modules named in `also`, with their imports, once', () => {
+    const lazy: ViteManifest = {
+      ...workspace,
+      'src/contact.ts': { file: 'assets/contact-DV.js', imports: ['_render-bG.js', '_form.js'] },
+      '_form.js': { file: 'assets/form.js' },
+    };
+    expect(clientAssets(lazy, 'src/entry-client.ts', ['src/contact.ts']).modulepreload).toEqual([
+      '/assets/render-bG.js',
+      '/assets/define-D8.js',
+      '/assets/hydration-client-B8.js',
+      '/assets/form.js',
+      '/assets/contact-DV.js',
+    ]);
+    expect(() => clientAssets(lazy, 'src/entry-client.ts', ['src/nope.ts'])).toThrow(
+      /src\/nope\.ts is not a module in the Vite manifest/,
+    );
+  });
+
   it('preloads nothing extra for an entry without imports, and handles import cycles', () => {
     expect(clientAssets({ 'a.ts': { file: 'a.js' } }, 'a.ts')).toEqual({
       entry: '/a.js',
@@ -120,7 +138,16 @@ describe('modulepreload on the page', () => {
         return { fetch: () => new Response('') };
       },
     });
-    expect(seen).toEqual([clientAssets(workspace, 'src/entry-client.ts')].map(toAppOptions));
+    const [first] = seen as [Record<string, unknown>];
+    const { preload, ...rest } = first;
+    expect(rest).toEqual(toAppOptions(clientAssets(workspace, 'src/entry-client.ts')));
+    if (typeof preload !== 'function') throw new Error('no preload');
+    // A page with a lazily imported route module preloads it and its imports too.
+    const urls = preload as (modules: readonly string[]) => readonly string[];
+    expect(urls(['src/contact.ts'])).toEqual(
+      clientAssets(workspace, 'src/entry-client.ts', ['src/contact.ts']).modulepreload,
+    );
+    expect(urls(['src/contact.ts'])).toBe(urls(['src/contact.ts'])); // cached
   });
 });
 

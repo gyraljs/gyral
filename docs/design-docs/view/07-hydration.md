@@ -39,7 +39,11 @@ The walk, the mismatch messages and islands live in one internal module
   reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry's
   static imports (depth first) and the hydration chunk (the dynamic import whose source is
   core's `hydration-client`, from `packages/core/src/` or an installed `@gyral/core/dist/`)
-  with its own imports. The app's own lazy chunks are not included. `page({ modulepreload })`
+  with its own imports. The app's own lazy chunks are not included unless named:
+  `clientAssets(manifest, entry, also)` adds those modules (manifest keys such as a route's
+  `src/routes/product.ts`) with their imports, and `productionServer` gives `createApp` a
+  `preload(modules)` that returns the list with them (cached per list), so a route preloads
+  its own chunk (2026-10-06, found migrating gyral-shop). `page({ modulepreload })`
   writes one `<link rel="modulepreload">` per URL before the module scripts, and
   `productionServer` hands the list to `createApp`. The browser then fetches the entry, its
   imports and the hydration chunk in parallel, instead of the entry, then its imports, then

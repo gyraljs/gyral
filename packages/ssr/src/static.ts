@@ -111,8 +111,16 @@ export interface ClientAssets {
 const HYDRATION_MODULE =
   /(?:^|\/)(?:@gyral\/core\/dist|packages\/core\/src)\/hydration-client\.[jt]s$/;
 
-/** `ClientAssets` for `entry`, from a manifest already in memory. */
-export function clientAssets(manifest: ViteManifest, entry: string): ClientAssets {
+/**
+ * `ClientAssets` for `entry`, from a manifest already in memory. `also`: manifest keys of
+ * modules the page will import lazily (a route's module, by source path such as
+ * `src/routes/product.ts`), preloaded too, each with its static imports, after the entry's.
+ */
+export function clientAssets(
+  manifest: ViteManifest,
+  entry: string,
+  also: readonly string[] = [],
+): ClientAssets {
   const root = entryChunk(manifest, entry, 'the Vite manifest');
   const seen = new Set<string>([entry]);
   const urls: string[] = [];
@@ -135,17 +143,29 @@ export function clientAssets(manifest: ViteManifest, entry: string): ClientAsset
     addImports(chunk);
     urls.push(`/${chunk.file}`);
   }
+  for (const key of also) {
+    const lazy = manifest[key];
+    if (lazy === undefined) throw new Error(`${key} is not a module in the Vite manifest`);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    addImports(lazy);
+    urls.push(`/${lazy.file}`);
+  }
   return { entry: `/${root.file}`, modulepreload: urls };
 }
 
-/** `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). */
+/**
+ * `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also`
+ * as for `clientAssets`.
+ */
 export async function clientAssetsFromManifest(
   manifestPath: string,
   entry: string,
+  also: readonly string[] = [],
 ): Promise<ClientAssets> {
   const manifest = await readManifest(manifestPath);
   entryChunk(manifest, entry, manifestPath);
-  return clientAssets(manifest, entry);
+  return clientAssets(manifest, entry, also);
 }
 
 export interface ProductionOptions {
@@ -156,10 +176,13 @@ export interface ProductionOptions {
   /**
    * Builds the request-time renderer (the same app the prerender step used). Pass
    * `modulepreload` on to `renderPage({ modulepreload })` so pages preload what the entry needs.
+   * A page that imports modules lazily (a route's chunk) passes `preload(modules)` instead:
+   * the same list plus those modules and their imports (`clientAssets`' `also`).
    */
   readonly createApp: (options: {
     readonly clientEntry: string;
     readonly modulepreload: readonly string[];
+    readonly preload: (modules: readonly string[]) => readonly string[];
   }) => FetchApp;
 }
 
@@ -188,11 +211,25 @@ async function readOrUndefined(file: string): Promise<Uint8Array<ArrayBuffer> | 
 export async function productionServer(options: ProductionOptions): Promise<FetchApp> {
   const clientDir = resolve(options.distDir, 'client');
   const staticDir = resolve(options.distDir, 'static');
-  const assets = await clientAssetsFromManifest(
-    join(clientDir, '.vite', 'manifest.json'),
-    options.entry ?? 'src/entry-client.ts',
-  );
-  const app = options.createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload });
+  const manifestPath = join(clientDir, '.vite', 'manifest.json');
+  const entry = options.entry ?? 'src/entry-client.ts';
+  const manifest = await readManifest(manifestPath);
+  entryChunk(manifest, entry, manifestPath);
+  const assets = clientAssets(manifest, entry);
+  const preloads = new Map<string, readonly string[]>();
+  const app = options.createApp({
+    clientEntry: assets.entry,
+    modulepreload: assets.modulepreload,
+    preload: (modules) => {
+      const key = modules.join('\n');
+      let urls = preloads.get(key);
+      if (urls === undefined) {
+        urls = clientAssets(manifest, entry, modules).modulepreload;
+        preloads.set(key, urls);
+      }
+      return urls;
+    },
+  });
   return {
     fetch: async (request) => {
       const { pathname } = new URL(request.url);

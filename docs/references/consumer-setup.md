@@ -143,7 +143,8 @@ server-rendered component, so client-only pages never fetch it. For server-rende
 read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
 (`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser
 then fetches the hydration chunk together with the entry (`productionServer` hands
-`modulepreload` to your `createApp`).
+`modulepreload` to your `createApp`, and `preload(modules)` for pages that import a route's
+module lazily).
 
 ## Removed in 0.3.0
 

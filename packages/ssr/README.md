@@ -32,7 +32,7 @@ import './app.js';
 
 `renderPage({ …, csp: { directives } })` sets a `Content-Security-Policy` whose `style-src` allows every component's `<style>` and the page's `styles` by hash, built when the page renders, so components imported late are covered. `contentSecurityPolicy({ styles, directives })` returns the same header ahead of time, for the components registered when it is called (development warns if a registered component's hash is missing from a header passed to `renderPage`). `formAction` handles no-JS form posts with the same schema as the browser.
 
-`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts, modulepreload })` so server-rendered pages hydrate without extra round trips.
+`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts, modulepreload })` so server-rendered pages hydrate without extra round trips. A route whose module is imported lazily adds it with `clientAssets(manifest, entry, also)`, or `preload(modules)` from `productionServer`'s `createApp` options.
 
 ## Documentation
 

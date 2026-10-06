@@ -173,7 +173,10 @@ export const server = await productionServer({ distDir: dist, createApp });
 `productionServer` passes `{ clientEntry, modulepreload }` to `createApp`. Hydration code loads
 lazily (only pages with server-rendered components need it); passing `modulepreload` on to
 `renderPage` lets the browser fetch it together with the entry instead of a round trip later.
-`clientEntryFromManifest()` (the entry URL alone) still works.
+A page whose route module is imported lazily passes `preload(['src/routes/product.ts'])`
+(also given to `createApp`) as `modulepreload` instead: the same list plus that module and its
+imports (`clientAssets(manifest, entry, also)` underneath). `clientEntryFromManifest()` (the
+entry URL alone) still works.
 
 ## Islands: hydrate later
 
