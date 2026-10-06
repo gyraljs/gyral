@@ -1,5 +1,5 @@
 // Size fixture for the view layer's client API (ADR 0018 "Measuring"): measure-bundles.mjs
-// builds this with the `gyral-compiled` condition (no runtime preparer), minified, and records
+// builds this (renderer and hydration) with the `gyral-compiled` condition (no runtime preparer), minified, and records
 // its gzip size as the "view" budget. `html` appears only as a tag, as in apps: the template
 // compiler rewrites it to a compiled template object.
 import {
@@ -7,6 +7,7 @@ import {
   defineHook,
   each,
   html,
+  hydrate,
   nothing,
   raw,
   render,
@@ -16,6 +17,7 @@ globalThis.gyralView = {
   compiled,
   defineHook,
   each,
+  hydrate,
   nothing,
   raw,
   render,
