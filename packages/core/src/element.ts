@@ -7,7 +7,14 @@ import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { HostModel, type ModelCommand } from './host-model.js';
 import { hydrationCode, takeSeed, whenHydrationLoads } from './hydration.js';
-import { handleIntent, hostDepth, intentNames, listenForIntents } from './intent.js';
+import {
+  DEFAULT_EVENTS,
+  eventsOf,
+  handleIntent,
+  hostDepth,
+  intentNames,
+  listenForIntents,
+} from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import type { PropFeature, PropTable } from './props.js';
@@ -22,7 +29,7 @@ import {
 import { stateSync, type StateSync } from './states.js';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
-import { render, sheetsFor } from './view/index.js';
+import { render, sheetsFor, type Markup } from './view/index.js';
 
 const DEFER = 'defer-hydration';
 
@@ -205,7 +212,8 @@ export function elementClass<S, M extends Tagged, P>(
         if (!light || this.#serverRendered) root.replaceChildren();
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
-      listenForIntents(this.#root, spec.events ?? [], this.#onEvent);
+      this.#listen(DEFAULT_EVENTS);
+      if (spec.events !== undefined) this.#listen(spec.events);
       this.#state(); // init, unless resumed from a seed
       this.#connect();
     }
@@ -234,9 +242,9 @@ export function elementClass<S, M extends Tagged, P>(
       this.#model.syncProps(names);
       const view = spec.view(this.state, intentNames as IntentNames<M>, this.#model.ctx());
       if (this.#hydrating) {
-        hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets);
+        hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
         this.#hydrating = false;
-      } else render(view, root);
+      } else render(view, root, this.#seen);
       if (spec.states !== undefined) afterRender(POST_STATES, this.#syncStates);
       if (this.#rendered) return;
       this.#rendered = true;
@@ -261,6 +269,18 @@ export function elementClass<S, M extends Tagged, P>(
       this.#states ??= stateSync(this.attachInternals());
       if (this.#states !== false && spec.states !== undefined)
         this.#states(spec.states(this.state));
+    };
+
+    /** Intent event types this host's root listens for (view/05-element.md "Intent events"). */
+    #listening = new Set<string>();
+
+    #listen(types: readonly string[]): void {
+      listenForIntents(this.#root as Node, this.#listening, types, this.#onEvent);
+    }
+
+    /** Told about each template a render instantiates: listen for what its markup names. */
+    #seen = (markup: Markup): void => {
+      this.#listen(eventsOf(markup));
     };
 
     #onEvent = (event: Event): void => {

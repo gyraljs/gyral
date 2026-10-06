@@ -124,6 +124,22 @@ comes with the function that builds the command. A host starts its interpreter w
 first command after connecting, not on connect. Each slot is filled before it can be needed:
 a component's props, stores and commands are built by those APIs.
 
+## Intent events (gyral-g1r.20)
+
+A host's root listens (capture phase) only for events its intents can fire on: the default
+triggers (`click`, `submit`, `input`, `change`, child outputs), `spec.events`, and the
+`data-intent-on` values of the templates it renders. `render`/`hydrate` report each template
+they instantiate (and `raw()` markup) to the host (`view/render/seen.ts`; one call per run of
+instances of the same template); core reads the static `data-intent-on` values from the
+template's HTML once per template, and listens for all intent events when the attribute is
+bound. A listener is added when its template first renders, before any of its elements can
+receive an event. A root that listens for `command` in a browser without invoker commands loads
+the fallback (`invokers-shim.ts`, ADR 0003 tier 3); `settled()` waits for it.
+
+Effect: 5 listeners per typical host instead of 12 (11 intent events plus the invoker shim's
+click listener on every root); keyboard and focus events no longer run intent lookup in
+components that don't use them.
+
 ## `ElementInternals`
 
 Attached lazily and only once per element, through one internal accessor, when a feature needs

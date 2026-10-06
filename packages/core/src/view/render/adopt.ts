@@ -21,6 +21,7 @@ import { Instance } from './instance.js';
 import { mismatch } from './mismatch.js';
 import { ROOT, SOLE } from './plan.js';
 import { parse, RawRange } from './raw.js';
+import { report } from './seen.js';
 import { List } from './rows.js';
 import { isList, rawHtml, type ListResult } from './values.js';
 
@@ -237,6 +238,7 @@ function rows(part: ChildPart, values: readonly unknown[], l: ListResult | undef
 
 /** `raw()`: its start anchor, then the nodes its markup parses to (texts by length). */
 function raw(part: ChildPart, markup: string): void {
+  report({ html: markup });
   const start = cur as Comment | null;
   if (start === null || start.nodeType !== 8) return fail('the raw() start anchor <!---->');
   cur = start.nextSibling;

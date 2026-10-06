@@ -8,6 +8,7 @@ import { DEV } from '#view-dev';
 import { ChildPart } from './child-part.js';
 import { resetRowChecks } from './dev-check.js';
 import { dropHooks, hookMark, runHooks } from './hooks.js';
+import { listenFor, type SeenMarkup } from './seen.js';
 import type { ChildValue } from './values.js';
 
 const roots = new WeakMap<Node, ChildPart>();
@@ -29,8 +30,15 @@ export function renderBatch(fn: () => void): void {
   }
 }
 
-/** Renders `value` into `root`, updating what an earlier call rendered there. */
-export function render(value: ChildValue, root: Element | ShadowRoot | DocumentFragment): void {
+/**
+ * Renders `value` into `root`, updating what an earlier call rendered there. `seen` is told
+ * about each template the render instantiates (seen.ts).
+ */
+export function render(
+  value: ChildValue,
+  root: Element | ShadowRoot | DocumentFragment,
+  seen?: SeenMarkup,
+): void {
   let part = roots.get(root);
   if (part === undefined) {
     part = new ChildPart(root, null, null, 0, false, 0);
@@ -38,11 +46,14 @@ export function render(value: ChildValue, root: Element | ShadowRoot | DocumentF
   }
   const mark = hookMark();
   if (DEV && !batching) resetRowChecks();
+  const outer = listenFor(seen);
   try {
     part.commit(value);
   } catch (error) {
     dropHooks(mark);
     throw error;
+  } finally {
+    listenFor(outer);
   }
   runHooks(mark);
 }

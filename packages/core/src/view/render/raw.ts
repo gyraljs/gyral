@@ -4,6 +4,7 @@
 import { DEV } from '#view-dev';
 import { EMPTY, RAW, type ChildPart } from './child-part.js';
 import { removeRange } from './nodes.js';
+import { report } from './seen.js';
 import { MARKUP, type RawResult } from './values.js';
 import { warnRaw } from './warn.js';
 
@@ -40,6 +41,7 @@ export function parse(html: string): DocumentFragment {
 /** Commits `raw()` markup into `part`. */
 function commitRaw(part: ChildPart, html: string): void {
   if (DEV) warnRaw();
+  report({ html });
   if (part.kind === RAW) {
     const range = part.content as RawRange;
     if (range.html === html) return;

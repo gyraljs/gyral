@@ -10,6 +10,7 @@ import type { PartSpec, TemplateObject } from '../normalize/types.js';
 import { AttrPart, type Part } from './attr-parts.js';
 import { ChildPart, type Owner } from './child-part.js';
 import { removeRange } from './nodes.js';
+import { report } from './seen.js';
 import { CHILD, nodes, planOf, ROOT, stack, walk, type Plan } from './plan.js';
 
 /** The DOM cloned from one template, plus its parts. */
@@ -38,6 +39,7 @@ export class Instance implements Owner {
     this.head = null;
     this.tail = null;
     this.frag = this.start = this.end = null;
+    report(template);
     if (adopt === true) return;
     const plan = planOf(template);
     if (plan.single) {

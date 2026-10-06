@@ -16,7 +16,9 @@ typo fails to compile). When that element's trigger event fires, Gyral calls the
 
 Override with `data-intent-on`: `keydown`, `keyup`, `focusin`, `focusout`, `toggle`
 (popover, `<details>`), `command` (invoker commands), `change`, `input`, `click`, `submit`.
-Other event types must be listed in `spec.events` (e.g. `['pointerdown']`).
+Any other event type works too when written statically (`data-intent-on="pointerdown"`): the
+component listens for the events its templates name. Only a type that comes from a bound
+`data-intent-on=${…}` and isn't in the list above must be added to `spec.events`.
 
 ## `IntentInput`
 

@@ -18,6 +18,7 @@ export type {
 
 export { hydrate } from './render/hydrate.js';
 export { render, renderBatch } from './render/render.js';
+export type { Markup, SeenMarkup } from './render/seen.js';
 export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
 export { raw } from './render/raw.js';

@@ -62,6 +62,13 @@ add others with `spec.events` (for example `['pointerdown']`). `IntentInput` gai
 Parsers may call `event.preventDefault()` to cancel default input handling (arrow keys moving
 the caret); they must not do other side effects.
 
+**Update (gyral-g1r.20, 2026-10-06):** a component root no longer listens for every intent
+event. It listens for the default triggers, `spec.events`, and the `data-intent-on` values in
+the templates it renders, added when a template first renders (all intent events when a
+template binds `data-intent-on` dynamically). Any statically named event type now works
+without `spec.events`; list a type there only when a bound `data-intent-on` produces it and it
+isn't one of the intent events above. Details: view/05-element.md "Intent events".
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the
@@ -115,6 +122,7 @@ An element with `data-intent-on="command"` receives intents for invoker commands
 source }`. Browsers with invoker commands dispatch a native `CommandEvent` on the target. Since
 invokers are Baseline newly available, not widely (ADR 0003), Gyral's intent wiring also
 listens for clicks on custom-command (`--…`) invokers and, only when `CommandEvent` is missing,
-dispatches an equivalent `command` CustomEvent on the `commandfor` target, so the same markup
+dispatches an equivalent `command` event (with the native event's `command` and `source`
+properties since gyral-g1r.18; it loads lazily, ADR 0003 tier 3) on the `commandfor` target, so the same markup
 works everywhere. Built-in commands (`show-modal`, `toggle-popover`, …) are left to the browser.
 `invokersSupported()` is exported. Example: `examples/invoker-commands`.

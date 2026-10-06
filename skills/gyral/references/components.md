@@ -19,7 +19,7 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
 | `shadow`                          | no                           | `false` renders into light DOM (page-level content). Default `true`             |
 | `hydrate`                         | no                           | `'load'` (default), `'idle'`, `'visible'`, `'interaction'` for SSR islands      |
-| `events`                          | no                           | Extra event types usable with `data-intent-on`                                  |
+| `events`                          | no                           | Event types a bound `data-intent-on=${…}` may produce (static values need none) |
 | `drivers`                         | no                           | Driver substitutions by name for every instance                                 |
 | `stores`                          | no                           | Stores this component reads and writes                                          |
 | `viewTransition(prev, next, msg)` | no                           | `true` renders that change inside a View Transition                             |
