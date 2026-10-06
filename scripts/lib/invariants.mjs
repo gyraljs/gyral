@@ -16,9 +16,18 @@ export function findEffectLeaks(file, text) {
 /** Runtime dependencies @gyral/core may have besides its `lit` peer (types-only packages). */
 export const CORE_ALLOWED_DEPENDENCIES = ['@standard-schema/spec'];
 
+/** @gyral/core's peer dependencies: `lit` (runtime, until 0.3.0), and build-time-only tools. */
+export const CORE_PEERS = ['lit'];
+/**
+ * Optional peers that only `@gyral/core/vite` loads, at build time (view/01-templates.md
+ * "Compiled"): never imported by browser or server code, so they are no runtime dependency.
+ */
+export const CORE_BUILD_TIME_PEERS = ['parse5', 'vite'];
+
 /**
  * Dependency rules (docs/design-docs/0015-runtime-size-spike.md): no package depends on
- * `effect`, and @gyral/core has no runtime dependency beyond the allowlist.
+ * `effect`, and @gyral/core has no runtime dependency beyond the allowlist: its peers are
+ * `lit` and optional build-time tools.
  */
 export function checkDependencies(file, manifest) {
   const errors = [];
@@ -41,6 +50,23 @@ export function checkDependencies(file, manifest) {
           `${file}: @gyral/core must have no runtime dependencies besides its lit peer ` +
             `(allowed: ${CORE_ALLOWED_DEPENDENCIES.join(', ')}). Remove "${dep}" or ` +
             `implement what you need inside packages/core/src/internal/.`,
+        );
+      }
+    }
+    for (const dep of Object.keys(manifest.peerDependencies ?? {})) {
+      if (CORE_PEERS.includes(dep)) continue;
+      if (!CORE_BUILD_TIME_PEERS.includes(dep)) {
+        errors.push(
+          `${file}: @gyral/core peers are ${CORE_PEERS.join(', ')} plus the build-time-only ` +
+            `${CORE_BUILD_TIME_PEERS.join(', ')}. Remove the "${dep}" peer, or, if only the ` +
+            `Vite compiler loads it at build time, add it to CORE_BUILD_TIME_PEERS ` +
+            `(scripts/lib/invariants.mjs) with a reason.`,
+        );
+      } else if (manifest.peerDependenciesMeta?.[dep]?.optional !== true) {
+        errors.push(
+          `${file}: the build-time peer "${dep}" must be optional ` +
+            `(peerDependenciesMeta: { "${dep}": { "optional": true } }): apps that never ` +
+            `use @gyral/core/vite don't install it.`,
         );
       }
     }

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkDependencies,
@@ -44,13 +45,19 @@ describe('checkDependencies', () => {
   });
 
   it('accepts the real core manifest shape', () => {
-    expect(
-      checkDependencies('packages/core/package.json', {
-        name: '@gyral/core',
-        dependencies: { '@standard-schema/spec': '1.1.0' },
-        peerDependencies: { lit: '^3.3.0' },
-      }),
-    ).toEqual([]);
+    const manifest = JSON.parse(readFileSync('packages/core/package.json', 'utf8'));
+    expect(checkDependencies('packages/core/package.json', manifest)).toEqual([]);
+  });
+
+  it('allows only optional build-time peers in @gyral/core besides lit', () => {
+    const errors = checkDependencies('packages/core/package.json', {
+      name: '@gyral/core',
+      peerDependencies: { lit: '^3.3.0', parse5: '^8.0.0', vite: '^8.0.0', jsdom: '^26.0.0' },
+      peerDependenciesMeta: { parse5: { optional: true } },
+    });
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain('"vite" must be optional');
+    expect(errors[1]).toContain('Remove the "jsdom" peer');
   });
 });
 

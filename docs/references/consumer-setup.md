@@ -27,7 +27,7 @@ import `lit` directly for plain `LitElement` classes.
 
 ## Vite and Vitest: `gyralVitePreset()`
 
-Two settings every Gyral app needs, shipped as a preset (plain data, safe in config files):
+Settings every Gyral app needs, shipped as a preset (safe in any config file):
 
 ```ts
 // vite.config.ts
@@ -50,6 +50,28 @@ projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */}
   first browser test run, reloads the page ("Vite unexpectedly reloaded a test") and the run
   fails. If your app imports other Lit modules directly, add them:
   `gyralVitePreset({ optimize: ['lit/directives/unsafe-html.js'] })`.
+- **`plugins` (the template compiler)**: see below. If your config has plugins of its own,
+  list both, or the spread is overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+
+### Template compiler
+
+The preset's plugin runs in `vite build` only (view/01-templates.md "Compiled"); the dev server
+and Vitest keep the runtime template path. In a build it:
+
+- rewrites every `html` template imported straight from the view layer, dependencies in
+  `node_modules` included, into a precompiled template object, and adds the `gyral-compiled`
+  resolve condition so the runtime template preparer leaves the bundle;
+- fails the build, with a code frame, on a template rule violation (view/09-template-rules.md)
+  and on any `html` it can't follow: an alias (`const h = html`), a call (`html(strings)`), or a
+  re-export whose templates would stay uncompiled. Import `html` from `@gyral/core` where you
+  write templates.
+- checks rule 7 again with [parse5](https://github.com/inikulin/parse5) when it is installed
+  (`pnpm add -D parse5`, an optional peer dependency; build time only). Without it, the build
+  prints a one-time notice and keeps the normalizer's own check.
+
+Until `@gyral/core` exports the view layer's `html` (0.3.0), its Lit `html` is left alone.
+Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
+`gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
 
 ## Template whitespace
 

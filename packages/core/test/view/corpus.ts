@@ -7,6 +7,10 @@ const sources = import.meta.glob<string>(
     '../../../../examples/*/{src,server,test}/**/*.ts',
     '../../../*/{src,test}/**/*.ts',
     '!../../../core/{src,test}/view/**',
+    // The compiler's sources and tests hold templates inside strings (messages, fixture apps).
+    '!../../../core/{src,test}/compiler/**',
+    // Written and deleted by scripts/test/eslint-guardrails.test.mjs while tests run.
+    '!../../../*/src/**/__lint_fixture_*',
     '!../../../create-gyral/**',
   ],
   { query: '?raw', import: 'default', eager: true },

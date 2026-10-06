@@ -24,6 +24,12 @@ const VIEW_CLEAN_ROOM =
   'lit, lit-html, lit-element, @lit/* or @lit-labs/* in view/. Implement it from ' +
   'docs/design-docs/view/ and the web-platform specs.';
 
+const PARSE5_BUILD_ONLY =
+  'parse5 is a build-time-only, optional peer dependency (view/09-template-rules.md "How rule 7 ' +
+  'is checked"): only the template compiler loads it (packages/core/src/compiler/parse5-check.ts), ' +
+  'so it never reaches browser or server code. Check markup with the normalizer instead.';
+const parse5Imports = { group: ['parse5', 'parse5/*'], message: PARSE5_BUILD_ONLY };
+
 const effectImports = {
   paths: [{ name: 'effect', message: EFFECT_BOUNDARY }],
   patterns: [{ group: ['effect/*', '@effect/*'], message: EFFECT_BOUNDARY }],
@@ -82,6 +88,7 @@ export default tseslint.config(
               message:
                 '@gyral/core is the bottom layer and must not import other Gyral packages (ARCHITECTURE.md). Invert the dependency.',
             },
+            parse5Imports,
           ],
         },
       ],
@@ -106,6 +113,7 @@ export default tseslint.config(
             { group: ['@gyral/*'], message: VIEW_BOUNDARY },
             { regex: escape, message: VIEW_BOUNDARY },
             { regex: '^#(?!prepare$)', message: VIEW_BOUNDARY },
+            parse5Imports,
             { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },
@@ -124,6 +132,7 @@ export default tseslint.config(
             { group: ['@gyral/*'], message: VIEW_SERVER_BOUNDARY },
             { regex: '^\\.\\./\\.\\./', message: VIEW_SERVER_BOUNDARY },
             { regex: '^#', message: VIEW_SERVER_BOUNDARY },
+            parse5Imports,
             { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },
