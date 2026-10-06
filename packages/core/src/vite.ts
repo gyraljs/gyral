@@ -1,12 +1,15 @@
-// Vite / Vitest settings every Gyral app needs (gyral-a7r, docs/references/consumer-setup.md),
-// and the template compiler (view/01-templates.md "Compiled"). Only Node built-ins are
-// imported up front, so it loads from vite.config.ts and vitest.config.ts in any way: bundled
-// with the config, by Node from source (type stripping), or by a Vite module runner. The
-// compiler is a plugin applied in `vite build` only, so dev servers and test runs keep the
-// runtime template path; its implementation (./compiler/) loads on the first build hook,
-// with `require` (Node loads ES modules with it too): a module runner that loaded this file
-// may be closed by then, and would reject a dynamic import().
+// Vite / Vitest settings every Gyral app needs (gyral-a7r, docs/references/consumer-setup.md):
+// the template compiler (view/01-templates.md "Compiled") and, in serve mode, development
+// output from the dev server's SSR (view/06-server.md "Development markers"). Only Node
+// built-ins are imported up front, so it loads from vite.config.ts and vitest.config.ts in any
+// way: bundled with the config, by Node from source (type stripping), or by a Vite module
+// runner. The compiler is a plugin applied in `vite build` only, so dev servers and test runs
+// keep the runtime template path; its implementation (./compiler/) loads on the first build
+// hook, with `require` (Node loads ES modules with it too): a module runner that loaded this
+// file may be closed by then, and would reject a dynamic import().
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ConfigEnv, EnvironmentOptions, Plugin } from 'vite';
 import type { CompilerHooks } from './compiler/hooks.js';
@@ -115,6 +118,68 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
   };
 }
 
+/** Gyral's packages: the dev server runs them through Vite, never Node (view/06). */
+export const GYRAL_PACKAGES = /^@gyral\//;
+
+type Manifest = Partial<Record<'dependencies' | 'devDependencies' | 'peerDependencies', object>>;
+
+function manifest(file: string): Manifest | undefined {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8')) as Manifest;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The installed manifest of `name`, looked up from `root` the way Node does (no exports map). */
+function installed(root: string, name: string): Manifest | undefined {
+  for (let dir = root; ; dir = dirname(dir)) {
+    const found = manifest(join(dir, 'node_modules', name, 'package.json'));
+    if (found !== undefined || dirname(dir) === dir) return found;
+  }
+}
+
+/**
+ * The app's direct dependencies that depend on a Gyral package (a design system, say). They
+ * import @gyral/core, so they must share the copy the dev server runs.
+ */
+export function gyralDependents(root: string): string[] {
+  const app = manifest(join(root, 'package.json'));
+  const names = Object.keys({ ...app?.dependencies, ...app?.devDependencies });
+  return names.filter((name) => {
+    if (GYRAL_PACKAGES.test(name)) return false;
+    const dep = installed(root, name);
+    return Object.keys({ ...dep?.dependencies, ...dep?.peerDependencies }).some((d) =>
+      GYRAL_PACKAGES.test(d),
+    );
+  });
+}
+
+/**
+ * Development output from the dev server's SSR (`ssrLoadModule`, view/06 "Development
+ * markers"). Vite externalizes installed packages there and Node imports them itself, resolving
+ * core's `#view-dev` without the `development` condition (Vite's `externalConditions` only pick
+ * the entry file, not the package's own imports), so the server rendered production output.
+ * In serve mode this plugin keeps Gyral's packages, and the app's dependencies that use them,
+ * out of externalization in server environments: Vite resolves them with its conditions
+ * (`development` in dev), and they all share one copy of core. `vite build` is unaffected.
+ */
+export function gyralDevServer(): Plugin {
+  let root = process.cwd();
+  return {
+    name: 'gyral:dev-server',
+    apply: 'serve',
+    config(config) {
+      root = resolve(config.root ?? process.cwd());
+    },
+    configEnvironment(name, config) {
+      const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
+      if (consumer === 'client') return undefined;
+      return { resolve: { noExternal: [GYRAL_PACKAGES, ...gyralDependents(root)] } };
+    },
+  };
+}
+
 export interface GyralViteOptions {
   /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
@@ -137,7 +202,7 @@ export interface GyralViteConfig {
  */
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
-    plugins: [gyralTemplateCompiler(options.compiler)],
+    plugins: [gyralTemplateCompiler(options.compiler), gyralDevServer()],
     resolve: { dedupe: [] },
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };

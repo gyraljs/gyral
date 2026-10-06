@@ -39,8 +39,14 @@ export default defineConfig({ ...gyralVitePreset(), build: {/* … */} });
 projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */} } }];
 ```
 
-- **`plugins` (the template compiler)**: see below. If your config has plugins of its own,
-  list both, or the spread is overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`plugins`**: the template compiler (below) and `gyral:dev-server`. If your config has
+  plugins of its own, list both, or the spread is overwritten:
+  `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
+  (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
+  Vite instead of Node, so it renders development output and they all share one `@gyral/core`.
+  It adds them to `ssr.noExternal` in serve mode; builds keep them external
+  (view/06-server.md "Development markers").
 - **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the
   first browser test run and reloads the page ("Vite unexpectedly reloaded a test"), list it:
   `gyralVitePreset({ optimize: ['some-dependency'] })`.
@@ -119,9 +125,10 @@ for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
 
 - Register components on the server by importing their modules: `define()` records the spec
   outside the browser, and the renderer renders it in place of its tag.
-- Development output (the `development` export condition: Vite's dev server, Vitest) carries
-  `<!--gyral:ID-->` markers and runs development checks; plain `node`/`tsx` gets production
-  output. Pass `{ dev: true | false }` to override.
+- Development output (the `development` export condition: Vite's dev server with the preset,
+  Vitest) carries `<!--gyral:ID-->` markers and runs development checks; plain `node`/`tsx` and
+  servers built with `vite build` get production output. Pass `{ dev: true | false }` to
+  override.
 - SSR builds keep the server segments of compiled templates (the Vite preset does this for
   `build.ssr`); a template compiled for the client can't be server-rendered.
 

@@ -118,6 +118,16 @@ off for plain `node`/`tsx`/bundled servers. No `process.env` is read (runtime-ag
 templates (page shells) get no marker: they are never hydrated. A component's root starts
 with its view's marker (right after the `<style>`, or after a light host's start tag).
 
+**Installed packages under the dev server:** Vite's SSR externalizes packages in
+`node_modules`, and Node then imports them itself, resolving core's `#view-dev` without the
+`development` condition (`ssr.resolve.externalConditions` only picks the package's entry file,
+not the imports inside it). So the Vite preset's `gyral:dev-server` plugin, in serve mode only,
+adds `@gyral/*` and the app's direct dependencies that depend on a Gyral package to
+`resolve.noExternal` of every server environment: Vite resolves them with its own conditions
+(`development` in dev), and they share one copy of core, whose registry the renderer reads.
+`vite build` keeps them external; the built server runs them with Node, so production output.
+Tested in `core/test/vite-dev-server.node.test.ts` with core compiled and installed as published.
+
 ## Components
 
 When a start tag's name is in the server registry (05), the renderer renders that component in
