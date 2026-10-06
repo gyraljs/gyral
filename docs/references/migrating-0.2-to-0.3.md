@@ -102,6 +102,10 @@ Attributes: `null` and `undefined` remove an attribute, so `href=${s.url ?? noth
 
 One spelling per piece of state, the same on the server and in the browser. The model wins
 whenever it changes, and hydration never overwrites what the user typed before scripts ran.
+A control is written only when the model's value for it changes: unlike 0.2's `live()`, a
+re-render for any other reason (another field's message, a refused edit) leaves what the user
+typed alone. To put a control back, change the model, or re-create the form with a key
+(`each([s], (x) => x.formKey, …)`, see view/02-bindings.md "Putting a control back").
 
 ```text
 // 0.2

@@ -8,7 +8,6 @@ import {
   CHECKED,
   HOOK,
   MULTI,
-  OPEN,
   PLAIN,
   PROP,
   STATE,
@@ -20,13 +19,11 @@ import {
   type AttrPart,
 } from './attr-parts.js';
 
-/** Kinds whose adopted value is held until the model changes it (form state the user edits). */
-const HELD = (1 << VALUE) | (1 << CHECKED) | (1 << OPEN) | (1 << TEXTAREA);
-
 /**
  * Takes this render's values as committed without writing (the server wrote them). Form state
- * the user can change is held (07 "Form state"); `?indeterminate`, which no attribute carries,
- * is set; a property is set unless a nested component already has it from its own seed.
+ * the user changed before scripts ran stays: like every part, it writes only when the model's
+ * value changes (07 "Form state"). `?indeterminate`, which no attribute carries, is set; a
+ * property is set unless a nested component already has it from its own seed.
  */
 export function adoptAttr(part: AttrPart, values: readonly unknown[]): void {
   const v = values[part.at];
@@ -51,7 +48,6 @@ export function adoptAttr(part: AttrPart, values: readonly unknown[]): void {
     part.value = truthy(v);
     if (kind === STATE && live[name] !== part.value) live[name] = part.value;
   }
-  part.held = ((HELD >> part.kind) & 1) === 1;
 }
 
 /**

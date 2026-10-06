@@ -105,19 +105,39 @@ One spelling per piece of form state. The compiler and runtime know this table, 
 | `<option>`                     | `?selected=${v}`      | `selected` present/absent | first creation: attribute and `.selected`; later: `.selected` only |
 | `<details>`, `<dialog>`        | `?open=${v}`          | `open` present/absent     | the `open` attribute (it is the state)                             |
 
-- **Live** means the browser compares with the element's current state, not the committed
-  value, and writes only when they differ. The model wins whenever it changes, even after the
-  user has edited the control.
+- **Live** (rule, 2026-10-06): like every part, a form-state part writes only when the model's
+  value for it changed since its last commit (`===` on the value, on its truthiness for
+  `?name`, on the flattened text for `<textarea>`). When it does write, it compares with the
+  element's **live** state (`.value`, `.checked`, `.selected`, `.indeterminate`, the `open`
+  attribute) and writes only if they differ. So the model wins whenever it changes, even after
+  the user has edited the control, and a render whose model value for that part is unchanged
+  (any other message, a refused edit) never touches the control: what the user typed or
+  toggled stays. A change undone before the render (two messages in one flush) is no change.
 - Setting the attribute on first creation keeps `form.reset()` meaningful (it resets to the
   model's initial value), matching server-rendered markup.
-- Hydration never overwrites state the user changed before scripts ran; the model's next change
-  writes as usual (07).
+- Hydration is the same rule: adopted parts take the model's (the seed's) values as committed,
+  so state the user changed before scripts ran stays until the model's value changes (07).
 - **Text-like** inputs are every `<input>` type except checkbox, radio, hidden, button, submit,
   reset, image and file. A missing value means `''` and writes no attribute on first creation.
 - `?open` compares with the attribute's live presence. `<textarea>`/`<title>` content follows the
   child-hole value rules, flattened to a string.
 - A checkbox's `value`, `<button value>`, `<option value>` and the like are submitted values,
   not state: plain attributes.
+
+### Putting a control back
+
+A refused edit stays in the control: the model didn't change, so nothing is written. To show
+the model's value again, change the model:
+
+- **Clamp or normalize** to a value that differs from the committed one (a capped number
+  stored as the cap, a trimmed string), and the part writes it.
+- **Re-create the controls with a key**: keep a counter in the model, bump it on reset, and
+  render the form as a keyed row, `${each([s], (x) => x.formKey, (x) => fields(x))}`. A new
+  key replaces the form's elements with fresh ones carrying the model's values (focus is lost
+  with them; a `focus(selector)` command puts it back). `form.reset()` is not a substitute: it
+  restores the first values (the attributes), not the model's.
+
+Tested in `core/test/form-edits-hydration.test.ts` (both builds) and `render-form.test.ts`.
 
 ## Element hooks
 

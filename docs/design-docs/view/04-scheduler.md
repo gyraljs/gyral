@@ -14,8 +14,10 @@ update maps or completion promises.
   flush with `queueMicrotask`.
 - Messages a spec lists in `renderOnFrame` mark their host in the **frame lane** instead
   (below): it renders in the next animation frame.
-- Every delivered message marks its host, even when the reducer returns the same state: the
-  render's live form-state comparison (02) then writes a refused edit back to the control.
+- Every delivered message marks its host, even when the reducer returns the same state. That
+  render writes nothing: every part, form state included, writes only when its value changed
+  since its last commit (02 "Live form state"), so a refused edit stays in the control. To
+  put a control back, change the model (02 "Putting a control back").
 - A host that isn't connected isn't rendered; it renders when it reconnects.
 - Each host records its **depth** (number of Gyral host ancestors in the composed tree) when it
   connects. Sorting by depth needs no DOM queries.

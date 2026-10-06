@@ -111,14 +111,14 @@ works whether the child hydrated first or hasn't upgraded yet (then the set is a
 property, which upgrade capture hands to the accessor, and the seed's copy is skipped, 05).
 Property parts on other elements are set during the walk: no markup carries them.
 
-**Form state** is never overwritten (decision F2). Adopted form-state parts are flagged so the
-live comparison (02) is skipped until the model's value for that part changes; a re-render with
-an unchanged model must not undo the user's edit: `value`, `checked`, `selected`, `open` and
-textarea content keep what the user did before scripts ran. The model's next change writes as
-usual. **Phase 5:** the flag (`held`) is cleared by the first render whose value for that part
-differs from the adopted one; from then on the part compares live as always.
+**Form state** is never overwritten (decision F2). Adopted form-state parts take the model's
+values as committed, and a form-state part writes only when the model's value for it changes
+(02 "Live form state"), so a re-render with an unchanged model doesn't undo the user's edit:
+`value`, `checked`, `selected`, `open` and textarea content keep what the user did before
+scripts ran. The model's next change writes as usual. (Phase 5 held these parts with a flag
+until the first change; since 2026-10-06 that is simply the rule for every render.)
 `?indeterminate` is the exception: no attribute carries it (06), so the walk sets the property
-from the model (the user can't set it; a click clears it). `?open` is held too: the user may
+from the model (the user can't set it; a click clears it). `?open` is kept too: the user may
 toggle a `<details>` before scripts run.
 
 ### The walk's algorithm (Phase 5)

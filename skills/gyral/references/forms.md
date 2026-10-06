@@ -115,6 +115,55 @@ export const Signup = define<State, Msg>('my-signup', {
 Never keep passwords in state (or re-fill them from `values`): state is serialized into the
 page.
 
+## What the user typed stays until the model changes
+
+`value=`, `?checked`, `?selected`, `?open` and `<textarea>` content are written only when the
+model's value for them changes; then the model wins, even over an edit. Any other render
+(another field's message, a refused edit, a rejection that keeps `values`) leaves the controls
+as the user left them, so passwords the model never holds stay typed after a rejection.
+
+To clear or restore a form, change the model. A keyed row re-creates the controls with the
+model's values (`form.reset()` would restore the first render's values instead):
+
+```ts
+import { define, each, html, intents } from '@gyral/core';
+
+interface State {
+  readonly note: string;
+  readonly formKey: number;
+}
+type Msg = { readonly _tag: 'Note'; readonly value: string } | { readonly _tag: 'Clear' };
+const i = intents<Msg>();
+
+const fields = (s: State) =>
+  html`<form>
+    <textarea name="note" data-intent=${i.Note}>${s.note}</textarea>
+    <button type="button" data-intent=${i.Clear}>Clear</button>
+  </form>`;
+
+export const Notes = define<State, Msg>('my-notes', {
+  init: () => ({ note: '', formKey: 0 }),
+  intent: {
+    Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
+    Clear: () => ({ _tag: 'Clear' }),
+  },
+  update: {
+    Note: (s, m) => ({ ...s, note: m.value }),
+    // A new key: the form's elements are replaced by fresh ones with the model's values.
+    Clear: (s) => ({ note: '', formKey: s.formKey + 1 }),
+  },
+  view: (s) =>
+    html`${each(
+      [s],
+      (x) => x.formKey,
+      (x) => fields(x),
+    )}`,
+});
+```
+
+Here `note: ''` alone would also clear the textarea whenever the model held text; the key also
+covers edits the model never saw (or refused).
+
 ## One control, live: `field()`
 
 ```ts

@@ -17,11 +17,15 @@ const rejected = {
  * Structure + sorted attributes + text; ignores comments and whitespace. An input's value is
  * read live: the client writes the `value` attribute only on first creation, then `.value`
  * (view/02-bindings.md "Live form state"), while the server writes the current value.
+ * Passwords are the exception: the model never holds them, so no render writes them and the
+ * JS path keeps what the user typed, while the no-JS page can't refill them. They are
+ * compared by attribute (the model's `''`).
  */
 function canonical(node: Node): string {
   if (node instanceof Text) return node.data.replace(/\s+/g, ' ').trim();
   if (!(node instanceof Element)) return '';
-  const live = node instanceof HTMLInputElement ? [`value="${node.value}"`] : [];
+  const live =
+    node instanceof HTMLInputElement && node.type !== 'password' ? [`value="${node.value}"`] : [];
   const attrs = [...node.attributes]
     .filter((a) => live.length === 0 || a.name !== 'value')
     .map((a) => `${a.name}="${a.value}"`)
@@ -63,5 +67,7 @@ describe('JS and no-JS rejections render the same markup', () => {
       confirm: ['The passwords do not match.'],
     });
     expect(canonical(form)).toBe(expected);
+    const password = root?.querySelector('input[name=password]') as HTMLInputElement;
+    expect(password.value).toBe('longenough'); // kept for the user to resubmit
   });
 });

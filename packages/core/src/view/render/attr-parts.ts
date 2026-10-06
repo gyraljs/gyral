@@ -1,12 +1,13 @@
 // Element parts (view/02-bindings.md "Attribute values", "Boolean attributes", "Properties",
 // "Live form state", "Element hooks"): every hole on or inside one element that isn't a child
 // hole, as one class with a kind, so an instance's update loop sees only two part shapes.
-// Plain parts compare with their committed value and write only on change. Live form state
+// Every part compares with its committed value and writes only on change. Live form state
 // sets the attribute too on first creation (the default, so `form.reset()` returns to the
-// model's first value) and later compares with the element's live state. Constructors only
-// record nodes; hydration (view/07-hydration.md) builds the same parts over server DOM and
-// adopts this render's values as committed (adopt-attr.ts). Adopted form state is `held`: the
-// live comparison waits until the model's value changes, so edits made before scripts ran stay.
+// model's first value); when the model's value changes it compares with the element's live
+// state and writes only on a difference, so the change lands even over a user's edit, and an
+// unchanged model never touches the control. Constructors only record nodes; hydration
+// (view/07-hydration.md) builds the same parts over server DOM and adopts this render's values
+// as committed (adopt-attr.ts), so edits made before scripts ran stay by the same rule.
 import { DEV } from '#view-dev';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
 import { nothing, UNSET } from './values.js';
@@ -87,8 +88,6 @@ export class AttrPart implements Part {
   spec: HookSpec<readonly unknown[]> | null;
   args: readonly unknown[] | undefined;
   prev: readonly unknown[] | undefined;
-  /** Adopted form state: skip the live comparison until the model's value changes (07). */
-  held: boolean;
 
   constructor(el: Element, kind: number, name: string, at: number, strings?: readonly string[]) {
     this.el = el;
@@ -102,7 +101,6 @@ export class AttrPart implements Part {
     this.spec = null;
     this.args = undefined;
     this.prev = undefined;
-    this.held = false;
   }
 
   set(values: readonly unknown[]): void {
@@ -135,10 +133,7 @@ export class AttrPart implements Part {
         live[this.name] = v;
         return;
       case VALUE: {
-        if (this.held) {
-          if (v === this.value) return;
-          this.held = false;
-        }
+        if (v === this.value) return;
         const s = absent(v) ? '' : text(v);
         if (this.value === UNSET) {
           // First creation: the attribute (the default), then the live value.
@@ -153,10 +148,7 @@ export class AttrPart implements Part {
       case CHECKED:
       case STATE: {
         const on = truthy(v);
-        if (this.held) {
-          if (on === this.value) return;
-          this.held = false;
-        }
+        if (on === this.value) return;
         if (this.kind === CHECKED && this.value === UNSET) el.toggleAttribute(this.name, on);
         this.value = on;
         if (live[this.name] !== on) live[this.name] = on;
@@ -164,10 +156,7 @@ export class AttrPart implements Part {
       }
       case OPEN: {
         const on = truthy(v);
-        if (this.held) {
-          if (on === this.value) return;
-          this.held = false;
-        }
+        if (on === this.value) return;
         this.value = on;
         if (el.hasAttribute('open') !== on) el.toggleAttribute('open', on);
         return;
@@ -175,13 +164,10 @@ export class AttrPart implements Part {
       case TITLE:
       case TEXTAREA: {
         const s = textOf(this, v);
-        if (this.held) {
-          if (s === this.value) return;
-          this.held = false;
-        }
+        if (s === this.value) return;
         if (this.kind === TEXTAREA && this.value !== UNSET) {
           if (live.value !== s) live.value = s;
-        } else if (s !== this.value) el.textContent = s;
+        } else el.textContent = s;
         this.value = s;
         return;
       }

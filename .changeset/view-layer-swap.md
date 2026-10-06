@@ -16,7 +16,8 @@ Gyral's own view layer replaces Lit (ADR 0018). No Gyral package depends on Lit 
   `intents<Msg>()`, `raw()`, `defineHook()` (the hooks `invalid` and `labelledBy` keep their call
   sites) and `HydrationMismatch`. Props are declared with `prop.string/number/boolean/json/value`
   over Standard Schema: attributes are kebab-case by default and always validated. Form state
-  uses plain bindings (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`). Removed:
+  uses plain bindings (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), written
+  only when the model's value changes, so other renders keep the user's edits. Removed:
   `svg`, `classMap`, `styleMap`, `unsafeCSS` (interpolate in `css`), `repeat`, `keyed`, `live`,
   `liveBoolean`, `textarea()`, `textareaMarkup`, `directive`/`ElementDirective`,
   `defineStoresProvider`, `HIDDEN_MARKER`, `HYDRATE_KEY`, `CSSStyleSheet` in `styles`, and

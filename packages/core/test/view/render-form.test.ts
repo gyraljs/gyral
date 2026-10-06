@@ -1,6 +1,8 @@
 // view/02-bindings.md "Live form state" in Chromium: on first creation the attribute (the
-// default) and the live state are both set; later commits compare with the live state and
-// write only on a difference, so the model wins whenever it renders, even after user edits.
+// default) and the live state are both set; later, a part writes only when the model's value
+// changed since its last commit, and then only if the live state differs. So the model wins
+// whenever it changes, even after user edits, and a re-render with an unchanged model leaves
+// the user's edit alone. Component-level cases: form-edits-hydration.test.ts.
 import { afterEach, describe, expect, it } from 'vitest';
 import { html, nothing } from '../../src/view/index.js';
 import { draw, mount } from './render-helpers.js';
@@ -27,8 +29,10 @@ describe('live form state (view/02 "Live form state")', () => {
     expect(input.value).toBe('b');
     expect(input.getAttribute('value')).toBe('a'); // the default stays the first value
     type(input, 'typed');
-    draw(el, view('b')); // the model renders again: it wins over the edit
-    expect(input.value).toBe('b');
+    draw(el, view('b')); // an unchanged model renders again: the edit stays
+    expect(input.value).toBe('typed');
+    draw(el, view('c')); // the model changes: it wins over the edit
+    expect(input.value).toBe('c');
     draw(el, view(null));
     expect(input.value).toBe('');
     (el.querySelector('form') as HTMLFormElement).reset();
@@ -61,13 +65,16 @@ describe('live form state (view/02 "Live form state")', () => {
     expect(box.hasAttribute('checked')).toBe(true);
     box.click(); // the user checks it; the model still says false
     expect(box.checked).toBe(true);
-    draw(el, view(false));
+    draw(el, view(false)); // unchanged model: the edit stays
+    expect(box.checked).toBe(true);
+    draw(el, view(true));
+    draw(el, view(false)); // the model changes: it wins
     expect(box.checked).toBe(false);
     (el.querySelector('form') as HTMLFormElement).reset();
     expect(box.checked).toBe(true);
   });
 
-  it('?checked on radios follows the model across the group', () => {
+  it('?checked on radios follows the model across the group when it changes', () => {
     const el = mount();
     const view = (v: string) =>
       html`<input type="radio" name="g" ?checked=${v === 'a'} /><input
@@ -78,6 +85,9 @@ describe('live form state (view/02 "Live form state")', () => {
     draw(el, view('a'));
     const [a, b] = [...el.querySelectorAll('input')] as [HTMLInputElement, HTMLInputElement];
     b.click();
+    draw(el, view('a')); // unchanged model: the user's pick stays
+    expect([a.checked, b.checked]).toEqual([false, true]);
+    draw(el, view('b'));
     draw(el, view('a'));
     expect([a.checked, b.checked]).toEqual([true, false]);
   });
@@ -89,7 +99,10 @@ describe('live form state (view/02 "Live form state")', () => {
     const box = el.querySelector('input') as HTMLInputElement;
     expect(box.indeterminate).toBe(true);
     expect(box.hasAttribute('indeterminate')).toBe(false);
-    box.indeterminate = false;
+    box.indeterminate = false; // a click clears it
+    draw(el, view(true)); // unchanged model: stays cleared
+    expect(box.indeterminate).toBe(false);
+    draw(el, view(false));
     draw(el, view(true));
     expect(box.indeterminate).toBe(true);
   });
@@ -105,9 +118,9 @@ describe('live form state (view/02 "Live form state")', () => {
     expect(area.value).toBe('second');
     expect(area.defaultValue).toBe('first');
     type(area, 'typed');
-    draw(el, view('second'));
-    expect(area.value).toBe('second');
-    draw(el, view(nothing));
+    draw(el, view('second')); // unchanged model: the edit stays
+    expect(area.value).toBe('typed');
+    draw(el, view(nothing)); // the model changes: it wins
     expect(area.value).toBe('');
     (el.querySelector('form') as HTMLFormElement).reset();
     expect(area.value).toBe('first');
@@ -132,9 +145,11 @@ describe('live form state (view/02 "Live form state")', () => {
     expect(select.options[1]?.hasAttribute('selected')).toBe(true);
     select.value = 'a'; // the user picks a; the model renders b again
     draw(el, view('b'));
-    expect(select.value).toBe('b');
+    expect(select.value).toBe('a');
     draw(el, view('a'));
     expect(select.value).toBe('a');
+    draw(el, view('b'));
+    expect(select.value).toBe('b');
   });
 
   it('?open on <details> and <dialog> is the attribute, compared with its live presence', () => {
@@ -144,10 +159,12 @@ describe('live form state (view/02 "Live form state")', () => {
     const details = el.querySelector('details') as HTMLDetailsElement;
     expect(details.open).toBe(true);
     details.open = false; // the user closes it
-    draw(el, view(true));
-    expect(details.open).toBe(true);
+    draw(el, view(true)); // unchanged model: stays closed
+    expect(details.open).toBe(false);
     draw(el, view(false));
     expect(details.hasAttribute('open')).toBe(false);
+    draw(el, view(true));
+    expect(details.open).toBe(true);
     draw(el, html`<dialog ?open=${true}>d</dialog>`);
     expect(el.querySelector('dialog')?.open).toBe(true);
   });

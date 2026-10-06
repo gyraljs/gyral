@@ -6,25 +6,29 @@ Compute derived values in plain helper functions of state.
 
 ## Template rules
 
-| Need                              | Write                                                               |
-| --------------------------------- | ------------------------------------------------------------------- |
-| Name an intent                    | `data-intent=${i.Save}` — never `@click=${…}` or other closures     |
-| Text, attributes                  | `${value}`, `attr=${value}`; `null`/`undefined`/`nothing` remove it |
-| Several pieces in one attribute   | `class="btn ${s.kind}"` (quoted)                                    |
-| Presence-only attribute           | `?disabled=${s.busy}`                                               |
-| Data for a child Gyral component  | `.items=${s.items}` (property binding)                              |
-| Text input value                  | `value=${s.text}` — live: the model wins whenever it re-renders     |
-| Checkbox/radio, option, indeterm. | `?checked=${s.on}`, `?selected=${…}`, `?indeterminate=${…}`         |
-| `<details>`/`<dialog>` open       | `?open=${s.open}`                                                   |
-| `<textarea>` content              | `<textarea name="note">${s.note}</textarea>`                        |
-| Keyed list                        | `each(items, (it) => it.id, Row, pick?)`                            |
-| Trusted markup (Markdown output)  | `raw(html)` — never user input                                      |
-| Behaviour on the element itself   | an element hook: `<input ${invalid(errors)}>`, `defineHook(…)`      |
+| Need                              | Write                                                                |
+| --------------------------------- | -------------------------------------------------------------------- |
+| Name an intent                    | `data-intent=${i.Save}` — never `@click=${…}` or other closures      |
+| Text, attributes                  | `${value}`, `attr=${value}`; `null`/`undefined`/`nothing` remove it  |
+| Several pieces in one attribute   | `class="btn ${s.kind}"` (quoted)                                     |
+| Presence-only attribute           | `?disabled=${s.busy}`                                                |
+| Data for a child Gyral component  | `.items=${s.items}` (property binding)                               |
+| Text input value                  | `value=${s.text}` — live: written whenever the model's value changes |
+| Checkbox/radio, option, indeterm. | `?checked=${s.on}`, `?selected=${…}`, `?indeterminate=${…}`          |
+| `<details>`/`<dialog>` open       | `?open=${s.open}`                                                    |
+| `<textarea>` content              | `<textarea name="note">${s.note}</textarea>`                         |
+| Keyed list                        | `each(items, (it) => it.id, Row, pick?)`                             |
+| Trusted markup (Markdown output)  | `raw(html)` — never user input                                       |
+| Behaviour on the element itself   | an element hook: `<input ${invalid(errors)}>`, `defineHook(…)`       |
 
 - `false`, `null`, `undefined` and `nothing` render nothing in a child hole, so
   `${s.open && html`…`}` works. `true` renders nothing and warns in development.
 - Never bind form state with properties (`.value=`, `.checked=`): the server drops property
   bindings on plain elements. Use the attribute spellings above.
+- Form state is written only when the model's value for it changes (then it overwrites the
+  user's edit). A render for any other reason leaves what the user typed or toggled alone, and
+  so does a refused edit (the reducer kept the state). To put a control back, change the model:
+  clamp to a different value, or re-create the form with a key (`references/forms.md`).
 - Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
   `style="--w: ${s.width}px"`. (`classMap`, `styleMap` and `svg` templates may return if a real
   need appears; inline `<svg>` inside `html` works.)

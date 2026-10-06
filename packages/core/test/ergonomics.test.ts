@@ -20,7 +20,8 @@ const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>('test
 });
 
 // Controlled input whose model refuses values over 10: `value=` is live form state
-// (view/02-bindings.md), so the render after the refused message writes the kept value back.
+// (view/02-bindings.md), written only when the model's value changes, so a refused edit stays
+// in the control (the model didn't change) and an accepted one is the control's value.
 type FieldMsg = { readonly _tag: 'Typed'; readonly value: number };
 const Capped = define<{ readonly value: number }, FieldMsg>('test-capped', {
   init: () => ({ value: 5 }),
@@ -54,16 +55,23 @@ describe('ergonomics', () => {
     });
   });
 
-  it('keeps controlled inputs on the model: every message re-renders, live', async () => {
+  it('leaves a refused edit in a controlled input: the model did not change', async () => {
     const el = new Capped();
     document.body.append(el);
     await settled();
     const input = el.shadowRoot?.querySelector('input');
     if (input == null) throw new Error('no input');
-    input.value = '99';
-    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    const typed = (text: string) => {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    };
+    typed('99');
     await settled();
     expect(el.state.value).toBe(5);
-    expect(input.value).toBe('5');
+    expect(input.value).toBe('99');
+    typed('7');
+    await settled();
+    expect(el.state.value).toBe(7);
+    expect(input.value).toBe('7');
   });
 });

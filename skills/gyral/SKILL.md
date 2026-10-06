@@ -64,7 +64,8 @@ export const Counter = define<State, Msg>('my-counter', {
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
    arguments and module constants; name intents with a module-level `const i = intents<Msg>()`
    and pass view values (the selection) through `pick`. Form state uses
-   attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`.
+   attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`;
+   they are written only when the model's value changes, so other renders keep user edits.
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
    real browser (Vitest browser mode) with fake drivers; `await settled()` before asserting on
    the DOM. No jsdom.

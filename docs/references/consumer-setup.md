@@ -151,7 +151,8 @@ then fetches the hydration chunk together with the entry (`productionServer` han
 `liveBoolean`, `textarea()`, `directive`/`ElementDirective` and the renderer re-exports are
 gone (ADR 0018; every change, with before/after code, in
 [migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md)). Use `each(items, key, row, pick?)` for keyed lists, plain bindings for form state
-(`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), class and style strings,
+(`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`; written only when the model's
+value changes, so other renders keep the user's edits), class and style strings,
 `defineHook` for element behaviours, and plain interpolation in `css`. `svg` templates,
 `classMap` and `styleMap` may return if a real need appears; inline `<svg>` inside `html`
 works.
