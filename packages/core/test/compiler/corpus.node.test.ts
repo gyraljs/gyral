@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalize, type TemplateObject } from '../../src/view/index.js';
 import { corpus } from '../view/corpus.js';
+import { clientObject } from '../view/helpers.js';
 import { buildApp, importBuilt, VIEW } from './fixture.js';
 
 /** Corpus templates the normalizer accepts (client templates; page shells are server-only). */
@@ -33,10 +34,8 @@ const fixture = {
   ].join('\n'),
 };
 
-const strip = (t: TemplateObject, segments: boolean): object => {
-  const { id, html, parts, server } = t;
-  return segments ? { id, html, parts, server, segments: t.segments } : { id, html, parts, server };
-};
+const strip = (t: TemplateObject, segments: boolean): object =>
+  segments ? { ...clientObject(t), segments: t.segments } : clientObject(t);
 
 describe('compiled templates equal runtime ones (corpus)', () => {
   it('has a corpus to compare', () => {

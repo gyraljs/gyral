@@ -39,10 +39,15 @@ export interface CompileInput {
   readonly seen: Map<string, { readonly strings: string; readonly loc: string }>;
 }
 
-/** The template object as emitted: no `loc` (production), no `segments` in client builds. */
+/**
+ * The template object as emitted: no `loc` (production), no `segments` in client builds. Its
+ * fields are already compact (numeric part kinds, tuples, `server` only when true; 01), so
+ * the code needs no decoding.
+ */
 function emitted(template: TemplateObject, ssr: boolean): object {
   const { id, html, parts, server, segments } = template;
-  return ssr ? { id, html, parts, server, segments } : { id, html, parts, server };
+  const client = server === true ? { id, html, parts, server } : { id, html, parts };
+  return ssr ? { ...client, segments } : client;
 }
 
 const newlines = (text: string): string => '\n'.repeat(text.split('\n').length - 1);

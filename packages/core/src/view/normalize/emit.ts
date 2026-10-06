@@ -3,7 +3,22 @@
 // anchor rule), the server segments (types.ts), the part table with child-index paths, and the
 // shape of the DOM the browser must build (checked by prepare.ts).
 import type { ElementNode, TreeNode } from './tree.js';
-import type { PartSpec, Path, Segment, Shape, ShapeNode } from './types.js';
+import {
+  ATTR_PART,
+  BOOL_PART,
+  CHILD_BEFORE,
+  CHILD_END,
+  CHILD_SOLE,
+  HOOK_PART,
+  MULTI_PART,
+  PROP_PART,
+  TEXT_PART,
+  type PartSpec,
+  type Path,
+  type Segment,
+  type Shape,
+  type ShapeNode,
+} from './types.js';
 
 const ANCHOR = '<!---->';
 
@@ -58,7 +73,7 @@ class Emitter {
           return;
         case 'hole':
           if (node.kind === 'text') {
-            this.parts.push({ k: 'text', path });
+            this.parts.push([TEXT_PART, path]);
             this.op({ k: 'text' });
             return;
           }
@@ -77,13 +92,12 @@ class Emitter {
     parent: string | undefined,
   ): void {
     const next = nodes[k + 1];
-    const sole = nodes.length === 1;
     this.op(parent === undefined ? { k: 'child' } : { k: 'child', in: parent });
     if (next === undefined) {
-      this.parts.push({ k: 'child', path, ref: null, sole });
+      this.parts.push([nodes.length === 1 ? CHILD_SOLE : CHILD_END, path]);
       return;
     }
-    this.parts.push({ k: 'child', path, ref: shape.length, sole });
+    this.parts.push([CHILD_BEFORE, path, shape.length]);
     if (next.type === 'el' || next.type === 'comment' || this.server) return;
     this.out(ANCHOR);
     shape.push('#comment');
@@ -101,13 +115,14 @@ class Emitter {
     for (const a of el.attrs) {
       if (a.kind === 'static') continue;
       if (a.kind === 'hook') {
-        this.parts.push({ k: 'hook', path });
+        this.parts.push([HOOK_PART, path]);
         this.op({ k: 'hook' });
       } else if (a.kind === 'attr' && a.strings !== undefined) {
-        this.parts.push({ k: 'attr', path, name: a.name, strings: a.strings });
+        this.parts.push([MULTI_PART, path, a.name, a.strings]);
         this.op({ k: 'attr', name: a.name, strings: a.strings });
       } else {
-        this.parts.push({ k: a.kind, path, name: a.name });
+        const kind = a.kind === 'attr' ? ATTR_PART : a.kind === 'bool' ? BOOL_PART : PROP_PART;
+        this.parts.push([kind, path, a.name]);
         this.op({ k: a.kind, name: a.name });
       }
     }

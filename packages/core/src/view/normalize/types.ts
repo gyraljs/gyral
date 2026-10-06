@@ -1,39 +1,58 @@
 // The template object (view/01-templates.md "The template object") and its part table
 // (view/02-bindings.md "Hole kinds"). Plain JSON data, no functions: the Vite compiler (Phase 6)
-// emits it as code, the browser instantiates from it, and the server writes from it.
+// emits it as code, the browser instantiates from it, and the server writes from it. Compact
+// on purpose (numeric part kinds, tuples, `server` only when true), so the code compiled
+// client builds carry stays small with nothing to decode.
 
 /** Child-index path from the template's content root (`[]` is the root itself). */
 export type Path = readonly number[];
 
-/** One entry per binding, in source order. Multi-attributes take several values. */
+// Part kinds: the first entry of a PartSpec tuple. Small numbers, because compiled client
+// builds carry every template's part table as code (view/01-templates.md "Compiled").
+/** `[CHILD_END, path]`: a child hole that inserts at the end of its parent. */
+export const CHILD_END = 0;
+/** `[CHILD_SOLE, path]`: a child hole that is its parent's only child node (so at its end). */
+export const CHILD_SOLE = 1;
+/** `[CHILD_BEFORE, path, ref]`: a child hole that inserts before the parent's child `ref`. */
+export const CHILD_BEFORE = 2;
+/** `[ATTR_PART, path, name]`: `name=${v}`. */
+export const ATTR_PART = 3;
+/** `[MULTI_PART, path, name, strings]`: `name="a ${x} b"`. */
+export const MULTI_PART = 4;
+/** `[BOOL_PART, path, name]`: `?name=${v}`. */
+export const BOOL_PART = 5;
+/** `[PROP_PART, path, name]`: `.name=${v}`. */
+export const PROP_PART = 6;
+/** `[HOOK_PART, path]`: `${hook(…)}` in a start tag. */
+export const HOOK_PART = 7;
+/** `[TEXT_PART, path]`: the whole content of a `<textarea>` or `<title>`. */
+export const TEXT_PART = 8;
+
+/**
+ * One entry per binding, in source order: a tuple whose first entry is its kind (above), whose
+ * second is a path, then the kind's own fields. Multi-attributes take several values.
+ *
+ * - Child holes: `path` leads to the parent element (`[]`: the template root). `ref` is the
+ *   index, among the parent's child nodes in the template DOM, of the node the part inserts
+ *   before: the next static element or comment, or the anchor comment the normalizer emitted.
+ *   Without `ref` the hole inserts at the end of the parent (CHILD_END, CHILD_SOLE).
+ * - Attributes, booleans, properties: `path` leads to the element; `name` is the attribute or
+ *   property name. A multi-attribute's `strings` are its static pieces (character references
+ *   already decoded): `strings.length - 1` values are joined with them.
+ * - Hooks: `path` leads to the element. Text: `path` leads to the `<textarea>`/`<title>`.
+ */
 export type PartSpec =
-  /**
-   * A child hole. `path` leads to the parent element (`[]`: the template root). `ref` is the
-   * index, among the parent's child nodes in the template DOM, of the node the part inserts
-   * before: the next static element or comment, or the anchor comment the normalizer emitted.
-   * `null` means the end of the parent. `sole`: the hole is the parent's only child node.
-   */
-  | {
-      readonly k: 'child';
-      readonly path: Path;
-      readonly ref: number | null;
-      readonly sole: boolean;
-    }
-  /**
-   * An attribute. With `strings` it is a multi-attribute: `strings.length - 1` values joined
-   * with these static pieces (character references already decoded).
-   */
-  | {
-      readonly k: 'attr';
-      readonly path: Path;
-      readonly name: string;
-      readonly strings?: readonly string[];
-    }
-  | { readonly k: 'bool'; readonly path: Path; readonly name: string }
-  | { readonly k: 'prop'; readonly path: Path; readonly name: string }
-  | { readonly k: 'hook'; readonly path: Path }
-  /** The whole content of a `<textarea>` or `<title>`; `path` leads to that element. */
-  | { readonly k: 'text'; readonly path: Path };
+  | readonly [
+      kind: typeof CHILD_END | typeof CHILD_SOLE | typeof HOOK_PART | typeof TEXT_PART,
+      path: Path,
+    ]
+  | readonly [kind: typeof CHILD_BEFORE, path: Path, ref: number]
+  | readonly [
+      kind: typeof ATTR_PART | typeof BOOL_PART | typeof PROP_PART,
+      path: Path,
+      name: string,
+    ]
+  | readonly [kind: typeof MULTI_PART, path: Path, name: string, strings: readonly string[]];
 
 /**
  * What the server renderer writes (view/06-server.md), in order, with no tokenizing. Strings
@@ -83,8 +102,11 @@ export interface TemplateObject {
   /** Normalized template HTML for the client: bound attributes removed, anchors added. */
   readonly html: string;
   readonly parts: readonly PartSpec[];
-  /** Contains document-level tags (<!doctype>, <html>, <head>, <body>): server-only. */
-  readonly server: boolean;
+  /**
+   * `true` when it contains document-level tags (<!doctype>, <html>, <head>, <body>):
+   * server-only. Absent otherwise.
+   */
+  readonly server?: true;
   /**
    * Server writing plan. Absent from client-compiled template objects (the compiler drops it),
    * so the client renderer never reads it; the runtime preparer and server builds keep it.

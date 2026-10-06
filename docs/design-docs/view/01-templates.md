@@ -43,8 +43,9 @@ Steps, in order:
    browser.
 4. **Build the part table:** one entry per hole, in source order: kind, the path to its element
    (or to its parent element and position for child holes), the attribute name and static
-   strings for attribute holes, and flags (`sole`: the hole is its parent's only child node).
-   Paths are child-index paths from the template's content root.
+   strings for attribute holes; a child hole's kind also says whether it is its parent's only
+   child node (`sole`). Paths are child-index paths from the template's content root. Entries
+   are compact tuples (below).
 5. **Compute the template id** from the normalized strings (after step 2).
 
 ### Whitespace
@@ -80,12 +81,34 @@ There is no opt-out tag. Exact whitespace belongs in `<pre>`, or in a value.
 interface TemplateObject {
   readonly id: string;
   readonly html: string; // normalized template HTML, bound attributes removed
-  readonly parts: readonly PartSpec[]; // see 02 for kinds
-  readonly server: boolean; // contains document-level tags (<!doctype>, <html>, <head>, <body>)
+  readonly parts: readonly PartSpec[]; // compact tuples, below; see 02 for kinds
+  readonly server?: true; // only when it has document-level tags (<!doctype>, <html>, …)
   readonly segments?: readonly Segment[]; // the server's writing plan (06); not in client builds
   readonly loc?: string; // development only: file:line:column of the call site
 }
+
+type PartSpec =
+  // the first entry is a small number (types.ts names them)
+  | readonly [0 /* child at the end */ | 1 /* sole child */, path]
+  | readonly [2 /* child */, path, ref] // inserts before the parent's child node `ref`
+  | readonly [3 /* attr */ | 5 /* ?bool */ | 6 /* .prop */, path, name]
+  | readonly [4 /* multi-attribute */, path, name, strings]
+  | readonly [7 /* hook */ | 8 /* textarea/title text */, path];
 ```
+
+**Compact by design (2026-10-06, found migrating gyral-shop).** Compiled client builds carry
+every template object as code, so its form is chosen for size: numeric kinds, tuples instead
+of keyed objects, `server` written only when true. The runtime normalizer produces the same
+form, so there is nothing to decode: compiled and runtime objects are identical, and the
+renderer reads the tuples directly. A decoded format (flat arrays or one string per template,
+decoded once at first use) was measured too: it saves somewhat more on large apps (a string
+format about 0.4 KiB more gzip on the 208-object corpus), but its decoder (about 0.2-0.3 KiB
+gzip) makes every small app's initial chunk larger, and it needs a cache lookup per template.
+Measured with the compiler on the corpus (the examples' and packages' templates: 260 call
+sites, 208 objects, minified): 47.6 → 35.2 KB raw, 10.53 → 10.17 KiB gzip, ids unchanged.
+Every example's bundle got smaller (35-97 B gzip all chunks, 26-75 B initial; hello-world's
+initial chunk 8.91 → 8.87 KiB), since the renderer's own checks got shorter too. Ids are now
+about a fifth of the corpus' gzip size (random base-36 text doesn't compress).
 
 `segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
 strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
@@ -106,7 +129,8 @@ in the browser is an error.
     internal entry point, not API, so compiled code shares the package copy of the `html` it
     replaces. One constant per distinct template id per module.
   - The hoisted object is the normalizer's output without `loc`; client builds also drop the
-    server `segments`, SSR builds keep them.
+    server `segments`, SSR builds keep them. It is already compact (above): nothing decodes
+    it at runtime.
   - Call sites are found by scope-aware analysis of each module (TypeScript included, before
     it is compiled away): `` html`…` `` or `` ns.html`…` `` where `html` is imported from
     `@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error

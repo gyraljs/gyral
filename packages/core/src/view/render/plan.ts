@@ -3,7 +3,18 @@
 // firstChild/nextSibling and sharing prefixes (no TreeWalker, no marker search), and what each
 // part is. Part kinds that depend on the element (live form state) are decided here, from the
 // template's own parsed content, so creating an instance only walks and allocates.
-import type { PartSpec, TemplateObject } from '../normalize/types.js';
+import {
+  ATTR_PART,
+  BOOL_PART,
+  CHILD_BEFORE,
+  CHILD_SOLE,
+  MULTI_PART,
+  PROP_PART,
+  HOOK_PART,
+  TEXT_PART,
+  type PartSpec,
+  type TemplateObject,
+} from '../normalize/types.js';
 import { templateElement } from '../template-element.js';
 import { attrKind, HOOK, MULTI, PROP, TEXTAREA, TITLE } from './attr-parts.js';
 
@@ -58,7 +69,7 @@ export function walk(plan: Plan): void {
 
 function build(template: TemplateObject): Plan {
   const content = templateElement(template).content;
-  const single = content.childNodes.length === 1 && template.parts.every((p) => p.path.length > 0);
+  const single = content.childNodes.length === 1 && template.parts.every((p) => p[1].length > 0);
   const ids = new Map<string, number>();
   const ops: number[] = [];
   let cursor: readonly number[] = single ? [0] : [];
@@ -84,10 +95,10 @@ function build(template: TemplateObject): Plan {
   const at: number[] = [];
   let value = 0;
   for (const spec of template.parts) {
-    a.push(target(spec.path));
-    b.push(spec.k === 'child' && spec.ref !== null ? target([...spec.path, spec.ref]) : -1);
+    a.push(target(spec[1]));
+    b.push(spec[0] === CHILD_BEFORE ? target([...spec[1], spec[2]]) : -1);
     at.push(value);
-    value += spec.k === 'attr' && spec.strings !== undefined ? spec.strings.length - 1 : 1;
+    value += spec[0] === MULTI_PART ? spec[3].length - 1 : 1;
   }
   const kinds: number[] = [];
   const plan: Plan = { content, single, ops, targets: ids.size, a, b, at, kinds };
@@ -102,19 +113,21 @@ function build(template: TemplateObject): Plan {
 }
 
 function kindOf(spec: PartSpec, el: Element): number {
-  switch (spec.k) {
-    case 'child':
-      return spec.path.length === 0 ? ROOT : spec.sole ? SOLE : CHILD;
-    case 'attr':
-      return spec.strings !== undefined ? MULTI : attrKind(el, spec.name, false);
-    case 'bool':
-      return attrKind(el, spec.name, true);
-    case 'prop':
+  switch (spec[0]) {
+    case ATTR_PART:
+      return attrKind(el, spec[2], false);
+    case MULTI_PART:
+      return MULTI;
+    case BOOL_PART:
+      return attrKind(el, spec[2], true);
+    case PROP_PART:
       return PROP;
-    case 'hook':
+    case HOOK_PART:
       return HOOK;
-    default:
+    case TEXT_PART:
       return el.localName === 'textarea' ? TEXTAREA : TITLE;
+    default:
+      return spec[1].length === 0 ? ROOT : spec[0] === CHILD_SOLE ? SOLE : CHILD;
   }
 }
 

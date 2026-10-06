@@ -103,7 +103,7 @@ export class Writer extends Markup {
     if (this.dev && !template.server) this.buf += `<!--gyral:${template.id}-->`;
     const values = result.values;
     const outer = this.shell;
-    this.shell = template.server;
+    this.shell = template.server === true;
     let at = 0;
     let opening: Opening | undefined;
     let frames: Frame[] | undefined;

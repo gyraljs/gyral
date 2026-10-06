@@ -30,7 +30,7 @@ export function analyze(strings: readonly string[], loc?: string): Analysis {
     id: templateId(normalized),
     html,
     parts,
-    server: tree.server,
+    ...(tree.server ? { server: true as const } : {}),
     segments,
     ...(loc === undefined ? {} : { loc }),
   };

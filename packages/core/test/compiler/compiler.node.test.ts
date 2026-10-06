@@ -2,15 +2,13 @@
 // real `vite build`s of small fixture apps that import `html` from core's view module.
 import { describe, expect, it } from 'vitest';
 import { normalize, type TemplateObject } from '../../src/view/index.js';
+import { clientObject as client } from '../view/helpers.js';
 import { buildApp, buildError, importBuilt, VIEW } from './fixture.js';
 
 const GREET = ['<p class="greeting">Hello ', '!</p>'];
 
 /** The template object a client build carries: no segments, no loc. */
-function clientObject(strings: readonly string[]): Omit<TemplateObject, 'segments'> {
-  const { id, html, parts, server } = normalize(strings);
-  return { id, html, parts, server };
-}
+const clientObject = (strings: readonly string[]): TemplateObject => client(normalize(strings));
 
 describe('template compiler: rewriting call sites', () => {
   it('hoists the template object (same id as the runtime normalizer) and calls compiled', async () => {
@@ -30,6 +28,9 @@ describe('template compiler: rewriting call sites', () => {
     expect(code.match(new RegExp(`"id": "${id}"`, 'g'))).toHaveLength(1);
     expect(code).toMatch(/compiled\(_gyral\$t0, \[name\]\)/);
     expect(code).not.toMatch(/\bhtml`</);
+    // The compact form (view/01 "The template object"): tuples, no `server: false`.
+    expect(code.replace(/\s/g, '')).toContain(`"parts":[[2,[0],1]]`);
+    expect(code).not.toMatch(/"server"|"k":/);
 
     const built = await importBuilt(code);
     const templateOf = built['templateOf'] as (r: unknown) => TemplateObject;

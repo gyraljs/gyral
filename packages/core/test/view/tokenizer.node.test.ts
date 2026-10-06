@@ -2,11 +2,11 @@
 // "Normalization" step 1): one test per kind, plus the tokenizer states that hold no hole.
 import { describe, expect, it } from 'vitest';
 import { normalize } from '../../src/view/normalize/normalize.js';
-import { t } from './helpers.js';
+import { readable, t } from './helpers.js';
 
 const kinds = (strings: readonly string[]): unknown[] =>
   normalize(strings).parts.map((part) => {
-    const { path, ...rest } = part;
+    const { path, ...rest } = readable(part);
     return path.length >= 0 ? rest : part;
   });
 
@@ -79,7 +79,14 @@ describe('hole kinds (view/02)', () => {
 
   it('keeps holes in source order across attributes and children', () => {
     const n = normalize(t`<a href=${0} ${1}>${2}<b class="x ${3}" .p=${4}>${5}</b></a>`);
-    expect(n.parts.map((p) => p.k)).toEqual(['attr', 'hook', 'child', 'attr', 'prop', 'child']);
+    expect(n.parts.map((p) => readable(p).k)).toEqual([
+      'attr',
+      'hook',
+      'child',
+      'attr',
+      'prop',
+      'child',
+    ]);
   });
 });
 
@@ -109,6 +116,6 @@ describe('tokenizer states without holes', () => {
   it('marks document-level templates as server templates', () => {
     expect(normalize(t`<!doctype html><html><body>${1}</body></html>`).server).toBe(true);
     expect(normalize(t`<head><title>${1}</title></head>`).server).toBe(true);
-    expect(normalize(t`<main>${1}</main>`).server).toBe(false);
+    expect(normalize(t`<main>${1}</main>`).server).toBeUndefined(); // only `true` is written (01)
   });
 });

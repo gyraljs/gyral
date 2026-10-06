@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { normalize } from '../../src/view/normalize/normalize.js';
 import { prepare as stubPrepare, verify as stubVerify } from '../../src/view/prepare-stub.js';
 import { compiled, html, isTemplateResult, templateOf } from '../../src/view/template.js';
+import { readable } from './helpers.js';
 
 const view = (n: number) => html`<p class="n-${n}">${n}</p>`;
 
@@ -29,7 +30,7 @@ describe('template results (view/01)', () => {
     const a = templateOf(view(1));
     expect(templateOf(view(2))).toBe(a);
     expect(a.html).toBe('<p></p>');
-    expect(a.parts).toEqual([
+    expect(a.parts.map(readable)).toEqual([
       { k: 'attr', path: [0], name: 'class', strings: ['n-', ''] },
       { k: 'child', path: [0], ref: null, sole: true },
     ]);

@@ -4,12 +4,10 @@
 import type { PartSpec, TemplateObject } from '../normalize/types.js';
 import { nodes, planOf, stack, walk, type Plan } from './plan.js';
 
-export type Spec = PartSpec & { name?: string; strings?: readonly string[]; ref?: number | null };
-
 /** Per template: its element parts per static element, its child holes per parent node. */
 export interface Adoption {
   readonly plan: Plan;
-  readonly specs: readonly Spec[];
+  readonly specs: readonly PartSpec[];
   readonly attrs: Map<Node, number[]>;
   readonly holes: Map<Node, number[]>;
 }

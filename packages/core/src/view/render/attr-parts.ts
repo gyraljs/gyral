@@ -9,6 +9,7 @@
 // (view/07-hydration.md) builds the same parts over server DOM and adopts this render's values
 // as committed (adopt-attr.ts), so edits made before scripts ran stay by the same rule.
 import { DEV } from '#view-dev';
+import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
 import { nothing, UNSET } from './values.js';
 import { badHook, warnTrue, warnValue } from './warn.js';
@@ -72,6 +73,12 @@ export function attrKind(el: Element, name: string, bool: boolean): number {
     return name === 'checked' ? CHECKED : name === 'indeterminate' ? STATE : BOOL;
   if (tag === 'option' && name === 'selected') return CHECKED;
   return name === 'open' && (tag === 'details' || tag === 'dialog') ? OPEN : BOOL;
+}
+
+/** The element part for part table entry `spec`: `[kind, path, name?, strings?]` (01). */
+export function attrPart(el: Element, kind: number, spec: PartSpec, at: number): AttrPart {
+  const s = spec as readonly [number, unknown, string?, (readonly string[])?];
+  return new AttrPart(el, kind, s[2] ?? '', at, s[3]);
 }
 
 export class AttrPart implements Part {

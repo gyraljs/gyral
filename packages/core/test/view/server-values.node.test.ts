@@ -13,6 +13,7 @@ import {
 } from '../../src/view/index.js';
 import { normalize } from '../../src/view/normalize/normalize.js';
 import { renderToString } from '../../src/server.js';
+import { clientObject } from './helpers.js';
 
 const prod = (value: unknown) => renderToString(value as never, { dev: false });
 const dev = (value: unknown) => renderToString(value as never, { dev: true });
@@ -253,9 +254,7 @@ describe('development markers and checks (06 "Development markers")', () => {
   });
 
   it('refuse a template compiled for the client (no segments)', () => {
-    const { id, html: markup, parts, server } = normalize(['<p>', '</p>']);
-    expect(() => prod(compiled({ id, html: markup, parts, server }, ['x']))).toThrow(
-      /no server segments/,
-    );
+    const client = clientObject(normalize(['<p>', '</p>']));
+    expect(() => prod(compiled(client, ['x']))).toThrow(/no server segments/);
   });
 });

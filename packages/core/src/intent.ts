@@ -39,7 +39,7 @@ const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
 export function eventsOf(markup: Markup): readonly string[] {
   let events = eventsByTemplate.get(markup);
   if (events === undefined) {
-    events = markup.parts?.some((p) => 'name' in p && p.name === 'data-intent-on')
+    events = markup.parts?.some((p) => p[2] === 'data-intent-on') // a bound attribute's name
       ? INTENT_EVENTS
       : Array.from(markup.html.matchAll(INTENT_ON), (m) => m[1] ?? '');
     eventsByTemplate.set(markup, events);

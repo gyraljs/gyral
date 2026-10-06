@@ -10,11 +10,11 @@
 // when present; production checks node types, local names and text lengths.
 import { DEV } from '#view-dev';
 import { LIGHT_ATTRIBUTE } from '../attributes.js';
-import type { TemplateObject } from '../normalize/types.js';
+import { CHILD_BEFORE, type PartSpec, type TemplateObject } from '../normalize/types.js';
 import { isTemplateResult, sourceOf, templateOf, type TemplateResult } from '../template.js';
-import { adoptionOf, type Adoption, type Spec } from './adopt-plan.js';
+import { adoptionOf, type Adoption } from './adopt-plan.js';
 import { adoptAttr, checkAttr } from './adopt-attr.js';
-import { AttrPart, TEXTAREA, TITLE } from './attr-parts.js';
+import { attrPart, TEXTAREA, TITLE } from './attr-parts.js';
 import { ChildPart, INSTANCE, ITEMS, LIST, RAW, TEXT } from './child-part.js';
 import { checkKeys } from './dev-check.js';
 import { Instance } from './instance.js';
@@ -125,7 +125,8 @@ function children(t: Node, a: Adoption, inst: Instance, values: readonly unknown
   for (let n = t.firstChild, j = 0; ; n = n.nextSibling, j++) {
     if (holes !== undefined && h < holes.length) {
       const i = holes[h] as number;
-      const ref = (a.specs[i] as Spec).ref ?? null;
+      const spec = a.specs[i] as PartSpec;
+      const ref = spec[0] === CHILD_BEFORE ? spec[2] : null;
       if (n === null ? ref === null : ref === j) {
         hole(i, ref, a, inst, values);
         h++;
@@ -184,9 +185,8 @@ function element(t: Element, a: Adoption, inst: Instance, values: readonly unkno
   cur = el.nextSibling;
   let whole = false;
   for (const i of a.attrs.get(t) ?? []) {
-    const spec = a.specs[i] as Spec;
     const kind = a.plan.kinds[i] as number;
-    const part = new AttrPart(el, kind, spec.name ?? '', a.plan.at[i] as number, spec.strings);
+    const part = attrPart(el, kind, a.specs[i] as PartSpec, a.plan.at[i] as number);
     inst.parts[i] = part;
     adoptAttr(part, values);
     if (DEV) checkAttr(part, fail);

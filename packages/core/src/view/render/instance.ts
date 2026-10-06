@@ -7,7 +7,7 @@
 // How to reach the nodes, and what each part is, comes from the template's plan (plan.ts).
 // Hydration (adopt.ts) creates instances with `adopt` set and fills them from server DOM.
 import type { PartSpec, TemplateObject } from '../normalize/types.js';
-import { AttrPart, type Part } from './attr-parts.js';
+import { attrPart, type Part } from './attr-parts.js';
 import { ChildPart, type Owner } from './child-part.js';
 import { removeRange } from './nodes.js';
 import { report } from './seen.js';
@@ -64,8 +64,7 @@ export class Instance implements Owner {
       const kind = kinds[i] as number;
       const node = nodes[a[i] as number] as Element;
       if (kind >= 0) {
-        const spec = specs[i] as PartSpec & { name?: string; strings?: readonly string[] };
-        this.parts.push(new AttrPart(node, kind, spec.name ?? '', at[i] as number, spec.strings));
+        this.parts.push(attrPart(node, kind, specs[i] as PartSpec, at[i] as number));
         continue;
       }
       const r = b[i] as number;
