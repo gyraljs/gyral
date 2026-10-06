@@ -1,4 +1,4 @@
-import { css, define, html } from '@gyral/core';
+import { css, define, html, prop } from '@gyral/core';
 
 // A widget: renders into its own shadow root (Declarative Shadow DOM on the server).
 export interface State {
@@ -14,7 +14,7 @@ export interface Props {
 export const Counter = define<State, Msg, Props>('app-counter', {
   // Props are inputs (attributes or properties). The server-rendered value travels to the
   // browser in the hydration seed, so the page starts where the server left it.
-  props: { start: { type: Number, default: 0 } },
+  props: { start: prop.number({ default: 0 }) },
   init: (props) => ({ count: props.start }),
   intent: {
     Increment: () => ({ _tag: 'Increment' }),

@@ -1,8 +1,11 @@
 # Components: `define()`
 
-`define<S, M, P, O>(tag, spec)` compiles a spec into a Lit custom element, registers it under
-`tag`, and returns the class. Type parameters: `S` state, `M` message union, `P` props
-(default `object`), `O` outputs a child emits to its parent (default `never`).
+`define<S, M, P, O>(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
+subclass), registers it under `tag`, and returns the class. Type parameters: `S` state, `M`
+message union, `P` props (default `object`; inferred from the `prop.*` builders when you pass
+no type arguments), `O` outputs a child emits to its parent (default `never`). Rendering goes
+through one global scheduler: reducers run at once, the DOM updates in a microtask; tests
+`await settled()`.
 
 ## Spec fields
 
@@ -12,8 +15,8 @@
 | `intent`                          | yes (may be `{}`)            | Parsers keyed by message tag: DOM event → message                               |
 | `update`                          | yes                          | One pure reducer per message tag (exhaustive), plus optional framework reducers |
 | `view(state, intents, ctx)`       | yes                          | Pure template; `ctx.props`, `ctx.read(store)`                                   |
-| `props`                           | no                           | Lit property declarations, with Gyral's `required`/`default` rule               |
-| `styles`                          | no                           | `css` templates, strings, `CSSStyleSheet`s or arrays (shadow DOM only)          |
+| `props`                           | no                           | `prop.*` builders (Standard Schema), with the `required`/`default` rule         |
+| `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
 | `shadow`                          | no                           | `false` renders into light DOM (page-level content). Default `true`             |
 | `hydrate`                         | no                           | `'load'` (default), `'idle'`, `'visible'`, `'interaction'` for SSR islands      |
 | `events`                          | no                           | Extra event types usable with `data-intent-on`                                  |
@@ -24,51 +27,71 @@
 
 ## Props
 
-A prop is `undefined` until a parent, an attribute or a seed sets it, so a prop whose type
-excludes `undefined` must declare `required: true` or a `default`:
+Declare props with `prop.*` builders. Types come from the builders: a prop without `required`
+or `default` includes `undefined` (it is unset until a parent, an attribute or a seed sets it).
 
 ```ts
-import { define, html } from '@gyral/core';
+import { define, html, prop, type PropsOf } from '@gyral/core';
 
-interface Props {
-  readonly label: string; // required
-  readonly step: number; // has a default
-  readonly hint?: string | undefined; // may be missing
-}
+const props = {
+  label: prop.string({ required: true }), // attribute "label"
+  step: prop.number({ default: 1 }), // attribute "step"
+  hint: prop.string(), // string | undefined
+  maxValue: prop.number({ default: 10 }), // attribute "max-value" (kebab-case)
+  compact: prop.boolean(), // present → true, absent → false
+};
+type Props = PropsOf<typeof props>;
+
 interface State {
   readonly value: number;
 }
 type Msg = { readonly _tag: 'Bump' };
 
 export const Stepper = define<State, Msg, Props>('my-stepper', {
-  props: {
-    label: { type: String, required: true },
-    step: { type: Number, default: 1 },
-    hint: { type: String },
-  },
+  props,
   init: () => ({ value: 0 }),
   intent: { Bump: () => ({ _tag: 'Bump' }) },
-  update: { Bump: (s, _m, { props }) => ({ value: s.value + props.step }) },
-  view: (s, i, { props }) => html`
-    <button type="button" data-intent=${i.Bump}>${props.label}: ${s.value}</button>
-    ${props.hint === undefined ? '' : html`<small>${props.hint}</small>`}
+  update: {
+    Bump: (s, _m, { props: p }) => ({ value: Math.min(s.value + p.step, p.maxValue) }),
+  },
+  view: (s, i, { props: p }) => html`
+    <button type="button" class=${p.compact ? 'compact' : ''} data-intent=${i.Bump}>
+      ${p.label}: ${s.value}
+    </button>
+    ${p.hint === undefined ? '' : html`<small>${p.hint}</small>`}
   `,
 });
 ```
 
-Don't name props after built-in element properties (`hidden`, `title`, `id`): `define()` warns,
-because setting them changes platform behaviour. Objects and arrays are passed as properties
-(`.item=${it}`) and declared with `attribute: false`.
+| Builder                     | Attribute parsing                   | Attribute name |
+| --------------------------- | ----------------------------------- | -------------- |
+| `prop.string(opts?)`        | as is                               | kebab-case     |
+| `prop.number(opts?)`        | `Number(v)`; empty or `NaN` invalid | kebab-case     |
+| `prop.boolean(opts?)`       | present → `true`, absent → `false`  | kebab-case     |
+| `prop.json(schema, opts?)`  | `JSON.parse`, then the schema       | kebab-case     |
+| `prop.value(schema, opts?)` | none: property only (`.items=${…}`) | none           |
+
+Options: `schema` (refines `string`/`number`/`boolean`, e.g. `v.picklist([...])`),
+`attribute` (a name, or `false` for property only), `required`, `default`. Any Standard Schema
+library works (valibot, zod, …); schemas must be synchronous and should validate, not transform.
+
+- **Attributes are always validated** (they're external strings). Property sets and hydration
+  seeds are validated in development only. An invalid value is logged and treated as missing.
+- No reflection: props never write attributes. State that CSS needs goes through `states`.
+- Objects and arrays travel as properties: `prop.value(v.array(Item), { default: [] })` and
+  `.items=${s.items}` in the parent.
+- Don't name props after built-in element properties (`hidden`, `title`, `id`): it's an error
+  in development, because setting them changes platform behaviour.
 
 ## Stateless components
 
 `Stateless` (an empty record) makes `init` optional; use `never` when there are no messages:
 
 ```ts
-import { define, html, type Stateless } from '@gyral/core';
+import { define, html, prop, type Stateless } from '@gyral/core';
 
 export const Badge = define<Stateless, never, { readonly text: string }>('my-badge', {
-  props: { text: { type: String, default: '' } },
+  props: { text: prop.string({ default: '' }) },
   intent: {},
   update: {},
   view: (_s, _i, { props }) => html`<span class="badge">${props.text}</span>`,
@@ -77,9 +100,11 @@ export const Badge = define<Stateless, never, { readonly text: string }>('my-bad
 
 ## Styles
 
-Shadow components take `styles` (constructable stylesheets shared across instances). Theme
-through inherited custom properties and `::part()`. Wrap rules in `@layer component` so app
-themes win predictably.
+Shadow components take `styles`: `css` values, plain CSS strings (e.g. a `?inline` import) or
+nested arrays of them. Each `css` value maps to one `CSSStyleSheet`, shared by every component
+and instance that uses it. Strings and numbers interpolate as written (`${GAP}px`); CSS is
+trusted author code, never user input. Theme through inherited custom properties and
+`::part()`. Wrap rules in `@layer component` so app themes win predictably.
 
 ```ts
 import { css, define, html, type Stateless } from '@gyral/core';

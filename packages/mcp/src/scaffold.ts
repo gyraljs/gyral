@@ -101,7 +101,7 @@ describe('${tag} model', () => {
 }
 
 function form(tag: string, name: string, description: string | undefined): Scaffold {
-  const component = `${comment(description)}import { define, defineForm, fieldErrors, form, html, invalid, nothing, type FormFields } from '@gyral/core';
+  const component = `${comment(description)}import { define, defineForm, fieldErrors, form, html, invalid, type FormFields } from '@gyral/core';
 import { submitForm } from '@gyral/http';
 import * as v from 'valibot';
 
@@ -171,7 +171,6 @@ export const ${name} = define<State, Msg>('${tag}', {
                 required
                 value=\${text(s.values, f.name)}
                 aria-describedby=\${\`\${f.name}-error\`}
-                aria-invalid=\${errors === undefined ? nothing : 'true'}
                 \${invalid(errors)}
               />
               <span id=\${\`\${f.name}-error\`}>\${errors?.join(' ') ?? ''}</span>
@@ -185,7 +184,7 @@ export const ${name} = define<State, Msg>('${tag}', {
   return {
     files: [{ path: `src/${tag}.ts`, code: component }],
     notes: [
-      'Needs: npm i @gyral/core @gyral/http lit valibot (any Standard Schema library works).',
+      'Needs: npm i @gyral/core @gyral/http valibot (any Standard Schema library works).',
       `The form posts to /${tag}: handle it on the server with formAction(${name}Form, …) from @gyral/ssr so it also works without JavaScript (get_doc "forms#the-server-half").`,
       'Never keep passwords in state or re-fill them from values: state is serialized into the page.',
     ],
@@ -206,7 +205,7 @@ export const ${name} = define<Stateless, never>('${tag}', {
   \`,
 });
 `;
-  const route = `import { html } from 'lit';
+  const route = `import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
 import './${tag}.js';
 
@@ -221,8 +220,7 @@ export function ${name.charAt(0).toLowerCase()}${name.slice(1)}Route(_request: R
   });
 }
 `;
-  const entry = `// Client entry. ORDER MATTERS: hydrate support before anything that imports lit or @gyral/core.
-import '@gyral/ssr/hydrate';
+  const entry = `// Client entry: import the components. Hydration is built into @gyral/core.
 import './${tag}.js';
 `;
   return {
@@ -232,7 +230,7 @@ import './${tag}.js';
       { path: 'src/entry-client.ts', code: entry },
     ],
     notes: [
-      'Needs: npm i @gyral/core @gyral/ssr lit @lit-labs/ssr @lit-labs/ssr-client.',
+      'Needs: npm i @gyral/core @gyral/ssr. (0.3 development builds: server rendering returns with @gyral/core/server; until then renderPage throws.)',
       'Mount the route in any server that speaks Request/Response (Hono, Node via productionServer, Workers), or prerender it with @gyral/ssr/static.',
       'Or start from a working app: npm create gyral@latest my-app -- --template ssr.',
     ],

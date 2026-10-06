@@ -47,9 +47,6 @@ function gyralPaths() {
       paths[specifier] = [relative(outDir, join(root, 'packages', name, target))];
     }
   }
-  // Lit as the packages see it (a peer of @gyral/core), so snippets get the same types.
-  paths['lit'] = [relative(outDir, join(root, 'packages/core/node_modules/lit'))];
-  paths['lit/*'] = [relative(outDir, join(root, 'packages/core/node_modules/lit/*'))];
   return paths;
 }
 

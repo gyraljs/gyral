@@ -22,8 +22,8 @@ define('gy-letters', {
 ```
 
 - `css` returns a **style source**: the CSS text plus a cache slot. String and number
-  interpolations are inserted as written, so `unsafeCSS` is gone. CSS is trusted author code:
-  never interpolate user input.
+  interpolations are inserted as written, so `unsafeCSS` is gone; another style source
+  interpolates its text. CSS is trusted author code: never interpolate user input.
 - `spec.styles` accepts a style source, a plain string (for example
   `import base from './base.css?inline'`) or an array of them, nested freely.
 - Raw `CSSStyleSheet` objects are no longer accepted: the server can't read their text. Share

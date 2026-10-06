@@ -3,7 +3,7 @@
 Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 ```text
- platform event ──► INTENT (parse) ──► message ──► MODEL (update) ──► state ──► VIEW (Lit template)
+ platform event ──► INTENT (parse) ──► message ──► MODEL (update) ──► state ──► VIEW (template)
        ▲                                  ▲                │
        │                                  │                └──► effects (data) ──► drivers
        └──────── DOM (shadow root) ◄──────┴──────────── result messages ◄─────────────┘
@@ -13,7 +13,9 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
   event (click, submit, input, change) into a typed message. Nested components are isolated
   by Shadow DOM, which replaces Cycle's `isolate()`.
 - **Model** is a record of pure reducers keyed by message tag (exhaustive by type).
-- **View** is a pure Lit template of state. It names intents and never holds closures.
+- **View** is a pure template of state, rendered by Gyral's own view layer
+  (`packages/core/src/view/`, ADR 0018). It names intents and never holds closures. One global
+  scheduler renders every component in a microtask flush, parents first.
 - **Context and framework messages:** reducers and the view receive `{ props }`. Props enter
   state only through the optional `PropsChanged` reducer (ADR 0007). Schema failures in
   `form()`/`field()` intents arrive as `IntentRejected` (ADR 0008).
@@ -28,12 +30,12 @@ Dependencies only point **down** this list. Nothing points up or sideways except
 
 | Layer | Package          | Status  | May depend on                                                                                                                           |
 | ----- | ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | `@gyral/core`    | v0 work | `lit` (peer); `effect` only from `src/internal/`; `vite`, `parse5` (optional peers, `src/compiler/` at build time only)                 |
+| 0     | `@gyral/core`    | v0 work | no runtime peers; `vite`, `parse5` (optional peers, `src/compiler/` at build time only); `src/view/` imports nothing else from core     |
 | 1     | `@gyral/testing` | v0 work | core, `@sinonjs/fake-timers`                                                                                                            |
 | 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                                                                                              |
 | 1     | `@gyral/router`  | v0 work | core                                                                                                                                    |
 | 1     | `@gyral/time`    | v0 work | core                                                                                                                                    |
-| 2     | `@gyral/ssr`     | v0 work | core, router, `@lit-labs/ssr` (peer; behind `src/internal/lit.ts`; ADR 0012)                                                            |
+| 2     | `@gyral/ssr`     | v0 work | core, router; `@lit-labs/ssr` until its Phase 4 rewrite onto `@gyral/core/server` (behind `src/internal/`; ADR 0012, 0018)              |
 | 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                                                                                             |
 | tool  | `create-gyral`   | v0 work | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                           |
 | tool  | `@gyral/mcp`     | v0 work | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill) |
@@ -57,9 +59,10 @@ switches exports to `dist/` on publish.
 
 ## Cross-cutting
 
-- **Styling:** `static styles` per component via `css`, cascade layers, custom-property tokens,
-  `::part()` for theming. Follow the `modern-css` skill.
+- **Styling:** `spec.styles` per component via `css` (one shared `CSSStyleSheet` per style
+  source), cascade layers, custom-property tokens, `::part()` for theming. Follow the
+  `modern-css` skill.
 - **Markup:** semantic HTML first (`semantic-html` skill). UI-only state (popovers, dialogs,
   disclosure) belongs to the platform, not the model.
-- **Raw Lit:** any `LitElement` class can sit next to `define()` components. Gyral is a thin
-  layer, not a walled garden.
+- **Other custom elements:** any custom element (built with Lit or anything else) can sit next
+  to `define()` components. Gyral is a thin layer, not a walled garden.

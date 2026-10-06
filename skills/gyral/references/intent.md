@@ -71,12 +71,10 @@ export const Filters = define<State, Msg>('my-filters', {
     <div data-intent=${i.Cancel} data-intent-on="keydown">
       <label>
         Search
-        <input type="search" .value=${s.query} data-intent=${i.Typed} />
+        <input type="search" value=${s.query} data-intent=${i.Typed} />
       </label>
     </div>
-    <label
-      >Qty <input type="number" min="1" max="99" .value=${String(s.qty)} data-intent=${i.Qty}
-    /></label>
+    <label>Qty <input type="number" min="1" max="99" value=${s.qty} data-intent=${i.Qty} /></label>
   `,
 });
 ```

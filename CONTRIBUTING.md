@@ -34,7 +34,7 @@ you want a clean-room run.
 - If a published package changes, add a changeset: `pnpm changeset` (patch, minor or major,
   plus a one-line summary for the changelog). See [.changeset/README.md](.changeset/README.md).
 - Follow the house rules in [AGENTS.md](AGENTS.md): pure views, no runtime dependencies
-  in `@gyral/core` besides Lit, Baseline browser features, files under 300 lines.
+  in `@gyral/core`, Baseline browser features, files under 300 lines.
 
 ## Sign your commits (DCO)
 

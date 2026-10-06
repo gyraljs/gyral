@@ -40,7 +40,7 @@ const Search = define<State, Msg>('test-search', {
     ],
     Hits: (s, m) => ({ ...s, hits: m.hits }),
   },
-  view: (s, i) => html`<input .value=${s.query} data-intent=${i.Typed} />`,
+  view: (s, i) => html`<input value=${s.query} data-intent=${i.Typed} />`,
 });
 
 describe('search model', () => {
@@ -49,13 +49,13 @@ describe('search model', () => {
   });
 
   it('asks for results when typing, and shows them', () => {
-    const typed = step(Search.spec, { query: '', hits: [] }, { _tag: 'Typed', query: 'lit' });
-    expect(inputsFor(typed.commands, http)).toEqual([{ url: '/api?q=lit' }]);
+    const typed = step(Search.spec, { query: '', hits: [] }, { _tag: 'Typed', query: 'gyral' });
+    expect(inputsFor(typed.commands, http)).toEqual([{ url: '/api?q=gyral' }]);
     // Simulate the driver: what message would this response produce?
     const [command] = typed.commands;
     if (command === undefined) throw new Error('expected a command');
-    const msg = resolve(command, { hits: ['lit', 'lit-ssr'] });
-    expect(msg).toEqual({ _tag: 'Hits', hits: ['lit', 'lit-ssr'] });
+    const msg = resolve(command, { hits: ['gyral', 'gyral-ssr'] });
+    expect(msg).toEqual({ _tag: 'Hits', hits: ['gyral', 'gyral-ssr'] });
   });
 
   it('folds a sequence of messages', () => {
@@ -147,6 +147,9 @@ body)`, `failNext()`.
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 
 ## SSR tests
+
+> **0.3 status:** server rendering and hydration are being rewritten (ssr.md); these helpers
+> keep their API. `hydrated()` releases islands if asked, then awaits `settled()`.
 
 ```ts
 import { expect, it } from 'vitest';

@@ -12,6 +12,9 @@ update maps or completion promises.
   render waits.
 - Marking an already-dirty host does nothing. The first mark in a quiet period schedules a
   flush with `queueMicrotask`.
+- Every delivered message marks its host, even when the reducer returns the same state: the
+  render's live form-state comparison (02) then writes a refused edit back to the control.
+- A host that isn't connected isn't rendered; it renders when it reconnects.
 - Each host records its **depth** (number of Gyral host ancestors in the composed tree) when it
   connects. Sorting by depth needs no DOM queries.
 
@@ -29,11 +32,17 @@ update maps or completion promises.
 6. Resolve waiting `settled()` promises.
 
 **Errors:** a view or reducer that throws is logged with its tag, its previous DOM stays, and the
-flush continues with the other hosts.
+flush continues with the other hosts. Post-render work that throws is logged the same way.
+
+Outputs a child sends to its parent (`emit`, ADR 0010) are dispatched in a microtask, outside the
+child's render; the scheduler counts them as pending work, so `settled()` waits for them and for
+the parent render they cause.
 
 **Loop guard:** more than 10 renders of one host, or 100 passes, in one flush means a cycle (two
-components feeding each other props or messages). Development throws, naming the tags involved.
-Production logs the same message and drops the remaining work, so the page doesn't freeze.
+components feeding each other props or messages). Development throws, naming the tags involved:
+waiting `settled()` promises reject with the error, or, when nothing waits, it is thrown from the
+flush (an uncaught error). Production logs the same message and drops the remaining work, so the
+page doesn't freeze.
 
 ## Post-render queue
 
@@ -53,7 +62,8 @@ Before 0.3.0 these were spread over Lit lifecycle hooks and `updateComplete` cha
 
 When `spec.viewTransition(prev, next, msg)` returns `true` for any message in a pending flush,
 the whole flush runs inside `document.startViewTransition(() => flush())`, so the change is one
-transition. Without support, or with `prefers-reduced-motion: reduce`, the flush runs as normal.
+transition. The transition starts where the flush would have run (the microtask), not inside
+`send()`; marks that arrive while its update callback is pending join that flush. Without support, or with `prefers-reduced-motion: reduce`, the flush runs as normal.
 `settled()` waits for the transition's update callback, so focus and tests see the same DOM with
 or without a transition.
 
@@ -64,14 +74,16 @@ import { settled } from '@gyral/core';
 await settled(); // no host is dirty, no flush is scheduled, no transition update is pending
 ```
 
-- One shared promise per quiet period, not one per element. It resolves immediately when the
-  scheduler is idle.
+- One shared promise per quiet period, not one per element. When the scheduler is idle it
+  resolves after a few microtask turns (4), so follow-ups already resolving (a driver that
+  answered at once, an output on its way) reach the scheduler before quiet is judged.
 - It covers rendering only. Driver work (HTTP, timers) is outside it; tests drive time with
   `@gyral/testing`'s `virtualTime` and then `await settled()`.
 - `@gyral/testing`'s `hydrated()` becomes: wait for the document's islands to be released (if
   asked), then `await settled()`. No polling passes.
-- Shipped before the swap (gyral-g1r.4), backed by Lit in `packages/core/src/settled.ts`, so
-  tests are renderer-agnostic first. The scheduler then implements the same contract.
+- Shipped before the swap (gyral-g1r.4), backed by Lit, so tests were renderer-agnostic first.
+  Since Phase 3 `packages/core/src/settled.ts` implements it on the scheduler
+  (`packages/core/src/scheduler.ts`).
 - Replaces `el.updateComplete` everywhere (about 270 test sites, the scaffold's `AGENTS.md`, the
   docs and the skill).
 

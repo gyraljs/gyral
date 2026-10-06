@@ -9,7 +9,7 @@ _Inspired by [Cycle.js](https://cycle.js.org)._
 
 Gyral keeps the core idea of Cycle.js (your app is a pure function, side effects happen at
 the edges as data, and data flows in one visible loop) and rebuilds it on today's platform:
-custom elements and Shadow DOM, [Lit](https://lit.dev) templates, semantic HTML, modern CSS.
+custom elements and Shadow DOM, its own small template layer, semantic HTML, modern CSS.
 No stream library to learn.
 
 ```ts

@@ -9,7 +9,7 @@ Props are context: read them in `view` and reducers via `ctx.props`. They enter 
 same render):
 
 ```ts
-import { define, html } from '@gyral/core';
+import { define, html, prop } from '@gyral/core';
 import { get } from '@gyral/http';
 
 interface Props {
@@ -31,7 +31,7 @@ const loadBio = (userId: string) =>
   });
 
 export const UserCard = define<State, Msg, Props>('my-user-card', {
-  props: { userId: { type: String, required: true } },
+  props: { userId: prop.string({ required: true }) },
   init: (props) => [{ draft: '', bio: '' }, [loadBio(props.userId)]],
   intent: { Draft: ({ value }) => ({ _tag: 'Draft', text: value ?? '' }) },
   update: {
@@ -44,7 +44,7 @@ export const UserCard = define<State, Msg, Props>('my-user-card', {
   view: (s, i, { props }) => html`
     <h3>${props.userId}</h3>
     <p>${s.bio}</p>
-    <input .value=${s.draft} data-intent=${i.Draft} aria-label="Message" />
+    <input value=${s.draft} data-intent=${i.Draft} aria-label="Message" />
   `,
 });
 ```
@@ -56,17 +56,19 @@ command. The parent puts `data-intent` on the child element and parses outputs w
 `child(ChildClass, (output, el) => msg)`; `el` is the typed child element (read its props).
 
 ```ts
-import { child, define, emit, html, repeat } from '@gyral/core';
+import * as v from 'valibot';
+import { child, define, each, emit, html, prop } from '@gyral/core';
 
 // Child: owns its own state; reports removal up.
 type ItemOut = { readonly _tag: 'Removed' };
 type ItemMsg = { readonly _tag: 'Remove' };
+const ItemData = v.object({ id: v.number(), label: v.string() });
 interface ItemProps {
-  readonly item: { readonly id: number; readonly label: string };
+  readonly item: v.InferOutput<typeof ItemData>;
 }
 
 export const Item = define<object, ItemMsg, ItemProps, ItemOut>('my-item', {
-  props: { item: { attribute: false, required: true } },
+  props: { item: prop.value(ItemData, { required: true }) },
   init: () => ({}),
   intent: { Remove: () => ({ _tag: 'Remove' }) },
   update: { Remove: (s) => [s, [emit({ _tag: 'Removed' })]] },
@@ -96,10 +98,12 @@ export const List = define<ListState, ListMsg>('my-list', {
   },
   view: (s, i) =>
     html`<ul>
-      ${repeat(
+      ${each(
         s.items,
         (it) => it.id,
-        (it) => html`<li><my-item .item=${it} data-intent=${i.ItemOut}></my-item></li>`,
+        // Rows are pure: the intent name comes in through pick.
+        (it, intent) => html`<li><my-item .item=${it} data-intent=${intent}></my-item></li>`,
+        () => i.ItemOut,
       )}
     </ul>`,
 });
@@ -119,7 +123,7 @@ and write with the `send(store, msg)` command. Changes re-render readers; the op
 `StoreChanged` reducer reacts (narrow it with `changed(store, msg)`).
 
 ```ts
-import { changed, define, defineStore, html, send } from '@gyral/core';
+import { changed, define, defineStore, html, prop, send } from '@gyral/core';
 
 interface Line {
   readonly sku: string;
@@ -149,7 +153,7 @@ interface BadgeState {
 type BadgeMsg = { readonly _tag: 'Buy' };
 
 export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>('my-buy', {
-  props: { sku: { type: String, required: true } },
+  props: { sku: prop.string({ required: true }) },
   stores: [cart],
   init: () => ({ bumped: false }),
   intent: { Buy: () => ({ _tag: 'Buy' }) },
@@ -168,6 +172,7 @@ export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>(
 ```
 
 - One store instance per page in the browser, per request on the server (pass instances to
-  `renderPage({ stores: [cart.instance(seed)] })`), per test (`testStore(cart)`).
+  `renderPage({ stores: [cart.instance(seed)] })`; see ssr.md for the 0.3 status), per test
+  (`testStore(cart)`).
 - Store names key seeds and overrides: keep them unique.
 - A store may `send` to another store; writes are always commands, never direct mutation.

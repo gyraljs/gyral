@@ -1,7 +1,7 @@
 # AGENTS.md — Gyral
 
-Gyral is a web framework: Model-View-Intent components compiled to Lit custom elements,
-built on current web-platform standards. Inspired by Cycle.js. This file is a **map**;
+Gyral is a web framework: Model-View-Intent components compiled to custom elements with
+Gyral's own view layer, built on current web-platform standards. Inspired by Cycle.js. This file is a **map**;
 details live in the linked docs, which are the system of record.
 
 ## Start every session
@@ -36,11 +36,11 @@ First run needs `pnpm exec playwright install chromium`.
 | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                    |
 | `packages/core`                                                                                  | `define()`, intent parsing, MVI runtime (`@gyral/core`)                       |
-| `packages/*/src/internal`                                                                        | Implementation details (interpreter, Lit Labs adapters); never exported       |
+| `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                |
 | `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                          |
 | `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                               |
 | [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                  |
-| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: Lit as a peer, Vite dedupe                            |
+| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler              |
 | [docs/references/releasing.md](docs/references/releasing.md)                                     | npm release runbook: placeholders, trusted publishing, `release.yml`          |
 | [docs/references/capability-audit-2026-10-05.md](docs/references/capability-audit-2026-10-05.md) | Capability audit: docs gaps, feature gaps, spikes (epic gyral-1zd)            |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                      |
@@ -74,14 +74,13 @@ First run needs `pnpm exec playwright install chromium`.
 
 ## Skills to load
 
-- `lit-web-apps` — components, SSR, routing, testing (Lit is the view layer).
 - `modern-css` — all component and example styles.
 - `semantic-html` — markup in views and examples (element choice, a11y, i18n).
 - `beads` — work tracking.
 
 ## Hard rules (enforced by `pnpm check`)
 
-- No runtime dependencies in `@gyral/core` besides `lit` (peer); no package depends on `effect` (ADR 0015).
+- No runtime dependencies in `@gyral/core`; no package depends on `effect` (ADR 0015).
 - `@gyral/core` imports no other `@gyral/*` package.
 - Views are pure: name intents with `data-intent=${i.Tag}`, never attach closures.
 - Browser code must pass the Baseline policy (`.browserslistrc`), or feature-detect.

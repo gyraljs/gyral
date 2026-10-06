@@ -1,27 +1,45 @@
 # Views
 
-`view(state, intents, ctx)` returns a Lit `html` template. It is a pure function: no event
-handlers, no `this`, no fetching, no reading the DOM. Compute derived values in plain helper
-functions of state.
+`view(state, intents, ctx)` returns an `html` template from `@gyral/core` (Gyral's own view
+layer). It is a pure function: no event handlers, no `this`, no fetching, no reading the DOM.
+Compute derived values in plain helper functions of state.
 
 ## Template rules
 
-- Name intents: `data-intent=${i.Save}`. Never `@click=${…}` or other closures.
-- Text and attributes: `${value}`, `attr=${value}`; drop an attribute with `nothing`.
-- Live form values: `.value=${s.text}` (property binding), so the control follows the model.
-- **Boolean form state: `?checked=${liveBoolean(s.on)}`**, also `?selected`, `?open`. Never
-  `.checked=${s.on}`: Lit SSR serializes it as `checked="false"`, which checks the box.
-- Keyed lists that reorder or remove: `repeat(items, (it) => it.id, (it) => html`…`)`.
-- Force a fresh element when an id changes: `keyed(id, html`…`)`.
-- Classes and inline custom properties: `classMap({...})`, `styleMap({ '--w': '10px' })`.
-- `<textarea>` content can't be bound: use the `textarea()` directive.
-- Accessible names across shadow boundaries: `${labelledBy('heading-id')}`.
-- Model errors on native validity: `${invalid(errors)}` (see forms.md).
+| Need                              | Write                                                               |
+| --------------------------------- | ------------------------------------------------------------------- |
+| Name an intent                    | `data-intent=${i.Save}` — never `@click=${…}` or other closures     |
+| Text, attributes                  | `${value}`, `attr=${value}`; `null`/`undefined`/`nothing` remove it |
+| Several pieces in one attribute   | `class="btn ${s.kind}"` (quoted)                                    |
+| Presence-only attribute           | `?disabled=${s.busy}`                                               |
+| Data for a child Gyral component  | `.items=${s.items}` (property binding)                              |
+| Text input value                  | `value=${s.text}` — live: the model wins whenever it re-renders     |
+| Checkbox/radio, option, indeterm. | `?checked=${s.on}`, `?selected=${…}`, `?indeterminate=${…}`         |
+| `<details>`/`<dialog>` open       | `?open=${s.open}`                                                   |
+| `<textarea>` content              | `<textarea name="note">${s.note}</textarea>`                        |
+| Keyed list                        | `each(items, (it) => it.id, Row, pick?)`                            |
+| Trusted markup (Markdown output)  | `raw(html)` — never user input                                      |
+| Behaviour on the element itself   | an element hook: `<input ${invalid(errors)}>`, `defineHook(…)`      |
 
-## Example with the directives
+- `false`, `null`, `undefined` and `nothing` render nothing in a child hole, so
+  `${s.open && html`…`}` works. `true` renders nothing and warns in development.
+- Never bind form state with properties (`.value=`, `.checked=`): the server drops property
+  bindings on plain elements. Use the attribute spellings above.
+- Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
+  `style="--w: ${s.width}px"`. (`classMap`, `styleMap` and `svg` templates may return if a real
+  need appears; inline `<svg>` inside `html` works.)
+- With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
+  time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
+
+## Lists: `each` with pure rows
+
+`each(items, key, row, pick?)` is the only keyed list. A row re-renders only when its item
+object or its `pick` result changes, so **a row may read only its parameters, module-level
+bindings and imports**. Anything from the view's scope (`s`, `i`, `ctx`) goes through `pick`
+and arrives as the row's second argument. Plain arrays still render, by position.
 
 ```ts
-import { classMap, define, html, liveBoolean, repeat, textarea } from '@gyral/core';
+import { define, each, html } from '@gyral/core';
 
 interface Todo {
   readonly id: number;
@@ -30,14 +48,24 @@ interface Todo {
 }
 interface State {
   readonly todos: readonly Todo[];
+  readonly selected: number;
   readonly note: string;
 }
 type Msg =
   | { readonly _tag: 'Toggle'; readonly id: number }
   | { readonly _tag: 'Note'; readonly note: string };
 
+// A pure row: module-level, reads only (todo, picked).
+const Row = (t: Todo, picked: { readonly intent: string; readonly selected: boolean }) =>
+  html`<li class=${picked.selected ? 'selected' : ''}>
+    <label>
+      <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${picked.intent} />
+      ${t.text}
+    </label>
+  </li>`;
+
 export const Todos = define<State, Msg>('my-todos', {
-  init: () => ({ todos: [{ id: 1, text: 'Write docs', done: false }], note: '' }),
+  init: () => ({ todos: [{ id: 1, text: 'Write docs', done: false }], selected: 1, note: '' }),
   intent: {
     Toggle: ({ value }) => {
       const id = Number(value);
@@ -54,25 +82,57 @@ export const Todos = define<State, Msg>('my-todos', {
   },
   view: (s, i) => html`
     <ul aria-label="Todos">
-      ${repeat(
+      ${each(
         s.todos,
         (t) => t.id,
-        (t) =>
-          html`<li class=${classMap({ done: t.done })}>
-            <label>
-              <input
-                type="checkbox"
-                value=${t.id}
-                ?checked=${liveBoolean(t.done)}
-                data-intent=${i.Toggle}
-              />
-              ${t.text}
-            </label>
-          </li>`,
+        Row,
+        (t) => ({ intent: i.Toggle, selected: t.id === s.selected }),
       )}
     </ul>
     <label for="note">Note</label>
-    ${textarea({ value: s.note, attrs: { id: 'note', name: 'note', rows: 3, 'data-intent': i.Note } })}
+    <textarea id="note" name="note" rows="3" data-intent=${i.Note}>${s.note}</textarea>
+  `,
+});
+```
+
+Keys must be unique strings or numbers (duplicates are a development error). `pick` results
+are compared one level deep (`Object.is` per element or key), so returning a small object or
+tuple is fine.
+
+## Element hooks
+
+A hook is a small behaviour attached to the element it sits on, written in the start tag. Core
+ships `invalid(errors)` (forms.md) and `labelledBy(id, fallback?)`. Write your own with
+`defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
+(`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
+server-rendered start tag. A hook acts only on its own element.
+
+```ts
+import { defineHook, define, html } from '@gyral/core';
+
+/** Scrolls the element into view when `active` turns true. */
+export const scrollWhen = defineHook<[active: boolean]>({
+  client: (el, [active], prev) => {
+    if (active && prev?.[0] !== true) el.scrollIntoView({ block: 'nearest' });
+  },
+});
+
+interface State {
+  readonly current: number;
+}
+type Msg = { readonly _tag: 'Next' };
+
+export const Steps = define<State, Msg>('my-steps', {
+  init: () => ({ current: 0 }),
+  intent: { Next: () => ({ _tag: 'Next' }) },
+  update: { Next: (s) => ({ current: (s.current + 1) % 3 }) },
+  view: (s, i) => html`
+    <ol>
+      <li ${scrollWhen(s.current === 0)}>One</li>
+      <li ${scrollWhen(s.current === 1)}>Two</li>
+      <li ${scrollWhen(s.current === 2)}>Three</li>
+    </ol>
+    <button type="button" data-intent=${i.Next}>Next</button>
   `,
 });
 ```

@@ -52,6 +52,9 @@ Every spec section that states behaviour has tests in `packages/core/test/view/`
 it. Two properties run with fast-check over generated templates and values:
 
 1. **Server equals client:** the server string for a template result, parsed by the browser,
-   has the same DOM (via `getHTML()`) as the client rendering of the same result.
+   has the same DOM (via `getHTML()`) as the client rendering of the same result. Form state is
+   compared by its live properties (`value`, `checked`, `selected`), not by those attributes:
+   the browser writes the `value`/`checked`/`selected` attributes only on first creation (02),
+   so after an update they legitimately differ from a fresh server string.
 2. **Hydration is identity:** hydrating server output and then rendering a second result gives
    the same DOM as client-rendering the second result directly, and keeps the server's nodes.

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { registerTools, type ToolOptions } from './tools.js';
 import type { Corpus } from './types.js';
 
-const INSTRUCTIONS = `Gyral builds web components as Model-View-Intent loops on Lit: intent parses DOM events into typed messages, update is one pure reducer per message, view is a pure function of state that names intents with data-intent (no event handlers), and side effects are commands performed by drivers. Read the gyral://skill resource first. Use search_docs / get_doc for guides, get_api for exact signatures, get_example for working code, scaffold_component for a starting point, and check_snippet before presenting code.`;
+const INSTRUCTIONS = `Gyral builds web components as Model-View-Intent loops with their own view layer (html, css, each, prop from @gyral/core): intent parses DOM events into typed messages, update is one pure reducer per message, view is a pure function of state that names intents with data-intent (no event handlers), and side effects are commands performed by drivers. Read the gyral://skill resource first. Use search_docs / get_doc for guides, get_api for exact signatures, get_example for working code, scaffold_component for a starting point, and check_snippet before presenting code.`;
 
 function registerResources(server: McpServer, corpus: Corpus): void {
   server.registerResource(

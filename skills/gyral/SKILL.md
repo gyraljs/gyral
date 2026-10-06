@@ -1,15 +1,16 @@
 ---
 name: gyral
-description: Build web apps and components with Gyral (@gyral/core, @gyral/ssr, @gyral/http, @gyral/router, @gyral/time, @gyral/testing, @gyral/devtools, create-gyral) — Model-View-Intent custom elements on Lit with server rendering that hydrates in place, effects as data, and DOM-free tests. Use whenever code imports @gyral/*, calls define()/defineStore()/command(), uses data-intent markup, or the user asks for a Gyral app, component, form, store, driver, SSR page or test.
+description: Build web apps and components with Gyral (@gyral/core, @gyral/ssr, @gyral/http, @gyral/router, @gyral/time, @gyral/testing, @gyral/devtools, create-gyral) — Model-View-Intent custom elements with their own view layer, server rendering that hydrates in place, effects as data, and DOM-free tests. Use whenever code imports @gyral/*, calls define()/defineStore()/command(), uses data-intent markup, or the user asks for a Gyral app, component, form, store, driver, SSR page or test.
 ---
 
 # Building with Gyral
 
-Gyral compiles a **Model-View-Intent** spec into a standard custom element (a Lit element).
+Gyral compiles a **Model-View-Intent** spec into a standard custom element, rendered by
+Gyral's own view layer (`html`, `css`, `each` from `@gyral/core`; no Lit).
 Every component is one loop: **intent** parses DOM events into typed messages, **update** is
 one pure reducer per message, **view** is a pure function of state. Side effects are
 **commands** (data) that drivers perform. Pages render on the server with Declarative Shadow
-DOM and hydrate in place. Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
+DOM and hydrate in place (being rewritten for 0.3: see `references/ssr.md`). Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
 
 ## The shape of every component
 
@@ -51,16 +52,17 @@ export const Counter = define<State, Msg>('my-counter', {
    in `update`/`init`/`view`. Return `[nextState, [command, …]]` and let a driver do it.
 4. **Intent parsers validate.** Return a message, `undefined` (ignore the event) or let
    `form()`/`field()` produce `IntentRejected`. Never trust `value` without checking it.
-5. **Props are read-only context** (`ctx.props`). They enter state only through
-   `init(props)` and the optional `PropsChanged` reducer.
+5. **Props are read-only context** (`ctx.props`), declared with `prop.*` builders
+   (Standard Schema; attributes are kebab-case and always validated). They enter state only
+   through `init(props)` and the optional `PropsChanged` reducer.
 6. **State, props and store state must be JSON-serializable.** They travel to the browser in
    hydration seeds (no `Map`, class instances, functions or `Date` objects in state).
-7. **Import Lit helpers from `@gyral/core`** (`html`, `css`, `nothing`, `repeat`, `keyed`,
-   `classMap`, `styleMap`, `live`). Exactly one copy of Lit: spread `gyralVitePreset()` into
-   the Vite/Vitest config.
-8. **SSR client entry imports `@gyral/ssr/hydrate` first**, before anything that imports
-   `lit` or `@gyral/core`. Boolean form state uses `?checked=${liveBoolean(x)}`, never
-   `.checked=${x}` (Lit SSR writes `checked="false"`, which checks the box).
+7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
+   `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
+   config: `vite build` then compiles templates and checks their rules.
+8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
+   arguments; pass view values (`i.Remove`, the selection) through `pick`. Form state uses
+   attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`.
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
    real browser (Vitest browser mode) with fake drivers; `await settled()` before asserting on
    the DOM. No jsdom.
@@ -74,8 +76,8 @@ npm create gyral@latest my-app -- --template basic   # client-rendered
 npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
 ```
 
-Manual install: `npm i @gyral/core lit` (+ `@gyral/ssr @lit-labs/ssr @lit-labs/ssr-client`
-for SSR, `@gyral/http @gyral/router @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
+Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
+@gyral/time` as needed, `-D @gyral/testing`). tsconfig:
 `strict`, `moduleResolution: "bundler"`, `useDefineForClassFields: false`.
 
 ## Decision tables
@@ -101,10 +103,10 @@ for SSR, `@gyral/http @gyral/router @gyral/time` as needed, `-D @gyral/testing`)
 
 ## References (read on demand)
 
-- `references/components.md` — `define()` spec fields, props, styles, light DOM, custom states, view transitions
+- `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
-- `references/view.md` — template rules and directives: `liveBoolean`, `invalid`, `textarea`, `labelledBy`, `focus`
+- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `labelledBy`), `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path

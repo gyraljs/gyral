@@ -1,7 +1,7 @@
 # AGENTS.md
 
-A [Gyral](https://gyral.dev) app: Model-View-Intent web components on Lit, client-rendered with
-Vite. This file tells coding agents how the project works.
+A [Gyral](https://gyral.dev) app: Model-View-Intent web components with Gyral's own view layer,
+client-rendered with Vite. This file tells coding agents how the project works.
 
 ## Commands
 
@@ -33,7 +33,9 @@ Vite. This file tells coding agents how the project works.
    reducer. Children report up with `emit()`; parents read outputs with `child()`.
 6. Shared state goes in a store: `defineStore`, `spec.stores`, `ctx.read(store)`,
    `send(store, msg)`.
-7. Keep state JSON-serializable. Import `html`, `css` and Lit directives from `@gyral/core`.
+7. Keep state JSON-serializable. Import `html`, `css`, `each` and hooks from `@gyral/core`.
+   Lists: `each(items, key, row, pick?)` with pure rows (view values through `pick`). Form
+   state: `value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`. Props: `prop.*`.
 8. Use semantic HTML (real buttons, labels, forms, `<output aria-live>`) and modern CSS in
    `@layer component` inside `styles`.
 

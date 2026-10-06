@@ -101,19 +101,12 @@ function buildApi() {
       const node = symbol.declarations?.[0];
       if (node === undefined) throw new Error(`build-corpus: ${exported.name} has no declaration`);
       const doc = ts.displayPartsToString(symbol.getDocumentationComment(checker));
-      const fromLit = /\/node_modules\/(lit|lit-html|lit-element|@lit)\//.test(
-        node.getSourceFile().fileName,
-      );
       return {
         name: exported.name,
         specifier,
         kind: kindOf(node, checker),
-        declaration: fromLit
-          ? `// Re-exported from Lit: import { ${exported.name} } from '${specifier}';`
-          : declarationText(node, exported.name, checker),
-        doc: fromLit
-          ? `Lit's \`${exported.name}\`, re-exported so apps use one copy of Lit. See https://lit.dev/docs/.`
-          : doc,
+        declaration: declarationText(node, exported.name, checker),
+        doc,
       };
     });
   });

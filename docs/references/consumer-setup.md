@@ -1,29 +1,27 @@
 # Using Gyral in an app
 
-Gyral renders with [Lit](https://lit.dev). Lit must exist **once** in an app: two copies give
-two `LitElement` classes and two template systems, and server-rendered templates stop
-hydrating. So the Lit packages are **peer dependencies** of `@gyral/core` and `@gyral/ssr`.
-Your app installs them, and every Gyral package uses your copy.
+Gyral renders with its own view layer ([ADR 0018](../design-docs/0018-view-layer.md),
+[view/](../design-docs/view/README.md)): templates, keyed lists, element hooks, styles, the
+element base and the scheduler all live in `@gyral/core`. There is no `lit` dependency.
 
 ## Install
 
 ```sh
-pnpm add @gyral/core lit
+pnpm add @gyral/core
 # Optional packages
 pnpm add @gyral/http @gyral/router @gyral/time
 pnpm add -D @gyral/testing
-# Server rendering (ADR 0012)
-pnpm add @gyral/ssr @lit-labs/ssr @lit-labs/ssr-client
+# Server rendering (ADR 0012; being rewritten for 0.3.0, see below)
+pnpm add @gyral/ssr
 ```
 
-| Package                                                         | Peer dependencies                                               |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| `@gyral/core`                                                   | `lit` ^3.3                                                      |
-| `@gyral/ssr`                                                    | `lit` ^3.3, `@lit-labs/ssr` ^4.1, `@lit-labs/ssr-client` ^1.1.8 |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/testing` | none beyond `@gyral/core`                                       |
+| Package                                                         | Peer dependencies                                           |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `@gyral/core`                                                   | none at runtime; `vite` and `parse5` (optional, build time) |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/testing` | none beyond `@gyral/core`                                   |
 
-Import Lit helpers (`html`, `css`, `nothing`, `repeat`, `live`, …) from `@gyral/core`. Only
-import `lit` directly for plain `LitElement` classes.
+Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
+`defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.
 
 ## Vite and Vitest: `gyralVitePreset()`
 
@@ -40,27 +38,20 @@ export default defineConfig({ ...gyralVitePreset(), build: {/* … */} });
 projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */} } }];
 ```
 
-- **`resolve.dedupe` (`LIT_PACKAGES`)**: package managers usually dedupe peers, but can't when
-  Gyral comes from a `link:` path or a second checkout (as in gyral-shop before Gyral is
-  published), because each tree has its own `node_modules`. Symptom if you skip it: "Multiple
-  versions of Lit loaded", or "Hydration value mismatch" with duplicated DOM.
-- **`optimizeDeps.include` (`LIT_PREBUNDLE`)**: the Lit modules Gyral imports or re-exports
-  (`lit`, `lit/directive.js`, `lit/static-html.js` for `textarea()`, and the directives behind
-  `classMap`, `keyed`, `live`, `repeat`, `styleMap`). Without it, Vite discovers them during the
-  first browser test run, reloads the page ("Vite unexpectedly reloaded a test") and the run
-  fails. If your app imports other Lit modules directly, add them:
-  `gyralVitePreset({ optimize: ['lit/directives/unsafe-html.js'] })`.
 - **`plugins` (the template compiler)**: see below. If your config has plugins of its own,
   list both, or the spread is overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the
+  first browser test run and reloads the page ("Vite unexpectedly reloaded a test"), list it:
+  `gyralVitePreset({ optimize: ['some-dependency'] })`.
 
 ### Template compiler
 
 The preset's plugin runs in `vite build` only (view/01-templates.md "Compiled"); the dev server
 and Vitest keep the runtime template path. In a build it:
 
-- rewrites every `html` template imported straight from the view layer, dependencies in
-  `node_modules` included, into a precompiled template object, and adds the `gyral-compiled`
-  resolve condition so the runtime template preparer leaves the bundle;
+- rewrites every `html` template imported from `@gyral/core`, dependencies in `node_modules`
+  included, into a precompiled template object, and adds the `gyral-compiled` resolve condition
+  so the runtime template preparer leaves the bundle;
 - fails the build, with a code frame, on a template rule violation (view/09-template-rules.md)
   and on any `html` it can't follow: an alias (`const h = html`), a call (`html(strings)`), or a
   re-export whose templates would stay uncompiled. Import `html` from `@gyral/core` where you
@@ -69,62 +60,36 @@ and Vitest keep the runtime template path. In a build it:
   (`pnpm add -D parse5`, an optional peer dependency; build time only). Without it, the build
   prints a one-time notice and keeps the normalizer's own check.
 
-Until `@gyral/core` exports the view layer's `html` (0.3.0), its Lit `html` is left alone.
 Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
 `gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
 
 ## Template whitespace
 
-Gyral's `html` and `svg` tags are Lit's, with indentation whitespace removed (gyral-9rf). Lit
-keeps every newline and indent between tags as a DOM text node; a benchmark table row had 12
-of them in 25 nodes, and removing them made creating, replacing and clearing rows 11-24%
-faster. The strings are minified once per call site, at runtime, so the server and the browser
-build identical templates in any toolchain (Vite, tsx, plain Node) and hydration digests match.
-There is no build step and nothing to configure.
+The view layer normalizes template whitespace once per template, the same way in the compiler,
+the browser and the server (view/01-templates.md "Whitespace"), so there is nothing to
+configure. Indentation between block-level tags disappears; between inline neighbours it
+becomes one space; `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` keep theirs.
 
-- Whitespace-only text that contains a newline is removed next to a template edge, a
-  block-level tag (`div`, `p`, `li`, `tr`, `td`, …), or the inside edge of a `<button>` or
-  `<select>`. CSS never renders whitespace there.
-- Between two inline neighbours (`span`, `b`, `a`, custom elements, `${bindings}`,
-  comments) it becomes one space, so `Hello <b>${name}</b>` on two lines still reads
-  "Hello Ada again".
-- Other runs of whitespace in text become one space.
-- Unchanged: `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` contents, tags,
-  attribute values and comments.
+## Tests
 
-**When to opt out.** If an element shows text with CSS `white-space: pre`, `pre-wrap` or
-`break-spaces` outside `<pre>`/`<textarea>`, write that template with `html` from `lit`, which
-keeps whitespace exactly. Use the same import on the server and the client (it is the same
-module), so hydration still matches.
+`await settled()` (from `@gyral/core`) waits until every component has rendered, view
+transitions included (view/04-scheduler.md). It replaces 0.2's `el.updateComplete`.
 
-## Server rendering checklist
+## Server rendering
 
-- Import `@gyral/ssr/hydrate` **first** in the client entry, before anything that imports
-  `lit` or `@gyral/core`.
-- Allow `style-src 'unsafe-inline'` in your CSP. Declarative Shadow DOM styles are inline
-  `<style>` elements (ADR 0012, CSP addendum).
-- Keep component state and props JSON-serializable. They travel in the hydration seed.
+Server rendering and hydration are being rebuilt on the view layer for 0.3.0:
+`@gyral/core/server` renders specs to strings without a DOM (view/06-server.md), and hydration
+is built into core (view/07-hydration.md). Until then, a server-rendered component resumes its
+state from its `data-gyral-seed`, clears the server's markup and renders fresh, and
+`@gyral/ssr`'s rendering functions throw. Keep component state and props JSON-serializable:
+they travel in the hydration seed.
 
-## Known issue: lit-html 3.3.1+ list leak
+## Removed in 0.3.0
 
-Since lit-html 3.3.1, removing items rendered with `repeat()` leaves one comment node in the
-DOM per removed item (upstream [lit/lit#5010](https://github.com/lit/lit/issues/5010) and
-[#5298](https://github.com/lit/lit/issues/5298), open as of 2026-10-05). Lists that churn
-keep growing the DOM, and bulk changes get slow: in the Gyral benchmark, clearing 1,000 rows
-took about 3,700 ms on lit-html 3.3.3 and 56 ms on 3.3.0. It affects every Lit-based app,
-not only Gyral. Tracked in gyral-9y6.
-
-**Gyral's own workspace pins lit-html 3.3.0** with an override in `pnpm-workspace.yaml`, so
-Gyral's tests and examples run on the fixed version, and
-`packages/core/test/repeat-leak.test.ts` fails if a leaking lit-html comes back (1,002
-comment nodes after clearing 1,000 rows on 3.3.3, 2 on 3.3.0). Gyral can't pin lit-html
-inside your app, because it arrives through `lit`. Apps with long, frequently changing lists
-should add the same override until upstream fixes it:
-
-- pnpm 10 (`pnpm-workspace.yaml`): `overrides:` then `  lit-html: 3.3.0`
-- pnpm (`package.json`): `"pnpm": { "overrides": { "lit-html": "3.3.0" } }`
-- npm (`package.json`): `"overrides": { "lit-html": "3.3.0" }`
-
-From 0.2.0, development builds of `@gyral/core` check `globalThis.litHtmlVersions` when the
-first component connects and log one `console.warn` if a leaking lit-html (3.3.1 or later)
-is loaded. Production builds don't include the check.
+`svg` templates, `classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,
+`liveBoolean`, `textarea()`, `directive`/`ElementDirective` and Lit re-exports are gone (ADR
+0018). Use `each(items, key, row, pick?)` for keyed lists, plain bindings for form state
+(`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), class and style strings,
+`defineHook` for element behaviours, and plain interpolation in `css`. `svg` templates,
+`classMap` and `styleMap` may return if a real need appears; inline `<svg>` inside `html`
+works.

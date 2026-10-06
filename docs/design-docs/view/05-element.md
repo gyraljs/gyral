@@ -40,7 +40,12 @@ define('shop-filter', {
 Options: `schema` (refines `string`/`number`/`boolean`), `attribute` (a name, or `false` for
 property only), `required`, `default`. The honesty rule of ADR 0007 stays: a prop whose type
 excludes `undefined` must be `required` or have a `default`. Prop types are inferred from the
-schemas' output types.
+schemas' output types. `prop.boolean()` defaults to `false` (an absent attribute).
+
+Typing: `define()` infers the props type from the builders when it gets no type arguments.
+With explicit `define<State, Msg, Props>`, each builder must produce its prop's type (a builder
+without `required`/`default` produces `T | undefined`); `PropsOf<typeof props>` derives `Props`
+from a table of builders.
 
 The `string`/`number`/`boolean` builders carry tiny built-in schemas, so simple props need no
 schema library.
@@ -55,9 +60,12 @@ schema library.
 
 - An invalid value is logged with the tag, prop and schema issues. The prop is then treated as
   missing, so `default` or the `required` warning applies.
-- Schemas must be synchronous (a `Promise` from `validate` is a definition error) and should
+- Schemas must be synchronous (a `Promise` from `validate` is a definition error, thrown where
+  it is detected; from `attributeChangedCallback` the platform reports it instead) and should
   validate rather than transform. In development, a property set whose validated output differs
-  from its input warns, because production doesn't run the schema on property sets.
+  structurally from its input (plain arrays and objects compared by content, so schemas that
+  copy are fine) warns, and the input is kept, because production doesn't run the schema on
+  property sets.
 - No property-to-attribute reflection. State that CSS needs goes through custom states
   (`spec.states`).
 
@@ -74,14 +82,14 @@ schema library.
 
 ## Lifecycle
 
-| Callback                   | Does                                                                                                                                                                                                                                                                                                                                                |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `constructor`              | Upgrade capture. No DOM work.                                                                                                                                                                                                                                                                                                                       |
-| `connectedCallback`, first | Find the root: an existing (declarative) shadow root, or `attachShadow({ mode: 'open' })`, or the host itself for `shadow: false`. With `defer-hydration`, schedule the island and stop (07). Otherwise read the seed (resume) or run `init(props)`; add intent listeners to the root once; connect stores and the command interpreter; mark dirty. |
-| `connectedCallback`, later | A move without `moveBefore`: re-resolve stores and providers (the nearest may differ), restart the interpreter. No re-render unless something changed.                                                                                                                                                                                              |
-| `connectedMoveCallback`    | Defined and empty: a `moveBefore()` move keeps everything (03).                                                                                                                                                                                                                                                                                     |
-| `disconnectedCallback`     | Dispose the interpreter, unsubscribe stores. State is kept for a later reconnect.                                                                                                                                                                                                                                                                   |
-| `attributeChangedCallback` | Prop attributes: parse, validate, set. `defer-hydration` removed: release the island (07).                                                                                                                                                                                                                                                          |
+| Callback                   | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `constructor`              | Upgrade capture. No DOM work.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `connectedCallback`, first | Read the seed (resume). With `defer-hydration`, schedule the island and stop (07). Otherwise find the root: an existing (declarative) shadow root, or `attachShadow({ mode: 'open' })`, or the host itself for `shadow: false`; adopt the shared sheets (08); run `init(props)` unless resumed; add intent listeners to the root once; connect stores and the command interpreter; mark dirty. Until hydration (Phase 5), a resumed host clears its root in its first render and renders fresh. |
+| `connectedCallback`, later | A move without `moveBefore`: re-resolve stores and providers (the nearest may differ), restart the interpreter. No re-render unless something changed.                                                                                                                                                                                                                                                                                                                                          |
+| `connectedMoveCallback`    | Defined and empty: a `moveBefore()` move keeps everything (03).                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `disconnectedCallback`     | Dispose the interpreter, unsubscribe stores. State is kept for a later reconnect.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `attributeChangedCallback` | Prop attributes: parse, validate, set. `defer-hydration` removed: release the island (07).                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 `observedAttributes` lists the props' attribute names plus `defer-hydration`.
 
@@ -105,11 +113,19 @@ it: custom states today, form association later.
 
 ## Registration
 
-- `customElements.define(tag, Class)` unless the tag is already defined. Defining the same tag
-  with a different spec warns in development.
+- `customElements.define(tag, Class)` unless the tag is already defined; then `define()`
+  returns the registered class. Defining the same tag with a different spec warns in
+  development.
 - In an environment without `HTMLElement` (Node), `define()` records the spec in the server
-  registry used by `@gyral/core/server` (06) and returns a placeholder class. That check is a
-  few bytes; no export condition is needed.
+  registry used by `@gyral/core/server` (06) and returns a placeholder class (it carries `spec`
+  and `tagName`; constructing it throws). That check is a few bytes; no export condition is
+  needed.
+- The registry lives in `view/registry.ts` (so `view/server/` can read it):
+  `registerServerComponent(c)`, `serverComponent(tag)`, `serverComponents()`. An entry is
+  `{ tag, light, styles (CSS texts), hydrate, render({ attributes, properties,
+initialMessages? }) → { view, seed } }`; `render` parses props as the browser does, runs
+  `init` (commands dropped) and `initialMessages`, and computes the seed (06 "Seed"). Core's
+  `server-component.ts` builds it from a spec.
 
 ## Native primitives
 

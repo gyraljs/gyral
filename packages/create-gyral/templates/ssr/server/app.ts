@@ -3,9 +3,8 @@
 // (server/prerender.ts) and in production (server/prod.ts).
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-// @gyral/ssr first: it installs the server DOM shim the components need.
+import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
-import { html } from 'lit';
 import '../src/home-page.js';
 
 export interface AppOptions {
