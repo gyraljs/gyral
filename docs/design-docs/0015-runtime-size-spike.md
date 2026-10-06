@@ -1,9 +1,10 @@
 # ADR 0015 — Runtime size spike: Effect 3, Micro, Effect 4, or no Effect
 
-Status: **accepted — (c) Effect 4 from 0.2.0** (owner, 2026-10-05; see the decision addendum at
-the end). 0.1.0 shipped on (a) Effect 3. Proposed
-2026-10-04). Beads: gyral-ob0 (bundle size),
-gyral-d0x (Effect 4 evaluation), gyral-czi.9 (Effect adds ~40 kB).
+Status: **accepted — (d) no Effect from 0.2.0** (owner, 2026-10-05; see the final decision at
+the end). 0.1.0 shipped on (a) Effect 3; the interim Effect 4 decision below was superseded the
+same day by measurements. Proposed 2026-10-04. Beads: gyral-ob0 (bundle size), gyral-d0x
+(Effect 4 evaluation), gyral-czi.9 (Effect adds ~40 kB), gyral-das, gyral-qh4, gyral-pr7,
+gyral-sug.
 
 ## Question
 
@@ -164,19 +165,43 @@ above for 0.2.0 onwards.
   about 13 of its 24 KiB. Option (d) is the only way below that; revisit with the published
   benchmark.
 
-## NOTE: no-Effect experiment (experiment, not a decision) (2026-10-05, gyral-das)
+## Final decision: no Effect from 0.2.0 (2026-10-05)
 
-Local branch `exp/no-effect` (off `exp/lit330-effect4`, not merged) ports option (d) onto
-the current interpreter, which now also carries devtools tracing. `effect` is removed from
-`@gyral/core`; `internal/runtime.ts` is gone. Interruption is one `AbortController` per
-task, retry schedules are timers that cancel on abort, `queue` chains on the previous
-task's promise, and devtools `interrupted` fires from the abort listener while a command is
-unsettled. All 632 tests pass unchanged (concurrency lanes, retry, streaming, cancellation
-on disconnect, devtools traces), as does `smoke:prod`; the public API is identical.
+**The owner adopts option (d), the hand-written runtime with no Effect, together with the
+lit-html 3.3.0 pin and template whitespace minification (gyral-9rf), for 0.2.0.** This
+supersedes the Effect 4 addendum above and ADR 0002. Branch `release/0.2.0` combines
+`exp/no-effect` and `exp/whitespace` (bead gyral-sug). Full write-up: the runtime report
+(https://claude.ai/artifact/4EADFNaSvmGg25wbiKR5Pz, private to the owner).
 
-- Size (`pnpm size`, gzip): counter 11.1 KiB (Effect 4: 24.3), http-search-github 15.1
-  (28.5), isomorphic 16.2 (29.5).
-- Code: 214 lines of hand-written runtime vs 169 for the Effect 4 interpreter + runtime.
-- Benchmarks: `gyral-benchmarks` branch `exp/no-effect`, `COMPARISON-noeffect.md`.
+- **Runtime:** one `AbortController` per task, retry schedules as timers that cancel on
+  abort, `queue` chained on the previous task's promise, devtools `interrupted` from the abort
+  listener. 214 lines in `packages/core/src/internal/interpreter.ts`; `effect` is no longer a
+  dependency of any package, and `internal/runtime.ts` is gone. All lane, retry, streaming,
+  cancellation and devtools tests pass unchanged; the public API is identical.
+- **Why (d) over the alternatives,** all measured in one trace-timed session
+  (gyraljs/benchmarks branch `exp/pipewise`, `results/2026-10-05-all-runtimes-trace-a3/`):
 
-This would reverse ADR 0002's premise; it is recorded here as evidence for the owner.
+  | Option               | Empty app (KiB gzip) | Todo interactive (ms) | Heap (MB) | Table geomean |
+  | -------------------- | -------------------: | --------------------: | --------: | ------------: |
+  | Effect 4             |                 24.0 |                 521.9 |      1.36 |          1.35 |
+  | **No Effect**        |             **10.8** |             **438.4** |  **1.24** |      **1.34** |
+  | two-track            |                 11.1 |                 444.5 |      1.24 |          1.36 |
+  | pipewise             |                 12.3 |                 441.9 |      1.24 |          1.35 |
+  | pipewise + two-track |                 12.7 |                 449.1 |      1.24 |          1.36 |
+  | Lit (reference)      |                  5.8 |                 408.8 |      1.20 |          1.34 |
+
+  Rendering speed is the same for every option (the interpreter only runs for commands), so
+  the choice is size, startup and maintenance. (d) is the smallest, starts fastest, adds no
+  dependency and keeps synchronous driver start.
+
+- **Not chosen, with the condition to revisit:**
+  - **pipewise** (best-tested lane semantics): when Gyral adds stream-shaped features and
+    pipewise is on npm with exponential backoff and exhaust-drop reporting.
+  - **two-track:** as a public `Result` type for `@gyral/http` and forms, once published with
+    its retry-after-abort bug fixed.
+  - **Effect:** `@gyral/effect` (gyral-5zk) becomes an optional adapter for apps that use
+    Effect, built on demand; Gyral itself has no Effect dependency.
+- **What we now own:** interruption, retry timing and task tracking, about 214 lines, covered
+  by the existing tests. Effect's scheduler is no longer available for future features.
+- **Confirmation:** the combined candidate is benchmarked as one build before release
+  (gyral-sug; `gyraljs/benchmarks` branch `exp/release-0.2.0`, `CONFIRMATION.md`).

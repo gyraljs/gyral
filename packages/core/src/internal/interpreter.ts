@@ -2,8 +2,7 @@ import { DEVTOOLS_ENABLED } from '#devtools';
 import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 
-// EXPERIMENT (ADR 0015, option d, branch exp/no-effect): the command interpreter without
-// Effect. Each running command is a task with its own AbortController; lanes hold the
+// The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`, retry schedules are timers
 // that cancel on abort, and `queue` chains on the previous task's promise.
 

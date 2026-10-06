@@ -3,7 +3,8 @@
 //   pnpm size counter bmi     → only those
 //   pnpm size --json          → machine-readable output
 // Each example is built twice with Vite in production mode: once as shipped, once with
-// `effect` externalized. The difference is Effect's contribution to the bundle.
+// `effect` externalized. Since 0.2.0 Gyral has no Effect dependency (ADR 0015), so the
+// "effect" column reads 0 unless an app imports Effect itself.
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';

@@ -6,8 +6,9 @@ import compat from 'eslint-plugin-compat';
 import globals from 'globals';
 
 const EFFECT_BOUNDARY =
-  'Effect is an internal implementation detail (docs/design-docs/0002-effect-boundary.md). ' +
-  'Move this code under packages/<pkg>/src/internal/ and expose a plain TypeScript API from it.';
+  'Gyral has no Effect dependency since 0.2.0 (docs/design-docs/0015-runtime-size-spike.md). ' +
+  'Write it in plain TypeScript (Promise, AbortSignal, tagged unions); Effect integration ' +
+  'belongs in an optional adapter package such as @gyral/effect, not in src/internal/.';
 
 const effectImports = {
   paths: [{ name: 'effect', message: EFFECT_BOUNDARY }],
@@ -120,7 +121,8 @@ export default tseslint.config(
     },
   },
   {
-    // Internal modules are the only place Effect is allowed.
+    // Internal modules host the Labs adapters (ssr/src/internal/lit.ts); Effect is still
+    // excluded there by the dependency check in scripts/check-public-api.mjs.
     files: ['packages/*/src/internal/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },

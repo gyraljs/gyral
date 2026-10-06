@@ -3,14 +3,49 @@
 
 const EFFECT_IMPORT = /(?:from\s+|import\s*\(\s*)['"](effect|@effect\/[^'"]+|effect\/[^'"]+)['"]/g;
 
-/** Public declaration files must not mention Effect (docs/design-docs/0002-effect-boundary.md). */
+/** Public declaration files must not mention Effect: the public API is plain TypeScript. */
 export function findEffectLeaks(file, text) {
   return [...text.matchAll(EFFECT_IMPORT)].map(
     (m) =>
-      `${file}: public types reference "${m[1]}". Effect must stay internal ` +
-      `(docs/design-docs/0002-effect-boundary.md). Convert the type to plain TypeScript ` +
-      `(tagged unions, Promise, AbortSignal) before exporting it.`,
+      `${file}: public types reference "${m[1]}". Gyral's public API is plain TypeScript and ` +
+      `Gyral has no Effect dependency (docs/design-docs/0015-runtime-size-spike.md). Convert ` +
+      `the type to plain TypeScript (tagged unions, Promise, AbortSignal) before exporting it.`,
   );
+}
+
+/** Runtime dependencies @gyral/core may have besides its `lit` peer (types-only packages). */
+export const CORE_ALLOWED_DEPENDENCIES = ['@standard-schema/spec'];
+
+/**
+ * Dependency rules (docs/design-docs/0015-runtime-size-spike.md): no package depends on
+ * `effect`, and @gyral/core has no runtime dependency beyond the allowlist.
+ */
+export function checkDependencies(file, manifest) {
+  const errors = [];
+  const sections = ['dependencies', 'peerDependencies', 'optionalDependencies'];
+  for (const section of sections) {
+    for (const dep of Object.keys(manifest[section] ?? {})) {
+      if (dep === 'effect' || dep.startsWith('@effect/')) {
+        errors.push(
+          `${file}: ${section} has "${dep}". Gyral has no Effect dependency since 0.2.0 ` +
+            `(ADR 0015). Implement it in plain TypeScript, or put it in an optional adapter ` +
+            `package such as @gyral/effect.`,
+        );
+      }
+    }
+  }
+  if (manifest.name === '@gyral/core') {
+    for (const dep of Object.keys(manifest.dependencies ?? {})) {
+      if (!CORE_ALLOWED_DEPENDENCIES.includes(dep)) {
+        errors.push(
+          `${file}: @gyral/core must have no runtime dependencies besides its lit peer ` +
+            `(allowed: ${CORE_ALLOWED_DEPENDENCIES.join(', ')}). Remove "${dep}" or ` +
+            `implement what you need inside packages/core/src/internal/.`,
+        );
+      }
+    }
+  }
+  return errors;
 }
 
 /** Top-level keys of the workflow's `on:` block. Handles block, inline and list forms. */

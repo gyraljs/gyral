@@ -81,20 +81,19 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
 
 ### Lifecycle and runtime
 
-- Each element owns an interpreter. Commands run as Effect fibers, forked through **one**
-  internal runtime module (`packages/core/src/internal/runtime.ts`); nothing else calls
-  `run*`.
-- Cancellation: `AbortSignal` outside, fiber interruption inside (`Effect.tryPromise` links
-  them). `switch` and `disconnectedCallback` interrupt in-flight fibers; their `signal`
+- Each element owns an interpreter (`packages/core/src/internal/interpreter.ts`). Each running
+  command is a task with its own `AbortController`; lanes hold the latest task per key.
+  (Until 0.1.x commands ran as Effect fibers; ADR 0015 removed Effect in 0.2.0.)
+- Cancellation: `switch` and `disconnectedCallback` abort in-flight tasks; their `signal`
   aborts, and their results are never dispatched.
-- Retries use `Schedule` (`recurs` ∩ `spaced`/`exponential`). Only failures retry; interrupts
-  never do.
+- Retries are timers that cancel on abort (fixed or exponential delay, `times` cap). Only
+  failures retry; aborts never do.
 - A driver failure becomes `onFailure(toError(cause))`, a message. Nothing is thrown into
   the view.
 
 ## Consequences
 
-- Public types are plain TypeScript; Effect stays in `src/internal/` (checked).
+- Public types are plain TypeScript (checked); no package depends on Effect (ADR 0015).
 - Debounce is "switch + delay": a timer driver with `concurrency: 'switch'` (see the
   http-search-github example). The time driver package (gyral-ud5.3) generalises this.
 - Virtual time for retry/debounce tests lives in `@gyral/testing` (see Testing below).

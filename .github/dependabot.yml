@@ -13,10 +13,6 @@ updates:
       runtime-dependencies:
         dependency-type: production
     ignore:
-      # Effect majors are deliberate, tracked decisions (ADR 0015); 4.x minors and patches
-      # come through as usual.
-      - dependency-name: effect
-        update-types: [version-update:semver-major]
       # lit-html >= 3.3.1 leaks a comment node per removed repeat() item
       # (https://github.com/lit/lit/issues/5298); the workspace pins 3.3.0 until it's fixed.
       - dependency-name: lit-html

@@ -1,6 +1,10 @@
 # ADR 0002 — Effect inside, plain TypeScript outside
 
-Status: **accepted** (2026-10-04)
+Status: **superseded** by [ADR 0015](0015-runtime-size-spike.md) (2026-10-05). Gyral 0.2.0
+has no Effect dependency: measurements showed Effect was most of a small app's JavaScript and
+bought no runtime speed. The public-API half of this ADR still holds (plain TypeScript,
+Promises, `AbortSignal`); `@gyral/effect` becomes an optional adapter for Effect users.
+Originally accepted 2026-10-04.
 
 ## Context
 

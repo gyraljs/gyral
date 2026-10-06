@@ -18,8 +18,9 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
   state only through the optional `PropsChanged` reducer (ADR 0007). Schema failures in
   `form()`/`field()` intents arrive as `IntentRejected` (ADR 0008).
 - **Effects** are commands (plain data) returned by `update` or `init`. Drivers carry them out
-  under a per-lane concurrency policy and report back as messages. The interpreter uses Effect
-  internally (ADRs 0002, 0006).
+  under a per-lane concurrency policy and report back as messages. The interpreter is
+  hand-written plain TypeScript with no runtime dependencies (ADRs 0006, 0015; ADR 0002 is
+  superseded).
 
 ## Packages and layers
 
@@ -46,7 +47,7 @@ Enforced by `eslint.config.js` (import restrictions for core, layer-1 packages a
 packages/<pkg>/
   src/index.ts       public API: plain TypeScript only
   src/*.ts           public modules
-  src/internal/      implementation detail; Effect allowed here
+  src/internal/      implementation detail; not exported
   test/*.test.ts     Vitest, runs in real Chromium
   tsconfig.build.json  declaration build (used by the public-API check)
 ```
