@@ -8,6 +8,7 @@ interface Live extends HTMLElement {
 }
 
 let page: MountedSsr | undefined;
+let serverParagraphs: Element[] = [];
 
 const el = (tag: string): Live => {
   const found = document.querySelector(tag);
@@ -19,6 +20,7 @@ const text = (tag: string, sel: string): string | undefined =>
 
 beforeAll(async () => {
   page = mountSsr(serverHtml);
+  serverParagraphs = [...(document.querySelector('test-empty-text')?.shadowRoot?.children ?? [])];
   await import('./support/empty-text.js');
   await hydrated(page);
 });
@@ -27,8 +29,12 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip("a text binding rendered from '' on the server (gyral-4k7.12)", () => {
+describe("a text binding rendered from '' on the server (gyral-4k7.12)", () => {
+  it('hydrates in place: the server paragraphs are kept', () => {
+    expect([...(el('test-empty-text').shadowRoot?.children ?? [])]).toEqual(serverParagraphs);
+    expect(serverParagraphs).toHaveLength(2);
+  });
+
   it('shows content set after hydration (shadow DOM)', async () => {
     el('test-empty-text').send({ _tag: 'Say', text: 'Hello' });
     await settled();
@@ -36,11 +42,12 @@ describe.skip("a text binding rendered from '' on the server (gyral-4k7.12)", ()
     expect(text('test-empty-text', '.mixed')).toBe('Note: Hello!');
   });
 
-  it('keeps the closing marker intact and survives cycling back to empty', async () => {
+  it('keeps the anchor intact and survives cycling back to empty', async () => {
     const host = el('test-empty-text');
     const msg = host.shadowRoot?.querySelector('.msg');
-    const comments = [...(msg?.childNodes ?? [])].filter((n) => n instanceof Comment);
-    expect(comments.map((c) => c.data)).toEqual(['lit-part', '/lit-part']);
+    const mixed = host.shadowRoot?.querySelector('.mixed');
+    const comments = [...(mixed?.childNodes ?? [])].filter((n) => n instanceof Comment);
+    expect(comments.map((c) => c.data)).toEqual(['']);
     for (const text of ['', 'Again', '']) {
       host.send({ _tag: 'Say', text });
       await settled();

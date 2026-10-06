@@ -35,8 +35,7 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip('lazy hydration islands (gyral-4k7.4)', () => {
+describe('lazy hydration islands (gyral-4k7.4)', () => {
   it('hydrates load components right away and keeps islands inert', () => {
     expect(el('test-island-load').state['hydrated']).toBe(true);
     expect(deferred('test-island-visible')).toBe(true);
@@ -69,13 +68,33 @@ describe.skip('lazy hydration islands (gyral-4k7.4)', () => {
     expect(el('test-island-interaction').state['count']).toBe(1);
   });
 
-  it('releases nested components together with their island', async () => {
+  it('hydrates a component nested in a pending island on its own (07: no parent order)', async () => {
     const parent = el('test-island-parent');
+    expect(deferred('test-island-parent')).toBe(true);
+    const nested = parent.shadowRoot?.querySelector('test-island-load') as Live | null;
+    expect(nested?.state['hydrated']).toBe(true);
+    const p = parent.shadowRoot?.querySelector('p');
     parent.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
     await settled();
-    const nested = parent.shadowRoot?.querySelector('test-island-load');
-    expect(nested?.hasAttribute('defer-hydration')).toBe(false);
-    expect((nested as Live | null)?.state['hydrated']).toBe(true);
+    expect(deferred('test-island-parent')).toBe(false);
+    expect(parent.shadowRoot?.querySelector('p')).toBe(p);
+    expect(parent.shadowRoot?.querySelector('test-island-load')).toBe(nested);
+  });
+
+  it('keeps an island inside a hydrated component deferred: islands sit anywhere', async () => {
+    const host = el('test-island-host');
+    expect(host.state['n']).toBe(1);
+    const inner = host.shadowRoot?.querySelector<Live>('test-island-interaction');
+    if (inner == null) throw new Error('no inner island');
+    expect(inner.hasAttribute('defer-hydration')).toBe(true); // the host's walk left it alone
+    const innerButton = inner.shadowRoot?.querySelector('button');
+    innerButton?.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, composed: true }));
+    await settled();
+    expect(inner.hasAttribute('defer-hydration')).toBe(false);
+    expect(inner.shadowRoot?.querySelector('button')).toBe(innerButton);
+    innerButton?.click();
+    await settled();
+    expect(inner.state['count']).toBe(1);
   });
 
   it('hydrates visible islands when they scroll into view', async () => {

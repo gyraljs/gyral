@@ -50,7 +50,7 @@ export function lightHydrationSuite(label = ''): void {
       (n) => n.nodeType === Node.TEXT_NODE && /\d/.test(n.textContent ?? ''),
     );
     if (text === undefined) throw new Error('no count text');
-    text.textContent = String(count);
+    text.textContent = (text.textContent ?? '').replace(/\d+/, String(count));
   }
 
   beforeAll(async () => {

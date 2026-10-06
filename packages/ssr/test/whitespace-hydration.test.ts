@@ -28,8 +28,7 @@ afterAll(() => {
   errors.mockRestore();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip('indented templates hydrate in place (gyral-9rf)', () => {
+describe('indented templates hydrate in place (gyral-9rf)', () => {
   it('hydrates without mismatch and stays live', async () => {
     const before = root('test-ws-table').querySelector('tr');
     el('test-ws-table').send({ _tag: 'Rename', name: 'Grace' });
@@ -48,7 +47,7 @@ describe.skip('indented templates hydrate in place (gyral-9rf)', () => {
     expect(light?.textContent.replace(/\s+/g, ' ').trim()).toBe('Hello Ada again');
   });
 
-  it('builds 13 nodes per table row: 6 elements, 3 texts, 4 Lit markers', () => {
+  it('builds 9 nodes per table row: 6 elements and 3 texts, no markers', () => {
     const row = root('test-ws-table').querySelector('tr');
     if (row === null) throw new Error('no row');
     const nodes: Node[] = [];
@@ -63,7 +62,7 @@ describe.skip('indented templates hydrate in place (gyral-9rf)', () => {
     const count = (type: number): number => nodes.filter((n) => n.nodeType === type).length;
     expect(count(Node.ELEMENT_NODE)).toBe(6);
     expect(count(Node.TEXT_NODE)).toBe(3);
-    expect(count(Node.COMMENT_NODE)).toBe(4);
-    expect(nodes).toHaveLength(13);
+    expect(count(Node.COMMENT_NODE)).toBe(0);
+    expect(nodes).toHaveLength(9);
   });
 });

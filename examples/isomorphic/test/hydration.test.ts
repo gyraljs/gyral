@@ -29,8 +29,7 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip('hydration', () => {
+describe('hydration', () => {
   it('paints from the server markup before any component code loads', () => {
     expect(customElements.get('gy-iso-app')).toBeUndefined();
     expect($('h1')?.textContent).toBe('Read more about us');

@@ -27,7 +27,7 @@ afterEach(() => {
 
 type Msg = { readonly _tag: 'Inc' };
 
-// Server-rendered markup, until Phase 5 hydrates it, is resumed from the seed and re-rendered.
+// Hand-written server markup (production style: no development markers), hydrated in place.
 define<{ readonly n: number }, Msg>('test-ssr-counter', {
   hydrate: 'idle',
   init: () => ({ n: 0 }),

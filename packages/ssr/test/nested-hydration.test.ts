@@ -3,6 +3,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import serverHtml from './fixtures/nested.ssr.html?raw';
 
 let page: MountedSsr | undefined;
+let before:
+  | {
+      child: Element;
+      childButton: Element | null | undefined;
+      parentButton: Element | null | undefined;
+    }
+  | undefined;
 
 const errors = vi.spyOn(console, 'error');
 // Errors thrown from custom element callbacks (upgrade, connect) are reported here.
@@ -30,9 +37,15 @@ const settle = () => new Promise((r) => setTimeout(r, 20));
 
 beforeAll(async () => {
   page = mountSsr(serverHtml);
-  const childBefore = nested();
-  expect(childBefore.hasAttribute('defer-hydration')).toBe(true);
-  await import('./support/nested.js'); // upgrade: parent hydrates, then releases the child
+  // Nested components are not deferred: each hydrates on its own (view/07-hydration.md).
+  const child = nested();
+  expect(child.hasAttribute('defer-hydration')).toBe(false);
+  before = {
+    child,
+    childButton: child.shadowRoot?.querySelector('button'),
+    parentButton: parent().shadowRoot?.querySelector('button'),
+  };
+  await import('./support/nested.js'); // upgrade: parent and child hydrate, parents first
   await hydrated(page); // waits for the nested child too; fails on mismatches/errors
   await settle();
 });
@@ -41,10 +54,12 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip('a Gyral child server-rendered inside a parent shadow root', () => {
-  it('hydrates in place without errors and loses defer-hydration', () => {
-    expect(nested().hasAttribute('defer-hydration')).toBe(false);
+describe('a Gyral child server-rendered inside a parent shadow root', () => {
+  it('hydrates both in place without errors: the server nodes are kept', () => {
+    expect(nested()).toBe(before?.child);
+    expect(nested().shadowRoot?.querySelector('button')).toBe(before?.childButton);
+    expect(parent().shadowRoot?.querySelector('button')).toBe(before?.parentButton);
+    expect(nested().shadowRoot?.querySelectorAll('button')).toHaveLength(1);
     expect(nested().hasAttribute('data-gyral-seed')).toBe(false);
     expect(errors).not.toHaveBeenCalled();
     expect(uncaught).toEqual([]);

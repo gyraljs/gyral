@@ -43,7 +43,7 @@ export const StoreIsland = define<{ readonly seen: boolean }, never>('test-islan
   view: (_s, _i, { read }) => html`<output>${read(counter).n}</output>`,
 });
 
-/** An island whose shadow root holds a nested Gyral child: the child hydrates with it. */
+/** An island whose shadow root holds a nested Gyral child: the child hydrates on its own. */
 export const ParentIsland = define<{ readonly label: string }, never>('test-island-parent', {
   hydrate: 'interaction',
   init: () => ({ label: 'parent' }),
@@ -52,4 +52,14 @@ export const ParentIsland = define<{ readonly label: string }, never>('test-isla
   view: (s) =>
     html`<p>${s.label}</p>
       <test-island-load class="nested"></test-island-load>`,
+});
+
+/** A component (hydrated at load) whose shadow root holds an island: islands sit anywhere. */
+export const IslandHost = define<{ readonly n: number }, never>('test-island-host', {
+  init: () => ({ n: 1 }),
+  intent: {},
+  update: {},
+  view: (s) =>
+    html`<p>host ${s.n}</p>
+      <test-island-interaction class="inner"></test-island-interaction>`,
 });

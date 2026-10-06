@@ -9,6 +9,7 @@ interface Live extends HTMLElement {
 }
 
 let page: MountedSsr;
+let serverInput: Element | null | undefined;
 const host = (): Live => {
   const el = document.querySelector('test-invalid-form');
   if (!(el instanceof HTMLElement)) throw new Error('no host');
@@ -33,6 +34,7 @@ const reject = async () => {
 
 beforeAll(async () => {
   page = mountSsr(serverHtml);
+  serverInput = document.querySelector('test-invalid-form')?.shadowRoot?.querySelector('input');
   await import('./support/invalid.js');
   await hydrated(page);
 });
@@ -41,9 +43,9 @@ afterAll(() => {
   page.unmount();
 });
 
-// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
-describe.skip('invalid() after hydration', () => {
-  it('applies the model error to native validity once hydrated', () => {
+describe('invalid() after hydration', () => {
+  it('applies the model error to native validity once hydrated, on the server input', () => {
+    expect(field()).toBe(serverInput);
     expect(field().validationMessage).toBe('Email is taken');
     expect(field().getAttribute('aria-invalid')).toBe('true');
   });
