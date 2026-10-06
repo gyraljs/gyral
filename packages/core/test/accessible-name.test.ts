@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, findInScope, html, labelledBy, settled, type Stateless } from '../src/index.js';
+import {
+  define,
+  findInScope,
+  html,
+  labelledBy,
+  prop,
+  settled,
+  type Stateless,
+} from '../src/index.js';
 
 interface Props {
   readonly target: string;
@@ -7,7 +15,7 @@ interface Props {
 }
 
 const Named = define<Stateless, never, Props>('test-named', {
-  props: { target: { type: String, required: true }, fallback: { type: String } },
+  props: { target: prop.string({ required: true }), fallback: prop.string() },
   intent: {},
   update: {},
   view: (_s, _i, { props }) =>

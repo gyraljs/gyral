@@ -197,9 +197,18 @@ describe('components and stores (ADR 0013)', () => {
     expect(text(document.querySelector('test-badge'), 'output')).toBe('1');
   });
 
-  it('rejects reading a store the spec does not declare', () => {
-    // render() directly (not via Lit's update) so the error surfaces synchronously.
-    const el = document.createElement('test-undeclared') as unknown as { render(): unknown };
-    expect(() => el.render()).toThrow(/without declaring it/);
+  it('rejects reading a store the spec does not declare', async () => {
+    // The view throws; the scheduler logs it with the tag and carries on (view/04 "Errors").
+    const errors: unknown[][] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => errors.push(args);
+    try {
+      document.body.append(document.createElement('test-undeclared'));
+      await settled();
+    } finally {
+      console.error = original;
+    }
+    expect(String(errors[0]?.[0])).toContain('<test-undeclared> failed to render');
+    expect(String(errors[0]?.[1])).toMatch(/without declaring it/);
   });
 });

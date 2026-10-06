@@ -1,7 +1,6 @@
 // Shared state: stores as "props from the side" (docs/design-docs/0013-shared-state.md).
 // A store is MVI without a view: init + pure update, commands run by its own interpreter.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import { isServer } from 'lit';
 import { DEVTOOLS_ENABLED, devCommands, devStore } from '#devtools';
 import {
   splitNext,
@@ -13,7 +12,8 @@ import {
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import type { IntentRejected, Tagged } from './types.js';
 
-const onServer: boolean = isServer;
+/** No DOM means a server render: store commands never run there (ADR 0012). */
+const onServer = typeof document === 'undefined';
 
 type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 

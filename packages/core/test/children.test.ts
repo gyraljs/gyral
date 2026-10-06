@@ -1,11 +1,13 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
 import {
   child,
   define,
+  each,
   emit,
   html,
-  repeat,
+  prop,
   settled,
   type GyralElementClass,
 } from '../src/index.js';
@@ -17,6 +19,18 @@ interface Item {
   readonly done: boolean;
 }
 
+/** A tiny Standard Schema for Item (no schema library needed in core's tests). */
+const itemSchema: StandardSchemaV1<Item> = {
+  '~standard': {
+    version: 1,
+    vendor: 'test',
+    validate: (value) =>
+      typeof value === 'object' && value !== null && 'id' in value
+        ? { value: value as Item }
+        : { issues: [{ message: 'expected an item' }] },
+  },
+};
+
 type ItemOut = { readonly _tag: 'Toggled'; readonly done: boolean } | { readonly _tag: 'Removed' };
 type ItemMsg =
   { readonly _tag: 'Toggle' } | { readonly _tag: 'Remove' } | { readonly _tag: 'Poke' };
@@ -25,7 +39,7 @@ type ItemMsg =
 const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>(
   'test-item',
   {
-    props: { item: { attribute: false, required: true } },
+    props: { item: prop.value(itemSchema, { required: true }) },
     init: () => ({ pokes: 0 }),
     intent: {
       Toggle: () => ({ _tag: 'Toggle' }),
@@ -75,10 +89,11 @@ const TestList = define<{ readonly items: readonly Item[] }, ListMsg>('test-list
   view: (s, i) => html`
     <button id="reverse" data-intent=${i.Reverse}>reverse</button>
     <ul>
-      ${repeat(
+      ${each(
         s.items,
         (it) => it.id,
-        (it) => html`<li><test-item .item=${it} data-intent=${i.Item}></test-item></li>`,
+        (it, intent) => html`<li><test-item .item=${it} data-intent=${intent}></test-item></li>`,
+        () => i.Item,
       )}
     </ul>
   `,
@@ -172,7 +187,7 @@ describe('child() with a lazy source', () => {
   // A recursive component: it renders itself and parses its own outputs.
   const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
     define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
-      props: { nodeId: { type: String, required: true } },
+      props: { nodeId: prop.string({ required: true }) },
       init: () => ({ kids: [] }),
       intent: {
         Add: () => ({ _tag: 'Add' }),
@@ -192,10 +207,11 @@ describe('child() with a lazy source', () => {
       view: (s, i) => html`
         <button class="add" data-intent=${i.Add}>add</button>
         <button class="rm" data-intent=${i.Remove}>remove</button>
-        ${repeat(
+        ${each(
           s.kids,
           (k) => k,
-          (k) => html`<test-tree .nodeId=${k} data-intent=${i.Child}></test-tree>`,
+          (k, intent) => html`<test-tree .nodeId=${k} data-intent=${intent}></test-tree>`,
+          () => i.Child,
         )}
       `,
     });

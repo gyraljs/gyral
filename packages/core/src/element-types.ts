@@ -1,10 +1,12 @@
-import type { LitElement } from 'lit';
 import type { DriverOverrides } from './command.js';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, Tagged } from './types.js';
 
-/** The custom element class produced by `define()`. */
-export interface GyralElement<S, M extends Tagged> extends LitElement {
+/**
+ * The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public
+ * instance API"). Tests wait for rendering with `settled()`.
+ */
+export interface GyralElement<S, M extends Tagged> extends HTMLElement {
   /** Current model state. */
   readonly state: S;
   /** Feeds a message through `update`, as if an intent had produced it. */

@@ -1,8 +1,7 @@
 // `labelledBy(id, fallback?)` as an element hook (view/02-bindings.md "Element hooks",
 // gyral-czi.26): accessible names across shadow boundaries. `aria-labelledby="page-title"`
 // inside a shadow root can't see an id in the page, so the id is resolved outward through the
-// shadow-including ancestors. Replaces the Lit element directive in ../accessible-name.ts when
-// the view layer swaps in (Phase 3); not exported from @gyral/core yet.
+// shadow-including ancestors.
 import { defineHook } from '../view/index.js';
 
 interface Reflecting extends Element {

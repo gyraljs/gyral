@@ -63,6 +63,19 @@ export function markGyralHost(ctor: object): void {
 const isGyralHost = (node: Node): boolean => hostClasses.has(node.constructor);
 
 /**
+ * The number of Gyral host ancestors of `el` in the composed tree (across shadow roots): the
+ * scheduler renders smaller depths first (view/04-scheduler.md "Marking").
+ */
+export function hostDepth(el: Element): number {
+  let depth = 0;
+  for (let node: Node | null = el.parentNode; node !== null;) {
+    if (isGyralHost(node)) depth += 1;
+    node = node instanceof ShadowRoot ? node.host : node.parentNode;
+  }
+  return depth;
+}
+
+/**
  * Does `node` belong to the component whose intent root is `root`? `root` is the component's
  * shadow root, or the host itself for light-DOM components (ADR 0014). The node must be in the
  * same tree (not inside a nested shadow root) with no other Gyral host between them: a nested

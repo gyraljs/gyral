@@ -11,31 +11,6 @@ import { fileURLToPath } from 'node:url';
 import type { ConfigEnv, EnvironmentOptions, Plugin } from 'vite';
 import type { CompilerHooks } from './compiler/hooks.js';
 
-/** Every Lit package: resolve exactly one copy, even when Gyral is linked from elsewhere. */
-export const LIT_PACKAGES: readonly string[] = [
-  'lit',
-  'lit-html',
-  'lit-element',
-  '@lit/reactive-element',
-  '@lit-labs/ssr',
-  '@lit-labs/ssr-client',
-];
-
-/**
- * Lit modules that Gyral imports or re-exports. Pre-bundling them up front stops Vite from
- * discovering them mid-run, which reloads the page and fails the first browser test run.
- */
-export const LIT_PREBUNDLE: readonly string[] = [
-  'lit',
-  'lit/directive.js',
-  'lit/static-html.js',
-  'lit/directives/class-map.js',
-  'lit/directives/keyed.js',
-  'lit/directives/live.js',
-  'lit/directives/repeat.js',
-  'lit/directives/style-map.js',
-];
-
 export interface TemplateCompilerOptions {
   /**
    * Module specifiers whose `html` export is the view layer's tag (default
@@ -51,11 +26,8 @@ export interface TemplateCompilerOptions {
   readonly parse5?: boolean | string;
 }
 
-/**
- * '@gyral/core' joins in Phase 3 (gyral-g1r), when its `html` becomes the view layer's tag;
- * until then it is Lit's, which the compiler must leave alone.
- */
-export const DEFAULT_TEMPLATE_SOURCES: readonly string[] = [];
+/** Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3). */
+export const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
 
 /** The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). */
 export const COMPILED_CONDITION = 'gyral-compiled';
@@ -144,7 +116,7 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
 }
 
 export interface GyralViteOptions {
-  /** More modules to pre-bundle (e.g. 'lit/directives/unsafe-html.js'). */
+  /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
@@ -166,7 +138,7 @@ export interface GyralViteConfig {
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
     plugins: [gyralTemplateCompiler(options.compiler)],
-    resolve: { dedupe: [...LIT_PACKAGES] },
-    optimizeDeps: { include: [...new Set([...LIT_PREBUNDLE, ...(options.optimize ?? [])])] },
+    resolve: { dedupe: [] },
+    optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };
 }

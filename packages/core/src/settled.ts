@@ -1,45 +1,18 @@
-// `settled()`: wait until rendering is quiet (docs/design-docs/view/04-scheduler.md). It resolves
-// when no connected Gyral host has a pending update, no view-transition update is pending, and
-// the post-render work (focus commands, outputs, `Hydrated`) has run. It covers rendering only:
-// driver work (HTTP, timers) is outside it. Tests use it instead of `el.updateComplete`.
-//
-// Until the view-layer swap (ADR 0018) it is backed by Lit: define() registers connected hosts
-// and tracks its post-render promises here. After the swap, the global scheduler implements the
-// same contract and this module goes.
+// `settled()` (docs/design-docs/view/04-scheduler.md "`settled()`"): wait until rendering is
+// quiet. Implemented on the global scheduler: no host is dirty, no flush is scheduled, no
+// view-transition update is pending, the post-render queue has run, and outputs sent to
+// parents have been delivered. It covers rendering only: driver work (HTTP, timers) is outside
+// it. Tests use it instead of the 0.2 `el.updateComplete`.
+import { isQuiet, whenQuiet } from './scheduler.js';
 
-/** What settled() needs from a connected host: Lit's public update state. */
-export interface SettleHost {
-  readonly isUpdatePending: boolean;
-  readonly updateComplete: Promise<unknown>;
-}
-
-const hosts = new Set<SettleHost>();
-const work = new Set<Promise<unknown>>();
-
-/** Rounds of "await pending work" before settled() gives up: a cycle, not slow rendering. */
+/** Rounds of "wait for the next quiet flush" before settled() gives up: a cycle. */
 const MAX_ROUNDS = 100;
 
-/** Microtask turns to let untracked follow-ups (a resolved driver, a `.then`) run first. */
+/**
+ * Microtask turns first, so follow-ups that are already resolving (a driver that answered at
+ * once, an output on its way to a parent) reach the scheduler before quiet is judged.
+ */
 const DRAIN_TURNS = 4;
-
-const ignore = (): void => undefined;
-
-/** define(): a host joins on connect (when it can update) and leaves on disconnect. */
-export function trackHost(host: SettleHost): void {
-  hosts.add(host);
-}
-
-export function untrackHost(host: SettleHost): void {
-  hosts.delete(host);
-}
-
-/** define(): post-render work (a transition update, a focus command, an output) in flight. */
-export function trackWork<T>(promise: Promise<T>): Promise<T> {
-  const tracked = promise.then(ignore, ignore);
-  work.add(tracked);
-  void tracked.then(() => work.delete(tracked));
-  return promise;
-}
 
 async function drain(): Promise<void> {
   for (let turn = 0; turn < DRAIN_TURNS; turn += 1) await Promise.resolve();
@@ -48,21 +21,22 @@ async function drain(): Promise<void> {
 /**
  * Resolves once rendering is quiet: every connected Gyral host has rendered its latest state,
  * view-transition updates have run, and focus commands and outputs have been delivered (an
- * output that makes a parent render is waited for too). Resolves after a few microtasks when
- * nothing is pending. Throws when rendering never settles (components feeding each other).
+ * output that makes a parent render is waited for too). Rejects with the loop guard's error
+ * when rendering never settles in development (components feeding each other).
  *
  *   el.send({ _tag: 'Increment' });
  *   await settled();
  */
 export async function settled(): Promise<void> {
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
+    // Wait for a pending flush before draining, so its outcome (a loop-guard error) reaches us.
+    const pending = isQuiet() ? undefined : whenQuiet();
     await drain();
-    const busy = [...hosts].filter((host) => host.isUpdatePending);
-    if (busy.length === 0 && work.size === 0) return;
-    await Promise.all([...work, ...busy.map((host) => host.updateComplete.catch(ignore))]);
+    if (pending !== undefined) await pending;
+    else if (isQuiet()) return;
   }
   throw new Error(
-    `settled(): rendering did not settle after ${String(MAX_ROUNDS)} rounds. ` +
+    `settled(): rendering did not settle after ${String(MAX_ROUNDS)} flushes. ` +
       'Components are probably feeding each other props or messages in a cycle.',
   );
 }

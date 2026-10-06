@@ -3,7 +3,7 @@ import { CLEAN_ROOM_DIRS, findLitProvenance, LIT_MARKERS } from '../check-proven
 
 describe('check-provenance (ADR 0018 clean room)', () => {
   it('covers the view layer', () => {
-    expect(CLEAN_ROOM_DIRS).toContain('packages/core/src/view');
+    expect(CLEAN_ROOM_DIRS).toContain('packages/core/src');
   });
 
   it('flags every Lit marker with file and line', () => {

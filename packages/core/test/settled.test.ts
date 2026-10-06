@@ -1,7 +1,7 @@
 // settled() (docs/design-docs/view/04-scheduler.md): one wait for all rendering, including
 // child props, outputs, focus commands and view-transition updates.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { child, define, emit, focus, html, settled } from '../src/index.js';
+import { child, define, emit, focus, html, prop, settled } from '../src/index.js';
 
 type KidOut = { readonly _tag: 'Grown'; readonly size: number };
 type KidMsg = { readonly _tag: 'Grow' };
@@ -9,7 +9,7 @@ type KidMsg = { readonly _tag: 'Grow' };
 const Kid = define<{ readonly grown: number }, KidMsg, { readonly label: string }, KidOut>(
   'test-settled-kid',
   {
-    props: { label: { attribute: false, default: '' } },
+    props: { label: prop.string({ attribute: false, default: '' }) },
     init: () => ({ grown: 0 }),
     intent: {},
     update: {

@@ -1,10 +1,7 @@
 // Which store instance a component uses (docs/design-docs/0013-shared-state.md):
 // el.stores override → nearest <gyral-stores> ancestor → the document default (client), or the
 // request scope set by @gyral/ssr around each render step (server).
-import { isServer } from 'lit';
 import type { AnyStore, AnyStoreInstance } from './store.js';
-
-const onServer: boolean = isServer;
 
 /** Page-level seed written by @gyral/ssr: `<script type="application/json" data-gyral-stores>`. */
 export const STORE_SEED_ATTRIBUTE = 'data-gyral-stores';
@@ -122,9 +119,7 @@ export function providerScope(el: Element): StoreRegistry {
   let registry = providers.get(el);
   if (registry === undefined) {
     const { instances = [] } = el as { instances?: readonly AnyStoreInstance[] };
-    const seeds = onServer
-      ? {}
-      : parseSeeds(el.getAttribute(STORE_SEED_ATTRIBUTE), `<${el.localName}>`);
+    const seeds = parseSeeds(el.getAttribute(STORE_SEED_ATTRIBUTE), `<${el.localName}>`);
     const unseeded = instances.filter((i) => !(i.store.name in seeds));
     registry = new StoreRegistry(unseeded, seeds);
     providers.set(el, registry);
@@ -132,33 +127,20 @@ export function providerScope(el: Element): StoreRegistry {
   return registry;
 }
 
-/** Event a component dispatches on the server to find its nearest `<gyral-stores>` provider. */
-export const STORES_REQUEST = 'gyral-stores-request';
-
-/** The detail of a STORES_REQUEST event; the provider fills in `registry`. */
-export interface StoresRequest {
-  registry?: StoreRegistry;
-}
-
-// The server has no DOM ancestry, but Lit's SSR DOM shim bubbles events through the custom
-// elements being rendered (the mechanism @lit/context uses), so a registered provider can answer.
-function serverProvider(host: Element): StoreRegistry | undefined {
-  const detail: StoresRequest = {};
-  host.dispatchEvent(new CustomEvent(STORES_REQUEST, { bubbles: true, composed: true, detail }));
-  return detail.registry;
+/**
+ * The scope for a server render: the request's, set by `withStoreScope`. Nested
+ * `<gyral-stores>` providers on the server are the server renderer's job (Phase 4, gyral-g1r.9).
+ */
+export function serverScopeFor(tag: string, store: AnyStore): StoreRegistry {
+  if (serverScope !== undefined) return serverScope;
+  throw new Error(
+    `<${tag}> reads store "${store.name}" during a server render without a store scope. ` +
+      "Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).",
+  );
 }
 
 /** The scope for a component: its nearest provider (across shadow roots) or the default. */
-export function scopeFor(host: Element, tag: string, store: AnyStore): StoreRegistry {
-  if (onServer) {
-    const provided = serverProvider(host);
-    if (provided !== undefined) return provided;
-    if (serverScope !== undefined) return serverScope;
-    throw new Error(
-      `<${tag}> reads store "${store.name}" during a server render without a store scope. ` +
-        "Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).",
-    );
-  }
+export function scopeFor(host: Element): StoreRegistry {
   for (let node: Node | null = host.parentNode; node !== null;) {
     if (node instanceof Element && node.localName === STORES_ELEMENT) return providerScope(node);
     node = node instanceof ShadowRoot ? node.host : node.parentNode;

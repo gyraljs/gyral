@@ -82,7 +82,11 @@ export interface TemplateObject {
   readonly parts: readonly PartSpec[];
   /** Contains document-level tags (<!doctype>, <html>, <head>, <body>): server-only. */
   readonly server: boolean;
-  readonly segments: readonly Segment[];
+  /**
+   * Server writing plan. Absent from client-compiled template objects (the compiler drops it),
+   * so the client renderer never reads it; the runtime preparer and server builds keep it.
+   */
+  readonly segments?: readonly Segment[];
   /** Development only: file:line:column of the call site. */
   readonly loc?: string;
 }

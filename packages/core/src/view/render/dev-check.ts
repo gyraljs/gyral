@@ -1,7 +1,7 @@
 // Development checks for lists (view/03-lists.md "Keys", "Rows must be pure"). Keys must be
 // unique strings or numbers. Skipped rows are re-evaluated and compared with what is committed
 // (template id and values, recursively); a difference warns once per row function. At most 200
-// rows are checked per render call, rotating through each list. Only reached under `if (DEV)`.
+// rows are checked per flush (per render call outside one), rotating through each list. Only reached under `if (DEV)`.
 import { isTemplateResult, templateOf } from '../template.js';
 import {
   BOOL,
@@ -24,12 +24,12 @@ import { samePick, type List } from './rows.js';
 import { isList, rawHtml, type ListResult } from './values.js';
 import { badKey, warnImpureRow } from './warn.js';
 
-/** Rows re-evaluated per render call. */
+/** Rows re-evaluated per flush (render.ts `renderBatch`), or per render call outside one. */
 export const ROW_CHECKS = 200;
 let budget = ROW_CHECKS;
 const warned = new WeakSet<object>();
 
-/** Called by `render` at the start of each call. */
+/** Called at the start of each flush, or of a `render` call outside one. */
 export function resetRowChecks(): void {
   budget = ROW_CHECKS;
 }

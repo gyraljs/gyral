@@ -1,41 +1,59 @@
+// Component styles (docs/design-docs/view/08-styles.md "Authoring", "Browser").
 import { afterEach, describe, expect, it } from 'vitest';
 import { css, define, html, settled, type Stateless } from '../src/index.js';
 
-const sheet = new CSSStyleSheet();
-sheet.replaceSync('b { font-weight: 900; }');
-
 const tokens = 'p { color: rgb(1, 2, 3); }';
+const WEIGHT = 900;
+const shared = css`
+  b {
+    font-weight: ${WEIGHT};
+  }
+`;
+
+const view = () =>
+  html`<p>p</p>
+    <b>b</b>
+    <i>i</i>`;
 
 const Styled = define<Stateless, never>('test-styled', {
   intent: {},
   update: {},
-  view: () =>
-    html`<p>p</p>
-      <b>b</b>
-      <i>i</i>`,
-  // A plain string (shared with the document), a constructed sheet and a css`` template, nested.
+  view,
+  // A plain string (shared with the document), a shared css value and a nested one.
   styles: [
     tokens,
     [
-      sheet,
+      shared,
       css`
         i {
-          margin-inline-start: 7px;
+          margin-inline-start: ${7}px;
         }
       `,
     ],
   ],
 });
 
+const Other = define<Stateless, never>('test-styled-other', {
+  intent: {},
+  update: {},
+  view,
+  styles: shared,
+});
+
 afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe('define() styles (gyral-czi.24)', () => {
-  it('accepts plain CSS strings, CSSStyleSheets and css`` templates in nested arrays', async () => {
-    const el = new Styled();
-    document.body.append(el);
-    await settled();
+async function mount(tag: string): Promise<HTMLElement> {
+  const el = document.createElement(tag);
+  document.body.append(el);
+  await settled();
+  return el;
+}
+
+describe('define() styles', () => {
+  it('accepts plain strings and css values with interpolations, in nested arrays', async () => {
+    const el = await mount('test-styled');
     const style = (sel: string) => {
       const node = el.shadowRoot?.querySelector(sel);
       if (node == null) throw new Error(`missing ${sel}`);
@@ -44,12 +62,35 @@ describe('define() styles (gyral-czi.24)', () => {
     expect(style('p').color).toBe('rgb(1, 2, 3)');
     expect(style('b').fontWeight).toBe('900');
     expect(style('i').marginInlineStart).toBe('7px');
+    expect(el.shadowRoot?.querySelector('style')).toBeNull(); // adopted, no <style> fallback
   });
 
-  it('keeps one shared CSSStyleSheet instance across components', async () => {
-    const el = new Styled();
-    document.body.append(el);
-    await settled();
-    expect(el.shadowRoot?.adoptedStyleSheets).toContain(sheet);
+  it('maps one css value to one CSSStyleSheet shared by every component and instance', async () => {
+    const a = await mount('test-styled');
+    const b = await mount('test-styled');
+    const c = await mount('test-styled-other');
+    const sheetsOf = (el: HTMLElement) => el.shadowRoot?.adoptedStyleSheets ?? [];
+    expect(sheetsOf(a)).toHaveLength(3);
+    expect(sheetsOf(a)).toEqual(sheetsOf(b));
+    expect(sheetsOf(a)[0]).toBe(sheetsOf(b)[0]);
+    expect(sheetsOf(c)[0]).toBe(sheetsOf(a)[1]);
+    expect(Styled.spec.styles).toBeDefined();
+    expect(Other.spec.styles).toBe(shared);
+  });
+
+  it('inserts strings, numbers and other css values as written', () => {
+    const inner = css`
+      --x: 1;
+    `;
+    expect(
+      css`
+        a {
+          ${inner} gap: ${4}px;
+          content: ${'"y"'};
+        }
+      `.text
+        .replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('a { --x: 1; gap: 4px; content: "y"; }');
   });
 });

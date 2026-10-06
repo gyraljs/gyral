@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { LitElement } from 'lit';
 import { define, html, settled } from '../src/index.js';
 import { ctxOf } from './ctx.js';
 
@@ -98,7 +97,7 @@ describe('define()', () => {
   it('isolates intents inside nested components', async () => {
     const el = await mount();
     el.send({ _tag: 'Add', text: 'keep' });
-    const child = q(el, 'test-child', LitElement);
+    const child = q(el, 'test-child', HTMLElement);
     await settled();
     q(child, 'button', HTMLButtonElement).click();
     expect(el.state.items).toEqual(['keep']);

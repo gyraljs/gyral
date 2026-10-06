@@ -1,8 +1,7 @@
 // `invalid(errors)` as an element hook (view/02-bindings.md "Element hooks", ADR 0008): model
 // errors mirrored to native validity, so `:user-invalid` and native bubbles agree with the
 // model. The server half writes `aria-invalid` into the start tag, so it is no longer written
-// twice. Replaces the Lit element directive in ../invalid.ts when the view layer swaps in
-// (Phase 3); not exported from @gyral/core yet.
+// twice.
 import { defineHook } from '../view/index.js';
 
 type Errors = readonly string[] | string | undefined;

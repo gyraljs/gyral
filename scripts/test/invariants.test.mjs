@@ -37,7 +37,6 @@ describe('checkDependencies', () => {
     const manifest = {
       name: '@gyral/core',
       dependencies: { '@standard-schema/spec': '1.1.0', 'left-pad': '1.0.0' },
-      peerDependencies: { lit: '^3.3.0' },
     };
     const errors = checkDependencies('packages/core/package.json', manifest);
     expect(errors).toHaveLength(1);
@@ -49,15 +48,16 @@ describe('checkDependencies', () => {
     expect(checkDependencies('packages/core/package.json', manifest)).toEqual([]);
   });
 
-  it('allows only optional build-time peers in @gyral/core besides lit', () => {
+  it('allows only optional build-time peers in @gyral/core (no lit since ADR 0018)', () => {
     const errors = checkDependencies('packages/core/package.json', {
       name: '@gyral/core',
       peerDependencies: { lit: '^3.3.0', parse5: '^8.0.0', vite: '^8.0.0', jsdom: '^26.0.0' },
       peerDependenciesMeta: { parse5: { optional: true } },
     });
-    expect(errors).toHaveLength(2);
-    expect(errors[0]).toContain('"vite" must be optional');
-    expect(errors[1]).toContain('Remove the "jsdom" peer');
+    expect(errors).toHaveLength(3);
+    expect(errors[0]).toContain('Remove the "lit" peer');
+    expect(errors[1]).toContain('"vite" must be optional');
+    expect(errors[2]).toContain('Remove the "jsdom" peer');
   });
 });
 

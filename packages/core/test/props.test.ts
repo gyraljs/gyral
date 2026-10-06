@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html, settled } from '../src/index.js';
+import { command, define, defineDriver, html, prop, settled } from '../src/index.js';
 
 interface Props {
   readonly userId: string;
@@ -23,7 +23,7 @@ let renders: string[] = [];
 const load = defineDriver<string, string>({ name: 'load', run: (id) => id });
 
 const Card = define<State, Msg, Props>('test-card', {
-  props: { userId: { type: String, required: true }, label: { type: String, required: true } },
+  props: { userId: prop.string({ required: true }), label: prop.string({ required: true }) },
   init: (props) => ({ draft: '', loadedFor: props.userId, saved: [], fetched: [] }),
   intent: { Save: () => ({ _tag: 'Save' }) },
   update: {
@@ -48,7 +48,7 @@ const Card = define<State, Msg, Props>('test-card', {
 });
 
 const Plain = define<{ readonly n: number }, never, { readonly label: string }>('test-plain', {
-  props: { label: { type: String, required: true } },
+  props: { label: prop.string({ required: true }) },
   init: () => ({ n: 0 }),
   intent: {},
   update: {},
@@ -133,9 +133,9 @@ describe('honest prop types (ADR 0007 addendum)', () => {
 
   const Badge = define<{ readonly n: number }, never, BadgeProps>('test-badge', {
     props: {
-      label: { type: String, required: true },
-      size: { type: Number, default: 3 },
-      note: { type: String },
+      label: prop.string({ required: true }),
+      size: prop.number({ default: 3 }),
+      note: prop.string(),
     },
     init: () => ({ n: 0 }),
     intent: {},
@@ -177,7 +177,7 @@ describe('honest prop types (ADR 0007 addendum)', () => {
   it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {
     define<{ readonly n: number }, never, { readonly code: string }>('test-badge-types', {
       // @ts-expect-error -- `code: string` needs `required: true` or a `default`
-      props: { code: { type: String } },
+      props: { code: prop.string() },
       init: () => ({ n: 0 }),
       intent: {},
       update: {},
@@ -185,28 +185,16 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     });
   });
 
-  it('warns once at define() when a prop shadows a built-in element property (gyral-czi.33)', () => {
-    const warnings: string[] = [];
-    const original = console.warn;
-    console.warn = (message: string) => warnings.push(message);
-    try {
-      define<
-        { readonly n: number },
-        never,
-        { readonly hidden?: boolean; readonly title?: string; readonly label?: string }
-      >('test-shadowing-props', {
-        props: { hidden: { type: Boolean }, title: { type: String }, label: { type: String } },
+  it('rejects a prop that shadows a built-in element property in development (view/05)', () => {
+    const shadowing = () =>
+      define('test-shadowing-props', {
+        props: { hidden: prop.boolean(), title: prop.string(), label: prop.string() },
         init: () => ({ n: 0 }),
         intent: {},
         update: {},
         view: () => html``,
       });
-    } finally {
-      console.warn = original;
-    }
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('<test-shadowing-props>');
-    expect(warnings[0]).toContain('hidden, title');
-    expect(warnings[0]).not.toContain('label');
+    expect(shadowing).toThrow(/<test-shadowing-props>.*hidden, title/);
+    expect(shadowing).not.toThrow(/label/);
   });
 });

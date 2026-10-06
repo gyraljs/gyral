@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Directories that must stay free of Lit provenance (relative to the repo root). */
-export const CLEAN_ROOM_DIRS = ['packages/core/src/view'];
+export const CLEAN_ROOM_DIRS = ['packages/core/src'];
 
 /** Lit's internal identifiers and hydration/SSR markers. */
 export const LIT_MARKERS = [

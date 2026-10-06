@@ -61,8 +61,9 @@ describe('viewTransition hook', () => {
     stubTransitions(false);
     const el = await mount();
     el.send({ _tag: 'Go', page: 'about' });
-    expect(calls).toEqual(['start']);
+    expect(calls).toEqual([]); // the flush (and so the transition) starts in a microtask
     await settled(); // waits for the transition's update callback
+    expect(calls).toEqual(['start']);
     expect(heading(el)).toBe('about');
   });
 

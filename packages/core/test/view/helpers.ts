@@ -26,7 +26,7 @@ export function valueCounts(template: TemplateObject): { parts: number; segments
   const holes = new Set(['child', 'text', 'attr', 'bool', 'prop', 'hook']);
   return {
     parts: template.parts.reduce((n, p) => n + take(p), 0),
-    segments: template.segments.reduce(
+    segments: (template.segments ?? []).reduce(
       (n, s) => (typeof s !== 'string' && holes.has(s.k) ? n + take(s) : n),
       0,
     ),

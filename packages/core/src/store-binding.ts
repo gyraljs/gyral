@@ -38,7 +38,7 @@ export class StoreBinding {
     return (
       this.#bound.get(store.name) ??
       this.#overrides()[store.name] ??
-      scopeFor(this.#host, this.#tag, store).get(store)
+      scopeFor(this.#host).get(store)
     );
   }
 

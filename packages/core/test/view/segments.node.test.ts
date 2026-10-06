@@ -68,7 +68,7 @@ describe('normalizer properties (view/README "Conformance")', () => {
     fc.assert(
       fc.property(template, (strings) => {
         const n = normalize(strings);
-        expect(emptyRender(n.segments)).toBe(n.html);
+        expect(emptyRender(n.segments ?? [])).toBe(n.html);
         expect(valueCounts(n)).toEqual({ parts: strings.length - 1, segments: strings.length - 1 });
       }),
       { numRuns: 300 },

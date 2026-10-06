@@ -1,5 +1,5 @@
-import type { PropertyDeclaration } from 'lit';
-import type { Styles } from './styles.js';
+import type { Prop } from './prop.js';
+import type { ChildValue, Styles } from './view/index.js';
 import type { CommandInfo } from './invokers.js';
 import type { HydrateStrategy } from './islands.js';
 import type { DriverOverrides, Next } from './command.js';
@@ -120,20 +120,12 @@ export type Update<S, M extends Tagged, P = object> = {
 export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
 
 /**
- * One prop's declaration: Lit's `PropertyDeclaration` plus Gyral's honesty rule (ADR 0007
- * addendum). A prop is `undefined` until a parent, an attribute or a hydration seed sets it,
- * so a prop whose type excludes `undefined` must say how that is guaranteed:
- * - `required: true`: a missing value is a bug, reported once per instance at first render;
- * - `default: value`: used whenever the element's value is `undefined`.
- * A prop whose type includes `undefined` needs neither.
+ * The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per
+ * key. A builder's output type must fit the prop's type, so a prop whose type excludes
+ * `undefined` needs `required: true` or a `default` (the honesty rule, ADR 0007 addendum).
+ * Without explicit type arguments, `define()` infers `P` from the builders.
  */
-export type PropDeclaration<T> = PropertyDeclaration &
-  (undefined extends T
-    ? { readonly required?: false; readonly default?: T }
-    : | { readonly required: true; readonly default?: undefined }
-      | { readonly required?: false; readonly default: T });
-
-export type PropDeclarations<P> = { readonly [K in keyof P]-?: PropDeclaration<P[K]> };
+export type PropDeclarations<P> = { readonly [K in keyof P]-?: Prop<P[K]> };
 
 /** State of a component that keeps none (a pure view of its props). Its `init` is optional. */
 export type Stateless = Readonly<Record<string, never>>;
@@ -149,17 +141,17 @@ type InitField<S, M extends Tagged, P> = Stateless extends S
 export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitField<S, M, P>;
 
 interface SpecBody<S, M extends Tagged, P> {
-  /** Lit reactive property declarations: the component's inputs. */
+  /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
   /** INTENT: platform events to messages. */
   readonly intent: Intents<M>;
   /** MODEL: pure state transitions. */
   readonly update: Update<S, M, P>;
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
-  readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => unknown;
+  readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => ChildValue;
   /**
-   * Shadow-root styles: `css` templates, plain CSS strings, `CSSStyleSheet`s, or arrays of
-   * them. Ignored (with a warning) when `shadow: false`.
+   * Shadow-root styles: `css` values, plain CSS strings, or arrays of them, nested freely.
+   * Each maps to one shared `CSSStyleSheet`. Ignored (with a warning) when `shadow: false`.
    */
   readonly styles?: Styles;
   /**

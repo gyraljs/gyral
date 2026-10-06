@@ -1,5 +1,6 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html, settled } from '../src/index.js';
+import { command, define, defineDriver, html, prop, settled } from '../src/index.js';
 import { SEED_ATTRIBUTE } from '../src/hydration.js';
 
 let calls: string[] = [];
@@ -24,8 +25,19 @@ type Msg = { readonly _tag: 'Heard'; readonly value: string };
 
 let firstRenderState: State | undefined;
 
+const strings: StandardSchemaV1<readonly string[]> = {
+  '~standard': {
+    version: 1,
+    vendor: 'test',
+    validate: (value) =>
+      Array.isArray(value) && value.every((v) => typeof v === 'string')
+        ? { value }
+        : { issues: [{ message: 'expected strings' }] },
+  },
+};
+
 const Seeded = define<State, Msg, Props>('test-seeded', {
-  props: { label: { type: String }, items: { attribute: false } },
+  props: { label: prop.string(), items: prop.value(strings) },
   init: (p) => [
     { title: `init:${p.label ?? ''}`, heard: [], renders: 0 },
     [command(sync, p.label ?? '', { onSuccess: (value) => ({ _tag: 'Heard', value }) })],

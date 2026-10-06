@@ -1,6 +1,7 @@
 // Child components: props down, outputs up (docs/design-docs/0010-child-components.md).
 import type { Command } from './command.js';
 import { OUTPUT_EVENT } from './intent.js';
+import { defer } from './scheduler.js';
 import type { IntentInput, IntentParser, Tagged } from './types.js';
 
 /** Marker driver: `define()` handles emit commands itself, synchronously ordered. */
@@ -19,10 +20,11 @@ export function emit(output: Tagged & Readonly<Record<string, unknown>>): Comman
 
 /**
  * Sends an output to the parent component. A microtask keeps outputs in order and out of the
- * parent's render pass; the event bubbles through the parent's shadow tree only (not composed).
+ * parent's render pass (settled() waits for it); the event bubbles through the parent's shadow
+ * tree only (not composed).
  */
 export function dispatchOutput(host: Element, output: unknown): void {
-  queueMicrotask(() => {
+  defer(() => {
     if (!host.isConnected) return;
     host.dispatchEvent(
       new CustomEvent(OUTPUT_EVENT, { detail: output, bubbles: true, composed: false }),
