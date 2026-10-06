@@ -56,6 +56,7 @@ describe('row skipping (view/03 "Row skipping")', () => {
   it('skips rows without calling row or building template results', () => {
     let renders = 0;
     const Row = (r: Item) => {
+      // eslint-disable-next-line gyral/each-row-purity -- counts row renders on purpose
       renders++;
       return html`<li>${r.label}</li>`;
     };

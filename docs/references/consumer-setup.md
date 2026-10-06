@@ -15,10 +15,10 @@ pnpm add -D @gyral/testing
 pnpm add @gyral/ssr
 ```
 
-| Package                                                         | Peer dependencies                                           |
-| --------------------------------------------------------------- | ----------------------------------------------------------- |
-| `@gyral/core`                                                   | none at runtime; `vite` and `parse5` (optional, build time) |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/testing` | none beyond `@gyral/core`                                   |
+| Package                                                         | Peer dependencies                                               |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| `@gyral/core`                                                   | none at runtime; `vite`, `parse5`, `eslint` (optional, tooling) |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/testing` | none beyond `@gyral/core`                                       |
 
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
 `defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.
@@ -62,6 +62,38 @@ and Vitest keep the runtime template path. In a build it:
 
 Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
 `gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
+
+## ESLint: `@gyral/core/eslint`
+
+The template rules (view/09-template-rules.md) in the editor, with the compiler's messages, and
+pure `each` rows (view/03-lists.md). It works without Vite. ESLint 9 or 10 with a flat config:
+
+```sh
+pnpm add -D eslint
+```
+
+```js
+// eslint.config.js
+import gyral from '@gyral/core/eslint';
+
+export default [
+  // …your other configs (typescript-eslint, …)
+  { files: ['src/**/*.ts'], ...gyral.configs.recommended },
+];
+```
+
+`recommended` turns on `gyral/template` (every `html` template imported from `@gyral/core`)
+and `gyral/each-row-purity` (`each` rows read only their arguments; keys required), both as
+errors. If your templates come from a package that re-exports `html` (a design system), list it
+the way you list it for the Vite preset:
+
+```js
+rules: { 'gyral/template': ['error', { sources: ['@gyral/core', 'my-design-system'] }] },
+```
+
+The editor checks what the normalizer can see from the template's strings. `vite build` still
+runs the parse5 check (rule 7) and is the authority; the development runtime still catches rows
+ESLint can't follow and page shells rendered in the browser (rule 11).
 
 ## Template whitespace
 

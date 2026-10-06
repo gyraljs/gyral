@@ -4,6 +4,7 @@ export { DEV } from '#view-dev';
 export { html, compiled, isTemplateResult, templateOf, type TemplateResult } from './template.js';
 export { templateElement } from './template-element.js';
 export { normalize, analyze, type Analysis } from './normalize/normalize.js';
+export { checkTemplate, type TemplateIssue } from './normalize/check.js';
 export { templateId } from './normalize/id.js';
 export { TemplateError } from './normalize/errors.js';
 export { shapeMismatch, repairError } from './normalize/shape.js';

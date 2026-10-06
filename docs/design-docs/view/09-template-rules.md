@@ -15,10 +15,12 @@ messages:
 | ---------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------- |
 | Vite compiler (`@gyral/core/vite`) | `vite build`: the build fails with a code frame (the dev server uses the runtime path) | everyone on the preset (default) |
 | Runtime preparer, development mode | first render of the call site: throws                                                  | the no-build-step path, tests    |
-| ESLint (`@gyral/core/eslint`)      | in the editor                                                                          | everyone, before saving          |
+| ESLint (`@gyral/core/eslint`)      | in the editor and `eslint .`: one error per template, at the markup it is about        | everyone, before saving          |
 
 Production builds contain none of this code. Every message follows core belief 7: it says what
-is wrong **and what to write instead**, and links the spec section.
+is wrong **and what to write instead**, and links the spec section. The rule engine stops at a
+template's first error (its tokenizer can't recover), so every tool reports one per template:
+fix it, and the next one shows.
 
 ## Errors
 
@@ -52,7 +54,42 @@ Not handled yet: `<select>` content under the new customizable-select parsing, C
 - **Development runtime:** a repaired template loses or moves part markers when the browser
   parses it, so the part count or paths don't match the normalizer's. That is reported with the
   same message.
-- **ESLint:** checks the common cases above by tag structure. The compiler is the authority.
+- **ESLint:** runs the normalizer's own repair checks (the common cases above, by tag
+  structure), as the development runtime does before the browser parses. The parse5 comparison
+  is compiler-only, so a rare repair can pass the editor and fail `vite build`. The compiler is
+  the authority.
+
+## ESLint: `@gyral/core/eslint`
+
+A flat-config plugin with two rules, both in `gyral.configs.recommended` (setup:
+[consumer-setup.md](../../references/consumer-setup.md) "ESLint"). ESLint (9 or 10) is an
+optional peer dependency.
+
+- **`gyral/template`** (rules 1–7, 10, 12, 13): every `html` tagged template whose tag is
+  imported from a template source (`import { html } from '@gyral/core'` under any local name,
+  or `ns.html` for `import * as ns`) goes through `checkTemplate` (`view/normalize/check.ts`):
+  the normalizer's own steps, which also report where they stopped. The message is the
+  TemplateError's first line, identical to the runtime's and the compiler's; the editor's
+  location replaces the `near:`/`at` context. The location is mapped back from the minified
+  cooked strings through whitespace minification, escapes, line continuations and CRLF line
+  ends, and covers the tag or end tag (rules 4, 6, 7, 10, 12, 13), the text run (rule 7), the
+  `${…}` (rules 1, 2, 3, 5 at a hole), or else the character the tokenizer stopped at.
+- **`gyral/each-row-purity`** (rules 8, 9; 03 "Rows must be pure"): `each`'s row (inline, or a
+  name bound to a function: `function Row`, `const Row = …`) may read only its parameters and
+  locals, module-level bindings, imports and globals. A read of an enclosing function's binding
+  (the view's `s`, `i`, `ctx`, its locals) is an error naming it: "`row` reads `s.selected`;
+  return it from `pick` and take it as the second argument (view/03-lists.md)." A helper
+  function declared beside the row is followed: calling it is fine when it reads only the same.
+  An `each` call without a key function is rule 9.
+
+Not checked by ESLint: rule 7's parse5 comparison (compiler) and the browser's own parse
+(development runtime); rule 11, because the editor can't tell where a template renders (a page
+shell is right on the server); rows ESLint can't follow statically (a row returned by a call, a
+parameter), which 03's development check covers.
+
+Options (both rules): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the
+Vite preset's `sources`. Core's own code and tests, which import `html` and `each` from core's
+modules by relative path, are recognised without it.
 
 ## Warnings
 

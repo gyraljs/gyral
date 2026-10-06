@@ -21,6 +21,7 @@ describe('the development check (view/03 "Rows must be pure")', () => {
   it('warns once per row function when a skipped row would render differently', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     let suffix = '';
+    // eslint-disable-next-line gyral/each-row-purity -- an impure row on purpose: the dev check must catch it
     const Impure = (r: Item) => html`<li>${r.label}${suffix}</li>`;
     const view = (l: readonly Item[]) =>
       html`<ul>
@@ -41,6 +42,7 @@ describe('the development check (view/03 "Rows must be pure")', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const list = items(500);
     let stale = false;
+    // eslint-disable-next-line gyral/each-row-purity -- an impure row on purpose: the dev check must catch it
     const Late = (r: Item) => html`<li>${r.id === 450 && stale ? 'stale' : r.label}</li>`;
     const view = html`<ul>
       ${each(list, (r) => r.id, Late)}
@@ -67,6 +69,7 @@ describe('the development check (view/03 "Rows must be pure")', () => {
   it('shares the 200 rows between all lists in one render call', () => {
     let renders = 0;
     const Row = (n: number) => {
+      // eslint-disable-next-line gyral/each-row-purity -- counts row renders on purpose
       renders++;
       return html`<i>${n}</i>`;
     };
