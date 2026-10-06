@@ -13,8 +13,7 @@ const body = html`
   <test-island-visible></test-island-visible>
 `;
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('lazy hydration islands on the server (gyral-4k7.4)', () => {
+describe('lazy hydration islands on the server (gyral-4k7.4)', () => {
   it('marks deferred islands with defer-hydration and their strategy', async () => {
     const stores = [counter.instance({ n: 41 })];
     const out = await renderToString(page({ title: 'Islands', body, stores }), { stores });
@@ -26,6 +25,8 @@ describe.skip('lazy hydration islands on the server (gyral-4k7.4)', () => {
       );
     }
     expect(out).not.toMatch(/<test-island-load[^>]*data-gyral-hydrate/);
+    // An island's nested component isn't deferred: it hydrates on its own (view/07 "Islands").
+    expect(out).toMatch(/<test-island-load class="nested" data-gyral-seed='\{"props":\{\}\}'>/);
     expect(out).toContain('41'); // the store island renders its seeded store on the server
     // Golden file for islands-hydration.test.ts (update with `pnpm test -u`).
     await expect(out).toMatchFileSnapshot('./fixtures/islands.ssr.html');

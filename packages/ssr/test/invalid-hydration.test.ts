@@ -41,7 +41,7 @@ afterAll(() => {
   page.unmount();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip('invalid() after hydration', () => {
   it('applies the model error to native validity once hydrated', () => {
     expect(field().validationMessage).toBe('Email is taken');

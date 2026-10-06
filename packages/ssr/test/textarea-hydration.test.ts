@@ -33,7 +33,7 @@ afterAll(() => {
   page.unmount();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip('<textarea> hydration (gyral-czi.34)', () => {
   it('hydrates in place and keeps what was typed before the script loaded', () => {
     expect(area()).toBe(before);

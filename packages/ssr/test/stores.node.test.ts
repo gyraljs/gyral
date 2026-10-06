@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { define, defineStore, html } from '@gyral/core';
+import { renderToString as renderWithoutScope } from '@gyral/core/server';
 import { page, renderPage, renderToStream, renderToString } from '../src/index.js';
 
 interface Cart {
@@ -11,7 +12,7 @@ const cart = defineStore<Cart, { readonly _tag: 'Add'; readonly sku: string }>('
   update: { Add: (s, m) => ({ ...s, lines: [...s.lines, m.sku] }) },
 });
 
-const Badge = define<{ readonly x: number }, never>('ssr-badge', {
+define<{ readonly x: number }, never>('ssr-badge', {
   stores: [cart],
   init: () => ({ x: 0 }),
   intent: {},
@@ -29,8 +30,7 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<string> {
   return new Response(stream).text();
 }
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('stores on the server (ADR 0013)', () => {
+describe('stores on the server (ADR 0013)', () => {
   it('lets components read the request store synchronously during the render', async () => {
     const out = await renderToString(html`<ssr-badge></ssr-badge>`, {
       stores: [cart.instance({ owner: 'ada', lines: ['a', 'b'] })],
@@ -44,8 +44,16 @@ describe.skip('stores on the server (ADR 0013)', () => {
   });
 
   it('fails clearly when a component reads a store outside any render scope', () => {
-    const el = new Badge() as unknown as { render(): unknown };
-    expect(() => el.render()).toThrow(/without a store scope/);
+    expect(() => renderWithoutScope(html`<ssr-badge></ssr-badge>`)).toThrow(
+      /without a store scope/,
+    );
+  });
+
+  it('renders a component per pull, so each step can run in its own scope', async () => {
+    const reader = renderToStream(many, { stores: [] }).getReader();
+    let chunks = 0;
+    for (let next = await reader.read(); !next.done; next = await reader.read()) chunks++;
+    expect(chunks).toBeGreaterThanOrEqual(20); // at least one chunk per component boundary
   });
 
   it('writes one script-safe page seed with every store state', async () => {

@@ -3,12 +3,13 @@ import { html } from '@gyral/core';
 import { renderToString } from '../src/index.js';
 import './support/invalid.js';
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('invalid() on the server', () => {
-  it('renders nothing for the directive: native validity is applied after hydration', async () => {
+describe('invalid() on the server', () => {
+  it("writes the hook's server half: aria-invalid once, native validity after hydration", async () => {
     const out = await renderToString(html`<test-invalid-form></test-invalid-form>`);
-    expect(out).toContain('name="email"');
-    expect(out).not.toContain('aria-invalid');
+    expect(out).toContain(
+      '<input id="email" name="email" value="taken@example.com" aria-invalid="true">',
+    );
+    expect(out.match(/aria-invalid/g)).toHaveLength(1);
     // Golden file for invalid-hydration.test.ts (update with `pnpm test -u`).
     await expect(out).toMatchFileSnapshot('./fixtures/invalid.ssr.html');
   });

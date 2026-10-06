@@ -13,7 +13,7 @@ afterAll(() => {
 
 // The router answers synchronously with the current URL. If init's commands ran before the
 // hydrating render, state would change first and hydration would fail with a mismatch.
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 it.skip('hydrates the server state first, then applies what init commands report', async () => {
   history.replaceState(null, '', '/'); // the browser is somewhere else than the server render
   const page = mountSsr(serverHtml);

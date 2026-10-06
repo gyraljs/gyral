@@ -18,12 +18,12 @@ const valid = {
 const rejected = { ...valid, name: 'admin', confirm: 'different!' };
 
 const seedOf = (body: string): unknown => {
-  const raw = /data-gyral-seed="([^"]*)"/.exec(body)?.[1] ?? '';
-  return JSON.parse(raw.replaceAll('&quot;', '"').replaceAll('&amp;', '&'));
+  // Single-quoted; only & and ' are escaped (view/06-server.md "Escaping").
+  const raw = /data-gyral-seed='([^']*)'/.exec(body)?.[1] ?? '';
+  return JSON.parse(raw.replaceAll('&#39;', "'").replaceAll('&amp;', '&'));
 };
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('register server (no-JS path)', () => {
+describe('register server (no-JS path)', () => {
   it('renders a real form that posts back to itself', async () => {
     const res = await get('/');
     const body = await res.text();
@@ -100,8 +100,7 @@ describe('register server (JS path: submitForm round trip)', () => {
     expect(await res.json()).toEqual({ _tag: 'Redirected', location: '/?welcome=mike' });
   });
 
-  // Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-  it.skip('rejects a duplicate email on both paths with the same issue', async () => {
+  it('rejects a duplicate email on both paths with the same issue', async () => {
     const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
     await submit(fresh, valid);
     const json = await submit(fresh, { ...valid, name: 'other' });

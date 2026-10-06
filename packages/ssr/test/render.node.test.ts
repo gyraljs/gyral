@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
 import { command, define, defineDriver, html, prop } from '@gyral/core';
-import { page, renderPage, renderToString, serverHtml } from '../src/index.js';
+import { page, renderPage, renderToString } from '../src/index.js';
 
 const runs: string[] = [];
 const load = defineDriver<string, string>({
@@ -24,7 +24,7 @@ type Msg =
   | { readonly _tag: 'Loaded'; readonly id: string }
   | { readonly _tag: 'Noted'; readonly text: string };
 
-const HOSTILE = '</script><script>alert(1)</script>';
+const HOSTILE = `'</script><script>alert(1)</script>`;
 
 define<State, Msg, Props>('ssr-card', {
   props: {
@@ -57,26 +57,23 @@ define<{ readonly items: readonly string[] }, never, { readonly items: readonly 
   },
 );
 
-const decode = (attr: string) =>
-  attr
-    .replaceAll('&quot;', '"')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&');
+// The seed is single-quoted and escapes only & and ' (view/06-server.md "Escaping").
+const SEED = /data-gyral-seed='([^']*)'/;
+const decode = (attr: string) => attr.replaceAll('&#39;', "'").replaceAll('&amp;', '&');
 
 function seedOf(out: string): unknown {
-  const match = /data-gyral-seed="([^"]*)"/.exec(out);
+  const match = SEED.exec(out);
   if (match?.[1] === undefined) throw new Error('no seed attribute');
   return JSON.parse(decode(match[1]));
 }
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('server rendering (ADR 0012)', () => {
+describe('server rendering (ADR 0012)', () => {
   it('renders define() elements as Declarative Shadow DOM from init(props)', async () => {
     const out = await renderToString(html`<ssr-card label="hi" .items=${['a', 'b']}></ssr-card>`);
-    expect(out).toContain('<template shadowroot="open" shadowrootmode="open">');
-    expect(out).toMatch(/<h2>(<!--[^>]*-->)*HI(<!--[^>]*-->)*<\/h2>/);
-    expect(out).toMatch(/<li>(<!--[^>]*-->)*a/);
+    expect(out).toContain('<template shadowrootmode="open">');
+    expect(out).toContain('<h2>HI</h2>');
+    expect(out).toContain('<li>a</li><!--gyral:');
+    expect(out).toContain('<li>b</li></ul>');
   });
 
   it('seeds only the props an attribute cannot carry, and no state equal to init(props)', async () => {
@@ -98,14 +95,15 @@ describe.skip('server rendering (ADR 0012)', () => {
       html`<ssr-card label="x" .items=${[]} .initialMessages=${noted}></ssr-card>`,
     );
     expect(JSON.stringify(seedOf(out))).toContain(HOSTILE);
-    expect(out).not.toContain('<script>alert(1)');
+    // Inside a quoted attribute value only the quote can end it: `<script>` there is inert text.
+    expect(out.replace(SEED, '')).not.toContain('<script>');
+    expect(out).not.toContain(`'</script>`);
   });
 
   it('halves the seed when state is copied from props (gyral-4k7.10)', async () => {
     const items = Array.from({ length: 200 }, (_, n) => `product number ${String(n)}`);
     const out = await renderToString(html`<ssr-copy .items=${items}></ssr-copy>`);
-    const match = /data-gyral-seed="([^"]*)"/.exec(out);
-    const seed = decode(match?.[1] ?? '');
+    const seed = decode(SEED.exec(out)?.[1] ?? '');
     const payload = JSON.stringify(items).length;
     expect(seed.length).toBeLessThan(payload * 1.1); // once, not twice
     expect(seedOf(out)).toEqual({ props: { items } });
@@ -122,7 +120,7 @@ describe.skip('server rendering (ADR 0012)', () => {
       page({
         title: 'A <b> title',
         description: 'About us',
-        head: serverHtml`<link rel="icon" href="/favicon.ico">`,
+        head: html`<link rel="icon" href="/favicon.ico" />`,
         body: html`<ssr-card label="p" .items=${[]}></ssr-card>`,
         scripts: ['/src/entry-client.ts'],
       }),
@@ -132,6 +130,7 @@ describe.skip('server rendering (ADR 0012)', () => {
     expect(out).toContain('<title>A &lt;b&gt; title</title>');
     expect(out).toContain('<meta name="description" content="About us">');
     expect(out).toContain('<script type="module" src="/src/entry-client.ts"></script>');
+    expect(out).toContain('<link rel="icon" href="/favicon.ico">');
     expect(out).toMatch(/<ssr-card\s+label="p"/);
   });
 
@@ -147,6 +146,13 @@ describe.skip('server rendering (ADR 0012)', () => {
     expect(head).toContain('<style>body { color: red; }</style>');
     expect(head).toContain('content: "<\\/STYLE><script>x()</script>"; }</style>');
     expect(out.match(/<\/style>/gi)).toHaveLength(2);
+  });
+
+  it('rejects or errors the stream when a render step throws', async () => {
+    const later = Promise.resolve('x');
+    await expect(renderToString(html`<p>${later}</p>`)).rejects.toThrow(/got a Promise/);
+    const res = renderPage({ title: 't', body: html`<p>${later}</p>` });
+    await expect(res.text()).rejects.toThrow(/got a Promise/);
   });
 
   it('streams a full page as an HTML Response', async () => {

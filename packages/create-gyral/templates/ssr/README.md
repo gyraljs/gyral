@@ -20,8 +20,7 @@ the browser. They work before any JavaScript loads.
 - `server/app.ts`: renders each page. Add a route there and its path to `staticPaths` to
   prerender it.
 
-> **0.3 development builds:** server rendering moves to Gyral's own renderer
-> (`@gyral/core/server`). Until it lands, `renderPage` throws, so `npm run build` (prerender)
-> and the server tests (skipped) wait for it.
+> **0.3 development builds:** hydration in `@gyral/core` is still being built; until it lands,
+> server-rendered components resume from their seeds and render fresh in the browser.
 
 Docs: [gyral.dev/docs](https://gyral.dev/docs/).

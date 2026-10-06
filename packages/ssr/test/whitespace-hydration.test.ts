@@ -28,7 +28,7 @@ afterAll(() => {
   errors.mockRestore();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip('indented templates hydrate in place (gyral-9rf)', () => {
   it('hydrates without mismatch and stays live', async () => {
     const before = root('test-ws-table').querySelector('tr');

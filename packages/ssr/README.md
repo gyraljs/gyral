@@ -1,6 +1,6 @@
 # @gyral/ssr
 
-Gyral server rendering: whole pages of Gyral components rendered to Declarative Shadow DOM on the server, with hydration seeds so the browser picks up where the server left off. Works in any runtime with the Fetch API `Response` (Node, Hono, workers).
+Gyral server rendering: whole pages of Gyral components rendered on the server (shadow components as Declarative Shadow DOM, light components as plain children), with hydration seeds so the browser picks up where the server left off. Rendering is `@gyral/core/server`'s: synchronous, no DOM, no Node-only APIs. Works in any runtime with the Fetch API `Response` (Node, Hono, Deno, workers).
 
 ## Install
 
@@ -8,10 +8,9 @@ Gyral server rendering: whole pages of Gyral components rendered to Declarative 
 pnpm add @gyral/ssr @gyral/core
 ```
 
-> **0.3.0 in progress:** server rendering is being rebuilt on Gyral's own view layer
-> (`@gyral/core/server`, docs/design-docs/view/06-server.md). Until it lands, `renderPage`,
-> `renderToStream` and `renderToString` throw; `formAction`, `page()` and the static helpers
-> keep their API.
+> **0.3.0 in progress:** hydration in `@gyral/core` (docs/design-docs/view/07-hydration.md)
+> is still being built; until then a server-rendered component resumes from its seed and
+> renders fresh in the browser.
 
 ## Example
 
@@ -31,6 +30,8 @@ export const handle = (req: Request): Response =>
 // client.ts: hydration is built into @gyral/core
 import './app.js';
 ```
+
+`contentSecurityPolicy({ styles, directives })` builds a `Content-Security-Policy` whose `style-src` allows every component's `<style>` by hash; pass it as `renderPage({ …, csp })`. `formAction` handles no-JS form posts with the same schema as the browser.
 
 `@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`).
 

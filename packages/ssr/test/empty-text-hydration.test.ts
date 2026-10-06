@@ -27,7 +27,7 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip("a text binding rendered from '' on the server (gyral-4k7.12)", () => {
   it('shows content set after hydration (shadow DOM)', async () => {
     el('test-empty-text').send({ _tag: 'Say', text: 'Hello' });

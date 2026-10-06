@@ -4,8 +4,7 @@ import { createApp } from '../server/app.js';
 const app = createApp({ clientEntry: '/src/entry-client.ts' });
 const get = (path: string) => app.fetch(new Request(`http://localhost${path}`));
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('isomorphic server', () => {
+describe('isomorphic server', () => {
   it('server-renders the page as Declarative Shadow DOM, readable without JavaScript', async () => {
     const res = await get('/about');
     const body = await res.text();

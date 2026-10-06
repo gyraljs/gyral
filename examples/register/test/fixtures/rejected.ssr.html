@@ -1,26 +1,11 @@
-<!doctype html>
-<html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Create an account — Gyral register</title>
-    <meta name="description" content="A form that validates the same way with and without JavaScript.">
-    <link rel="stylesheet" href="/shared/base.css" />
-  <style>
+<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>Create an account — Gyral register</title> <!--gyral:1zf882o33ac--><meta name="description" content="A form that validates the same way with and without JavaScript."><!----> <!----><!--gyral:14a348qkihy--><link rel="stylesheet" href="/shared/base.css"> <style>
     @layer reset, base;
     @layer base {
-      body > main { max-inline-size: 30rem; }
+      body > main {
+        max-inline-size: 30rem;
+      }
     }
-  </style>
-    <script type="module" src="/src/entry-client.ts"></script>
-  </head>
-  <body>
-    <!--lit-part nnQwacmwlXU=--><main>
-        <h1>Create an account</h1>
-        <!--lit-node 2--><gy-register
-          
-          
-         data-gyral-seed="{&quot;state&quot;:{&quot;values&quot;:{&quot;name&quot;:&quot;admin&quot;,&quot;email&quot;:&quot;mike@example.com&quot;},&quot;errors&quot;:{&quot;name&quot;:[&quot;That name is taken.&quot;],&quot;confirm&quot;:[&quot;The passwords do not match.&quot;]}},&quot;props&quot;:{}}"><template shadowroot="open" shadowrootmode="open"><style>
+  </style><!----><!----> <!--gyral:kq7j8fgdjg--><script type="module" src="/src/entry-client.ts"></script></head><body><!--gyral:hnw4hbhpqj--><main><h1>Create an account</h1><gy-register data-gyral-seed='{"state":{"values":{"name":"admin","email":"mike@example.com"},"errors":{"name":["That name is taken."],"confirm":["The passwords do not match."]}},"props":{}}'><template shadowrootmode="open"><style>
     @layer component {
       :host {
         display: block;
@@ -67,51 +52,4 @@
         cursor: pointer;
       }
     }
-  </style><!--lit-part RR800qu3Wbg=--><!--lit-node 0--><form data-intent="Register" action="/" method="post"><!--lit-part--><!--lit-part uTvr9lnamKA=--><p><!--lit-node 1--><label for="name"><!--lit-part-->Name<!--/lit-part--></label> <!--lit-node 3--><input
-      id="name"
-      name="name"
-      type="text"
-      autocomplete="username"
-      
-      required
-      value="admin"
-      aria-describedby="name-error"
-      aria-invalid="true"
-      
-    /> <!--lit-node 4--><span id="name-error" class="error"><!--lit-part-->That name is taken.<!--/lit-part--></span></p><!--/lit-part--><!--lit-part uTvr9lnamKA=--><p><!--lit-node 1--><label for="email"><!--lit-part-->Email<!--/lit-part--></label> <!--lit-node 3--><input
-      id="email"
-      name="email"
-      type="email"
-      autocomplete="email"
-      
-      required
-      value="mike@example.com"
-      aria-describedby="email-error"
-      
-      
-    /> <!--lit-node 4--><span id="email-error" class="error"><!--lit-part--><!--/lit-part--></span></p><!--/lit-part--><!--lit-part uTvr9lnamKA=--><p><!--lit-node 1--><label for="password"><!--lit-part-->Password<!--/lit-part--></label> <!--lit-node 3--><input
-      id="password"
-      name="password"
-      type="password"
-      autocomplete="new-password"
-      minlength="8"
-      required
-      value=""
-      aria-describedby="password-error"
-      
-      
-    /> <!--lit-node 4--><span id="password-error" class="error"><!--lit-part--><!--/lit-part--></span></p><!--/lit-part--><!--lit-part uTvr9lnamKA=--><p><!--lit-node 1--><label for="confirm"><!--lit-part-->Repeat password<!--/lit-part--></label> <!--lit-node 3--><input
-      id="confirm"
-      name="confirm"
-      type="password"
-      autocomplete="new-password"
-      
-      required
-      value=""
-      aria-describedby="confirm-error"
-      aria-invalid="true"
-      
-    /> <!--lit-node 4--><span id="confirm-error" class="error"><!--lit-part-->The passwords do not match.<!--/lit-part--></span></p><!--/lit-part--><!--/lit-part--><p class="error" role="alert"><!--lit-part--><!--/lit-part--></p><!--lit-node 4--><button >Create account</button></form><!--/lit-part--></template></gy-register>
-      </main><!--/lit-part-->
-  </body>
-</html>
+  </style><!--gyral:157foim6m2g--><form action="/" method="post" data-intent="Register"><!--gyral:24xitbnjpo7--><p><label for="name">Name</label> <input required id="name" name="name" type="text" autocomplete="username" value="admin" aria-describedby="name-error" aria-invalid="true"> <span class="error" id="name-error">That name is taken.</span></p><!--gyral:24xitbnjpo7--><p><label for="email">Email</label> <input required id="email" name="email" type="email" autocomplete="email" value="mike@example.com" aria-describedby="email-error"> <span class="error" id="email-error"></span></p><!--gyral:24xitbnjpo7--><p><label for="password">Password</label> <input required id="password" name="password" type="password" autocomplete="new-password" minlength="8" value="" aria-describedby="password-error"> <span class="error" id="password-error"></span></p><!--gyral:24xitbnjpo7--><p><label for="confirm">Repeat password</label> <input required id="confirm" name="confirm" type="password" autocomplete="new-password" value="" aria-describedby="confirm-error" aria-invalid="true"> <span class="error" id="confirm-error">The passwords do not match.</span></p><p class="error" role="alert"></p><button>Create account</button></form></template></gy-register></main></body></html>

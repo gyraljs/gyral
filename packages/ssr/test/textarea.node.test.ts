@@ -3,12 +3,11 @@ import { html } from '@gyral/core';
 import { renderToString } from '../src/index.js';
 import './support/textarea.js';
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
-describe.skip('<textarea> content on the server (gyral-czi.34)', () => {
+describe('<textarea> content on the server (gyral-czi.34)', () => {
   it('renders escaped content and attributes without SSR errors', async () => {
     const out = await renderToString(html`<test-note></test-note>`);
     expect(out).toContain(
-      '<textarea id="msg" name="message" rows="3" required data-intent="Typed">' +
+      '<textarea id="msg" name="message" rows="3" required data-intent="Typed">\n' +
         'Hello &lt;/textarea&gt;&lt;b&gt;x&lt;/b&gt; &amp; "q"</textarea>',
     );
     expect(out).not.toContain('aria-invalid');

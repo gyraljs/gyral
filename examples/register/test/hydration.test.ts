@@ -28,7 +28,7 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip('hydrating a rejected no-JS submission', () => {
   it('shows the errors before any component code loads', () => {
     expect(customElements.get('gy-register')).toBeUndefined();

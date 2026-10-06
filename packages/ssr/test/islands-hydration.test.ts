@@ -35,7 +35,7 @@ afterAll(() => {
   page?.unmount();
 });
 
-// Re-enable in Phase 4/5 (gyral-g1r.9 / gyral-g1r.10): needs the Gyral server renderer / hydration.
+// Re-enable in Phase 5 (gyral-g1r.10): needs hydration. Its server markup (the fixture) comes from Phase 4.
 describe.skip('lazy hydration islands (gyral-4k7.4)', () => {
   it('hydrates load components right away and keeps islands inert', () => {
     expect(el('test-island-load').state['hydrated']).toBe(true);
