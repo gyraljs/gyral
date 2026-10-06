@@ -11,11 +11,11 @@ runtime, some only during SSR.
 The rules live once, in `view/`'s normalizer (01). Three tools surface them with the same
 messages:
 
-| Where                              | When                                                    | Audience                         |
-| ---------------------------------- | ------------------------------------------------------- | -------------------------------- |
-| Vite compiler (`@gyral/core/vite`) | build and dev server: the build fails with a code frame | everyone on the preset (default) |
-| Runtime preparer, development mode | first render of the call site: throws                   | the no-build-step path, tests    |
-| ESLint (`@gyral/core/eslint`)      | in the editor                                           | everyone, before saving          |
+| Where                              | When                                                                                   | Audience                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------- |
+| Vite compiler (`@gyral/core/vite`) | `vite build`: the build fails with a code frame (the dev server uses the runtime path) | everyone on the preset (default) |
+| Runtime preparer, development mode | first render of the call site: throws                                                  | the no-build-step path, tests    |
+| ESLint (`@gyral/core/eslint`)      | in the editor                                                                          | everyone, before saving          |
 
 Production builds contain none of this code. Every message follows core belief 7: it says what
 is wrong **and what to write instead**, and links the spec section.

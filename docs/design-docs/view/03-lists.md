@@ -61,15 +61,15 @@ Skipping is only correct if a row's output depends on nothing but `(item, picked
 2. **Development check:** skipped rows are re-evaluated anyway and their template results
    compared with the committed ones (template id and values, recursively). A difference warns
    once per call site: "a row depends on something not passed through `item` or `pick`". It
-   catches what the lint can't see, such as a helper reading changing module state. At most 200
+   catches what the lint can't see, such as a helper reading changing module state. At most 200 (per flush, reset by the scheduler)
    skipped rows are checked per flush, rotating through the list. Production has no check.
 
 ## Keys
 
 - Required. A key is a string or number, unique within the list. For lists of primitives the key
   can be the value: `each(tags, (t) => t, Tag)`.
-- Duplicate keys are a development error. In production the later duplicates are treated as
-  new rows.
+- Duplicate keys are a development error. In production they are handled best effort (matched
+  by position where the scan can), never crashing.
 
 ## Reconciliation
 

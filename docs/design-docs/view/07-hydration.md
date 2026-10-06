@@ -61,7 +61,9 @@ references, and the template's static text lengths come from the parsed template
 **Property parts** on nested Gyral hosts are recorded but not set when the child already has a
 value for that prop from its own seed. The first real change sets them.
 
-**Form state** is never overwritten (decision F2): `value`, `checked`, `selected`,
+**Form state** is never overwritten (decision F2). Adopted form-state parts are flagged so the
+live comparison (02) is skipped until the model's value for that part changes; a re-render with
+an unchanged model must not undo the user's edit: `value`, `checked`, `selected`,
 `indeterminate` and textarea content keep what the user did before scripts ran. The model's next
 change writes as usual.
 

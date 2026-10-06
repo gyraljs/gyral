@@ -48,6 +48,10 @@ A child part must always know where to insert. It inserts before its **reference
 - otherwise an **anchor**: an empty comment `<!---->` emitted after the hole in the template
   HTML. That happens only when the hole is followed by static text or by another child hole.
 
+A hole at a template's root whose `ref` is `null` means "the end of the instance": the instance's
+owner (a parent part, a list, the render root) supplies the position. `sole` only applies inside
+templates; the render root never clears with `replaceChildren()` (a shadow root may hold styles).
+
 Sole holes, attribute and hook parts, and list items need no anchor. The benchmark row
 (`<td>${id}</td><td><a>${label}</a></td>…`) has none. Anchors are part of the template HTML,
 so the server writes exactly the same ones (06), and hydration finds them where it expects (07).
@@ -68,13 +72,16 @@ presence-only attributes use `?name`.
 **Multi** (`name="a ${x} b"`): pieces are joined with the static strings. `null`/`undefined`
 pieces become `''`; `nothing` in any piece removes the attribute.
 
+Other objects in an attribute warn in development and are written as `String(v)`. Invalid child
+values are rejected before any DOM change.
+
 All attribute parts compare the new value (or joined string) with the committed one and write
 only on change.
 
 ## Boolean attributes
 
-`?name=${v}`: truthy → present (`""`), falsy → absent (`toggleAttribute`). Names in the form-state
-table below also drive the live property.
+`?name=${v}`: truthy → present (`""`), falsy → absent (`toggleAttribute`). `nothing` counts as
+falsy. Names in the form-state table below also drive the live property.
 
 ## Properties
 
@@ -104,10 +111,17 @@ One spelling per piece of form state. The compiler and runtime know this table, 
   model's initial value), matching server-rendered markup.
 - Hydration never overwrites state the user changed before scripts ran; the model's next change
   writes as usual (07).
+- **Text-like** inputs are every `<input>` type except checkbox, radio, hidden, button, submit,
+  reset, image and file. A missing value means `''` and writes no attribute on first creation.
+- `?open` compares with the attribute's live presence. `<textarea>`/`<title>` content follows the
+  child-hole value rules, flattened to a string.
 - A checkbox's `value`, `<button value>`, `<option value>` and the like are submitted values,
   not state: plain attributes.
 
 ## Element hooks
+
+A hook position also accepts `null`, `undefined` and `nothing` (no hook); anything else that
+isn't a hook result is a development error.
 
 The replacement for element directives: small behaviours attached to the element they sit on.
 

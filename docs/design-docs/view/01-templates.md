@@ -135,7 +135,8 @@ hydrate each other.
 ## Instantiation
 
 - Each template object gets one `<template>` element, created on first use.
-- Instances are created with `document.importNode(template.content, true)`, not
+- Single-root templates clone only the root node. Instances are created with
+  `document.importNode(template.content, true)`, not
   `template.content.cloneNode(true)`: nested custom elements are created in the document and
   upgraded at once, so parts set props on upgraded elements (05, upgrade capture).
 - Parts are found by following paths with `firstChild`/`nextSibling`, sharing prefixes between
