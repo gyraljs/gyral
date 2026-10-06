@@ -139,6 +139,13 @@ compare columns, not absolute values):
 - `moveBefore` costs 0–10% over `insertBefore` on move-heavy changes; it stays (it keeps focus
   and element state, step 4).
 
+**Size of each half (gyral-g1r.18):** in a production bundle the two-ended scan costs about
+0.08 KiB gzip and the LIS about 0.13 KiB (both only in apps that call `each`). Neither is dropped:
+with LIS only, "swap rows" (0.15 ms) is no longer faster than lit-html's (0.13–0.15 ms in the
+renderer benchmark); with the two-ended scan only, "replace first and last" takes 0.63 ms instead
+of 0.13 ms. Bench rerun after the size pass: (a) 0.150 / 0.125, (b) 0.070 / 0.625, (c) 0.070 /
+0.130 ms (swap / replace first and last).
+
 ### Fast paths
 
 - **Create into empty:** build all rows into one `DocumentFragment` and insert it once.

@@ -234,7 +234,7 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 - **Phase 5, size:** hydration added about 1.8 KiB gzip to every client bundle (the view line
   went from 5.47 to 7.22 KiB), whether the app server-rendered or not. **gyral-g1r.18:** it now
   loads lazily ("Loading"): a client-only app's initial chunk carries none of it (hello-world's
-  initial chunk 10.3 → 9.1 KiB gzip). The separate chunk is about 2.8 KiB gzip and is fetched
+  initial chunk 10.3 → 9.1 KiB gzip when it landed). The separate chunk is about 2.8 KiB gzip and is fetched
   only by server-rendered pages; split from the main chunk it compresses worse, so all chunks
   together are about 1 KiB larger than one bundle, and a server-rendered page fetches it one
   round trip after the entry (a `modulepreload` hint from the server would remove that wait;

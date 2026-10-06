@@ -3,7 +3,8 @@
 //   pnpm size                 → table for all examples and the view layer
 //   pnpm size counter view    → only those
 //   pnpm size --json          → machine-readable output
-//   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json
+//   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json (all chunks
+//                               under "budgets", the initial chunk under "initial")
 // Each example is built once with Vite in production mode and the Gyral preset (its template
 // compiler and the gyral-compiled condition, view/01-templates.md), all chunks concatenated:
 // budgets measure what apps built with the preset ship. The `initial` column is what a page
@@ -86,6 +87,7 @@ const examples = readdirSync('examples', { withFileTypes: true })
 
 const budgetFile = JSON.parse(readFileSync(BUDGET_FILE, 'utf8'));
 const budgets = { ...budgetFile.budgets, view: budgetFile.view };
+const initialBudgets = budgetFile.initial;
 const VIEW_CONDITIONS = ['gyral-compiled', 'module', 'browser', 'production'];
 const targets = [...examples];
 if (wanted.length === 0 || wanted.includes('view')) {
@@ -102,6 +104,7 @@ for (const t of targets) {
     brotliKb: size.brotli / 1024,
     initialKb: size.initial / 1024,
     budgetKb: budgets[t.name],
+    initialBudgetKb: t.name === 'view' ? undefined : initialBudgets[t.name],
   });
 }
 
@@ -119,7 +122,8 @@ if (json) {
   }
   console.log(
     'Sizes in KiB. gzip/brotli: all chunks; initial: gzip of the entry and its static imports ' +
-      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json.',
+      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
+      'also caps `initial`.',
   );
 }
 
@@ -141,6 +145,24 @@ if (check) {
     } else if (r.budgetKb - r.gzipKb > SLACK_KIB) {
       hints.push(
         `${r.example}: ${r.gzipKb.toFixed(2)} KiB, budget ${r.budgetKb}. Lower the budget to lock in the win.`,
+      );
+    }
+  }
+  for (const r of rows) {
+    if (r.example === 'view') continue;
+    if (r.initialBudgetKb === undefined) {
+      errors.push(
+        `${r.example}: no initial-chunk budget. Add "${r.example}": ${(Math.ceil(r.initialKb * 10) / 10 + 0.1).toFixed(1)} to "initial" in ${BUDGET_FILE}.`,
+      );
+    } else if (r.initialKb > r.initialBudgetKb) {
+      errors.push(
+        `${r.example}: its initial chunk, ${r.initialKb.toFixed(2)} KiB gzip, is over its ` +
+          `${r.initialBudgetKb} KiB budget. Find what grew in the entry chunk (pnpm size ` +
+          `${r.example}), or load it lazily. Raise a budget only with an ADR-backed reason.`,
+      );
+    } else if (r.initialBudgetKb - r.initialKb > SLACK_KIB) {
+      hints.push(
+        `${r.example}: initial ${r.initialKb.toFixed(2)} KiB, budget ${r.initialBudgetKb}. Lower it to lock in the win.`,
       );
     }
   }

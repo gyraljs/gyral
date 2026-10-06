@@ -117,6 +117,53 @@ Set as budgets in Phase 0 from measurements; these are estimates, not commitment
 - No js-framework-benchmark operation slower than 0.2.0; geomean ≤ 1.20, aiming lower.
 - Benchmark row: ≤ 1 comment node (today 4).
 
+### Size pass (gyral-g1r.18, 2026-10-06): measured
+
+`pnpm size` (production, Gyral preset, gzip; `initial` = entry chunk and its static imports,
+what a page downloads before any `import()`):
+
+| Bundle                   | 0.2.0 | before the pass | after: initial | after: all chunks |
+| ------------------------ | ----- | --------------- | -------------- | ----------------- |
+| hello-world              | 12.2  | 14.3            | **8.9**        | 11.3              |
+| counter                  | 12.2  | 14.3            | 8.9            | 11.3              |
+| isomorphic (SSR)         | 17.3  | 17.8            | 13.0           | 15.6              |
+| no-js-first (SSR, forms) | 18.7  | 19.2            | 16.8           | 19.3              |
+| view line                | —     | 7.2             | 7.0            | 7.0               |
+
+How (each in view/ or core, see the specs): features register themselves when their API is
+called (`each`, `raw`, `defineHook`, `command()`, `defineStore()`, the prop builders; view/05
+"Features register themselves"), hydration and islands load lazily with the first seeded host
+(view/07 "Loading"), the invoker fallback is an ADR 0003 tier-3 `import()`, production messages
+are short, and compiled builds no longer carry the runtime template cache.
+
+Against the targets above:
+
+- **Smallest app ≤ 8 KiB: not met** (8.9 initial). The owner's bar for this pass, ≤ 9.0, is met.
+  Stretch 6: 2.9 KiB away.
+- **All chunks are larger than one bundle** by about 1 KiB: the split-off hydration chunk
+  (2.8 KiB) compresses on its own, and Vite adds its preload helper (about 0.5 KiB, in the
+  initial chunk) to every app with an `import()`. Client-only pages never fetch the chunk; a
+  server-rendered page fetches it one round trip after the entry. Nine examples that use
+  `each`, stores or forms stay above their 0.2.0 all-chunks baseline; every initial chunk is
+  2.4–5.4 KiB below its 0.2.0 bundle (`scripts/size-budget.json` now caps both).
+- Apps that use a feature ship it: hello-world shed 5.4 KiB, no-js-first (forms, stores, lists,
+  hooks, commands, server-rendered) 2.5 KiB.
+- Renderer speed unchanged: every `pnpm bench:view` operation stays faster than lit-html.
+
+What further cuts would cost (largest first):
+
+1. Vite's preload helper (~0.5 KiB): only removable at the bundler level (a preset plugin that
+   drops wrappers with no dependencies, rewriting Vite's output; fragile), or by not splitting.
+2. Instantiation plans computed by the compiler (~0.5 KiB; `plan.ts`'s builder): compiled
+   template objects grow by their walk ops (tens of bytes each); the runtime path keeps the
+   builder behind `#prepare`.
+3. Custom states and view transitions behind `import()` (~0.15 KiB): the first state sync or
+   transition happens a round trip later.
+4. Keyed lists, for apps that use them: LIS only (−0.08 KiB) makes swaps slower than lit-html;
+   two-ended only (−0.13 KiB) makes "replace first and last" about 5× slower (view/03).
+5. A `modulepreload` hint for the hydration chunk from `@gyral/ssr` (no size change) would remove
+   the extra round trip for server-rendered pages.
+
 ### Measuring (Phase 0)
 
 - **Size:** `pnpm size:check` (part of `pnpm check`) fails when an example's gzip bundle
