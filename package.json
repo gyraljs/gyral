@@ -17,6 +17,7 @@
     "invariants": "node scripts/check-docs.mjs && node scripts/check-workflows.mjs && node scripts/check-public-api.mjs && node scripts/check-skill.mjs && node scripts/check-provenance.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench:view": "vitest run --config packages/core/bench/vitest.config.ts",
     "ci:local": "node scripts/ci-local.mjs",
     "examples": "node scripts/examples.mjs",
     "size": "node scripts/measure-bundles.mjs",

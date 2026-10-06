@@ -27,6 +27,10 @@
     "#prepare": {
       "gyral-compiled": "./src/view/prepare-stub.ts",
       "default": "./src/view/prepare.ts"
+    },
+    "#view-dev": {
+      "development": "./src/view/dev.ts",
+      "default": "./src/view/dev-off.ts"
     }
   },
   "publishConfig": {
@@ -48,6 +52,10 @@
       "#prepare": {
         "gyral-compiled": "./dist/view/prepare-stub.js",
         "default": "./dist/view/prepare.js"
+      },
+      "#view-dev": {
+        "development": "./dist/view/dev.js",
+        "default": "./dist/view/dev-off.js"
       }
     }
   },

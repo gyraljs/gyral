@@ -78,13 +78,47 @@ Given the old rows (keys, nodes) and the new items:
 1. Build the new key order. Reuse the row for every key present in both; create rows for new
    keys; remove rows for keys that are gone.
 2. Re-render reused rows that aren't skipped. A row whose template changed is replaced.
-3. Put rows in order with the fewest DOM moves. Candidates to benchmark in Phase 2 (record the
-   winner and why here): a longest-increasing-subsequence plan over old positions, and a
-   two-ended scan with a key map. The js-framework-benchmark swap-rows, remove-row and
-   partial-update operations decide.
+3. Put rows in order with the fewest DOM moves (chosen by benchmark in Phase 2, below): match
+   keys with a two-ended scan, then a key map for what is left; the rows matched in place by
+   the scan, or else the rows on a longest increasing subsequence of old positions, stay; every
+   other reused row moves, and new rows are inserted.
 4. Move rows with `moveBefore()` where the browser has it: it keeps focus, selection, CSS
    animations, `<iframe>` and `<video>` state. Otherwise use `insertBefore`. Components define
    `connectedMoveCallback` so a `moveBefore` move doesn't disconnect them (05).
+
+Rows re-render in document order (prefix, middle, suffix) before anything moves, so element
+hooks run in document order too.
+
+### The benchmark (Phase 2, 2026-10-06)
+
+`pnpm bench:view` (`packages/core/bench/lists.bench.test.ts`): Chromium (Playwright 1.63,
+headless), production build of `view/`, one keyed list of 1,000 `<tr>` rows reordered without
+changing any item (every row is skipped, so the time is matching, bookkeeping and DOM moves).
+The common prefix and suffix are trimmed before any candidate runs, so remove-one, insert-one
+and prepend never reach them. Medians of 61 interleaved runs, in ms (the machine was loaded;
+compare columns, not absolute values):
+
+| Change                   | (a) map + LIS | (b) two-ended + map | (c) hybrid | (c) with `insertBefore` |
+| ------------------------ | ------------- | ------------------- | ---------- | ----------------------- |
+| swap rows 1 and 998      | 0.225         | 0.130               | 0.130      | 0.125                   |
+| remove one (500)         | 0.090         | 0.095               | 0.085      | 0.090                   |
+| insert one in the middle | 0.070         | 0.070               | 0.065      | 0.065                   |
+| reverse                  | 0.695         | 0.620               | 0.625      | 0.585                   |
+| shuffle                  | 1.055         | 1.065               | 1.095      | 0.995                   |
+| replace first and last   | 0.355         | 1.520               | 0.350      | 0.340                   |
+| prepend 10               | 0.115         | 0.100               | 0.110      | 0.090                   |
+| move one (10 → 900)      | 0.165         | 0.090               | 0.095      | 0.095                   |
+
+- **(a)** builds a key map over the whole reordered window even for a swap, then an O(n log n)
+  LIS: minimal moves, but the bookkeeping costs 70% more than (b) on swap-rows.
+- **(b)** needs no map for swaps, single moves and reversals, but once its ends stop matching it
+  moves every row it finds before the old head: replacing the first and last row moves all 998
+  rows in between (4.3× slower than (a)).
+- **(c), shipped:** (b)'s scan for matching only, with the rows it matched in place kept and the
+  crossed ones moved (no map, no LIS); when the scan gets stuck, (a)'s map and LIS for the rest.
+  It ties (b) where (b) is good and (a) where (b) breaks down.
+- `moveBefore` costs 0–10% over `insertBefore` on move-heavy changes; it stays (it keeps focus
+  and element state, step 4).
 
 ### Fast paths
 
@@ -92,7 +126,8 @@ Given the old rows (keys, nodes) and the new items:
 - **Clear:** when the new list is empty and the list's hole is the sole content of its parent
   element, clear with `parent.replaceChildren()` instead of removing rows one by one.
 - **Append only:** when the old keys are a prefix of the new keys, only create and insert the
-  tail.
+  tail (likewise prepend and insert-only: new rows go into one fragment).
+- **Replace all:** when no key survives, clear (as above) and create into one fragment.
 
 ### Row boundaries
 

@@ -28,16 +28,26 @@ export function isTemplateResult(value: unknown): value is TemplateResult {
   return typeof value === 'object' && value !== null && SOURCE in value;
 }
 
+/** Internal: a result's source, compared by identity to skip `templateOf` on updates. */
+export const sourceOf = (result: TemplateResult): readonly string[] | TemplateObject =>
+  result[SOURCE];
+
 const prepared = new WeakMap<readonly string[], TemplateObject>();
+// One-entry cache in front of the WeakMap: list rows ask for the same call site in a row.
+let lastSource: readonly string[] | undefined;
+let lastTemplate: TemplateObject | undefined;
 
 /** The template object of a result (normalized on the first render of its call site). */
 export function templateOf(result: TemplateResult): TemplateObject {
   const source = result[SOURCE];
   if (!Array.isArray(source)) return source as TemplateObject;
+  if (source === lastSource) return lastTemplate as TemplateObject;
   let template = prepared.get(source);
   if (template === undefined) {
     template = prepare(source);
     prepared.set(source, template);
   }
+  lastSource = source;
+  lastTemplate = template;
   return template;
 }

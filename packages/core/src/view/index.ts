@@ -6,3 +6,13 @@ export { normalize } from './normalize/normalize.js';
 export { templateId } from './normalize/id.js';
 export { TemplateError } from './normalize/errors.js';
 export type { PartSpec, Path, Segment, TemplateObject } from './normalize/types.js';
+export { render } from './render/render.js';
+export {
+  each,
+  nothing,
+  raw,
+  type ChildValue,
+  type ListResult,
+  type RawResult,
+} from './render/values.js';
+export { defineHook, type HookAttributes, type HookResult, type HookSpec } from './render/hooks.js';

@@ -26,6 +26,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm demos:record [name…]`                     | Record each example's `demo.mjs` (1280×720 video + poster) → `.demos/` for gyral.dev                               |
 | `pnpm verify:create`                            | Generate both `create-gyral` templates from the tarball, install, typecheck, build, test (network)                 |
 | `pnpm smoke:prod`                               | Build SSR examples for production, check every page hydrates in place (run after hydration changes)                |
+| `pnpm bench:view`                               | View-layer benchmarks in Chromium: renderer vs lit-html, list reconciliation candidates (not part of `check`)      |
 
 First run needs `pnpm exec playwright install chromium`.
 

@@ -88,7 +88,8 @@ export default tseslint.config(
     },
   },
   // The view layer (ADR 0018 "Where it lives", "Clean room"): view/ imports nothing else from
-  // core and no Lit package; view/server/ imports only view/. Relative imports are matched by
+  // core (its own `#prepare`/`#view-dev` conditions aside) and no Lit package; view/server/
+  // imports only view/. Relative imports are matched by
   // depth, so each level gets the pattern that would climb out of view/.
   ...[
     ['packages/core/src/view/*.ts', '^\\.\\./'],
@@ -105,7 +106,7 @@ export default tseslint.config(
             ...effectImports.patterns,
             { group: ['@gyral/*'], message: VIEW_BOUNDARY },
             { regex: escape, message: VIEW_BOUNDARY },
-            { regex: '^#(?!prepare$)', message: VIEW_BOUNDARY },
+            { regex: '^#(?!(prepare|view-dev)$)', message: VIEW_BOUNDARY },
             { regex: '^(@lit(-[a-z]+)?/|lit($|/|-))', message: VIEW_CLEAN_ROOM },
           ],
         },

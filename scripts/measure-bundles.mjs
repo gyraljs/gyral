@@ -1,10 +1,13 @@
-// Measures production bundle sizes of every example (gyral-ob0, ADR 0015) and enforces the size
-// budget (gyral-g1r.2, ADR 0018).
-//   pnpm size                 → table for all examples
-//   pnpm size counter bmi     → only those
+// Measures production bundle sizes of every example (gyral-ob0, ADR 0015) and of the view
+// layer's client API, and enforces the size budget (gyral-g1r.2, ADR 0018).
+//   pnpm size                 → table for all examples and the view layer
+//   pnpm size counter view    → only those
 //   pnpm size --json          → machine-readable output
-//   pnpm size --check         → fail when an example exceeds scripts/size-budget.json
-// Each example is built once with Vite in production mode, all chunks concatenated.
+//   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json
+// Each example is built once with Vite in production mode, all chunks concatenated. The "view"
+// row builds scripts/size/view-entry.js (render, html, compiled, each, raw, nothing,
+// defineHook) with the `gyral-compiled` condition, as the Vite preset does, so the runtime
+// template preparer is left out; its budget is the top-level "view" key.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
@@ -25,11 +28,13 @@ function entryOf(dir) {
   return existsSync(client) ? client : undefined;
 }
 
-async function bundleBytes(root, entry) {
+async function bundleBytes(root, entry, conditions) {
   const output = await build({
     root,
     logLevel: 'silent',
     configFile: false,
+    mode: 'production',
+    ...(conditions === undefined ? {} : { resolve: { conditions } }),
     build: { write: false, minify: true, modulePreload: false, rollupOptions: { input: entry } },
   });
   const outputs = Array.isArray(output) ? output : [output];
@@ -52,16 +57,23 @@ const examples = readdirSync('examples', { withFileTypes: true })
   .map((e) => ({ ...e, entry: entryOf(e.root) }))
   .filter((e) => e.entry !== undefined);
 
-const budgets = JSON.parse(readFileSync(BUDGET_FILE, 'utf8')).budgets;
+const budgetFile = JSON.parse(readFileSync(BUDGET_FILE, 'utf8'));
+const budgets = { ...budgetFile.budgets, view: budgetFile.view };
+const VIEW_CONDITIONS = ['gyral-compiled', 'module', 'browser', 'production'];
+const targets = [...examples];
+if (wanted.length === 0 || wanted.includes('view')) {
+  const root = resolve('.');
+  targets.push({ name: 'view', root, entry: resolve('scripts/size/view-entry.js') });
+}
 const rows = [];
-for (const ex of examples) {
-  const size = await bundleBytes(ex.root, ex.entry);
+for (const t of targets) {
+  const size = await bundleBytes(t.root, t.entry, t.name === 'view' ? VIEW_CONDITIONS : undefined);
   rows.push({
-    example: ex.name,
+    example: t.name,
     minKb: size.min / 1024,
     gzipKb: size.gzip / 1024,
     brotliKb: size.brotli / 1024,
-    budgetKb: budgets[ex.name],
+    budgetKb: budgets[t.name],
   });
 }
 
@@ -85,8 +97,9 @@ if (check) {
   const hints = [];
   for (const r of rows) {
     if (r.budgetKb === undefined) {
+      const where = r.example === 'view' ? 'as the top-level "view" key of' : 'to the budgets in';
       errors.push(
-        `${r.example}: no budget. Add "${r.example}": ${(Math.ceil(r.gzipKb * 10) / 10 + 0.1).toFixed(1)} to ${BUDGET_FILE}.`,
+        `${r.example}: no budget. Add "${r.example}": ${(Math.ceil(r.gzipKb * 10) / 10 + 0.1).toFixed(1)} ${where} ${BUDGET_FILE}.`,
       );
     } else if (r.gzipKb > r.budgetKb) {
       errors.push(
@@ -105,5 +118,5 @@ if (check) {
     console.error(errors.join('\n'));
     process.exit(1);
   }
-  console.log(`size: ${rows.length} examples within budget`);
+  console.log(`size: ${rows.length} bundles within budget`);
 }
