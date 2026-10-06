@@ -1,8 +1,9 @@
 // define() outside the browser (docs/design-docs/view/05-element.md "Registration"): no
 // custom element, a placeholder class, and an entry in the server registry for Phase 4.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { css, define, html, isLightComponent, prop, type Stateless } from '../src/index.js';
+import { registerRecordedSpecs } from '../src/server-component.js';
 import { serverComponent } from '../src/view/index.js';
 
 const strings: StandardSchemaV1<readonly string[]> = {
@@ -40,6 +41,10 @@ const Light = define<Stateless, never>('test-node-light', {
 });
 
 describe('define() without a DOM', () => {
+  beforeAll(() => {
+    registerRecordedSpecs(); // what the Phase 4 server entry does before rendering
+  });
+
   it('returns a placeholder carrying the spec and tag', () => {
     expect(Counter.tagName).toBe('test-node-counter');
     expect(Counter.spec.init).toBeTypeOf('function');

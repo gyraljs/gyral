@@ -1,6 +1,6 @@
 // A spec as the server renderer sees it (view/05-element.md "Registration", view/06-server.md
-// "Components"). Outside the browser `define()` registers one of these in view/'s server
-// registry instead of a custom element. Rendering is `view(init(props))`: props parsed from the
+// "Components"). Outside the browser `define()` records the spec (server-specs.ts) and the
+// server entry registers one of these per spec in view/'s server registry. Rendering is `view(init(props))`: props parsed from the
 // start tag's attributes (always validated) and property holes (validated in development),
 // `init`'s commands dropped (the client's `init` starts them after hydration, ADR 0012), then
 // `initialMessages` through their reducers. Consumed by `@gyral/core/server` (Phase 4).
@@ -18,11 +18,13 @@ import {
   reportInvalid,
   type PropTable,
 } from './props.js';
+import { recordedSpecs } from './server-specs.js';
 import { serverScopeFor } from './store-scope.js';
 import type { AnyStore, StoreRef } from './store.js';
 import type { ComponentSpec, Ctx, IntentNames, Tagged } from './types.js';
 import {
   DEV,
+  registerServerComponent,
   styleTexts,
   type ServerComponent,
   type ServerRenderInput,
@@ -99,4 +101,15 @@ export function serverComponent<S, M extends Tagged, P>(
       };
     },
   };
+}
+
+/**
+ * Registers every spec define() recorded outside the browser in view/'s server registry. The
+ * server entry calls it before rendering (Phase 4); client code never imports this module.
+ */
+export function registerRecordedSpecs(): void {
+  for (const [tag, spec] of recordedSpecs()) {
+    // Sound: define() recorded exactly this tag's ComponentSpec.
+    registerServerComponent(serverComponent(tag, spec as ComponentSpec<unknown, Tagged, object>));
+  }
 }

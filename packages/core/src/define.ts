@@ -6,9 +6,9 @@ import { elementClass } from './element.js';
 import { markGyralHost } from './intent.js';
 import { isLight } from './light-dom.js';
 import { shadowedBuiltins } from './props.js';
-import { serverComponent } from './server-component.js';
+import { recordSpec } from './server-specs.js';
 import type { ComponentSpec, Tagged } from './types.js';
-import { DEV, registerServerComponent } from './view/index.js';
+import { DEV } from './view/index.js';
 
 export type { GyralElement, GyralElementClass } from './element-types.js';
 
@@ -44,8 +44,9 @@ export function define<S, M extends Tagged, P extends object = object, O extends
 ): GyralElementClass<S, M, P, O> {
   checkSpec(tag, spec);
   if (typeof HTMLElement === 'undefined') {
-    // No DOM (Node, Workers): the server renderer renders the spec itself (Phase 4).
-    registerServerComponent(serverComponent(tag, spec));
+    // No DOM (Node, Workers): the server renderer renders the spec itself (Phase 4). Only the
+    // spec is recorded here, so the server registry code never reaches client bundles.
+    recordSpec(tag, spec);
     const Placeholder = Object.assign(
       function Placeholder(): never {
         throw new Error(`<${tag}> is a browser element; render it with @gyral/core/server.`);

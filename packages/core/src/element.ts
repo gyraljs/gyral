@@ -35,8 +35,11 @@ const DEFER = 'defer-hydration';
 
 type Bag = Record<string, unknown>;
 
-/** The element class for `spec` (not yet registered). */
-export function elementClass<S, M extends Tagged, P>(tag: string, spec: ComponentSpec<S, M, P>) {
+/** The element class for `spec` (not yet registered); define() types it for the spec. */
+export function elementClass<S, M extends Tagged, P>(
+  tag: string,
+  spec: ComponentSpec<S, M, P>,
+): CustomElementConstructor {
   const table = (spec.props ?? {}) as PropTable;
   const names = Object.keys(table);
   const attrs = new Map<string, string>();

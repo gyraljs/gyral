@@ -1,8 +1,9 @@
 // The server registry (view/05-element.md "Registration", view/06-server.md "Components").
-// Outside the browser `define()` records each component here instead of registering a custom
-// element; `@gyral/core/server` (Phase 4, gyral-g1r.9) looks start tags up in it and renders
-// the component in place. Plain data and functions, no DOM: it lives in view/ so view/server/
-// can read it. Core's define() builds each entry from a spec (server-component.ts).
+// Outside the browser `define()` records each spec (server-specs.ts); the server entry turns
+// them into entries here (server-component.ts `registerRecordedSpecs`), and
+// `@gyral/core/server` (Phase 4, gyral-g1r.9) looks start tags up in it and renders the
+// component in place. Plain data and functions, no DOM: it lives in view/ so view/server/ can
+// read it.
 import type { ChildValue } from './render/values.js';
 
 /** What a server render of one component returns: its view and what its seed must carry. */
