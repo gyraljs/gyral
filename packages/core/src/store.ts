@@ -9,7 +9,9 @@ import {
   type DriverOverrides,
   type Next,
 } from './command.js';
+import { features, type LocalHost } from './features.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
+import { bindStores } from './store-binding.js';
 import type { IntentRejected, Tagged } from './types.js';
 
 /** No DOM means a server render: store commands never run there (ADR 0012). */
@@ -105,6 +107,7 @@ export type StoreOverrides = Readonly<Record<string, AnyStoreInstance>>;
 
 /** Defines a store. `name` keys it in registries, seeds and overrides, so keep it unique. */
 export function defineStore<S, M extends Tagged>(name: string, spec: StoreSpec<S, M>): Store<S, M> {
+  features.stores = bindStores; // components can use stores now (features.ts)
   const store: Store<S, M> = {
     name,
     spec,
@@ -232,6 +235,10 @@ function createInstance<S, M extends Tagged>(
 export const STORE_SEND = {
   name: '@gyral/store-send',
   run: () => undefined,
+  /** A component's send: delivered to its instance of the store (features.ts). */
+  local: (host: LocalHost, input: unknown) => {
+    host.stores().send(input as StoreSendInput);
+  },
 } as const;
 
 /** The input of a `send()` command. */

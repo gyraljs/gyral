@@ -1,6 +1,8 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
-import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
+import type { AnyDriver, Command, Concurrency, DriverOverrides, RetryPolicy } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
+import { providedDriver } from '../drivers-scope.js';
+import type { FeatureHost } from '../features.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`, retry schedules are timers
@@ -211,3 +213,23 @@ export function makeInterpreter<M>(
 
   return { run, dispose };
 }
+
+/**
+ * A component's interpreter (registered by `command()`, features.ts). Drivers resolve by name:
+ * el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
+ */
+export const hostInterpreter = <M>(
+  el: FeatureHost,
+  drivers: DriverOverrides | undefined,
+  dispatch: (msg: M) => void,
+  trace: CommandTrace | undefined,
+): Interpreter<M> =>
+  makeInterpreter(
+    (driver) =>
+      el.drivers[driver.name] ??
+      providedDriver(el, driver.name) ??
+      drivers?.[driver.name] ??
+      driver,
+    dispatch,
+    trace,
+  );

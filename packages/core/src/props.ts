@@ -1,5 +1,6 @@
 // Prop bookkeeping for define() (view/05-element.md "Props", ADR 0007): attribute names and
-// parsing, validation through Standard Schema, defaults, change detection, seed restore.
+// parsing, validation through Standard Schema, defaults, change detection, seed restore. The
+// prop builders register `propFeature` (features.ts): components without props don't bundle it.
 import type { Prop } from './prop.js';
 import { DEV } from './view/index.js';
 
@@ -14,16 +15,6 @@ export const kebab = (name: string): string => name.replace(/[A-Z]/g, (c) => `-$
 export function attributeOf(name: string, def: Prop<unknown>): string | undefined {
   if (def.attribute === false) return undefined;
   return def.attribute ?? kebab(name);
-}
-
-/** Attribute name → prop name, for `attributeChangedCallback`. */
-export function attributeMap(table: PropTable): ReadonlyMap<string, string> {
-  const map = new Map<string, string>();
-  for (const [name, def] of Object.entries(table)) {
-    const attr = attributeOf(name, def);
-    if (attr !== undefined) map.set(attr, name);
-  }
-  return map;
 }
 
 export type Checked =
@@ -162,14 +153,17 @@ export function readProps(values: Bag, table: PropTable): Bag {
 
 /** Required props that are still missing (ADR 0007 addendum). */
 export function missingRequired(values: Bag, table: PropTable): string[] {
-  return Object.entries(table)
-    .filter(([name, def]) => def.required && values[name] === undefined)
-    .map(([name]) => name);
+  return Object.keys(table).filter(
+    (name) => table[name]?.required === true && values[name] === undefined,
+  );
 }
 
-/** True when every declared prop is identical (`Object.is`) in both snapshots. */
-export function sameProps(names: readonly string[], a: Bag, b: Bag): boolean {
-  return names.every((name) => Object.is(a[name], b[name]));
+/** Warns about required props that are still missing, at first render. */
+export function warnMissing(tag: string, values: Bag, table: PropTable): void {
+  const missing = missingRequired(values, table);
+  if (missing.length > 0) {
+    console.warn(`<${tag}> is missing required prop(s): ${missing.join(', ')}.`);
+  }
 }
 
 /**
@@ -181,3 +175,27 @@ export function shadowedBuiltins(names: readonly string[]): string[] {
   if (typeof HTMLElement === 'undefined') return [];
   return names.filter((name) => name in HTMLElement.prototype);
 }
+
+/** define(): a prop named like a built-in property is an error in development, else a warning. */
+export function checkShadowed(tag: string, names: readonly string[]): void {
+  const shadowed = shadowedBuiltins(names);
+  if (shadowed.length === 0) return;
+  const message =
+    `<${tag}> declares prop(s) that shadow built-in element properties: ` +
+    `${shadowed.join(', ')}. Setting them changes platform behaviour ` +
+    `(a prop named "hidden" hides the element). Rename them (view/05-element.md).`;
+  if (DEV) throw new TypeError(message);
+  console.warn(message);
+}
+
+/** What the element uses, registered by the prop builders (features.ts). */
+export const propFeature = {
+  attributeOf,
+  attributeValue,
+  propertyValue,
+  warnMissing,
+  readProps,
+  checkShadowed,
+};
+
+export type PropFeature = typeof propFeature;

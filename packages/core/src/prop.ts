@@ -10,6 +10,8 @@
 // A prop's type is inferred from its schema's output. The honesty rule (ADR 0007) holds by
 // construction: a prop without `required` or `default` includes `undefined`.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
+import { features } from './features.js';
+import { propFeature } from './props.js';
 
 declare const OUTPUT: unique symbol;
 
@@ -79,6 +81,7 @@ interface Options {
 }
 
 function make(kind: PropKind, opts: Options = {}, schema?: StandardSchemaV1): Prop<unknown> {
+  features.props = propFeature; // components can declare props now (features.ts)
   const value = opts.default !== undefined ? opts.default : kind === 'boolean' ? false : undefined;
   const base = {
     kind,

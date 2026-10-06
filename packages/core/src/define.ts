@@ -5,7 +5,7 @@ import type { GyralElementClass } from './element-types.js';
 import { elementClass } from './element.js';
 import { markGyralHost } from './intent.js';
 import { isLight } from './light-dom.js';
-import { shadowedBuiltins } from './props.js';
+import { features } from './features.js';
 import { recordSpec } from './server-specs.js';
 import type { ComponentSpec, Tagged } from './types.js';
 import { DEV } from './view/index.js';
@@ -19,15 +19,9 @@ interface SpecShape {
 }
 
 function checkSpec(tag: string, spec: SpecShape): void {
-  const shadowed = shadowedBuiltins(Object.keys(spec.props ?? {}));
-  if (shadowed.length > 0) {
-    const message =
-      `<${tag}> declares prop(s) that shadow built-in element properties: ` +
-      `${shadowed.join(', ')}. Setting them changes platform behaviour ` +
-      `(a prop named "hidden" hides the element). Rename them (view/05-element.md).`;
-    if (DEV) throw new TypeError(message);
-    console.warn(message);
-  }
+  const names = Object.keys(spec.props ?? {});
+  // The prop builders registered the prop feature (features.ts) if there are props.
+  if (names.length > 0) features.props?.checkShadowed(tag, names);
   if (isLight(spec) && spec.styles !== undefined) {
     console.warn(`<${tag}> has shadow: false, so its styles are ignored; use document CSS.`);
   }

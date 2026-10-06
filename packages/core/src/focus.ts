@@ -3,12 +3,16 @@
 // (view/04-scheduler.md "Post-render queue"), against the component's own root, so the element
 // to focus already exists.
 import type { Command } from './command.js';
+import type { LocalHost } from './features.js';
 import { afterRender, POST_FOCUS } from './scheduler.js';
 
-/** Marker driver: `define()` handles focus commands itself. */
+/** Marker driver: the host runs focus commands itself (`local`). */
 export const FOCUS = {
   name: '@gyral/focus',
   run: () => undefined,
+  local: (host: LocalHost, input: unknown) => {
+    queueFocus(host.el, host.root, host.tag, input as FocusInput);
+  },
 } as const;
 
 export interface FocusOptions {

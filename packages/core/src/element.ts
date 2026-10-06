@@ -10,14 +10,8 @@ import { hydrateRoot, takeSeed } from './hydration.js';
 import { handleIntent, hostDepth, intentNames, listenForIntents } from './intent.js';
 import { scheduleIsland } from './islands.js';
 import { isLight } from './light-dom.js';
-import {
-  attributeOf,
-  attributeValue,
-  missingRequired,
-  propertyValue,
-  readProps,
-  type PropTable,
-} from './props.js';
+import { features } from './features.js';
+import type { PropFeature, PropTable } from './props.js';
 import {
   afterRender,
   markDirty,
@@ -42,6 +36,8 @@ export function elementClass<S, M extends Tagged, P>(
 ): CustomElementConstructor {
   const table = (spec.props ?? {}) as PropTable;
   const names = Object.keys(table);
+  // Registered by the prop builders (features.ts): set whenever a component declares props.
+  const props = features.props as PropFeature;
   const attrs = new Map<string, string>();
   const light = isLight(spec);
   let sheets: CSSStyleSheet[] | undefined;
@@ -58,7 +54,7 @@ export function elementClass<S, M extends Tagged, P>(
     static {
       for (const name of names) {
         const def = table[name];
-        const attr = def === undefined ? undefined : attributeOf(name, def);
+        const attr = def === undefined ? undefined : props.attributeOf(name, def);
         if (attr !== undefined) attrs.set(attr, name);
         Object.defineProperty(this.prototype, name, {
           configurable: true,
@@ -67,7 +63,7 @@ export function elementClass<S, M extends Tagged, P>(
             return this.#values[name];
           },
           set(this: Element, value: unknown) {
-            this.#write(name, propertyValue(tag, name, table[name], value));
+            this.#write(name, props.propertyValue(tag, name, table[name], value));
           },
         });
       }
@@ -100,7 +96,7 @@ export function elementClass<S, M extends Tagged, P>(
       {
         el: this,
         tag,
-        props: () => readProps(this.#values, table),
+        props: () => (names.length > 0 ? props.readProps(this.#values, table) : {}),
         root: () => this.#root,
         invalidate: (onFrame) => {
           this.#invalidate(onFrame);
@@ -129,12 +125,7 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #state(): S {
-      if (!this.#model.ready) {
-        const missing = missingRequired(this.#values, table);
-        if (missing.length > 0) {
-          console.warn(`<${tag}> is missing required prop(s): ${missing.join(', ')}.`);
-        }
-      }
+      if (!this.#model.ready && names.length > 0) props.warnMissing(tag, this.#values, table);
       return this.#model.state(this.initialMessages);
     }
 
@@ -169,7 +160,8 @@ export function elementClass<S, M extends Tagged, P>(
         return;
       }
       const prop = attrs.get(name);
-      if (prop !== undefined) this.#write(prop, attributeValue(tag, prop, table[prop], name, raw));
+      if (prop !== undefined)
+        this.#write(prop, props.attributeValue(tag, prop, table[prop], name, raw));
     }
 
     #write(name: string, value: unknown): void {
@@ -186,7 +178,7 @@ export function elementClass<S, M extends Tagged, P>(
       for (const [name, value] of Object.entries(seed.props)) {
         const def = table[name];
         if (def === undefined || this.#values[name] !== undefined) continue;
-        this.#values[name] = propertyValue(tag, name, def, value, 'the seed');
+        this.#values[name] = props.propertyValue(tag, name, def, value, 'the seed');
       }
       this.#afterInit = this.#model.resume(seed);
       this.#serverRendered = true;

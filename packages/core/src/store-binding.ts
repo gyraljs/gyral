@@ -1,43 +1,31 @@
 // A component's connection to the stores it declares (ADR 0013): resolve, read, subscribe, send.
+// `defineStore()` registers `bindStores` (features.ts), so apps without stores don't bundle it.
+import type { FeatureHost, StoreLink } from './features.js';
 import { scopeFor } from './store-scope.js';
-import type {
-  AnyStore,
-  AnyStoreInstance,
-  StoreOverrides,
-  StoreRef,
-  StoreSendInput,
-} from './store.js';
+import type { AnyStore, AnyStoreInstance, StoreRef, StoreSendInput } from './store.js';
 
 type OnChange = (store: AnyStore, state: unknown, prev: unknown) => void;
 
-export class StoreBinding {
-  readonly #host: Element;
+export class StoreBinding implements StoreLink {
+  readonly #host: FeatureHost;
   readonly #tag: string;
   readonly #declared: ReadonlyMap<string, AnyStore>;
-  readonly #overrides: () => StoreOverrides;
   readonly #onChange: OnChange;
   /** Resolved instances while connected (the scope can't change until it moves). */
   readonly #bound = new Map<string, AnyStoreInstance>();
   #unsubscribe: (() => void)[] = [];
 
-  constructor(
-    host: Element,
-    tag: string,
-    declared: readonly AnyStore[],
-    overrides: () => StoreOverrides,
-    onChange: OnChange,
-  ) {
+  constructor(host: FeatureHost, tag: string, declared: readonly AnyStore[], onChange: OnChange) {
     this.#host = host;
     this.#tag = tag;
     this.#declared = new Map(declared.map((s) => [s.name, s]));
-    this.#overrides = overrides;
     this.#onChange = onChange;
   }
 
   #instance(store: AnyStore): AnyStoreInstance {
     return (
       this.#bound.get(store.name) ??
-      this.#overrides()[store.name] ??
+      this.#host.stores[store.name] ??
       scopeFor(this.#host).get(store)
     );
   }
@@ -88,3 +76,11 @@ export class StoreBinding {
     this.#bound.clear();
   }
 }
+
+/** The store feature (features.ts): a host's binding to its declared stores. */
+export const bindStores = (
+  host: FeatureHost,
+  tag: string,
+  declared: readonly AnyStore[],
+  onChange: OnChange,
+): StoreLink => new StoreBinding(host, tag, declared, onChange);

@@ -1,13 +1,17 @@
 // Child components: props down, outputs up (docs/design-docs/0010-child-components.md).
 import type { Command } from './command.js';
+import type { LocalHost } from './features.js';
 import { OUTPUT_EVENT } from './intent.js';
 import { defer } from './scheduler.js';
 import type { IntentInput, IntentParser, Tagged } from './types.js';
 
-/** Marker driver: `define()` handles emit commands itself, synchronously ordered. */
+/** Marker driver: the host runs emit commands itself (`local`), synchronously ordered. */
 export const EMIT = {
   name: '@gyral/emit',
   run: () => undefined,
+  local: (host: LocalHost, output: unknown) => {
+    dispatchOutput(host.el, output);
+  },
 } as const;
 
 /**

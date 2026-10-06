@@ -106,6 +106,24 @@ schema library.
 Gone: `updateComplete`, `requestUpdate`, `renderRoot`, `hasUpdated`, all `LitElement`
 members. Tests use `settled()` (04).
 
+## Features register themselves (gyral-g1r.18)
+
+The element reaches optional machinery only through slots in `packages/core/src/features.ts`,
+which each feature's own API fills when it is first called. An app that never calls the API
+doesn't bundle the code (static imports from the API's module; nothing runs at load time, so
+`sideEffects: false` and tree-shaking work as usual):
+
+| Slot       | Filled by                         | Brings                                                     |
+| ---------- | --------------------------------- | ---------------------------------------------------------- |
+| `commands` | `command()`                       | the interpreter and driver resolution (`internal/`)        |
+| `stores`   | `defineStore()`                   | the store binding and store scopes (ADR 0013)              |
+| `props`    | the prop builders (`prop.string`) | attribute parsing, validation, defaults, required warnings |
+
+Marker drivers carry their own `local` handler (focus, `emit`, store `send`), so their code
+comes with the function that builds the command. A host starts its interpreter with its
+first command after connecting, not on connect. Each slot is filled before it can be needed:
+a component's props, stores and commands are built by those APIs.
+
 ## `ElementInternals`
 
 Attached lazily and only once per element, through one internal accessor, when a feature needs
