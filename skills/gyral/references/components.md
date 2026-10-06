@@ -24,6 +24,7 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `stores`                          | no                           | Stores this component reads and writes                                          |
 | `viewTransition(prev, next, msg)` | no                           | `true` renders that change inside a View Transition                             |
 | `states(state)`                   | no                           | Boolean custom states for CSS: `:host(:state(loading))`                         |
+| `renderOnFrame`                   | no                           | Message tags (or `'StoreChanged'`) from bursty sources: render once per frame   |
 
 ## Props
 

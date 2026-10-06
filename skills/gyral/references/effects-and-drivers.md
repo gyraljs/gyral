@@ -56,6 +56,9 @@ Set per command (`{ key: 'search', concurrency: 'switch' }`) or as the driver's 
 
 `run` may call `ctx.emit(output)` many times (each goes through `onSuccess`) and usually never
 resolves; `ctx.signal` aborts when the command is switched away or the component disconnects.
+When a stream delivers many messages per frame (market data, sensors) and the view isn't
+trivial, list the message in the spec's `renderOnFrame: ['Ticked']`: reducers still run per
+message, but the component renders once per animation frame. Not for clicks or pointer moves.
 
 ```ts
 import { command, defineDriver, type Command } from '@gyral/core';

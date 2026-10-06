@@ -181,6 +181,14 @@ interface SpecBody<S, M extends Tagged, P> {
    */
   readonly viewTransition?: (prev: S, next: S, msg: Tagged) => boolean;
   /**
+   * Messages from bursty sources (a WebSocket feed, a sensor) whose renders wait for the next
+   * animation frame, so many messages in one frame cost one render: `renderOnFrame: ['Ticked']`.
+   * Reducers still run at once. Any other change to the component renders in the usual
+   * microtask flush, taking pending frame work with it. `'StoreChanged'` covers store changes.
+   * Pages that get no frames (hidden) render from a 100 ms timer. view/04-scheduler.md.
+   */
+  readonly renderOnFrame?: readonly (M['_tag'] | 'StoreChanged')[];
+  /**
    * Boolean facts about the state, exposed to CSS as custom states:
    * `states: (s) => ({ loading: s._tag === 'Loading' })` enables `:host(:state(loading))` and
    * `gy-x:state(loading)`. Applied after each render; feature-detected; not on the server.
