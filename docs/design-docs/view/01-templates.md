@@ -39,6 +39,8 @@ Steps, in order:
 3. **Emit the template HTML** for the client: static markup with every bound attribute removed
    and every child hole replaced by nothing, or by an anchor comment where the anchor rule
    needs one (02). The emitted HTML is also exactly what the server writes around values (06).
+   A `server` template (a page shell) gets no anchors: it is never hydrated or rendered in the
+   browser.
 4. **Build the part table:** one entry per hole, in source order: kind, the path to its element
    (or to its parent element and position for child holes), the attribute name and static
    strings for attribute holes, and flags (`sole`: the hole is its parent's only child node).
@@ -47,11 +49,15 @@ Steps, in order:
 
 ### Whitespace
 
-Carried over unchanged from ADR 0016's addendum (it is Gyral's own design):
+Carried over from ADR 0016's addendum (it is Gyral's own design), plus the head-only rule
+(2026-10-06, found on gyral.dev's page shells):
 
 - Whitespace-only text that contains a newline is removed when it sits next to a template edge,
   a block-level tag, or the inside edge of `<button>`/`<select>`. Between two inline neighbours
   (phrasing elements, custom elements, holes, comments) it collapses to one space.
+- Head-only tags count as block-level edges: `<head>`, `<meta>`, `<link>`, `<base>` and
+  `<title>` are never rendered, so never inline. Inside `<head>` (until `</head>` or `<body>`),
+  whitespace-only text is always removed, newline or not, also between two holes.
 - Other runs of whitespace in text collapse to one space; a leading or trailing run with a
   newline next to one of those edges is removed.
 - `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` contents, tags, attribute values and

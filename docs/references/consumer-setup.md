@@ -106,7 +106,8 @@ ESLint can't follow and page shells rendered in the browser (rule 11).
 
 The view layer normalizes template whitespace once per template, the same way in the compiler,
 the browser and the server (view/01-templates.md "Whitespace"), so there is nothing to
-configure. Indentation between block-level tags disappears; between inline neighbours it
+configure. Indentation between block-level tags disappears (head-only tags such as `<meta>`
+and `<link>` count, and nothing survives inside `<head>`); between inline neighbours it
 becomes one space; `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` keep theirs.
 
 ## Tests

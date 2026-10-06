@@ -25,7 +25,7 @@ export function analyze(strings: readonly string[], loc?: string): Analysis {
   const src = new Source(normalized, loc);
   const tree = new TreeBuilder(src);
   tokenize(src, tree);
-  const { html, parts, segments, shape } = emit(tree.root);
+  const { html, parts, segments, shape } = emit(tree.root, tree.server);
   const template: TemplateObject = {
     id: templateId(normalized),
     html,

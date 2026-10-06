@@ -164,7 +164,8 @@ are resolved (marked **Phase 5**).
   component has CSS), in a light host right after its start tag. In development the view is
   preceded by `<!--gyral:ID-->`, and so is every nested instance (rows and array items too).
 - Anchors are exactly the template HTML's; `raw()` adds its own start anchor `<!---->` before
-  the markup; empty strings and `nothing` write nothing; lists write no markers.
+  the markup; empty strings and `nothing` write nothing; lists write no markers. Page shells
+  (`server` templates, never walked) carry no anchors, nor do `raw()` values in their holes.
 - Adjacent text is merged by the parser (`Hi ${name}!` → one Text node before the anchor).
 - Seeds are single-quoted JSON (`&` and `'` escaped); `<gyral-stores>` carries its own seed
   in a double-quoted `data-gyral-stores`.

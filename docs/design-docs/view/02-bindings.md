@@ -55,6 +55,7 @@ templates; the render root never clears with `replaceChildren()` (a shadow root 
 Sole holes, attribute and hook parts, and list items need no anchor. The benchmark row
 (`<td>${id}</td><td><a>${label}</a></td>…`) has none. Anchors are part of the template HTML,
 so the server writes exactly the same ones (06), and hydration finds them where it expects (07).
+`server` templates (page shells, 01) get none: they are never hydrated.
 
 ## Attribute values
 

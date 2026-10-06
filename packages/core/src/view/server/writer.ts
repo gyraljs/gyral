@@ -20,6 +20,9 @@ const tableTag = (parent: string): string | undefined => (TABLE.has(parent) ? pa
 export const ROOT: object = {};
 
 export class Writer extends Markup {
+  /** Writing a page shell's holes (a `server` template): never hydrated, so no anchors (06). */
+  private shell = false;
+
   /** A child value (02 "Child values"). `table`: the parent, when it is table structure. */
   child(v: unknown, table: string | undefined, at: object): void {
     switch (typeof v) {
@@ -60,7 +63,8 @@ export class Writer extends Markup {
     }
     const raw = rawHtml(v);
     if (raw !== undefined) {
-      this.buf += `<!---->${raw}`; // the start anchor hydration finds (02 "raw(html)")
+      // The start anchor hydration finds (02 "raw(html)"); a page shell is never hydrated.
+      this.buf += this.shell ? raw : `<!---->${raw}`;
       return;
     }
     checkPromise(v, 'a child hole');
@@ -98,6 +102,8 @@ export class Writer extends Markup {
     // never hydrated.
     if (this.dev && !template.server) this.buf += `<!--gyral:${template.id}-->`;
     const values = result.values;
+    const outer = this.shell;
+    this.shell = template.server;
     let at = 0;
     let opening: Opening | undefined;
     let frames: Frame[] | undefined;
@@ -139,5 +145,6 @@ export class Writer extends Markup {
           this.close(frames?.pop() ?? PLAIN, s.tag);
       }
     }
+    this.shell = outer;
   }
 }

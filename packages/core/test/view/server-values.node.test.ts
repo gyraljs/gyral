@@ -207,6 +207,26 @@ describe('development markers and checks (06 "Development markers")', () => {
     ).toBe('<!doctype html><html><body>x</body></html>');
   });
 
+  it('write no anchors in a server template; nested templates keep theirs (06)', () => {
+    const nested = html`<p>${'a'} b ${raw('<i>r</i>')}</p>`;
+    const shell = html`<!doctype html>
+      <html>
+        <head>
+          <title>${'T'}</title>
+          ${raw('<style>p {}</style>')} ${raw('<script type="application/json">{}</script>')}
+        </head>
+        <body>
+          ${'z'} text ${nested}
+        </body>
+      </html>`;
+    expect(templateOf(shell).html).not.toContain('<!---->');
+    expect(prod(shell)).toBe(
+      '<!doctype html><html><head><title>T</title><style>p {}</style>' +
+        '<script type="application/json">{}</script></head>' +
+        '<body>z text <p>a<!----> b <!----><i>r</i></p></body></html>',
+    );
+  });
+
   it('reject text the parser would move out of table structure, in development', () => {
     const rows = (v: unknown) =>
       html`<table>

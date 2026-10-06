@@ -15,6 +15,9 @@ export interface Emitted {
 }
 
 class Emitter {
+  /** A page shell (`server`): never hydrated, so it needs no anchors (06). */
+  constructor(private readonly server: boolean) {}
+
   html = '';
   readonly parts: PartSpec[] = [];
   readonly segments: Segment[] = [];
@@ -81,7 +84,7 @@ class Emitter {
       return;
     }
     this.parts.push({ k: 'child', path, ref: shape.length, sole });
-    if (next.type === 'el' || next.type === 'comment') return;
+    if (next.type === 'el' || next.type === 'comment' || this.server) return;
     this.out(ANCHOR);
     shape.push('#comment');
   }
@@ -133,9 +136,12 @@ class Emitter {
   }
 }
 
-/** Emits the HTML, part table, segments and shape for a template's tree. */
-export function emit(root: readonly TreeNode[]): Emitted {
-  const e = new Emitter();
+/**
+ * Emits the HTML, part table, segments and shape for a template's tree. A `server` template
+ * (a page shell) gets no anchors: hydration never walks it, and the browser never renders it.
+ */
+export function emit(root: readonly TreeNode[], server: boolean): Emitted {
+  const e = new Emitter(server);
   const shape = e.children(root, []);
   return { html: e.html, parts: e.parts, segments: e.segments, shape };
 }

@@ -4,8 +4,10 @@
 //
 // Rules:
 // - Whitespace-only text that contains a newline is removed when it sits next to a template
-//   edge, a block-level tag, or the inside edge of a <button>/<select> (CSS never renders it
-//   there). Between two inline neighbours (phrasing elements, custom elements, holes,
+//   edge, a block-level tag (head-only tags count: <head>, <meta>, <link>, <base>, <title>),
+//   or the inside edge of a <button>/<select> (CSS never renders it there). Inside <head>,
+//   whitespace-only text is always removed, newline or not, between holes too: nothing there
+//   renders. Between two inline neighbours (phrasing elements, custom elements, holes,
 //   comments) it collapses to one space.
 // - Other runs of whitespace in text collapse to one space; a leading or trailing run with a
 //   newline next to one of those edges is removed.
@@ -21,6 +23,8 @@ const BLOCK = new Set(
     'dl dt fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html ' +
     'legend li main menu nav ol optgroup option p pre search section select summary table tbody ' +
     'td tfoot th thead tr ul ' +
+    // Head-only elements: never rendered at all, so never inline.
+    'base link meta title ' +
     // SVG containers and shapes: whitespace between them is never rendered.
     'circle clippath defs ellipse g line lineargradient marker mask path pattern polygon ' +
     'polyline radialgradient rect stop symbol use'
@@ -53,12 +57,14 @@ function edgeOfTag(name: string, inside: boolean): Edge {
 const WS = /^[ \t\n\r\f]*$/;
 const RUN = /[ \t\n\r\f]+/g;
 
-function minifyChunk(text: string, left: Edge, right: Edge): string {
+/** `head`: the text is inside `<head>`, which is never rendered. */
+function minifyChunk(text: string, left: Edge, right: Edge, head: boolean): string {
   if (text === '') return text;
   if (WS.test(text)) {
     const removable =
-      /[\n\r]/.test(text) &&
-      (left === 'template' || right === 'template' || left === 'block' || right === 'block');
+      head ||
+      (/[\n\r]/.test(text) &&
+        (left === 'template' || right === 'template' || left === 'block' || right === 'block'));
     return removable ? '' : ' ';
   }
   // Mixed text: a leading or trailing run with a newline next to a removable edge goes too.
@@ -84,6 +90,8 @@ interface Scan {
   rawName: string;
   /** Depth of open <pre> elements: text is copied verbatim while > 0. */
   preDepth: number;
+  /** Inside <head> (until </head> or <body>). */
+  head: boolean;
   /** Edge type of the boundary before the current text chunk. */
   left: Edge;
 }
@@ -95,7 +103,7 @@ function minifySegment(segment: string, state: Scan, last: boolean): string {
   let out = '';
   let chunk = '';
   const flushText = (right: Edge): void => {
-    out += state.preDepth > 0 ? chunk : minifyChunk(chunk, state.left, right);
+    out += state.preDepth > 0 ? chunk : minifyChunk(chunk, state.left, right, state.head);
     chunk = '';
   };
   let i = 0;
@@ -170,6 +178,8 @@ function endTag(state: Scan, selfClosing: boolean): void {
   const name = state.tagName;
   state.mode = Mode.Text;
   state.left = edgeOfTag(name, !state.closing && !selfClosing);
+  if (name === 'head' && !selfClosing) state.head = !state.closing;
+  if (name === 'body') state.head = false;
   if (name === PRESERVE) {
     if (state.closing) state.preDepth = Math.max(0, state.preDepth - 1);
     else if (!selfClosing) state.preDepth += 1;
@@ -189,6 +199,7 @@ export function minifyStrings(strings: readonly string[]): string[] {
     closing: false,
     rawName: '',
     preDepth: 0,
+    head: false,
     left: 'template',
   };
   return strings.map((segment, index) =>

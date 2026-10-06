@@ -60,6 +60,18 @@ describe('the anchor rule (view/02)', () => {
     expect(n.html).toBe('a <!----> b');
     expect(n.parts).toEqual([{ k: 'child', path: [], ref: 1, sole: false }]);
   });
+
+  it('adds no anchors to a server template: a page shell is never hydrated (06)', () => {
+    const n = normalize(t`<html><body>${'a'} text ${'b'}${'c'}<p>${'d'}!</p></body></html>`);
+    expect(n.server).toBe(true);
+    expect(n.html).toBe('<html><body> text <p>!</p></body></html>');
+    expect(n.segments?.filter((s) => typeof s === 'string')).toEqual([
+      '<html><body>',
+      ' text ',
+      '<p>',
+      '!</p></body></html>',
+    ]);
+  });
 });
 
 describe('paths (view/01 step 4)', () => {

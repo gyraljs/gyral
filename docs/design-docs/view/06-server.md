@@ -58,6 +58,12 @@ The server writes the template HTML (01), putting each value in at its hole:
 - Lists: rows one after another, **no markers** (03). Empty strings and `nothing` write
   nothing; hydration creates what it needs (07).
 - `raw(html)`: an anchor comment, then the string verbatim (02).
+- **Page shells:** a `server` template (01) has no anchors in its HTML, and a `raw()` value in
+  one of its own holes is written without its start anchor: hydration never walks a shell.
+  Templates nested in a shell's holes are ordinary templates and keep theirs. With 01's
+  head-only whitespace rules this takes 34 bytes (28 of them anchors) off the production shell
+  of `examples/isomorphic` (614 → 580 bytes); a gyral.dev page shell had 12-13 anchors
+  (84-91 bytes) before.
 - **Escaping:** text escapes `&`, `<`, `>`; double-quoted attribute values escape `&` and `"`;
   the seed attribute is single-quoted and escapes `&` and `'` (below).
 - Per template, the renderer caches the template HTML split at its holes, keyed by template id.

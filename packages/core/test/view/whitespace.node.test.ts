@@ -115,6 +115,42 @@ describe('whitespace (view/01 "Whitespace")', () => {
     expect(out).toEqual(['<ul>', '</ul><p>', ' and ', '</p>']);
   });
 
+  it('removes whitespace between head-only tags, and anywhere inside <head>', () => {
+    expect(
+      min(t`<head>
+        <meta charset="utf-8" />
+        <title>${'T'}</title>
+        <link rel="icon" href="/i.svg" />
+        ${1}
+        ${2}
+      </head>`),
+    ).toEqual([
+      '<head><meta charset="utf-8" /><title>',
+      '</title><link rel="icon" href="/i.svg" />',
+      '',
+      '</head>',
+    ]);
+    // On one line too (Prettier joins short lines): nothing in <head> renders.
+    expect(min(t`<head>${1} ${2} <meta charset="utf-8" /></head>`)).toEqual([
+      '<head>',
+      '',
+      '<meta charset="utf-8" /></head>',
+    ]);
+    // A fragment written for the head: the tags themselves are block edges.
+    expect(
+      min(t`<meta name="a" content="b" />
+        <link rel="stylesheet" href="/s.css" />
+        <base href="/" />`),
+    ).toEqual([
+      '<meta name="a" content="b" /><link rel="stylesheet" href="/s.css" /><base href="/" />',
+    ]);
+    // <body> ends the head: inline neighbours keep their space again.
+    expect(
+      min(t`<head><title>x</title><body>${1}
+        ${2}</body>`),
+    ).toEqual(['<head><title>x</title><body>', ' ', '</body>']);
+  });
+
   it('treats a lone < as text', () => {
     expect(min(t`<p>a < b</p>`)).toEqual(['<p>a < b</p>']);
   });
@@ -130,6 +166,12 @@ describe('whitespace (view/01 "Whitespace")', () => {
       t`<pre>
  x </pre>
         <p> y </p>`,
+      t`<head>
+          <meta charset="utf-8" />
+          ${1}
+          ${2}
+        </head>
+        <body>${3} ${4}</body>`,
     ];
     for (const strings of samples) {
       const once = minifyStrings(strings);
