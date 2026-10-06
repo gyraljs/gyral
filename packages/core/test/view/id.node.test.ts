@@ -36,11 +36,14 @@ describe('template ids (view/01)', () => {
 
   it('are base-36 strings of at most 53 bits, with no collisions in 200k templates', () => {
     const seen = new Set<string>();
+    const malformed: string[] = [];
     for (let k = 0; k < 200_000; k++) {
       const id = templateId([`<li class="row-${String(k)}">`, `</li>`]);
-      expect(id).toMatch(/^[0-9a-z]{1,11}$/);
+      // One expect at the end: 200k expect() calls took seconds and timed out under load.
+      if (!/^[0-9a-z]{1,11}$/.test(id)) malformed.push(id);
       seen.add(id);
     }
+    expect(malformed).toEqual([]);
     expect(seen.size).toBe(200_000);
     expect(Number.isSafeInteger(parseInt(templateId(['x']), 36))).toBe(true);
   });
