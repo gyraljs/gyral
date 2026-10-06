@@ -59,8 +59,26 @@ export async function prerender(options: PrerenderOptions): Promise<readonly Pre
   return pages;
 }
 
-/** The subset of Vite's `.vite/manifest.json` used to find built entry chunks. */
-type ViteManifest = Readonly<Record<string, { readonly file: string; readonly css?: string[] }>>;
+/** One chunk of Vite's `.vite/manifest.json` (the fields serving uses). */
+export interface ManifestChunk {
+  readonly file: string;
+  readonly imports?: readonly string[];
+  readonly dynamicImports?: readonly string[];
+  readonly css?: readonly string[];
+}
+
+/** Vite's build manifest (`build.manifest: true`): chunks by source path or chunk key. */
+export type ViteManifest = Readonly<Record<string, ManifestChunk>>;
+
+async function readManifest(manifestPath: string): Promise<ViteManifest> {
+  return JSON.parse(await readFile(manifestPath, 'utf8')) as ViteManifest;
+}
+
+function entryChunk(manifest: ViteManifest, entry: string, where: string): ManifestChunk {
+  const chunk = manifest[entry];
+  if (chunk === undefined) throw new Error(`${entry} is not an entry in ${where}`);
+  return chunk;
+}
 
 /**
  * The URL of a built entry chunk (e.g. `src/entry-client.ts` → `/assets/entry-client-Ab12.js`),
@@ -70,10 +88,64 @@ export async function clientEntryFromManifest(
   manifestPath: string,
   entry: string,
 ): Promise<string> {
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as ViteManifest;
-  const chunk = manifest[entry];
-  if (chunk === undefined) throw new Error(`${entry} is not an entry in ${manifestPath}`);
-  return `/${chunk.file}`;
+  return `/${entryChunk(await readManifest(manifestPath), entry, manifestPath).file}`;
+}
+
+/** What a server-rendered page loads: the client entry and the modules to preload with it. */
+export interface ClientAssets {
+  /** The entry chunk's URL, for `page({ scripts })`. */
+  readonly entry: string;
+  /**
+   * Chunks the entry is known to need, for `page({ modulepreload })`: its static imports and
+   * Gyral's lazily loaded hydration chunk with its imports. Without the hints the browser
+   * finds them only after it has fetched and parsed the entry (a server-rendered page would
+   * fetch the hydration chunk a round trip later still).
+   */
+  readonly modulepreload: readonly string[];
+}
+
+/**
+ * `@gyral/core`'s hydration module (view/07-hydration.md "Loading") as a manifest key: from the
+ * published package (any package manager's layout) or from this repository's sources.
+ */
+const HYDRATION_MODULE =
+  /(?:^|\/)(?:@gyral\/core\/dist|packages\/core\/src)\/hydration-client\.[jt]s$/;
+
+/** `ClientAssets` for `entry`, from a manifest already in memory. */
+export function clientAssets(manifest: ViteManifest, entry: string): ClientAssets {
+  const root = entryChunk(manifest, entry, 'the Vite manifest');
+  const seen = new Set<string>([entry]);
+  const urls: string[] = [];
+  /** Adds the static imports of a chunk, depth first, each once. */
+  const addImports = (chunk: ManifestChunk): void => {
+    for (const key of chunk.imports ?? []) {
+      const imported = manifest[key];
+      if (seen.has(key) || imported === undefined) continue;
+      seen.add(key);
+      addImports(imported);
+      urls.push(`/${imported.file}`);
+    }
+  };
+  addImports(root);
+  const loaded = [...seen].flatMap((key) => manifest[key]?.dynamicImports ?? []);
+  const hydration = loaded.find((key) => HYDRATION_MODULE.test(key));
+  const chunk = hydration === undefined ? undefined : manifest[hydration];
+  if (hydration !== undefined && chunk !== undefined && !seen.has(hydration)) {
+    seen.add(hydration);
+    addImports(chunk);
+    urls.push(`/${chunk.file}`);
+  }
+  return { entry: `/${root.file}`, modulepreload: urls };
+}
+
+/** `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). */
+export async function clientAssetsFromManifest(
+  manifestPath: string,
+  entry: string,
+): Promise<ClientAssets> {
+  const manifest = await readManifest(manifestPath);
+  entryChunk(manifest, entry, manifestPath);
+  return clientAssets(manifest, entry);
 }
 
 export interface ProductionOptions {
@@ -81,8 +153,14 @@ export interface ProductionOptions {
   readonly distDir: string;
   /** The client entry as named in the Vite manifest. Default `src/entry-client.ts`. */
   readonly entry?: string;
-  /** Builds the request-time renderer (the same app the prerender step used). */
-  readonly createApp: (options: { readonly clientEntry: string }) => FetchApp;
+  /**
+   * Builds the request-time renderer (the same app the prerender step used). Pass
+   * `modulepreload` on to `renderPage({ modulepreload })` so pages preload what the entry needs.
+   */
+  readonly createApp: (options: {
+    readonly clientEntry: string;
+    readonly modulepreload: readonly string[];
+  }) => FetchApp;
 }
 
 const ASSET_TYPES: Readonly<Record<string, string>> = {
@@ -110,11 +188,11 @@ async function readOrUndefined(file: string): Promise<Uint8Array<ArrayBuffer> | 
 export async function productionServer(options: ProductionOptions): Promise<FetchApp> {
   const clientDir = resolve(options.distDir, 'client');
   const staticDir = resolve(options.distDir, 'static');
-  const clientEntry = await clientEntryFromManifest(
+  const assets = await clientAssetsFromManifest(
     join(clientDir, '.vite', 'manifest.json'),
     options.entry ?? 'src/entry-client.ts',
   );
-  const app = options.createApp({ clientEntry });
+  const app = options.createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload });
   return {
     fetch: async (request) => {
       const { pathname } = new URL(request.url);

@@ -9,6 +9,8 @@ import { pageTitle, site } from '../src/routes.js';
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
 }
 
 /** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
@@ -42,6 +44,7 @@ export function createApp(options: AppOptions): Hono {
         head: baseStyles,
         body: html`<gy-iso-app path=${pathname}></gy-iso-app>`,
         scripts: [options.clientEntry],
+        modulepreload: options.modulepreload ?? [],
       },
       { status: site.match(pathname) === undefined ? 404 : 200 },
     );

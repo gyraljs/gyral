@@ -2,17 +2,17 @@
 // Build step after `vite build`: renders every `ssg` route to dist/static (gyral-4k7.3).
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clientEntryFromManifest, prerender } from '@gyral/ssr/static';
+import { clientAssetsFromManifest, prerender } from '@gyral/ssr/static';
 import { staticPaths } from '../src/routes.js';
 import { createApp } from './app.js';
 
 export async function prerenderSite(distDir: string): Promise<readonly string[]> {
-  const clientEntry = await clientEntryFromManifest(
+  const assets = await clientAssetsFromManifest(
     join(distDir, 'client', '.vite', 'manifest.json'),
     'src/entry-client.ts',
   );
   const pages = await prerender({
-    app: createApp({ clientEntry }),
+    app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
     paths: staticPaths(),
     outDir: join(distDir, 'static'),
   });

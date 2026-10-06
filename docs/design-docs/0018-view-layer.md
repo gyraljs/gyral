@@ -162,8 +162,9 @@ What further cuts would cost (largest first):
    transition happens a round trip later.
 4. Keyed lists, for apps that use them: LIS only (−0.08 KiB) makes swaps slower than lit-html;
    two-ended only (−0.13 KiB) makes "replace first and last" about 5× slower (view/03).
-5. A `modulepreload` hint for the hydration chunk from `@gyral/ssr` (no size change) would remove
-   the extra round trip for server-rendered pages.
+5. ~~A `modulepreload` hint for the hydration chunk from `@gyral/ssr`~~: done in Phase 7
+   (gyral-g1r.21, view/07 "Loading"): `clientAssetsFromManifest()` and
+   `page({ modulepreload })` remove the extra round trip for server-rendered pages.
 
 ### Measuring (Phase 0)
 

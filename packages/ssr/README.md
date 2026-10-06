@@ -32,7 +32,7 @@ import './app.js';
 
 `contentSecurityPolicy({ styles, directives })` builds a `Content-Security-Policy` whose `style-src` allows every component's `<style>` by hash; pass it as `renderPage({ …, csp })`. `formAction` handles no-JS form posts with the same schema as the browser.
 
-`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`).
+`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts, modulepreload })` so server-rendered pages hydrate without extra round trips.
 
 ## Documentation
 

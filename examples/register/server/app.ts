@@ -9,6 +9,8 @@ import { RegisterForm } from '../src/schema.js';
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
   /**
    * Registered accounts. The dev server re-creates the app on every request (to follow source
    * edits), so it creates this once with createState() and passes it in (examples/shared/
@@ -56,6 +58,7 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
         ></gy-register>
       </main>`,
       scripts: [options.clientEntry],
+      modulepreload: options.modulepreload ?? [],
     },
     { status },
   );

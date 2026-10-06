@@ -129,7 +129,12 @@ state from its `data-gyral-seed` and adopts the server's DOM in place; there is 
 import, and module order doesn't matter. Keep component state and props JSON-serializable:
 they travel in the hydration seed. A mismatch between server markup and the first client
 render throws `HydrationMismatch` in development; production builds warn and re-render only
-that component. Hydration adds about 1.8 KiB gzip to client bundles.
+that component. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
+server-rendered component, so client-only pages never fetch it. For server-rendered pages,
+read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
+(`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser
+then fetches the hydration chunk together with the entry (`productionServer` hands
+`modulepreload` to your `createApp`).
 
 ## Removed in 0.3.0
 

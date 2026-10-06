@@ -9,6 +9,8 @@ import { RsvpForm, type Attendee } from '../src/schema.js';
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
   /**
    * The replies so far. The dev server re-creates the app on every request (to follow source
    * edits), so it creates this once and passes it in; otherwise each app starts its own.
@@ -60,6 +62,7 @@ function page(options: AppOptions, { attendees, joined, rejected }: View, status
         ></gy-rsvp>
       </main>`,
       scripts: [options.clientEntry],
+      modulepreload: options.modulepreload ?? [],
     },
     { status },
   );

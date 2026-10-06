@@ -34,6 +34,19 @@ The walk, the mismatch messages and islands live in one internal module
   work, 04).
 - If the module fails to load (a stale deployment whose chunks are gone), the error is logged
   and waiting hosts render fresh: their roots are cleared, so a view is never doubled.
+- **Preloading (gyral-g1r.21):** a server-rendered page knows it will need the chunk, so the
+  server says so up front. `clientAssetsFromManifest(manifest, entry)` (`@gyral/ssr/static`)
+  reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry's
+  static imports (depth first) and the hydration chunk (the dynamic import whose source is
+  core's `hydration-client`, from `packages/core/src/` or an installed `@gyral/core/dist/`)
+  with its own imports. The app's own lazy chunks are not included. `page({ modulepreload })`
+  writes one `<link rel="modulepreload">` per URL before the module scripts, and
+  `productionServer` hands the list to `createApp`. The browser then fetches the entry, its
+  imports and the hydration chunk in parallel, instead of the entry, then its imports, then
+  the chunk once the first seeded host connects. No bytes change; client-only pages, which
+  aren't rendered by `page()`, still never fetch the chunk. Checked by the isomorphic
+  example's production test (`examples/isomorphic/test/prod.node.test.ts`) and
+  `packages/ssr/test/modulepreload.node.test.ts`.
 
 ## Each component hydrates on its own
 
@@ -237,8 +250,8 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
   initial chunk 10.3 → 9.1 KiB gzip when it landed). The separate chunk is about 2.8 KiB gzip and is fetched
   only by server-rendered pages; split from the main chunk it compresses worse, so all chunks
   together are about 1 KiB larger than one bundle, and a server-rendered page fetches it one
-  round trip after the entry (a `modulepreload` hint from the server would remove that wait;
-  not done yet). `loading-hydration.test.ts` checks both sides.
+  round trip after the entry, unless the server preloads it ("Loading", gyral-g1r.21).
+  `loading-hydration.test.ts` checks both sides.
 
 ## Native primitives
 

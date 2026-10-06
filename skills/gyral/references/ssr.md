@@ -131,26 +131,44 @@ export const ShareButton = define<State, Msg>('my-share', {
 import { join } from 'node:path';
 import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
-import { clientEntryFromManifest, prerender, productionServer } from '@gyral/ssr/static';
+import { clientAssetsFromManifest, prerender, productionServer } from '@gyral/ssr/static';
 
-const createApp = ({ clientEntry }: { readonly clientEntry: string }) => ({
+interface AppOptions {
+  readonly clientEntry: string;
+  readonly modulepreload?: readonly string[];
+}
+
+const createApp = ({ clientEntry, modulepreload = [] }: AppOptions) => ({
   fetch: (_request: Request) =>
-    renderPage({ title: 'Home', body: html`<my-home></my-home>`, scripts: [clientEntry] }),
+    renderPage({
+      title: 'Home',
+      body: html`<my-home></my-home>`,
+      scripts: [clientEntry],
+      modulepreload, // <link rel="modulepreload"> for the entry's imports and the hydration chunk
+    }),
 });
 
 // Build step (after `vite build` with build.manifest: true into dist/client):
 const dist = join(process.cwd(), 'dist');
-const clientEntry = await clientEntryFromManifest(
+const assets = await clientAssetsFromManifest(
   join(dist, 'client', '.vite', 'manifest.json'),
   'src/entry-client.ts',
 );
-await prerender({ app: createApp({ clientEntry }), paths: ['/'], outDir: join(dist, 'static') });
+await prerender({
+  app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
+  paths: ['/'],
+  outDir: join(dist, 'static'),
+});
 
 // Production: hashed assets (immutable), prerendered pages (revalidate), the rest per request.
 export const server = await productionServer({ distDir: dist, createApp });
 ```
 
 `prerender` fails the build on any non-200 page. Mount `server.fetch` in your HTTP server.
+`productionServer` passes `{ clientEntry, modulepreload }` to `createApp`. Hydration code loads
+lazily (only pages with server-rendered components need it); passing `modulepreload` on to
+`renderPage` lets the browser fetch it together with the entry instead of a round trip later.
+`clientEntryFromManifest()` (the entry URL alone) still works.
 
 ## Islands: hydrate later
 

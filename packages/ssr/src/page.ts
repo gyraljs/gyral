@@ -44,6 +44,12 @@ export interface PageOptions extends RenderOptions {
   /** Module scripts to load, e.g. the client entry. */
   readonly scripts?: readonly string[];
   /**
+   * Modules to fetch early with `<link rel="modulepreload">`, written before `scripts`: in
+   * production, `clientAssetsFromManifest()`'s `modulepreload` (the entry's static imports and
+   * the hydration chunk), so hydration doesn't wait for extra round trips.
+   */
+  readonly modulepreload?: readonly string[];
+  /**
    * `renderPage` only: a `Content-Security-Policy` header value, usually from
    * `await contentSecurityPolicy({ styles })`, which allows the page's `<style>` elements by hash.
    */
@@ -78,6 +84,7 @@ export function documentStyles(styles: string | readonly string[] | undefined): 
 /** The server-only document shell around the hydratable body. Never hydrated itself. */
 export function page(options: PageOptions): ChildValue {
   const { title, body, description, head, scripts = [], stores = [], styles } = options;
+  const preload = options.modulepreload ?? [];
   return html`<!doctype html>
     <html lang=${options.lang ?? 'en'} dir=${options.dir ?? 'ltr'}>
       <head>
@@ -86,7 +93,10 @@ export function page(options: PageOptions): ChildValue {
         <title>${title}</title>
         ${description === undefined ? nothing : html`<meta name="description" content=${description} />`}
         ${documentStyles(styles)}${head ?? nothing}${storeSeed(stores)}
-        ${scripts.map((src) => html`<script type="module" src=${src}></script>`)}
+        ${[
+          ...preload.map((href) => html`<link rel="modulepreload" href=${href} />`),
+          ...scripts.map((src) => html`<script type="module" src=${src}></script>`),
+        ]}
       </head>
       <body>
         ${body}

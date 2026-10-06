@@ -10,6 +10,11 @@ import '../src/home-page.js';
 export interface AppOptions {
   /** URL of the client entry module (dev: the source path; production: the built asset). */
   readonly clientEntry: string;
+  /**
+   * Production: chunks to fetch alongside the entry (its imports and Gyral's hydration chunk),
+   * from the Vite manifest, so the page hydrates without extra round trips.
+   */
+  readonly modulepreload?: readonly string[];
 }
 
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
@@ -32,6 +37,7 @@ export function createApp(options: AppOptions): Hono {
       styles,
       body: html`<app-home></app-home>`,
       scripts: [options.clientEntry],
+      modulepreload: options.modulepreload ?? [],
       csp: await csp(),
     }),
   );
