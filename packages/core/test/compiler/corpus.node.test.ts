@@ -1,6 +1,7 @@
 // Compiled template objects equal the runtime normalizer's, for every template in the corpus
-// (the examples' and packages' `html` templates): client builds without segments, SSR builds
-// with them. This is what lets a compiled server hydrate a runtime client and the reverse.
+// (the examples' and packages' `html` templates): client builds without segments (and without
+// ids in production), SSR builds with them. This is what lets a compiled server hydrate a
+// runtime client and the reverse.
 import { describe, expect, it } from 'vitest';
 import { normalize, type TemplateObject } from '../../src/view/index.js';
 import { corpus } from '../view/corpus.js';
@@ -34,18 +35,25 @@ const fixture = {
   ].join('\n'),
 };
 
-const strip = (t: TemplateObject, segments: boolean): object =>
-  segments ? { ...clientObject(t), segments: t.segments } : clientObject(t);
+const strip = (t: TemplateObject, segments: boolean, production: boolean): object =>
+  segments ? { ...clientObject(t), segments: t.segments } : clientObject(t, production);
 
 describe('compiled templates equal runtime ones (corpus)', () => {
   it('has a corpus to compare', () => {
     expect(valid.length).toBeGreaterThan(100);
   });
 
-  for (const ssr of [false, true]) {
-    it(`${ssr ? 'SSR' : 'client'} build`, async () => {
-      const built = await importBuilt((await buildApp(fixture, { ssr })).code);
-      expect(built['all']).toEqual(valid.map((s) => strip(normalize(s), ssr)));
+  // A production client build drops the ids (01 "Template ids"); SSR builds keep them.
+  for (const [ssr, production] of [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ] as const) {
+    const mode = production ? 'production' : 'development';
+    it(`${ssr ? 'SSR' : 'client'} build (${mode})`, async () => {
+      const built = await importBuilt((await buildApp(fixture, { ssr, production })).code);
+      expect(built['all']).toEqual(valid.map((s) => strip(normalize(s), ssr, production)));
     });
   }
 });

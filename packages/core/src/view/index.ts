@@ -9,6 +9,7 @@ export { templateId } from './normalize/id.js';
 export { TemplateError } from './normalize/errors.js';
 export { shapeMismatch, repairError } from './normalize/shape.js';
 export type {
+  NormalizedTemplate,
   PartSpec,
   Path,
   Segment,

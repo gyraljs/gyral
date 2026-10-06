@@ -60,10 +60,14 @@ export function readable(p: PartSpec): ReadablePart {
   }
 }
 
-/** The template object a client build carries: no segments, no loc (compile.ts). */
-export function clientObject(template: TemplateObject): TemplateObject {
+/**
+ * The template object a client build carries: no segments, no loc, and in a production build
+ * no id either (compile.ts).
+ */
+export function clientObject(template: TemplateObject, production = false): TemplateObject {
   const { id, html, parts, server } = template;
-  return server === true ? { id, html, parts, server } : { id, html, parts };
+  const object = production || id === undefined ? { html, parts } : { id, html, parts };
+  return server === true ? { ...object, server } : object;
 }
 
 /** How many values a template consumes, counted from its parts and from its segments. */

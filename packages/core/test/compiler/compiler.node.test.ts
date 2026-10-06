@@ -137,6 +137,31 @@ describe('template compiler: client and server output', () => {
       segments: normalize(['<p class="x">', '</p>']).segments,
     });
   });
+
+  it('drops template ids from production client builds only (01 "Template ids")', async () => {
+    const { id } = normalize(['<p class="x">', '</p>']);
+    const production = await buildApp(files, { production: true });
+    expect(production.code).not.toContain(id);
+    expect(production.code).not.toContain('"id"');
+    expect((await importBuilt(production.code))['v']).toEqual(
+      client(normalize(['<p class="x">', '</p>']), true),
+    );
+    // Development client builds keep them (markers, the hydration id check), and so do SSR
+    // builds in either mode (development markers, server output).
+    for (const options of [{}, { ssr: true }, { ssr: true, production: true }]) {
+      const { code } = await buildApp(files, options);
+      expect(code).toContain(`"id": "${id}"`);
+    }
+  });
+
+  it('keeps ids when the app lists the development condition itself', async () => {
+    const { id } = normalize(['<p class="x">', '</p>']);
+    const { code } = await buildApp(files, {
+      production: true,
+      conditions: ['module', 'browser', 'development'],
+    });
+    expect(code).toContain(`"id": "${id}"`);
+  });
 });
 
 describe('template compiler: build errors', () => {

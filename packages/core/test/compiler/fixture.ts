@@ -18,6 +18,13 @@ export interface Built {
 
 export interface BuildOptions {
   readonly ssr?: boolean;
+  /**
+   * A production build (NODE_ENV=production while it runs): Vite resolves the `production`
+   * condition. Otherwise Vitest's NODE_ENV=test makes it a development build.
+   */
+  readonly production?: boolean;
+  /** The client's resolve conditions, when the app names its own. */
+  readonly conditions?: readonly string[];
   readonly compiler?: TemplateCompilerOptions;
   readonly entry?: string;
 }
@@ -42,6 +49,11 @@ export async function buildApp(
     logs.push(msg);
   };
   const entry = join(root, options.entry ?? 'main.ts');
+  const preset = gyralVitePreset(
+    options.compiler === undefined ? {} : { compiler: options.compiler },
+  );
+  const nodeEnv = process.env['NODE_ENV'];
+  if (options.production === true) process.env['NODE_ENV'] = 'production';
   try {
     const output = await build({
       root,
@@ -56,7 +68,10 @@ export async function buildApp(
         hasErrorLogged: () => false,
         hasWarned: false,
       },
-      ...gyralVitePreset(options.compiler === undefined ? {} : { compiler: options.compiler }),
+      ...preset,
+      ...(options.conditions === undefined
+        ? {}
+        : { resolve: { ...preset.resolve, conditions: [...options.conditions] } }),
       build: {
         write: false,
         minify: false,
@@ -72,6 +87,8 @@ export async function buildApp(
       .join('\n');
     return { code, logs };
   } finally {
+    if (nodeEnv === undefined) delete process.env['NODE_ENV'];
+    else process.env['NODE_ENV'] = nodeEnv;
     rmSync(root, { recursive: true, force: true });
   }
 }

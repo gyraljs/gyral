@@ -8,11 +8,11 @@ import { templateId } from './id.js';
 import { Source } from './source.js';
 import { tokenize } from './tokenizer.js';
 import { TreeBuilder } from './tree.js';
-import type { Shape, TemplateObject } from './types.js';
+import type { NormalizedTemplate, Shape } from './types.js';
 import { minifyStrings } from './whitespace.js';
 
 export interface Analysis {
-  readonly template: TemplateObject;
+  readonly template: NormalizedTemplate;
   /** The whitespace-normalized strings the id was computed from. */
   readonly strings: readonly string[];
   /** The DOM the browser must build from `template.html` (checked by the runtime preparer). */
@@ -26,7 +26,7 @@ export function analyze(strings: readonly string[], loc?: string): Analysis {
   const tree = new TreeBuilder(src);
   tokenize(src, tree);
   const { html, parts, segments, shape } = emit(tree.root, tree.server);
-  const template: TemplateObject = {
+  const template: NormalizedTemplate = {
     id: templateId(normalized),
     html,
     parts,
@@ -41,6 +41,6 @@ export function analyze(strings: readonly string[], loc?: string): Analysis {
  * Normalizes a template's static strings into its template object (JSON data). Throws a
  * TemplateError for markup that breaks a template rule.
  */
-export function normalize(strings: readonly string[], loc?: string): TemplateObject {
+export function normalize(strings: readonly string[], loc?: string): NormalizedTemplate {
   return analyze(strings, loc).template;
 }

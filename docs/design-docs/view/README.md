@@ -22,7 +22,7 @@ changing behaviour; a spec and its conformance tests move together.
 ## Words used in every spec
 
 - **Template:** the static part of one `html` call site, after normalization. Identified by its
-  **template id**.
+  **template id** (production client builds: by its template object, 01 "Template ids").
 - **Template result:** what `html` returns at runtime: a template plus this render's values.
 - **Hole:** a `${…}` position in a template. Its **kind** comes from where it sits (02).
 - **Part:** the live object that owns one hole in one rendered instance and remembers its

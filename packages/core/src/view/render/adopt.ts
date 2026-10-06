@@ -102,10 +102,12 @@ function text(want: string): Text {
 function instance(result: TemplateResult, holder: ChildPart): Instance {
   const template = templateOf(result);
   const a = adoptionOf(template);
-  // A development server's marker: checked when present (a production server writes none).
+  // A development server's marker: checked when present (a production server writes none),
+  // against the id when the template has one (production client objects don't, 01).
   const marker = cur as Comment | null;
   if (marker !== null && marker.nodeType === 8 && marker.data.startsWith('gyral:')) {
-    if (DEV && marker.data !== `gyral:${template.id}`) fail(`<!--gyral:${template.id}-->`);
+    const id = template.id;
+    if (DEV && id !== undefined && marker.data !== `gyral:${id}`) fail(`<!--gyral:${id}-->`);
     cur = marker.nextSibling;
     marker.remove();
   }

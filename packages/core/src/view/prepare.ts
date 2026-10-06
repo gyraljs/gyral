@@ -22,7 +22,7 @@ export function prepare(strings: readonly string[]): TemplateObject {
   if (template === undefined) {
     const analysis = analyze(strings);
     template = analysis.template;
-    recordTemplateId(template.id, analysis.strings);
+    recordTemplateId(analysis.template.id, analysis.strings);
     shapes.set(template, analysis.shape);
     prepared.set(strings, template);
   }

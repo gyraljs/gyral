@@ -97,8 +97,11 @@ export type Segment =
   | { readonly k: 'close'; readonly tag: string };
 
 export interface TemplateObject {
-  /** Deterministic id of the normalized strings (id.ts). */
-  readonly id: string;
+  /**
+   * Deterministic id of the normalized strings (id.ts). Absent from objects compiled for a
+   * production client (01 "Template ids"): there the renderer compares templates by identity.
+   */
+  readonly id?: string;
   /** Normalized template HTML for the client: bound attributes removed, anchors added. */
   readonly html: string;
   readonly parts: readonly PartSpec[];
@@ -115,6 +118,9 @@ export interface TemplateObject {
   /** Development only: file:line:column of the call site. */
   readonly loc?: string;
 }
+
+/** What the normalizer returns: a template object that always has its id. */
+export type NormalizedTemplate = TemplateObject & { readonly id: string };
 
 /**
  * The DOM the browser must build from `html`, for the runtime preparer's check (prepare.ts):

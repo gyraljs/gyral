@@ -166,6 +166,28 @@ What further cuts would cost (largest first):
    (gyral-g1r.21, view/07 "Loading"): `clientAssetsFromManifest()` and
    `page({ modulepreload })` remove the extra round trip for server-rendered pages.
 
+### Template ids out of production client builds (gyral-g1r.22, 2026-10-06): measured
+
+After the compact template form (view/01 "The template object"), ids were about a fifth of
+the compiled templates' gzip size. Production client builds now leave them out, and the
+renderer compares template objects by identity there (view/01 "Template ids"). On the corpus
+(264 call sites, 210 objects, minified): 35.8 → 32.4 KB raw, **10.32 → 8.27 KiB gzip**. The
+examples carry few templates, so their bundles shrink by tens of bytes; an app with many
+templates (gyral.dev, gyral-shop) saves about 10 B gzip per template. `pnpm size`, KiB gzip:
+
+| Bundle                   | initial before | initial after | all chunks before | all chunks after |
+| ------------------------ | -------------- | ------------- | ----------------- | ---------------- |
+| hello-world              | 8.87           | **8.86**      | 11.23             | 11.22            |
+| counter                  | 8.79           | 8.78          | 11.15             | 11.14            |
+| isomorphic (SSR)         | 12.94          | 12.87         | 15.44             | 15.35            |
+| no-js-first (SSR, forms) | 16.67          | 16.60         | 19.12             | 19.04            |
+| shared-cart              | 12.98          | 12.91         | 15.35             | 15.27            |
+| view line                | 6.90           | 6.90          | 6.90              | 6.90             |
+
+Every example got smaller: 2-98 B all chunks, 5-81 B initial. Budgets are now measured + 0.1
+KiB. `pnpm bench:view` unchanged within noise (the benchmark uses the runtime path, whose
+objects keep their ids; the renderer gained one comparison on a template switch).
+
 ### Measuring (Phase 0)
 
 - **Size:** `pnpm size:check` (part of `pnpm check`) fails when an example's gzip bundle

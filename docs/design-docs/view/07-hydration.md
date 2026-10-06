@@ -146,7 +146,9 @@ toggle a `<details>` before scripts run.
 - **Instances:** a `<!--gyral:ID-->` comment at an instance's start is checked (development)
   and **removed** in either build, so markers never linger as stray siblings after rows move
   or instances change. No marker: no check, no error (a development client may hydrate
-  production output).
+  production output). A template object without an id (production client builds, 01
+  "Template ids") consumes the marker without a check: hydration there is structural, the
+  production rule.
 - **Lists and arrays:** rows adopt one after another; `each` rows record key, item and pick
   as a client render would, so the first update skips unchanged rows.
 - **`raw()`:** the start anchor, then as many nodes as the markup parses to on its own (a

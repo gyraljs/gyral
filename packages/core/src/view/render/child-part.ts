@@ -168,8 +168,11 @@ export class ChildPart {
         instance.update(result.values);
         return;
       }
+      // Another source with the same id (a second call site, a module reloaded in development)
+      // is the same template. Production client objects have no id: each is its own template,
+      // so a different object replaces the instance (01 "Template ids").
       const template = templateOf(result);
-      if (template.id === instance.template.id) {
+      if (template.id !== undefined && template.id === instance.template.id) {
         instance.source = source;
         instance.update(result.values);
         return;

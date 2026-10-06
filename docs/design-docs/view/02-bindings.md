@@ -27,7 +27,7 @@ first-render error (09).
 | Value                                   | Renders                                                       |
 | --------------------------------------- | ------------------------------------------------------------- |
 | `string`, `number`                      | A Text node (`String(v)`); updates set `.data` in place       |
-| template result                         | An instance; same template id as before → its parts update    |
+| template result                         | An instance; same template as before → its parts update       |
 | `each(…)` (03), array of child values   | A list; arrays are positional (by index), `each` is keyed     |
 | `raw(html)`                             | Parsed markup (below)                                         |
 | `null`, `undefined`, `false`, `nothing` | Nothing                                                       |
@@ -36,7 +36,15 @@ first-render error (09).
 
 `false` renders nothing so `${s.open && html`…`}` works. When the value changes kind (text to
 template, template to list), the old content is removed and the new content created. Changing
-to a different template id replaces the instance.
+to a different template replaces the instance.
+
+"The same template" means the same template object, or, where objects carry ids (the runtime
+path, development builds), the same id. Production client builds carry none and compare
+objects (01 "Template ids", gyral-g1r.22). A call site always yields the same object, so the
+difference is only visible for identical markup at call sites in two modules: in production
+switching between them replaces the instance (new nodes, focus and edits in it lost) where an
+id would have patched it. Acceptable: views that switch between two places usually render
+different markup, and a shared view function is one call site.
 
 ### The anchor rule
 

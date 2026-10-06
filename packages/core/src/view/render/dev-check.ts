@@ -1,7 +1,8 @@
 // Development checks for lists (view/03-lists.md "Keys", "Rows must be pure"). Keys must be
 // unique strings or numbers. Skipped rows are re-evaluated and compared with what is committed
-// (template id and values, recursively); a difference warns once per row function. At most 200
-// rows are checked per flush (per render call outside one), rotating through each list. Only reached under `if (DEV)`.
+// (template, by id or identity, and values, recursively); a difference warns once per row
+// function. At most 200 rows are checked per flush (per render call outside one), rotating
+// through each list. Only reached under `if (DEV)`.
 import { DEV } from '#view-dev';
 import { isTemplateResult, templateOf } from '../template.js';
 import {
@@ -75,10 +76,12 @@ export function sameChild(part: ChildPart, value: unknown): boolean {
   if (typeof value === 'object' && value !== null) {
     if (isTemplateResult(value)) {
       if (part.kind !== INSTANCE) return false;
-      const instance = part.content as Instance;
+      const committed = part.content as Instance;
+      const template = templateOf(value);
       return (
-        instance.template.id === templateOf(value).id &&
-        instance.parts.every((p) => samePart(p, value.values))
+        (committed.template === template ||
+          (template.id !== undefined && template.id === committed.template.id)) &&
+        committed.parts.every((p) => samePart(p, value.values))
       );
     }
     if (isList(value)) return part.kind === LIST && sameList(part.content as List, value);

@@ -80,8 +80,8 @@ Two guards:
    the second argument." A helper function declared beside the row is followed instead of
    flagged: calling it is fine when it, too, reads only those.
 2. **Development check:** skipped rows are re-evaluated anyway and their template results
-   compared with the committed ones (template id and values, recursively). A difference warns
-   once per call site: "a row depends on something not passed through `item` or `pick`". It
+   compared with the committed ones (template, by id or identity, and values, recursively). A
+   difference warns once per call site: "a row depends on something not passed through `item` or `pick`". It
    catches what the lint can't see, such as a helper reading changing module state. At most 200 (per flush, reset by the scheduler)
    skipped rows are checked per flush, rotating through the list. Production has no check.
 

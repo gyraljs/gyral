@@ -93,14 +93,15 @@ export class Writer extends Markup {
     const segments = template.segments;
     if (segments === undefined) {
       throw new Error(
-        `gyral: template ${template.id} has no server segments: it was compiled for the ` +
-          'client. Render on the server with an SSR build (or the runtime normalizer), which ' +
-          'keeps them (docs/design-docs/view/01-templates.md "Compiled").',
+        `gyral: template ${JSON.stringify(template.html.slice(0, 40))} has no server ` +
+          'segments: it was compiled for the client. Render on the server with an SSR build ' +
+          '(or the runtime normalizer), which keeps them ' +
+          '(docs/design-docs/view/01-templates.md "Compiled").',
       );
     }
     // Development marker: hydration checks the id before each instance (07). Page shells are
     // never hydrated.
-    if (this.dev && !template.server) this.buf += `<!--gyral:${template.id}-->`;
+    if (this.dev && !template.server) this.buf += `<!--gyral:${template.id ?? ''}-->`;
     const values = result.values;
     const outer = this.shell;
     this.shell = template.server === true;

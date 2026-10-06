@@ -1,7 +1,8 @@
 // Compiles one module's `html` call sites (view/01-templates.md "Compiled"): each call site's
 // cooked strings go through the same normalizer as the runtime path (so ids match), parse5
-// double-checks rule 7, one module-level constant is hoisted per template object, and the
-// call becomes `compiled(<const>, [values…])`. Line breaks inside a rewritten template are
+// double-checks rule 7, one module-level constant is hoisted per template object (without its
+// id in production client builds: the renderer compares those by identity), and the call
+// becomes `compiled(<const>, [values…])`. Line breaks inside a rewritten template are
 // kept, so every following line keeps its number; the source map covers columns.
 import { analyze, TemplateError, type TemplateObject } from '../view/index.js';
 import type { Node } from './ast.js';
@@ -34,19 +35,25 @@ export interface CompileInput {
   readonly sites: readonly { readonly node: Node; readonly binding: HtmlImport }[];
   /** Server build: keep the server segments. */
   readonly ssr: boolean;
+  /**
+   * Keep template ids: SSR and development builds (development markers, the hydration id
+   * check). A production client compares templates by identity, so its objects go without.
+   */
+  readonly ids: boolean;
   readonly parse5: Parse5 | undefined;
   /** Template id → normalized strings and call site, for the whole build (collisions). */
   readonly seen: Map<string, { readonly strings: string; readonly loc: string }>;
 }
 
 /**
- * The template object as emitted: no `loc` (production), no `segments` in client builds. Its
- * fields are already compact (numeric part kinds, tuples, `server` only when true; 01), so
- * the code needs no decoding.
+ * The template object as emitted: no `loc` (production), no `segments` in client builds, no
+ * `id` unless `ids` (01 "Template ids": random base-36 text that gzip can't shrink). Its fields
+ * are already compact (numeric part kinds, tuples, `server` only when true; 01), so the code
+ * needs no decoding.
  */
-function emitted(template: TemplateObject, ssr: boolean): object {
+function emitted(template: TemplateObject, ssr: boolean, ids: boolean): object {
   const { id, html, parts, server, segments } = template;
-  const client = server === true ? { id, html, parts, server } : { id, html, parts };
+  const client = { ...(ids ? { id } : {}), html, parts, ...(server === true ? { server } : {}) };
   return ssr ? { ...client, segments } : client;
 }
 
@@ -136,7 +143,7 @@ export function compileModule(input: CompileInput): { code: string; map: SourceM
     if (name === undefined) {
       name = `${prefix}t${String(consts.size)}`;
       consts.set(template.id, name);
-      decls.push(`const ${name} = ${JSON.stringify(emitted(template, input.ssr))};`);
+      decls.push(`const ${name} = ${JSON.stringify(emitted(template, input.ssr, input.ids))};`);
     }
     const entry = COMPILED_ENTRIES[binding.specifier] ?? binding.specifier;
     let callee = callees.get(entry);

@@ -74,12 +74,32 @@ There is no opt-out tag. Exact whitespace belongs in `<pre>`, or in a value.
 - Collisions are detected where all templates are visible: the compiler fails the build, and the
   development runtime warns when two different normalized templates share an id.
 - Ids appear in server output only in development (07).
+- **Not in production client builds** (gyral-g1r.22, 2026-10-06). After the compact form
+  (below), ids were about a fifth of the compiled templates' gzip size: random base-36 text
+  doesn't compress. The compiler leaves `id` out of the hoisted objects when the client
+  environment resolves core's `#view-dev` to its production module (the `development`
+  condition isn't listed, and Vite's `development|production` resolves to production), so
+  exactly the builds whose renderer has no development checks. SSR builds and development
+  builds keep it: development markers and their hydration check, collision checks, server
+  output. The runtime path keeps it too (it is computed anyway).
+- Without ids the client renderer compares template objects by **identity**: compiled objects
+  are hoisted module constants (one per template per module), so a call site always yields the
+  same object. Where an object has an id (the runtime path, development builds) another
+  object with the same id is the same template, as before; that also keeps an instance across
+  a module reloaded in development. One difference follows (02 "Child values"): the same
+  markup at call sites in two modules is two objects, so switching between them replaces the
+  instance instead of patching it. Hydration in such a build is structural only, which is
+  already the production rule (07).
+- Measured on the corpus (the examples' and packages' templates: 264 call sites, 210 objects,
+  client production build, minified): 35.8 → 32.4 KB raw, 10.32 → 8.27 KiB gzip (−2.06 KiB,
+  a fifth). Every example's bundle got 2-98 B gzip smaller, initial chunks 5-81 B; the
+  examples have few templates (hello-world's initial chunk 8.87 → 8.86 KiB).
 
 ### The template object
 
 ```ts
 interface TemplateObject {
-  readonly id: string;
+  readonly id?: string; // absent from production client builds ("Template ids")
   readonly html: string; // normalized template HTML, bound attributes removed
   readonly parts: readonly PartSpec[]; // compact tuples, below; see 02 for kinds
   readonly server?: true; // only when it has document-level tags (<!doctype>, <html>, …)
@@ -107,8 +127,9 @@ gzip) makes every small app's initial chunk larger, and it needs a cache lookup 
 Measured with the compiler on the corpus (the examples' and packages' templates: 260 call
 sites, 208 objects, minified): 47.6 → 35.2 KB raw, 10.53 → 10.17 KiB gzip, ids unchanged.
 Every example's bundle got smaller (35-97 B gzip all chunks, 26-75 B initial; hello-world's
-initial chunk 8.91 → 8.87 KiB), since the renderer's own checks got shorter too. Ids are now
-about a fifth of the corpus' gzip size (random base-36 text doesn't compress).
+initial chunk 8.91 → 8.87 KiB), since the renderer's own checks got shorter too. Ids were then
+about a fifth of the corpus' gzip size (random base-36 text doesn't compress), so production
+client builds now leave them out ("Template ids").
 
 `segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
 strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
@@ -129,8 +150,8 @@ in the browser is an error.
     internal entry point, not API, so compiled code shares the package copy of the `html` it
     replaces. One constant per distinct template id per module.
   - The hoisted object is the normalizer's output without `loc`; client builds also drop the
-    server `segments`, SSR builds keep them. It is already compact (above): nothing decodes
-    it at runtime.
+    server `segments`, SSR builds keep them, and production client builds drop the `id`
+    ("Template ids"). It is already compact (above): nothing decodes it at runtime.
   - Call sites are found by scope-aware analysis of each module (TypeScript included, before
     it is compiled away): `` html`…` `` or `` ns.html`…` `` where `html` is imported from
     `@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error
@@ -167,7 +188,8 @@ in the browser is an error.
 - Node and the server renderer never parse HTML: they only need the normalizer's output.
 
 Both paths produce identical ids, so a precompiled server and a runtime client (or the reverse)
-hydrate each other.
+hydrate each other. A production client build carries no ids and hydrates any server's output
+structurally (07).
 
 ## Instantiation
 

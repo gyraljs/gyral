@@ -50,6 +50,22 @@ interface BuildState {
 const langOf = (id: string): 'js' | 'jsx' | 'ts' | 'tsx' =>
   /\.[cm]?tsx$/.test(id) ? 'tsx' : /\.[cm]?ts$/.test(id) ? 'ts' : id.endsWith('x') ? 'jsx' : 'js';
 
+/**
+ * Whether an environment resolves core's `#view-dev` to its development module: the
+ * `development` condition is listed, or Vite's `development|production` placeholder is and
+ * the build isn't a production one. Exactly then the client keeps template ids (01).
+ */
+function developmentBuild(config: {
+  readonly isProduction: boolean;
+  readonly resolve: { readonly conditions: readonly string[] };
+}): boolean {
+  const { conditions } = config.resolve;
+  return (
+    conditions.includes('development') ||
+    (!config.isProduction && conditions.includes('development|production'))
+  );
+}
+
 const CANT_FOLLOW =
   `This use of html can't be compiled: the template compiler rewrites only html\`…\` tagged ` +
   `templates whose tag is the imported html itself (or ns.html for import * as ns). ` +
@@ -160,13 +176,15 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
         else fail(l.node.start, l.node.end, CANT_FOLLOW);
       }
       if (sites.length === 0) return null;
+      const ssr = opts?.ssr === true || env.config.consumer === 'server';
       try {
         return compileModule({
           lines,
           id,
           file,
           sites,
-          ssr: opts?.ssr === true || env.config.consumer === 'server',
+          ssr,
+          ids: ssr || developmentBuild(env.config),
           parse5: loadOnce(),
           seen: state.seen,
         });

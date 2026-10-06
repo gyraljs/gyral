@@ -189,7 +189,7 @@ describe('development markers and checks (06 "Development markers")', () => {
   it('precede each template instance with its id in development only', () => {
     const inner = (n: number) => html`<b>${n}</b>`;
     const outer = html`<p>${inner(1)}${[inner(2)]}</p>`;
-    const id = (t: ReturnType<typeof html>) => templateOf(t).id;
+    const id = (t: ReturnType<typeof html>) => templateOf(t).id ?? '';
     expect(dev(outer)).toBe(
       `<!--gyral:${id(outer)}--><p><!--gyral:${id(inner(1))}--><b>1</b><!---->` +
         `<!--gyral:${id(inner(1))}--><b>2</b></p>`,
