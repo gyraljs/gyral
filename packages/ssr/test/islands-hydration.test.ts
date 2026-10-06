@@ -45,9 +45,13 @@ describe('lazy hydration islands (gyral-4k7.4)', () => {
   });
 
   it('hydrates idle islands in place once the browser is idle, with their store', async () => {
-    await vi.waitFor(() => {
-      expect(deferred('test-island-idle')).toBe(false);
-    });
+    // requestIdleCallback may wait up to its 2 s timeout on a busy machine.
+    await vi.waitFor(
+      () => {
+        expect(deferred('test-island-idle')).toBe(false);
+      },
+      { timeout: 5000 },
+    );
     await settled();
     expect(button('test-island-idle')).toBe(nodesBefore.get('idle'));
     button('test-island-idle').click();
