@@ -43,7 +43,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     recordSpec(tag, spec);
     const Placeholder = Object.assign(
       function Placeholder(): never {
-        throw new Error(`<${tag}> is a browser element; render it with @gyral/core/server.`);
+        throw new Error(`<${tag}> is a browser element (render it with @gyral/core/server).`);
       },
       { spec, tagName: tag },
     );

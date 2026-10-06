@@ -7,14 +7,12 @@ interface MovingParent {
   moveBefore(node: Node, child: Node | null): void;
 }
 
-/** Feature detection, once: `moveBefore` is not Baseline yet. */
-export const HAS_MOVE: boolean = typeof Element === 'function' && 'moveBefore' in Element.prototype;
-
 /**
- * Whether moves into `parent` can use `moveBefore`: the browser has it and the parent is in a
- * document (state worth keeping only exists there, and both ends share a root).
+ * Whether moves into `parent` can use `moveBefore` (not Baseline yet: detected on the parent,
+ * once per reorder): the browser has it and the parent is in a document (state worth keeping
+ * only exists there, and both ends share a root).
  */
-export const canMove = (parent: Node): boolean => HAS_MOVE && parent.isConnected;
+export const canMove = (parent: Node): boolean => 'moveBefore' in parent && parent.isConnected;
 
 /** Moves the nodes `first`…`last` (siblings, in order) before `ref` in `parent`. */
 export function moveRange(

@@ -16,7 +16,7 @@ export function templateElement(template: TemplateObject): HTMLTemplateElement {
     // Production keeps a short message: the class and its explanation stay out of the bundle.
     throw DEV
       ? new TemplateError(11, SERVER_ONLY, template.loc)
-      : new Error('gyral: a page-shell template (rule 11) can only be rendered by the server.');
+      : new Error('gyral: template rule 11: a page shell rendered in the browser.');
   }
   const el = document.createElement('template');
   el.innerHTML = template.html;

@@ -40,8 +40,7 @@ export function checkValue(tag: string, name: string, def: Prop<unknown>, value:
   const result = def.schema['~standard'].validate(value);
   if (result instanceof Promise) {
     throw new TypeError(
-      `<${tag}> prop "${name}" has an asynchronous schema. Prop schemas must validate ` +
-        'synchronously (docs/design-docs/view/05-element.md "When props are validated").',
+      `<${tag}> prop "${name}" has an asynchronous schema; it must be synchronous.`,
     );
   }
   if (result.issues !== undefined)

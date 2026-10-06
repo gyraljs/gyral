@@ -39,6 +39,9 @@ export interface ModelHost {
 }
 
 export class HostModel<S, P> implements LocalHost {
+  readonly el: FeatureHost;
+  readonly tag: string;
+  readonly root: () => ParentNode | undefined;
   readonly #host: ModelHost;
   readonly #spec: ComponentSpec<S, Tagged, P>;
   readonly #reducers: Readonly<Record<string, Reducer<S> | undefined>>;
@@ -52,20 +55,13 @@ export class HostModel<S, P> implements LocalHost {
 
   constructor(host: ModelHost, spec: ComponentSpec<S, Tagged, P>) {
     this.#host = host;
+    this.el = host.el;
+    this.tag = host.tag;
+    this.root = host.root;
     this.#spec = spec;
     // Sound: dispatch() only calls the reducer whose key equals msg._tag.
     this.#reducers = spec.update as unknown as Readonly<Record<string, Reducer<S> | undefined>>;
   }
-
-  get el(): FeatureHost {
-    return this.#host.el;
-  }
-
-  get tag(): string {
-    return this.#host.tag;
-  }
-
-  readonly root = (): ParentNode | undefined => this.#host.root();
 
   /** The store binding, created on first use. Only reached once `defineStore()` has run. */
   readonly stores = (): StoreLink =>
@@ -178,14 +174,14 @@ export class HostModel<S, P> implements LocalHost {
    * command built by `command()`, which registered it (features.ts).
    */
   #commands(): Interpreter<Tagged | IntentRejected> {
-    const { el, tag } = this.#host;
+    const el = this.el;
     return (this.#interpreter ??= (features.commands as NonNullable<typeof features.commands>)(
       el,
       this.#spec.drivers,
       (msg) => {
         this.dispatch(msg);
       },
-      DEVTOOLS_ENABLED ? devCommands(() => devOwner(el, tag)) : undefined,
+      DEVTOOLS_ENABLED ? devCommands(() => devOwner(el, this.tag)) : undefined,
     ));
   }
 

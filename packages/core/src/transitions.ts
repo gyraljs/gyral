@@ -11,16 +11,11 @@ interface ViewTransitionDocument {
   startViewTransition(update: () => void): ViewTransitionLike;
 }
 
-const supportsViewTransitions = (doc: Document): doc is Document & ViewTransitionDocument =>
-  'startViewTransition' in doc;
-
 const ignore = (): void => undefined;
 
 /** True when a view transition may run now (API present, motion not reduced). */
-export function canTransition(): boolean {
-  if (typeof document === 'undefined' || !supportsViewTransitions(document)) return false;
-  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+export const canTransition = (): boolean =>
+  'startViewTransition' in document && !matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Runs `update` (a whole flush) as a view transition's update callback. A transition skipped
@@ -28,11 +23,7 @@ export function canTransition(): boolean {
  * swallowed. Call only after `canTransition()`.
  */
 export function startTransition(update: () => void): void {
-  if (!supportsViewTransitions(document)) {
-    update();
-    return;
-  }
-  const transition = document.startViewTransition(update);
+  const transition = (document as Document & ViewTransitionDocument).startViewTransition(update);
   transition.ready.catch(ignore);
   transition.finished.catch(ignore);
 }

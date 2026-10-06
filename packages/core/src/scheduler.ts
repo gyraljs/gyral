@@ -167,8 +167,6 @@ function next(): HostTask {
   return best as HostTask;
 }
 
-class RenderLoop extends Error {}
-
 function renderAll(counts: Map<HostTask, number>): void {
   while (dirty.size > 0) {
     const task = next();
@@ -196,9 +194,9 @@ function runPost(): void {
   }
 }
 
-function loopError(counts: Map<HostTask, number>): RenderLoop {
+function loopError(counts: Map<HostTask, number>): Error {
   const tags = [...new Set([...counts.keys()].map((t) => `<${t.tag}>`))].join(', ');
-  return new RenderLoop(
+  return new Error(
     `gyral: rendering did not settle in one flush (a cycle between ${tags}).` +
       (DEV
         ? ' Components are probably feeding each other props or messages; break the cycle ' +

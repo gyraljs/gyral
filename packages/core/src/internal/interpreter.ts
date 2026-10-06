@@ -23,14 +23,12 @@ interface Task {
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
 type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
 
-/** Internal rejection for an aborted task; callers check `signal.aborted`, never this. */
-class Interrupted extends Error {}
-
 /** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
 const aborted = (signal: AbortSignal): Promise<never> => {
   const promise = new Promise<never>((_resolve, reject) => {
+    // Callers check `signal.aborted`, never the reason.
     const interrupt = (): void => {
-      reject(new Interrupted('gyral: command interrupted'));
+      reject(signal.reason as Error);
     };
     if (signal.aborted) interrupt();
     else signal.addEventListener('abort', interrupt, { once: true });

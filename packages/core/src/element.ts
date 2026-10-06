@@ -81,8 +81,7 @@ export function elementClass<S, M extends Tagged, P>(
     #hydrating = false;
     /** init's commands for a server-rendered host: started after its first render. */
     #afterInit: readonly ModelCommand[] = [];
-    #internals: ElementInternals | undefined;
-    #states: StateSync | null | undefined;
+    #states: StateSync | false | undefined;
     #task: HostTask = {
       tag,
       depth: 0,
@@ -258,13 +257,10 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #syncStates = (): void => {
-      if (this.#states === undefined) {
-        // ElementInternals is attached lazily, once, only when a feature needs it (05).
-        this.#internals ??=
-          typeof this.attachInternals === 'function' ? this.attachInternals() : undefined;
-        this.#states = stateSync(this.#internals) ?? null;
-      }
-      if (this.#states !== null && spec.states !== undefined) this.#states(spec.states(this.state));
+      // ElementInternals is attached lazily, once, when the first states sync needs it (05).
+      this.#states ??= stateSync(this.attachInternals());
+      if (this.#states !== false && spec.states !== undefined)
+        this.#states(spec.states(this.state));
     };
 
     #onEvent = (event: Event): void => {

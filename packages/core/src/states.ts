@@ -10,11 +10,11 @@ interface StateSetLike {
 export type StateSync = (states: Readonly<Record<string, boolean>>) => void;
 
 /**
- * A function that mirrors boolean states onto `internals.states`, or `undefined` when the
- * platform lacks custom states.
+ * A function that mirrors boolean states onto `internals.states`, or `false` when the platform
+ * lacks custom states.
  */
-export function stateSync(internals: ElementInternals | undefined): StateSync | undefined {
-  if (internals === undefined || !('states' in internals)) return undefined;
+export function stateSync(internals: ElementInternals): StateSync | false {
+  if (!('states' in internals)) return false;
   const set = internals.states as StateSetLike;
   return (states) => {
     for (const [name, on] of Object.entries(states)) {

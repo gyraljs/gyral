@@ -22,7 +22,8 @@ export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
-export { defineHook, type HookAttributes, type HookResult, type HookSpec } from './render/hooks.js';
+export { defineHook } from './render/hook-part.js';
+export type { HookAttributes, HookResult, HookSpec } from './render/hooks.js';
 export {
   css,
   isStyleSource,

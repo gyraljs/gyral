@@ -8,7 +8,7 @@
 // adopts this render's values as committed (adopt-attr.ts). Adopted form state is `held`: the
 // live comparison waits until the model's value changes, so edits made before scripts ran stay.
 import { DEV } from '#view-dev';
-import { hookSpec, queueHook, sameArgs, type HookResult, type HookSpec } from './hooks.js';
+import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
 import { nothing, UNSET } from './values.js';
 import { badHook, warnTrue, warnValue } from './warn.js';
 
@@ -222,24 +222,15 @@ export class AttrPart implements Part {
     return joined;
   }
 
-  /** HOOK: queue the client call when the hook or its arguments changed. */
+  /** HOOK: the result commits itself (hook-part.ts); an absent value forgets the hook. */
   hook(v: unknown): void {
     if (absent(v)) {
       this.spec = null;
       this.args = undefined;
       return;
     }
-    const spec = hookSpec(v);
-    if (spec === undefined) {
-      if (DEV) badHook(v);
-      return;
-    }
-    const args = (v as HookResult).args;
-    const same = spec === this.spec;
-    if (same && sameArgs(args, this.args)) return;
-    this.prev = same ? this.args : undefined;
-    this.spec = spec;
-    this.args = args;
-    queueHook(this);
+    const commit = isHook(v) ? v[COMMIT_HOOK] : undefined;
+    if (commit !== undefined) commit(this, v as HookResult);
+    else if (DEV) badHook(v);
   }
 }

@@ -153,7 +153,8 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - A `raw()` value in a component that renders in the browser is a development warning (09):
   every change re-parses it.
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`
-  don't bundle it.
+  don't bundle it. Hook results do the same (`defineHook`, render/hook-part.ts): argument
+  comparison and queueing come with the first hook an app defines.
 
 ## `nothing`
 

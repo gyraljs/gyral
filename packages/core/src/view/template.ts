@@ -2,7 +2,7 @@
 // A result is a template source (the call site's strings, or a compiled template object) plus
 // this call's values, recognised by a module-private symbol so data from JSON can never pass
 // for one. `templateOf` turns the source into the template object: compiled results carry it,
-// runtime results are normalized once per strings array through `#prepare`.
+// runtime results are normalized once per strings array through `#prepare` (prepare.ts).
 import { prepare } from '#prepare';
 import type { TemplateObject } from './normalize/types.js';
 
@@ -32,22 +32,12 @@ export function isTemplateResult(value: unknown): value is TemplateResult {
 export const sourceOf = (result: TemplateResult): readonly string[] | TemplateObject =>
   result[SOURCE];
 
-const prepared = new WeakMap<readonly string[], TemplateObject>();
-// One-entry cache in front of the WeakMap: list rows ask for the same call site in a row.
-let lastSource: readonly string[] | undefined;
-let lastTemplate: TemplateObject | undefined;
-
-/** The template object of a result (normalized on the first render of its call site). */
+/**
+ * The template object of a result: compiled results carry it; a runtime result's call site is
+ * normalized once by `#prepare` (cached there, so compiled builds carry neither the preparer
+ * nor its cache).
+ */
 export function templateOf(result: TemplateResult): TemplateObject {
   const source = result[SOURCE];
-  if (!Array.isArray(source)) return source as TemplateObject;
-  if (source === lastSource) return lastTemplate as TemplateObject;
-  let template = prepared.get(source);
-  if (template === undefined) {
-    template = prepare(source);
-    prepared.set(source, template);
-  }
-  lastSource = source;
-  lastTemplate = template;
-  return template;
+  return Array.isArray(source) ? prepare(source) : (source as TemplateObject);
 }

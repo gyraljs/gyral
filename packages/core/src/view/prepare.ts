@@ -10,12 +10,24 @@ import { repairError, shapeMismatch } from './normalize/shape.js';
 import type { Shape, ShapeNode, TemplateObject } from './normalize/types.js';
 
 const shapes = new WeakMap<TemplateObject, Shape>();
+const prepared = new WeakMap<readonly string[], TemplateObject>();
+// One-entry cache in front of the WeakMap: list rows ask for the same call site in a row.
+let lastSource: readonly string[] | undefined;
+let lastTemplate: TemplateObject | undefined;
 
-/** Normalizes a call site's strings (development checks included). */
+/** The template object of a call site's strings, normalized (with development checks) once. */
 export function prepare(strings: readonly string[]): TemplateObject {
-  const { template, strings: normalized, shape } = analyze(strings);
-  recordTemplateId(template.id, normalized);
-  shapes.set(template, shape);
+  if (strings === lastSource) return lastTemplate as TemplateObject;
+  let template = prepared.get(strings);
+  if (template === undefined) {
+    const analysis = analyze(strings);
+    template = analysis.template;
+    recordTemplateId(template.id, analysis.strings);
+    shapes.set(template, analysis.shape);
+    prepared.set(strings, template);
+  }
+  lastSource = strings;
+  lastTemplate = template;
   return template;
 }
 

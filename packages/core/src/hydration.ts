@@ -78,17 +78,13 @@ export function whenHydrationLoads(next: () => void): void {
     hydrationCode = code;
     const hosts = waiting ?? [];
     waiting = undefined;
-    for (const host of hosts) {
-      try {
-        host();
-      } catch (error) {
-        reportError(error);
-      }
-    }
+    // Each in its own microtask, in order: one host throwing doesn't stop the others. They all
+    // run before `hold` counts the load as done.
+    for (const host of hosts) queueMicrotask(host);
   };
   hold(
     import('./hydration-client.js').then(done, (error: unknown) => {
-      console.error('gyral: the hydration code failed to load; rendering fresh.', error);
+      console.error('gyral: hydration code failed to load; rendering fresh', error);
       done(null);
     }),
   );

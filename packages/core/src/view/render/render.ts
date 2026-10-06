@@ -15,7 +15,11 @@ let batching = false;
 
 /** Runs `fn` (one scheduler flush) with one shared row-check budget for every render in it. */
 export function renderBatch(fn: () => void): void {
-  if (DEV) resetRowChecks();
+  if (!DEV) {
+    fn(); // the budget is a development check: production needs no batch state
+    return;
+  }
+  resetRowChecks();
   const outer = batching;
   batching = true;
   try {
