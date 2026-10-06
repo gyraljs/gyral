@@ -1,6 +1,6 @@
 {
   "name": "@gyral/devtools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Gyral devtools: an in-page timeline of messages, state, commands and stores (development builds).",
   "license": "MIT",
   "author": "Mike Zupper",

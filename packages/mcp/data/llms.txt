@@ -36,6 +36,7 @@ Start a project with `npm create gyral@latest my-app -- --template ssr` (or `--t
 ## Examples
 
 - [Gyral examples](https://gyral.dev/examples/index.md): Gyral examples, from a counter to a server-rendered app: ports of the Cycle.js examples with their source, plus gyral-shop.
+- [What you can build with Gyral](https://gyral.dev/what-you-can-build/index.md): What Gyral makes easy, shown as short recordings of examples: undo and replay, type-ahead without stale results, pages that work before JavaScript, live themes and animated transitions.
 
 ## Optional
 
