@@ -33,7 +33,8 @@ class Emitter {
     this.segments.push(segment);
   }
 
-  children(nodes: readonly TreeNode[], path: Path): Shape {
+  /** `parent`: the parent element's name; undefined at the template root. */
+  children(nodes: readonly TreeNode[], path: Path, parent?: string): Shape {
     const shape: ShapeNode[] = [];
     nodes.forEach((node, k) => {
       switch (node.type) {
@@ -58,17 +59,23 @@ class Emitter {
             this.op({ k: 'text' });
             return;
           }
-          this.child(nodes, k, path, shape);
+          this.child(nodes, k, path, shape, parent);
       }
     });
     return shape;
   }
 
   /** A child hole: inserts before the next static element or comment, the end, or an anchor. */
-  private child(nodes: readonly TreeNode[], k: number, path: Path, shape: ShapeNode[]): void {
+  private child(
+    nodes: readonly TreeNode[],
+    k: number,
+    path: Path,
+    shape: ShapeNode[],
+    parent: string | undefined,
+  ): void {
     const next = nodes[k + 1];
     const sole = nodes.length === 1;
-    this.op({ k: 'child' });
+    this.op(parent === undefined ? { k: 'child' } : { k: 'child', in: parent });
     if (next === undefined) {
       this.parts.push({ k: 'child', path, ref: null, sole });
       return;
@@ -117,7 +124,7 @@ class Emitter {
     ) {
       this.out('\n');
     }
-    const shape = this.children(el.children, path);
+    const shape = this.children(el.children, path, el.name);
     if (el.props !== undefined) {
       this.html += `</${el.raw}>`;
       this.op({ k: 'close', tag: el.name });

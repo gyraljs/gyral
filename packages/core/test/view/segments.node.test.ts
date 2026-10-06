@@ -16,7 +16,7 @@ describe('segments (view/06)', () => {
       { k: 'attr', name: 'href' },
       { k: 'bool', name: 'hidden' },
       '>Hi ',
-      { k: 'child' },
+      { k: 'child', in: 'a' },
       '<!---->!</a>',
     ]);
   });
@@ -39,7 +39,7 @@ describe('segments (view/06)', () => {
       },
       { k: 'prop', name: 'lines' },
       { k: 'openEnd' },
-      { k: 'child' },
+      { k: 'child', in: 'shop-cart' },
       { k: 'close', tag: 'shop-cart' },
       '</p>',
     ]);

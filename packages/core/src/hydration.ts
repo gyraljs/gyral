@@ -3,9 +3,9 @@
 // attribute; the client reads it before its first render so both sides start from the same
 // state.
 import { warnJsonHazard } from './json-safety.js';
+import { DEV, SEED_ATTRIBUTE } from './view/index.js';
 
-/** Host attribute holding the JSON seed. Removed once the client has read it. */
-export const SEED_ATTRIBUTE = 'data-gyral-seed';
+export { SEED_ATTRIBUTE };
 
 export interface Seed {
   /**
@@ -32,7 +32,8 @@ export function makeSeed(
   carried: Readonly<Record<string, unknown>>,
 ): Seed {
   const seed: Seed = sameJson(state, initial) ? { props: carried } : { state, props: carried };
-  warnJsonHazard(`<${tag}>`, seed, 'seed');
+  if (DEV) warnJsonHazard(`<${tag}>`, seed, 'seed'); // view/06-server.md "Seed": development
+
   return seed;
 }
 

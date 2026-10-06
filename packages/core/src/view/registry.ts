@@ -1,10 +1,17 @@
 // The server registry (view/05-element.md "Registration", view/06-server.md "Components").
-// Outside the browser `define()` records each spec (server-specs.ts); the server entry turns
-// them into entries here (server-component.ts `registerRecordedSpecs`), and
-// `@gyral/core/server` (Phase 4, gyral-g1r.9) looks start tags up in it and renders the
-// component in place. Plain data and functions, no DOM: it lives in view/ so view/server/ can
-// read it.
+// Outside the browser `define()` records each spec (server-specs.ts); `@gyral/core/server`
+// turns them into entries here (server-component.ts `registerRecordedSpecs`) before each
+// render, and its renderer (view/server/) looks start tags up and renders the component in
+// place. Providers (`<gyral-stores>`, ADR 0013) register a scope for their subtree. Plain data
+// and functions, no DOM: it lives in view/ so view/server/ can read it.
 import type { ChildValue } from './render/values.js';
+
+/** Host attribute holding a component's JSON seed (ADR 0012); the client removes it. */
+export const SEED_ATTRIBUTE = 'data-gyral-seed';
+/** Marks a server-rendered light-DOM host (ADR 0014), so hydration knows its own content. */
+export const LIGHT_ATTRIBUTE = 'data-gyral-light';
+/** A deferred island's strategy (07 "Islands"), next to `defer-hydration`. */
+export const ISLAND_ATTRIBUTE = 'data-gyral-hydrate';
 
 /** What a server render of one component returns: its view and what its seed must carry. */
 export interface ServerRendering {
@@ -24,7 +31,13 @@ export interface ServerRenderInput {
   /** Property holes: values as is. */
   readonly properties: Readonly<Record<string, unknown>>;
   /** Messages run through their reducers after `init` (ADR 0008's rejected-form re-render). */
-  readonly initialMessages?: readonly unknown[];
+  readonly initialMessages?: readonly unknown[] | undefined;
+  /**
+   * The nearest provider's scope (opaque to view/), or undefined for the request's own scope.
+   * The renderer passes it down: a provider's subtree can span several streamed chunks, so a
+   * global set around the subtree would not survive between pulls.
+   */
+  readonly scope?: unknown;
 }
 
 /** One registered component, as the server renderer sees it. */
@@ -52,3 +65,26 @@ export const serverComponent = (tag: string): ServerComponent | undefined => com
 
 /** Every registered component (for `styleHashes()`, 06 "CSP"). */
 export const serverComponents = (): readonly ServerComponent[] => [...components.values()];
+
+/**
+ * A server-side provider element (`<gyral-stores>`, ADR 0013): written as a plain element, it
+ * gives its subtree a scope (passed to components as `ServerRenderInput.scope`) and may add
+ * attributes to its start tag (its seed).
+ */
+export interface ServerProvider {
+  readonly tag: string;
+  open(input: ServerRenderInput): {
+    readonly scope: unknown;
+    readonly attributes: Readonly<Record<string, string>>;
+  };
+}
+
+const providers = new Map<string, ServerProvider>();
+
+/** Records a provider element. A tag registered twice keeps its first entry. */
+export function registerServerProvider(provider: ServerProvider): void {
+  if (!providers.has(provider.tag)) providers.set(provider.tag, provider);
+}
+
+/** The provider registered under `tag`, if any. */
+export const serverProvider = (tag: string): ServerProvider | undefined => providers.get(tag);

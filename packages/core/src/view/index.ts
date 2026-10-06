@@ -35,10 +35,16 @@ export {
   type Styles,
 } from './styles.js';
 export {
+  ISLAND_ATTRIBUTE,
+  LIGHT_ATTRIBUTE,
+  SEED_ATTRIBUTE,
   registerServerComponent,
+  registerServerProvider,
   serverComponent,
   serverComponents,
+  serverProvider,
   type ServerComponent,
+  type ServerProvider,
   type ServerRenderInput,
   type ServerRendering,
 } from './registry.js';

@@ -17,6 +17,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
     "./vite": "./src/vite.ts",
     "./compiled": "./src/view/compiled.ts"
   },
@@ -39,6 +40,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
       },
       "./vite": {
         "types": "./dist/vite.d.ts",

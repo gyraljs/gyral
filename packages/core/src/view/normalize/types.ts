@@ -41,6 +41,9 @@ export type PartSpec =
  * ops take none and mark where a component's start tag ends and its end tag begins.
  *
  * - `child`: the value per 02's child table. Anchors are already in the next static string.
+ *   `in` is the parent element's local name (absent at the template root, where the parent is
+ *   wherever the instance is written): the development check for text the parser would move
+ *   out of table structure needs it.
  * - `text`: the value as escaped text (`<textarea>`, `<title>` content).
  * - `attr`: ` name="escaped"`, or nothing for null/undefined/nothing. With `strings`, the
  *   pieces and `strings.length - 1` values are joined first (`nothing` in any piece: nothing).
@@ -59,7 +62,7 @@ export type PartSpec =
  */
 export type Segment =
   | string
-  | { readonly k: 'child' }
+  | { readonly k: 'child'; readonly in?: string }
   | { readonly k: 'text' }
   | { readonly k: 'attr'; readonly name: string; readonly strings?: readonly string[] }
   | { readonly k: 'bool'; readonly name: string }
