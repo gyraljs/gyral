@@ -92,7 +92,6 @@ export function elementClass<S, M extends Tagged, P>(
     #task: HostTask = {
       tag,
       depth: 0,
-      lane: 'microtask',
       render: () => {
         this.#render();
       },
@@ -103,8 +102,8 @@ export function elementClass<S, M extends Tagged, P>(
         tag,
         props: () => readProps(this.#values, table),
         root: () => this.#root,
-        invalidate: () => {
-          this.#invalidate();
+        invalidate: (onFrame) => {
+          this.#invalidate(onFrame);
         },
       },
       model,
@@ -215,9 +214,9 @@ export function elementClass<S, M extends Tagged, P>(
       if (!this.#rendered || this.#stale || rebound) this.#invalidate();
     }
 
-    #invalidate(): void {
+    #invalidate(onFrame = false): void {
       if (this.#root === undefined) return;
-      if (this.isConnected) markDirty(this.#task);
+      if (this.isConnected) markDirty(this.#task, onFrame);
       else this.#stale = true;
     }
 

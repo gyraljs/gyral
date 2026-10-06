@@ -35,8 +35,8 @@ export interface ModelHost {
   readonly props: () => Bag;
   /** The host's root once it has one (focus commands run against it). */
   readonly root: () => ParentNode | undefined;
-  /** Something changed that the next render must show. */
-  readonly invalidate: () => void;
+  /** Something changed that the next render must show; `onFrame`: in the frame lane (04). */
+  readonly invalidate: (onFrame: boolean) => void;
 }
 
 export class HostModel<S, P> {
@@ -121,7 +121,7 @@ export class HostModel<S, P> {
     if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, next);
     if (!schedule) return;
     if (this.#spec.viewTransition?.(prev, next, msg) === true) requestTransition();
-    this.#host.invalidate();
+    this.#host.invalidate(this.#onFrame(msg._tag));
   }
 
   apply(next: Next<S, Tagged> | Next<S, Tagged | IntentRejected>): void {
@@ -169,6 +169,11 @@ export class HostModel<S, P> {
     this.#interpreter = undefined;
   }
 
+  /** Does `tag` render in the frame lane (`spec.renderOnFrame`)? */
+  #onFrame(tag: string): boolean {
+    return this.#spec.renderOnFrame?.includes(tag) === true;
+  }
+
   // el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
   #resolve = (driver: AnyDriver): AnyDriver =>
     this.#host.el.drivers[driver.name] ??
@@ -177,7 +182,10 @@ export class HostModel<S, P> {
     driver;
 
   #storeChanged(store: AnyStore, state: unknown, prev: unknown): void {
-    if (this.#reducers['StoreChanged'] === undefined) this.#host.invalidate();
-    else this.dispatch({ _tag: 'StoreChanged', store: store.name, state, prev } as Tagged);
+    if (this.#reducers['StoreChanged'] !== undefined) {
+      this.dispatch({ _tag: 'StoreChanged', store: store.name, state, prev } as Tagged);
+    } else {
+      this.#host.invalidate(this.#onFrame('StoreChanged'));
+    }
   }
 }

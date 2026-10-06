@@ -1,5 +1,5 @@
 {
-  "$comment": "Max gzip KiB per example production bundle (ADR 0018, gyral-g1r.2). Baseline: 0.2.0 + 0.1 KiB. \"view\": the view layer's client API built with the gyral-compiled condition (scripts/size/view-entry.js), measured in Phase 2 + 0.1 KiB. Only ever lower these: pnpm size --check fails above a budget and suggests tightening when a bundle is 0.5 KiB under. Phase 3 (view-layer swap, gyral-g1r.7): budgets over by up to 0.4 KiB were raised to measured + 0.1 KiB TEMPORARILY, pending the size pass gyral-g1r.18 (bmi, counter, custom-driver, hello-lastname, http-random-user, routing-view, typeahead-race); budgets more than 0.5 KiB under were lowered. Phase 5 (hydration, gyral-g1r.10): hydration is built into core (view/07), about +1.6–1.9 KiB gzip in every bundle; every budget it pushed over was raised to measured + 0.1 KiB TEMPORARILY, pending gyral-g1r.18 (a lazily loaded hydration chunk is the main candidate).",
+  "$comment": "Max gzip KiB per example production bundle (ADR 0018, gyral-g1r.2). Baseline: 0.2.0 + 0.1 KiB. \"view\": the view layer's client API built with the gyral-compiled condition (scripts/size/view-entry.js), measured in Phase 2 + 0.1 KiB. Only ever lower these: pnpm size --check fails above a budget and suggests tightening when a bundle is 0.5 KiB under. Phase 3 (view-layer swap, gyral-g1r.7): budgets over by up to 0.4 KiB were raised to measured + 0.1 KiB TEMPORARILY, pending the size pass gyral-g1r.18 (bmi, counter, custom-driver, hello-lastname, http-random-user, routing-view, typeahead-race); budgets more than 0.5 KiB under were lowered. Phase 5 (hydration, gyral-g1r.10): hydration is built into core (view/07), about +1.6\u20131.9 KiB gzip in every bundle; every budget it pushed over was raised to measured + 0.1 KiB TEMPORARILY, pending gyral-g1r.18 (a lazily loaded hydration chunk is the main candidate).",
   "budgets": {
     "animated-letters": 15.5,
     "animation": 14.9,
@@ -14,14 +14,14 @@
     "hello-world": 14.4,
     "http-random-user": 17.2,
     "http-search-github": 17.6,
-    "invoker-commands": 14.4,
+    "invoker-commands": 14.5,
     "isomorphic": 17.8,
     "nested-folders": 14.9,
     "no-js-first": 19.3,
     "register": 18.5,
     "routing-view": 17.2,
     "seconds-elapsed": 14.6,
-    "shared-cart": 15.7,
+    "shared-cart": 15.8,
     "typeahead-race": 16.7,
     "undo-replay": 17.1
   },

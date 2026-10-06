@@ -12,7 +12,7 @@ changing behaviour; a spec and its conformance tests move together.
 | [01-templates.md](01-templates.md)           | `html`, normalization, whitespace, template ids, the template object, compiled vs runtime | 1, 6  |
 | [02-bindings.md](02-bindings.md)             | Binding kinds and value rules, live form state, element hooks, `raw()`, `nothing`         | 2     |
 | [03-lists.md](03-lists.md)                   | `each(items, key, row, pick?)`, row skipping, reconciliation, the dev check               | 2     |
-| [04-scheduler.md](04-scheduler.md)           | Dirty marking, the flush, post-render work, view transitions, `settled()`                 | 3     |
+| [04-scheduler.md](04-scheduler.md)           | Dirty marking, the flush, post-render work, view transitions, frame lane, `settled()`     | 3     |
 | [05-element.md](05-element.md)               | `define()`'s element, props through Standard Schema, attributes, lifecycle                | 3     |
 | [06-server.md](06-server.md)                 | `@gyral/core/server`, component rendering, light and DSD output, seeds, streaming         | 4     |
 | [07-hydration.md](07-hydration.md)           | Parallel walk, per-component hydration, islands, mismatches, typed input                  | 5     |

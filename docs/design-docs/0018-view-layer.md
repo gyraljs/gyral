@@ -34,13 +34,13 @@ leak in lit-html ≥ 3.3.1 (a pin in every app), runtime whitespace minification
 
 **Size and speed (measured 2026-10-06):**
 
-| Measure                                                   | Value                                         |
-| --------------------------------------------------------- | --------------------------------------------- |
-| Lit as Gyral uses it, incl. hydration (esbuild, min/gzip) | 27.5 KB / 10.1 KB                             |
-| Lit share of app JS (gzip)                                | counter 35%, gyral.dev 35%, gyral-shop 12%    |
-| Smallest app, Gyral 0.2.0 vs plain Lit (gzip)             | 11.9 KiB vs 5.8 KiB                           |
-| js-framework-benchmark geomean (0.2.0 release run)        | Gyral 1.20, Lit 1.34, Solid 1.07, Svelte 1.06 |
-| select-row: idle before paint vs script                   | 13–18 ms idle vs 2–3 ms script (Solid: 7 ms)  |
+| Measure                                                   | Value                                                                               |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Lit as Gyral uses it, incl. hydration (esbuild, min/gzip) | 27.5 KB / 10.1 KB                                                                   |
+| Lit share of app JS (gzip)                                | counter 35%, gyral.dev 35%, gyral-shop 12%                                          |
+| Smallest app, Gyral 0.2.0 vs plain Lit (gzip)             | 11.9 KiB vs 5.8 KiB                                                                 |
+| js-framework-benchmark geomean (0.2.0 release run)        | Gyral 1.20, Lit 1.34, Solid 1.07, Svelte 1.06                                       |
+| select-row: total minus script vs script                  | 13–18 ms vs 2–3 ms script (Solid: 7 ms); frame alignment, not Gyral (view/04 spike) |
 
 Profiling (gyral-benchmarks-profile) shows Gyral's own layer costs about 1 ms per operation; the
 gap to Svelte and Solid is DOM work: comment markers (4 per benchmark row), whitespace nodes,

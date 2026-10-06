@@ -2,16 +2,11 @@
 // through it: reducers run at once, the render waits for one microtask flush shared by the
 // whole page. A flush renders dirty hosts parents first (smallest depth, then marking order),
 // then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
-// and loops until nothing is dirty. It lives outside view/ (view/ never imports it) and drives
-// the renderer through view/index.ts.
+// and loops until nothing is dirty. Messages a spec lists in `renderOnFrame` mark their host in
+// the frame lane instead: it renders in the next animation frame (04 "Frame lane"). It lives
+// outside view/ (view/ never imports it) and drives the renderer through view/index.ts.
 import { canTransition, startTransition } from './transitions.js';
 import { DEV, renderBatch } from './view/index.js';
-
-/**
- * When a dirty host renders. Only `microtask` exists; the flush-timing spike (gyral-g1r.8)
- * may add an opt-in frame lane for bursty sources. It never becomes the default.
- */
-export type Lane = 'microtask';
 
 /** One host as the scheduler sees it. define() creates one per element. */
 export interface HostTask {
@@ -19,7 +14,6 @@ export interface HostTask {
   readonly tag: string;
   /** Gyral host ancestors in the composed tree, recorded when the host connects. */
   depth: number;
-  readonly lane: Lane;
   /** `PropsChanged` (when props changed), then the view and its commit. May throw. */
   readonly render: () => void;
 }
@@ -44,8 +38,16 @@ const SCHEDULED = 1;
 const TRANSITION = 2;
 const FLUSHING = 3;
 
+/** A frame-lane flush that no animation frame has run by then runs from a timer (hidden pages). */
+const FRAME_FALLBACK_MS = 100;
+
 const ignore = (): void => undefined;
 const dirty = new Set<HostTask>();
+/** Hosts marked only in the frame lane: they join `dirty` when the frame comes. */
+const framed = new Set<HostTask>();
+let frameRaf = 0;
+/** Set while a frame-lane flush is requested. */
+let frameTimer: ReturnType<typeof setTimeout> | undefined;
 let post: PostTask[] = [];
 let phase = IDLE;
 let transitionWanted = false;
@@ -54,8 +56,12 @@ let deferred = 0;
 let quiet: { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } | null =
   null;
 
-/** True when no host is dirty, no flush or transition update is pending, nothing is deferred. */
-export const isQuiet = (): boolean => phase === IDLE && dirty.size === 0 && deferred === 0;
+/**
+ * True when no host is dirty (in either lane), no flush or transition update is pending and
+ * nothing is deferred.
+ */
+export const isQuiet = (): boolean =>
+  phase === IDLE && dirty.size === 0 && framed.size === 0 && deferred === 0;
 
 /** Resolves at the end of the flush that leaves the scheduler quiet. */
 export function whenQuiet(): Promise<void> {
@@ -78,10 +84,33 @@ function schedule(): void {
   queueMicrotask(start);
 }
 
-/** Marks `task` for the next flush. Marking an already-dirty host does nothing. */
-export function markDirty(task: HostTask): void {
+/**
+ * Marks `task` for the next flush: the microtask one, or with `onFrame` the next animation
+ * frame's (04 "Frame lane"). Marking an already-dirty host does nothing; a microtask mark moves a
+ * host waiting for the frame into the microtask flush. `requestAnimationFrame` doesn't run in
+ * hidden pages, so a timer runs the frame's flush if no frame came first.
+ */
+export function markDirty(task: HostTask, onFrame = false): void {
+  if (dirty.has(task)) return;
+  if (onFrame) {
+    framed.add(task);
+    if (frameTimer === undefined) {
+      frameRaf = requestAnimationFrame(runFrame);
+      frameTimer = setTimeout(runFrame, FRAME_FALLBACK_MS);
+    }
+    return;
+  }
+  framed.delete(task);
   dirty.add(task);
   schedule();
+}
+
+/** The frame lane's hosts join a microtask flush, which runs right after this callback. */
+function runFrame(): void {
+  cancelAnimationFrame(frameRaf);
+  clearTimeout(frameTimer);
+  frameTimer = undefined;
+  for (const task of framed) markDirty(task);
 }
 
 /** Queues post-render work for the current (or next) flush. */
