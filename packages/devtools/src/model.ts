@@ -94,6 +94,14 @@ function toRow(event: DevEvent, seq: number): Row {
         what: event.serverRendered ? 'hydrated' : 'first render',
         detail: '',
       };
+    case 'mismatch':
+      return {
+        ...base,
+        kind: 'component',
+        who: componentLabel(event.component),
+        what: 'hydration mismatch',
+        detail: event.message,
+      };
     case 'update':
       return {
         ...base,

@@ -2,57 +2,13 @@
 // the browser (which also attaches declarative shadow roots), has the same DOM as the client
 // rendering of the same result into a fresh root: structure, attributes, text, and form state
 // by its live properties. Components render on both sides (shadow and light).
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import fc from 'fast-check';
 import { afterEach, describe, expect, it } from 'vitest';
-import { css, define, html, prop, settled, type ComponentSpec } from '../../src/index.js';
-import { serverComponent } from '../../src/server-component.js';
+import { html, settled } from '../../src/index.js';
 import { renderToString } from '../../src/server.js';
-import { registerServerComponent, render, type ChildValue } from '../../src/view/index.js';
+import { render, type ChildValue } from '../../src/view/index.js';
+import './conformance-components.js';
 import { view } from './server-arbitrary.js';
-
-/** Defines a component for the client and registers it for the server renderer. */
-function both<S, P extends object>(tag: string, spec: ComponentSpec<S, never, P>): void {
-  define<S, never, P>(tag, spec);
-  registerServerComponent(serverComponent(tag, spec));
-}
-
-interface ShadowProps {
-  readonly label: string;
-  readonly items: readonly string[];
-}
-const strings: StandardSchemaV1<readonly string[]> = {
-  '~standard': { version: 1, vendor: 't', validate: (v) => ({ value: v as readonly string[] }) },
-};
-
-both<object, ShadowProps>('cf-shadow', {
-  props: { label: prop.string({ default: '' }), items: prop.value(strings, { default: [] }) },
-  init: () => ({}),
-  intent: {},
-  update: {},
-  view: (_s, _i, { props }) =>
-    html`<p class="c">${props.label}</p>
-      <ul>
-        ${props.items.map((it) => html`<li>${it}</li>`)}
-      </ul>
-      <slot></slot>`,
-  styles: css`
-    p {
-      color: rgb(1, 2, 3);
-    }
-  `,
-});
-
-both<object, { readonly n: number }>('cf-light', {
-  shadow: false,
-  props: { n: prop.number({ default: 0 }) },
-  init: () => ({}),
-  intent: {},
-  update: {},
-  view: (_s, _i, { props }) =>
-    html`<h3>Light ${props.n}</h3>
-      ${props.n > 1 ? html`<cf-shadow label="in light"></cf-shadow>` : ''}`,
-});
 
 /** Server-only attributes: hydration's inputs, not part of the view (06 "Components"). */
 const SERVER_ONLY = new Set(['data-gyral-seed', 'data-gyral-light']);

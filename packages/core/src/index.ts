@@ -101,7 +101,7 @@ export type {
 } from './types.js';
 
 // The view layer (ADR 0018, docs/design-docs/view/): templates, lists, hooks and styles.
-export { css, defineHook, each, html, nothing, raw } from './view/index.js';
+export { css, defineHook, each, html, HydrationMismatch, nothing, raw } from './view/index.js';
 export type {
   ChildValue,
   CssValue,

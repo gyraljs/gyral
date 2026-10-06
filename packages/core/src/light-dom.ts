@@ -15,6 +15,6 @@ export function isLightComponent(ctor: unknown): boolean {
 
 /**
  * Server-rendered light hosts carry this attribute (ADR 0014 addendum, view/06-server.md
- * "Components"), so hydration (Phase 5) can tell a light host's own content from a nested one's.
+ * "Components"), so a parent's hydration walk leaves a light child's content alone (view/07).
  */
 export const LIGHT_ATTRIBUTE = 'data-gyral-light';

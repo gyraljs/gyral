@@ -42,6 +42,12 @@ export type DevEvent = { readonly at: number } & (
       readonly component: DevComponentRef;
       readonly serverRendered: boolean;
     }
+  | {
+      /** The server DOM didn't match the first render (view/07-hydration.md "Mismatches"). */
+      readonly kind: 'mismatch';
+      readonly component: DevComponentRef;
+      readonly message: string;
+    }
   | ({ readonly kind: 'command'; readonly owner: string } & CommandTraceEvent)
   | {
       readonly kind: 'store';

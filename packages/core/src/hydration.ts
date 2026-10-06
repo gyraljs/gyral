@@ -1,9 +1,10 @@
 // Server-render seeds (docs/design-docs/0012-ssr.md, view/06-server.md "Components"). The
 // server writes each component's state, plus the props an attribute can't carry, into one
 // attribute; the client reads it before its first render so both sides start from the same
-// state.
+// state, then hydrates the server's DOM with that render (view/07-hydration.md).
+import { DEVTOOLS_ENABLED, devMismatch } from '#devtools';
 import { warnJsonHazard } from './json-safety.js';
-import { DEV } from './view/index.js';
+import { DEV, hydrate, HydrationMismatch, render, type ChildValue } from './view/index.js';
 
 /** Host attribute holding the JSON seed. Removed once the client has read it. */
 export const SEED_ATTRIBUTE = 'data-gyral-seed';
@@ -51,5 +52,35 @@ export function takeSeed(host: Element): Seed | undefined {
   } catch (error) {
     console.error(`<${host.localName}> has an unreadable ${SEED_ATTRIBUTE}`, error);
     return undefined;
+  }
+}
+
+/**
+ * Hydrates a server-rendered host's root with its first view (view/07-hydration.md "Steps").
+ * A shadow root swaps styles in the same step (08 "Hydration"): the shared sheets are adopted
+ * and the server's `<style>` removed. On a mismatch development throws; production recovers
+ * this component only: it clears the root, renders fresh and warns.
+ */
+export function hydrateRoot(
+  host: HTMLElement,
+  tag: string,
+  view: ChildValue,
+  root: ShadowRoot | HTMLElement,
+  sheets: CSSStyleSheet[] | undefined,
+): void {
+  if (sheets !== undefined) {
+    (root as ShadowRoot).adoptedStyleSheets = sheets;
+    const first = root.firstChild;
+    if (sheets.length > 0 && first?.nodeName === 'STYLE') first.remove();
+  }
+  try {
+    hydrate(view, root, `<${tag}>`);
+  } catch (error) {
+    if (!(error instanceof HydrationMismatch)) throw error;
+    if (DEVTOOLS_ENABLED) devMismatch(host, tag, error.message);
+    if (DEV) throw error;
+    console.warn(`${error.message} <${tag}> was rendered fresh.`);
+    root.replaceChildren();
+    render(view, root);
   }
 }

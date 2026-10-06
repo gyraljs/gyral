@@ -6,7 +6,7 @@ import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
 import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { HostModel, type ModelCommand } from './host-model.js';
-import { takeSeed } from './hydration.js';
+import { hydrateRoot, takeSeed } from './hydration.js';
 import { handleIntent, hostDepth, intentNames, listenForIntents } from './intent.js';
 import { scheduleIsland } from './islands.js';
 import { isLight } from './light-dom.js';
@@ -83,6 +83,8 @@ export function elementClass<S, M extends Tagged, P>(
     /** Something changed while disconnected: render on reconnect. */
     #stale = false;
     #serverRendered = false;
+    /** The first render adopts the server's DOM (07): resumed from a seed, root not empty. */
+    #hydrating = false;
     /** init's commands for a server-rendered host: started after its first render. */
     #afterInit: readonly ModelCommand[] = [];
     #internals: ElementInternals | undefined;
@@ -192,12 +194,14 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #start(): void {
-      if (light) {
-        this.#root = this;
-      } else {
-        const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
-        root.adoptedStyleSheets = sheets ??= sheetsFor(spec.styles);
-        this.#root = root;
+      const root = light ? this : (this.shadowRoot ?? this.attachShadow({ mode: 'open' }));
+      this.#root = root;
+      this.#hydrating = this.#serverRendered && root.hasChildNodes();
+      sheets ??= light ? [] : sheetsFor(spec.styles);
+      // A shadow root without a seed to resume from (hand-written DSD) renders fresh.
+      if (!light && !this.#hydrating) {
+        if (!this.#serverRendered) root.replaceChildren();
+        (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       listenForIntents(this.#root, spec.events ?? [], this.#onEvent);
       this.#state(); // init, unless resumed from a seed
@@ -227,10 +231,10 @@ export function elementClass<S, M extends Tagged, P>(
       this.#stale = false;
       this.#model.syncProps(names);
       const view = spec.view(this.state, intentNames as IntentNames<M>, this.#model.ctx());
-      // Phase 5 (gyral-g1r.10): hydrate the server's DOM here instead of clearing it. Until then
-      // a server-rendered host resumes its state from the seed and renders fresh.
-      if (!this.#rendered && this.#serverRendered) root.replaceChildren();
-      render(view, root);
+      if (this.#hydrating) {
+        hydrateRoot(this, tag, view, root, light ? undefined : sheets);
+        this.#hydrating = false;
+      } else render(view, root);
       if (spec.states !== undefined) afterRender(POST_STATES, this.#syncStates);
       if (this.#rendered) return;
       this.#rendered = true;

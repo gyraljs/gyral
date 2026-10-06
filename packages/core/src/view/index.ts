@@ -15,7 +15,8 @@ export type {
   ShapeNode,
   TemplateObject,
 } from './normalize/types.js';
-export { render, renderBatch } from './render/render.js';
+export { hydrate, render, renderBatch } from './render/render.js';
+export { HydrationMismatch } from './render/mismatch.js';
 export {
   each,
   nothing,

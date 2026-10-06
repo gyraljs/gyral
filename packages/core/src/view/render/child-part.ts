@@ -51,7 +51,8 @@ type Span = Instance | List | RawRange;
 
 let parser: HTMLTemplateElement | undefined;
 
-function parse(html: string): DocumentFragment {
+/** `html` parsed by a <template> (its content is reused: read it before the next call). */
+export function parse(html: string): DocumentFragment {
   parser ??= document.createElement('template');
   parser.innerHTML = html;
   return parser.content;

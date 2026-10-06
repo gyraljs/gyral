@@ -5,6 +5,7 @@
 // the clone is still detached, and only then is it inserted, so child components connect with
 // their props set. A template with one root node and no root-level holes clones just that node.
 // How to reach the nodes, and what each part is, comes from the template's plan (plan.ts).
+// Hydration (adopt.ts) creates instances with `adopt` set and fills them from server DOM.
 import type { PartSpec, TemplateObject } from '../normalize/types.js';
 import { AttrPart, type Part } from './attr-parts.js';
 import { ChildPart, type Owner } from './child-part.js';
@@ -20,26 +21,28 @@ export class Instance implements Owner {
   readonly holder: ChildPart;
   readonly parts: Part[];
   /** First and last static root nodes; null when the template is a single hole. */
-  readonly start: Node | null;
-  readonly end: Node | null;
+  start: Node | null;
+  end: Node | null;
   /** Root-level child parts before the first / after the last static root node. */
   head: ChildPart | null;
   tail: ChildPart | null;
   /** The clone, until it is inserted. */
   frag: DocumentFragment | null;
 
-  constructor(template: TemplateObject, source: unknown, holder: ChildPart) {
+  /** `adopt`: hydration (adopt.ts) fills the parts and root nodes from server DOM instead. */
+  constructor(template: TemplateObject, source: unknown, holder: ChildPart, adopt?: boolean) {
     this.template = template;
     this.source = source;
     this.holder = holder;
     this.parts = [];
     this.head = null;
     this.tail = null;
+    this.frag = this.start = this.end = null;
+    if (adopt === true) return;
     const plan = planOf(template);
     if (plan.single) {
       const root = document.importNode(plan.content.firstChild as Node, true);
       stack[1] = root;
-      this.frag = null;
       this.start = this.end = root;
     } else {
       const frag = document.importNode(plan.content, true);
@@ -49,10 +52,6 @@ export class Instance implements Owner {
       this.end = frag.lastChild;
     }
     walk(plan);
-    // Hydration (view/07-hydration.md, Phase 5) plugs in here: its parallel walk fills `nodes`
-    // with the server DOM's node for each target instead of `walk(plan)` over a clone, then
-    // `build` makes the same parts, and each part's committed `value` (ChildPart: kind and
-    // content) is set from the hydrated values without writing to the DOM.
     this.build(plan);
   }
 

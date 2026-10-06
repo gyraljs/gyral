@@ -72,6 +72,10 @@ export function devHydrated(element: Element, tag: string, serverRendered: boole
   emit(() => ({ kind: 'hydrated', component: ref(element, tag), serverRendered, at: now() }));
 }
 
+export function devMismatch(element: Element, tag: string, message: string): void {
+  emit(() => ({ kind: 'mismatch', component: ref(element, tag), message, at: now() }));
+}
+
 export function devStore(store: string, msg: Tagged, prev: unknown, next: unknown): void {
   emit(() => ({ kind: 'store', store, msg, prev, next, at: now() }));
 }
