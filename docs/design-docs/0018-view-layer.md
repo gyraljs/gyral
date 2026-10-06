@@ -117,6 +117,17 @@ Set as budgets in Phase 0 from measurements; these are estimates, not commitment
 - No js-framework-benchmark operation slower than 0.2.0; geomean ≤ 1.20, aiming lower.
 - Benchmark row: ≤ 1 comment node (today 4).
 
+### Measuring (Phase 0)
+
+- **Size:** `pnpm size:check` (part of `pnpm check`) fails when an example's gzip bundle
+  exceeds `scripts/size-budget.json`. The budgets start at 0.2.0 + 0.1 KiB and only go down; the
+  script suggests a lower budget when a bundle is 0.5 KiB under. A separate `view/` line is
+  added when the view layer exists (Phase 2).
+- **Speed:** the baseline is gyral-benchmarks `results/2026-10-06-release-0.2.0-a3` (drift
+  flagged, so used for orientation only). The Phase 8 gate is a fresh run in which
+  `frameworks/gyral` (published 0.2.0) and a `frameworks/gyral-next` variant (tarballs packed
+  from `next`) are measured **in the same run**, and compared only within it.
+
 ## Migration (decision K)
 
 - **Phase 0 on `main`:** this ADR and the specs; size budget in CI from the 0.2.0 baseline;

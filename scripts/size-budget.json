@@ -1,0 +1,31 @@
+{
+  "$comment": "Max gzip KiB per example production bundle (ADR 0018, gyral-g1r.2). Baseline: 0.2.0 + 0.1 KiB. Only ever lower these: pnpm size --check fails above a budget and suggests tightening when a bundle is 0.5 KiB under.",
+  "budgets": {
+    "animated-letters": 14.4,
+    "animation": 13.0,
+    "autocomplete-search": 17.2,
+    "bmi": 13.5,
+    "bmi-nested": 13.1,
+    "checkbox": 12.6,
+    "counter": 12.3,
+    "custom-driver": 13.8,
+    "devtools": 13.3,
+    "hello-lastname": 12.7,
+    "hello-world": 12.4,
+    "http-random-user": 15.1,
+    "http-search-github": 16.3,
+    "invoker-commands": 13.3,
+    "isomorphic": 17.4,
+    "many": 14.5,
+    "nested-folders": 13.5,
+    "no-js-first": 18.9,
+    "register": 18.3,
+    "routing-view": 15.2,
+    "seconds-elapsed": 12.7,
+    "shared-cart": 14.5,
+    "themes": 15.2,
+    "typeahead-race": 14.3,
+    "undo-replay": 15.3,
+    "view-transitions": 14.5
+  }
+}

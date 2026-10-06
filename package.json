@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test && node scripts/check-fixtures.mjs && pnpm pack:check",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test && pnpm size:check && node scripts/check-fixtures.mjs && pnpm pack:check",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && pnpm lint:css",
     "lint:css": "stylelint \"packages/*/src/**/*.ts\" \"examples/*/src/**/*.ts\" \"examples/**/*.css\" --allow-empty-input",
@@ -20,6 +20,7 @@
     "ci:local": "node scripts/ci-local.mjs",
     "examples": "node scripts/examples.mjs",
     "size": "node scripts/measure-bundles.mjs",
+    "size:check": "node scripts/measure-bundles.mjs --check",
     "ui:check": "node scripts/ui-check.mjs",
     "demos:record": "node scripts/demos-record.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
