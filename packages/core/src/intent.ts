@@ -1,7 +1,7 @@
 import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
 import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
-import type { Markup } from './view/index.js';
+import { message, type Markup } from './view/index.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010); public. */
 export const OUTPUT_EVENT = 'gyral-output';
@@ -225,13 +225,13 @@ export function handleIntent<M>(
   if (input === undefined) return;
   const parser = parsers[input.name];
   if (parser === undefined) {
-    console.warn(`<${tag}> has no intent parser for data-intent="${input.name}".`);
+    console.warn(message(11, tag, input.name));
     return;
   }
   const result = parser(input) as Tagged | undefined | Promise<Tagged | undefined>;
   if (result instanceof Promise) {
     result.then(deliver, (error: unknown) => {
-      console.error(`<${tag}> intent parser for "${input.name}" failed`, error);
+      console.error(message(12, tag, input.name), error);
     });
   } else {
     deliver(result);

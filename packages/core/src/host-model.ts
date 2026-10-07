@@ -19,6 +19,7 @@ import type { Interpreter } from './internal/interpreter.js';
 import { noteActivity, requestTransition } from './scheduler.js';
 import type { AnyStore } from './store.js';
 import type { ComponentSpec, Ctx, IntentRejected, Tagged } from './types.js';
+import { message } from './view/index.js';
 
 type Bag = Readonly<Record<string, unknown>>;
 type Reducer<S> = (state: S, msg: Tagged, ctx: Ctx<object>) => Next<S, Tagged>;
@@ -120,7 +121,7 @@ export class HostModel<S, P> implements LocalHost {
     if (reducer === undefined) {
       // Framework messages have optional reducers; props and stores stay readable as context.
       if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged') {
-        console.warn(`<${this.#host.tag}> has no update for message "${msg._tag}".`);
+        console.warn(message(10, this.#host.tag, msg._tag));
       }
       return;
     }

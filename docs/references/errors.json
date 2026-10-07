@@ -1,0 +1,205 @@
+[
+  {
+    "code": "G0001",
+    "group": "Components",
+    "message": "<{tag}> is a browser element (render it with @gyral/core/server).",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0001"
+  },
+  {
+    "code": "G0010",
+    "group": "Components",
+    "message": "<{tag}> has no update for message \"{message}\".",
+    "arguments": ["tag", "message"],
+    "url": "https://gyral.dev/errors/#G0010"
+  },
+  {
+    "code": "G0011",
+    "group": "Components",
+    "message": "<{tag}> has no intent parser for data-intent=\"{intent}\".",
+    "arguments": ["tag", "intent"],
+    "url": "https://gyral.dev/errors/#G0011"
+  },
+  {
+    "code": "G0012",
+    "group": "Components",
+    "message": "<{tag}> intent parser for \"{intent}\" failed",
+    "arguments": ["tag", "intent"],
+    "url": "https://gyral.dev/errors/#G0012"
+  },
+  {
+    "code": "G0013",
+    "group": "Components",
+    "message": "<{tag}> focus(\"{selector}\") matched no focusable element.",
+    "arguments": ["tag", "selector"],
+    "url": "https://gyral.dev/errors/#G0013"
+  },
+  {
+    "code": "G0020",
+    "group": "Props",
+    "message": "<{tag}> prop \"{prop}\" has an asynchronous schema; it must be synchronous.",
+    "arguments": ["tag", "prop"],
+    "url": "https://gyral.dev/errors/#G0020"
+  },
+  {
+    "code": "G0021",
+    "group": "Props",
+    "message": "<{tag}> prop \"{prop}\" got an invalid value from {source}, so it is treated as missing: {issues}",
+    "arguments": ["tag", "prop", "source", "issues"],
+    "url": "https://gyral.dev/errors/#G0021"
+  },
+  {
+    "code": "G0022",
+    "group": "Props",
+    "message": "<{tag}> is missing required prop(s): {props}.",
+    "arguments": ["tag", "props"],
+    "url": "https://gyral.dev/errors/#G0022"
+  },
+  {
+    "code": "G0023",
+    "group": "Props",
+    "message": "<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named \"hidden\" hides the element). Rename them (view/05-element.md).",
+    "arguments": ["tag", "props"],
+    "url": "https://gyral.dev/errors/#G0023"
+  },
+  {
+    "code": "G0030",
+    "group": "Scheduling",
+    "message": "gyral: a deferred callback failed",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0030"
+  },
+  {
+    "code": "G0031",
+    "group": "Scheduling",
+    "message": "<{tag}> failed to render; its previous DOM stays.",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0031"
+  },
+  {
+    "code": "G0032",
+    "group": "Scheduling",
+    "message": "gyral: post-render work failed",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0032"
+  },
+  {
+    "code": "G0033",
+    "group": "Scheduling",
+    "message": "gyral: rendering did not settle in one flush (a cycle between {tags}). Components are probably feeding each other props or messages; break the cycle with a condition in update (docs/design-docs/view/04-scheduler.md \"Loop guard\").",
+    "arguments": ["tags"],
+    "url": "https://gyral.dev/errors/#G0033"
+  },
+  {
+    "code": "G0034",
+    "group": "Scheduling",
+    "message": "settled(): the page did not settle after {rounds} flushes or busy turns. Components (or drivers) are probably feeding each other messages in a cycle.",
+    "arguments": ["rounds"],
+    "url": "https://gyral.dev/errors/#G0034"
+  },
+  {
+    "code": "G0040",
+    "group": "Commands",
+    "message": "gyral: command mapper threw",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0040"
+  },
+  {
+    "code": "G0041",
+    "group": "Commands",
+    "message": "gyral: unhandled failure from driver \"{driver}\"",
+    "arguments": ["driver"],
+    "url": "https://gyral.dev/errors/#G0041"
+  },
+  {
+    "code": "G0042",
+    "group": "Commands",
+    "message": "gyral: subscription \"{name}\" failed to unsubscribe",
+    "arguments": ["name"],
+    "url": "https://gyral.dev/errors/#G0042"
+  },
+  {
+    "code": "G0050",
+    "group": "Stores",
+    "message": "<{tag}> uses store \"{store}\" without declaring it. Add it to the spec: stores: [{store}] (ADR 0013), so the component subscribes to its changes.",
+    "arguments": ["tag", "store"],
+    "url": "https://gyral.dev/errors/#G0050"
+  },
+  {
+    "code": "G0051",
+    "group": "Stores",
+    "message": "store \"{store}\": the server's seed failed its schema, so it starts from init. Issues: {issues}",
+    "arguments": ["store", "issues"],
+    "url": "https://gyral.dev/errors/#G0051"
+  },
+  {
+    "code": "G0052",
+    "group": "Stores",
+    "message": "unreadable {attribute} seed on {where}",
+    "arguments": ["attribute", "where"],
+    "url": "https://gyral.dev/errors/#G0052"
+  },
+  {
+    "code": "G0053",
+    "group": "Stores",
+    "message": "<{tag}> reads store \"{store}\" during a server render without a store scope. Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).",
+    "arguments": ["tag", "store"],
+    "url": "https://gyral.dev/errors/#G0053"
+  },
+  {
+    "code": "G0054",
+    "group": "Stores",
+    "message": "store \"{store}\" sends to \"{target}\" but is not held by a store scope (a registry, <gyral-stores> or the page default), so the message is dropped.",
+    "arguments": ["store", "target"],
+    "url": "https://gyral.dev/errors/#G0054"
+  },
+  {
+    "code": "G0055",
+    "group": "Stores",
+    "message": "store \"{store}\" has no update for message \"{message}\".",
+    "arguments": ["store", "message"],
+    "url": "https://gyral.dev/errors/#G0055"
+  },
+  {
+    "code": "G0060",
+    "group": "Hydration",
+    "message": "<{tag}> has an unreadable {attribute}",
+    "arguments": ["tag", "attribute"],
+    "url": "https://gyral.dev/errors/#G0060"
+  },
+  {
+    "code": "G0061",
+    "group": "Hydration",
+    "message": "gyral: hydration code failed to load; rendering fresh",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0061"
+  },
+  {
+    "code": "G0062",
+    "group": "Hydration",
+    "message": "gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's HTML differs from the first client render: a view that isn't deterministic (Date.now(), locale), a third party that changed the DOM before scripts ran, or a stale cached page (docs/design-docs/view/07-hydration.md \"Mismatches\").",
+    "arguments": ["host", "path", "expected", "found"],
+    "url": "https://gyral.dev/errors/#G0062"
+  },
+  {
+    "code": "G0063",
+    "group": "Hydration",
+    "message": "<{tag}> was rendered fresh after a hydration mismatch:",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0063"
+  },
+  {
+    "code": "G0070",
+    "group": "Templates",
+    "message": "gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).",
+    "arguments": ["start"],
+    "url": "https://gyral.dev/errors/#G0070"
+  },
+  {
+    "code": "G0071",
+    "group": "Templates",
+    "message": "gyral: template rule 11: a page shell rendered in the browser.",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0071"
+  }
+]

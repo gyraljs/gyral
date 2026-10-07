@@ -3,6 +3,7 @@ import type { AnyDriver, Command, Concurrency, DriverOverrides, RetryPolicy } fr
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
+import { message } from '../view/index.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`, retry schedules are timers
@@ -84,7 +85,7 @@ const deliver = <M>(map: () => M | undefined, dispatch: (msg: M) => void): void 
     const msg = map();
     if (msg !== undefined) dispatch(msg);
   } catch (defect) {
-    console.error('gyral: command mapper threw', defect);
+    console.error(message(40), defect);
   }
 };
 
@@ -117,7 +118,7 @@ async function execute<M>(
     const error = driver.toError === undefined ? cause : driver.toError(cause);
     if (DEVTOOLS_ENABLED) report?.('failed', error);
     if (cmd.onFailure === undefined) {
-      console.warn(`gyral: unhandled failure from driver "${driver.name}"`, error);
+      console.warn(message(41, driver.name), error);
       return;
     }
     const onFailure = cmd.onFailure;

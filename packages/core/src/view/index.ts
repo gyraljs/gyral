@@ -1,6 +1,7 @@
 // The view layer's entry point for the rest of core (ADR 0018 "Where it lives"): code outside
 // view/ imports only this module. @gyral/core's index re-exports the public part of it.
 export { DEV } from '#view-dev';
+export { codeName, docsLink, message, type MessageCode } from './message.js';
 export {
   html,
   svg,

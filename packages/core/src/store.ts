@@ -14,6 +14,7 @@ import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { noteActivity } from './scheduler.js';
 import { bindStores } from './store-binding.js';
 import type { IntentRejected, Tagged } from './types.js';
+import { message } from './view/index.js';
 
 /** No DOM means a server render: store commands never run there (ADR 0012). */
 const onServer = typeof document === 'undefined';
@@ -161,10 +162,7 @@ function createInstance<S, M extends Tagged>(
   // Store-to-store writes: delivered synchronously to the other store's instance in scope.
   const deliver = ({ store: target, msg }: StoreSendInput): void => {
     if (scope === undefined) {
-      console.warn(
-        `store "${store.name}" sends to "${target.name}" but is not held by a store scope ` +
-          '(a registry, <gyral-stores> or the page default), so the message is dropped.',
-      );
+      console.warn(message(54, store.name, target.name));
       return;
     }
     (scope(target) as { send(msg: unknown): void }).send(msg);
@@ -199,7 +197,7 @@ function createInstance<S, M extends Tagged>(
       noteActivity(); // settled() keeps waiting while messages arrive (04)
       const reducer = reducers[msg._tag];
       if (reducer === undefined) {
-        console.warn(`store "${store.name}" has no update for message "${msg._tag}".`);
+        console.warn(message(55, store.name, msg._tag));
         return;
       }
       const prev = state;

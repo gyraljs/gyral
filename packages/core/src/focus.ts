@@ -5,6 +5,7 @@
 import type { Command } from './command.js';
 import type { LocalHost } from './features.js';
 import { afterRender, POST_FOCUS } from './scheduler.js';
+import { message } from './view/index.js';
 
 /** Marker driver: the host runs focus commands itself (`local`). */
 export const FOCUS = {
@@ -44,7 +45,7 @@ export function focus(selector: string, options: FocusOptions = {}): Command<nev
 export function runFocus(root: ParentNode, tag: string, input: FocusInput): void {
   const target = root.querySelector(input.selector);
   if (!(target instanceof HTMLElement || target instanceof SVGElement)) {
-    console.warn(`<${tag}> focus("${input.selector}") matched no focusable element.`);
+    console.warn(message(13, tag, input.selector));
     return;
   }
   target.focus({ preventScroll: input.preventScroll ?? false });

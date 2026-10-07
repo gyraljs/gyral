@@ -6,6 +6,7 @@
 // for a server) don't count: only the messages they deliver do. Timers are never advanced or
 // waited for. Tests await it before asserting on the DOM.
 import { activityCount, isQuiet, whenQuiet } from './scheduler.js';
+import { message } from './view/index.js';
 
 /** Flushes and busy turns settled() waits through before it gives up: a cycle. */
 const MAX_ROUNDS = 100;
@@ -17,11 +18,7 @@ const MAX_ROUNDS = 100;
  */
 const QUIET_TURNS = 8;
 
-const cycle = (): Error =>
-  new Error(
-    `settled(): the page did not settle after ${String(MAX_ROUNDS)} flushes or busy turns. ` +
-      'Components (or drivers) are probably feeding each other messages in a cycle.',
-  );
+const cycle = (): Error => new Error(message(34, MAX_ROUNDS));
 
 /**
  * Resolves once the page is quiet: every connected Gyral host has rendered its latest state,

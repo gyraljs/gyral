@@ -2,6 +2,7 @@
 // el.stores override → nearest <gyral-stores> ancestor → the document default (client), or the
 // request scope set by @gyral/ssr around each render step (server).
 import type { AnyStore, AnyStoreInstance } from './store.js';
+import { message } from './view/index.js';
 
 /** Page-level seed from `@gyral/ssr`: `<script type="application/json" data-gyral-stores>`. */
 export const STORE_SEED_ATTRIBUTE = 'data-gyral-stores';
@@ -39,10 +40,7 @@ export class StoreRegistry {
     if (!(store.name in this.#seeds)) return store.instance();
     const check = store.checkSeed(this.#seeds[store.name]);
     if (check.ok) return store.instance(check.state as never);
-    console.error(
-      `store "${store.name}": the server's seed failed its schema, so it starts from init. ` +
-        `Issues: ${check.issues.join('; ')}`,
-    );
+    console.error(message(51, store.name, check.issues.join('; ')));
     return store.instance();
   }
 
@@ -96,7 +94,7 @@ function parseSeeds(
     const parsed = JSON.parse(raw) as unknown;
     return parsed !== null && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
   } catch (error) {
-    console.error(`unreadable ${STORE_SEED_ATTRIBUTE} seed on ${where}`, error);
+    console.error(message(52, STORE_SEED_ATTRIBUTE, where), error);
     return {};
   }
 }
@@ -133,10 +131,7 @@ export function providerScope(el: Element): StoreRegistry {
  */
 export function serverScopeFor(tag: string, store: AnyStore): StoreRegistry {
   if (serverScope !== undefined) return serverScope;
-  throw new Error(
-    `<${tag}> reads store "${store.name}" during a server render without a store scope. ` +
-      "Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).",
-  );
+  throw new Error(message(53, tag, store.name));
 }
 
 /** The scope for a component: its nearest provider (across shadow roots) or the default. */

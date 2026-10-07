@@ -158,7 +158,9 @@ describe('a host whose server DOM does not match', () => {
       expect(bad?.shadowRoot?.querySelector('a')).not.toBeNull(); // left as the server wrote it
     } else {
       expect(errors).not.toHaveBeenCalled();
-      expect(reported).toMatch(/<test-mm-shadow> was rendered fresh/);
+      // G0063 (production: the code, the tag and the docs URL), then the mismatch itself.
+      expect(reported).toMatch(/Gyral G0063 test-mm-shadow https:\/\/gyral\.dev\/errors\/#G0063/);
+      expect(reported).toMatch(/expected <button>, found <a>\. Gyral G0062 https:/);
       expect(bad?.shadowRoot?.innerHTML).toBe('<button data-intent="Inc">n 2</button>');
       expect(bad?.state.n).toBe(2); // resumed from its seed
       expect(light?.innerHTML).toBe('<button data-intent="Inc">n 3</button>');

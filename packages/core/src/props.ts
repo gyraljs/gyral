@@ -2,7 +2,7 @@
 // parsing, validation through Standard Schema, defaults, change detection, seed restore. The
 // prop builders register `propFeature` (features.ts): components without props don't bundle it.
 import type { Prop } from './prop.js';
-import { DEV } from './view/index.js';
+import { DEV, message } from './view/index.js';
 
 type Bag = Readonly<Record<string, unknown>>;
 
@@ -44,9 +44,7 @@ export function checkValue(tag: string, name: string, def: Prop<unknown>, value:
   }
   const result = schema['~standard'].validate(value);
   if (result instanceof Promise) {
-    throw new TypeError(
-      `<${tag}> prop "${name}" has an asynchronous schema; it must be synchronous.`,
-    );
+    throw new TypeError(message(20, tag, name));
   }
   if (result.issues !== undefined)
     return { ok: false, issues: result.issues.map((i) => i.message) };
@@ -75,10 +73,7 @@ export function parseAttribute(def: Prop<unknown>, raw: string | null): Checked 
 
 /** Logs an invalid value; the caller then treats the prop as missing. */
 export function reportInvalid(tag: string, name: string, from: string, issues: readonly string[]) {
-  console.error(
-    `<${tag}> prop "${name}" got an invalid value from ${from}, so it is treated as missing: ` +
-      issues.join('; '),
-  );
+  console.error(message(21, tag, name, from, issues.join('; ')));
 }
 
 /**
@@ -166,7 +161,7 @@ export function missingRequired(values: Bag, table: PropTable): string[] {
 export function warnMissing(tag: string, values: Bag, table: PropTable): void {
   const missing = missingRequired(values, table);
   if (missing.length > 0) {
-    console.warn(`<${tag}> is missing required prop(s): ${missing.join(', ')}.`);
+    console.warn(message(22, tag, missing.join(', ')));
   }
 }
 
@@ -184,12 +179,9 @@ export function shadowedBuiltins(names: readonly string[]): string[] {
 export function checkShadowed(tag: string, names: readonly string[]): void {
   const shadowed = shadowedBuiltins(names);
   if (shadowed.length === 0) return;
-  const message =
-    `<${tag}> declares prop(s) that shadow built-in element properties: ` +
-    `${shadowed.join(', ')}. Setting them changes platform behaviour ` +
-    `(a prop named "hidden" hides the element). Rename them (view/05-element.md).`;
-  if (DEV) throw new TypeError(message);
-  console.warn(message);
+  const text = message(23, tag, shadowed.join(', '));
+  if (DEV) throw new TypeError(text);
+  console.warn(text);
 }
 
 /** What the element uses, registered by the prop builders (features.ts). */

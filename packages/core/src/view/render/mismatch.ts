@@ -3,6 +3,7 @@
 // (development builds know it), the path from the root to the node, and what was expected
 // and found. Development throws it; production recovers the one component (core's caller).
 import { DEV } from '#view-dev';
+import { docsLink } from '../message.js';
 
 /** The server's DOM doesn't match the component's first client render. */
 export class HydrationMismatch extends Error {
@@ -50,14 +51,15 @@ export function mismatch(
       : typeof found === 'string'
         ? found
         : describe(found);
+  // G0062 (messages.ts), whose explanation only development carries.
   throw new HydrationMismatch(
     `gyral: hydration mismatch in ${host}${loc === undefined ? '' : ` (template at ${loc})`} ` +
-      `at ${pathOf(where, root)}: expected ${expected}, found ${what}.` +
+      `at ${pathOf(where, root)}: expected ${expected}, found ${what}. ` +
       (DEV
-        ? " The server's HTML differs from the first client render: a view that isn't " +
+        ? "The server's HTML differs from the first client render: a view that isn't " +
           'deterministic (Date.now(), locale), a third party that changed the DOM before ' +
           'scripts ran, or a stale cached page (docs/design-docs/view/07-hydration.md ' +
           '"Mismatches").'
-        : ''),
+        : docsLink(62)),
   );
 }

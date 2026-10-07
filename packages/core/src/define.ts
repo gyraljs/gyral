@@ -8,7 +8,7 @@ import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import { recordSpec } from './server-specs.js';
 import type { ComponentSpec, Tagged } from './types.js';
-import { DEV } from './view/index.js';
+import { DEV, message } from './view/index.js';
 
 export type { GyralElement, GyralElementClass } from './element-types.js';
 
@@ -43,7 +43,7 @@ export function define<S, M extends Tagged, P extends object = object, O extends
     recordSpec(tag, spec);
     const Placeholder = Object.assign(
       function Placeholder(): never {
-        throw new Error(`<${tag}> is a browser element (render it with @gyral/core/server).`);
+        throw new Error(message(1, tag));
       },
       { spec, tagName: tag },
     );

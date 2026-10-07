@@ -5,6 +5,7 @@
 // apps without svg templates don't carry that code.
 import { verify } from '#prepare';
 import { DEV } from '#view-dev';
+import { message } from './message.js';
 import { SERVER_ONLY, TemplateError } from './normalize/errors.js';
 import type { TemplateObject } from './normalize/types.js';
 
@@ -16,9 +17,7 @@ export function templateElement(template: TemplateObject): HTMLTemplateElement {
   if (cached !== undefined) return cached;
   if (template.server) {
     // Production keeps a short message: the class and its explanation stay out of the bundle.
-    throw DEV
-      ? new TemplateError(11, SERVER_ONLY, template.loc)
-      : new Error('gyral: template rule 11: a page shell rendered in the browser.');
+    throw DEV ? new TemplateError(11, SERVER_ONLY, template.loc) : new Error(message(71));
   }
   const el = document.createElement('template');
   el.innerHTML = template.html;

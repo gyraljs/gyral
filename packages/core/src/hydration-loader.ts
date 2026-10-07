@@ -5,6 +5,7 @@
 // `#hydration-loader` to hydration-off.ts instead: no import(), so no hydration chunk.
 import { SEED_ATTRIBUTE, type Seed } from './hydration.js';
 import { hold } from './scheduler.js';
+import { message } from './view/index.js';
 
 /** Client side: reads and removes the seed, if this element was server-rendered by Gyral. */
 export function takeSeed(host: Element): Seed | undefined {
@@ -17,7 +18,7 @@ export function takeSeed(host: Element): Seed | undefined {
     const props = parsed.props ?? {};
     return 'state' in parsed ? { state: parsed.state, props } : { props };
   } catch (error) {
-    console.error(`<${host.localName}> has an unreadable ${SEED_ATTRIBUTE}`, error);
+    console.error(message(60, host.localName, SEED_ATTRIBUTE), error);
     return undefined;
   }
 }
@@ -50,7 +51,7 @@ export function whenHydrationLoads(next: () => void): void {
   };
   hold(
     import('./hydration-client.js').then(done, (error: unknown) => {
-      console.error('gyral: hydration code failed to load; rendering fresh', error);
+      console.error(message(61), error);
       done(null);
     }),
   );

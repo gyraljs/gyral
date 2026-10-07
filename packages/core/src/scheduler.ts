@@ -8,7 +8,7 @@
 // unless a compiled build found no module naming them (gyral-c5d.12). It lives outside view/
 // (view/ never imports it) and drives the renderer through view/index.ts.
 import { frameLane, viewTransitions } from '#spec-features';
-import { DEV, renderBatch } from './view/index.js';
+import { DEV, message, renderBatch } from './view/index.js';
 
 /** One host as the scheduler sees it. define() creates one per element. */
 export interface HostTask {
@@ -124,7 +124,7 @@ export function defer(fn: () => void): void {
     try {
       fn();
     } catch (error) {
-      console.error('gyral: a deferred callback failed', error);
+      console.error(message(30), error);
     } finally {
       deferred -= 1;
       settle();
@@ -169,7 +169,7 @@ function renderAll(counts: Map<HostTask, number>): void {
     try {
       task.render();
     } catch (error) {
-      console.error(`<${task.tag}> failed to render; its previous DOM stays.`, error);
+      console.error(message(31, task.tag), error);
     }
   }
 }
@@ -181,20 +181,14 @@ function runPost(): void {
     try {
       task.run();
     } catch (error) {
-      console.error('gyral: post-render work failed', error);
+      console.error(message(32), error);
     }
   }
 }
 
 function loopError(counts: Map<HostTask, number>): Error {
   const tags = [...new Set([...counts.keys()].map((t) => `<${t.tag}>`))].join(', ');
-  return new Error(
-    `gyral: rendering did not settle in one flush (a cycle between ${tags}).` +
-      (DEV
-        ? ' Components are probably feeding each other props or messages; break the cycle ' +
-          'with a condition in update (docs/design-docs/view/04-scheduler.md "Loop guard").'
-        : ''),
-  );
+  return new Error(message(33, tags));
 }
 
 function flush(): void {
