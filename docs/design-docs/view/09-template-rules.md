@@ -11,11 +11,11 @@ them showed up at runtime, some only during SSR.
 The rules live once, in `view/`'s normalizer (01). Three tools surface them with the same
 messages:
 
-| Where                              | When                                                                                   | Audience                         |
-| ---------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------- |
-| Vite compiler (`@gyral/core/vite`) | `vite build`: the build fails with a code frame (the dev server uses the runtime path) | everyone on the preset (default) |
-| Runtime preparer, development mode | first render of the call site: throws                                                  | the no-build-step path, tests    |
-| ESLint (`@gyral/core/eslint`)      | in the editor and `eslint .`: one error per template, at the markup it is about        | everyone, before saving          |
+| Where                              | When                                                                                         | Audience                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------- |
+| Vite compiler (`@gyral/core/vite`) | `vite build`: the build fails with a code frame (the dev server uses the runtime path)       | everyone on the preset (default) |
+| Runtime preparer, development mode | first render of the call site: throws, naming it (`at file:line:col`, 01 "Source locations") | the no-build-step path, tests    |
+| ESLint (`@gyral/core/eslint`)      | in the editor and `eslint .`: one error per template, at the markup it is about              | everyone, before saving          |
 
 Production builds made with the Vite preset contain none of this code (a build without it
 keeps the runtime preparer, 01 "Runtime"). Every message follows core belief 7: it says what

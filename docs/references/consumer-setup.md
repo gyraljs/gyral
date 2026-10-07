@@ -57,9 +57,13 @@ export default defineConfig({
 });
 ```
 
-- **`plugins`**: the template compiler (below) and `gyral:dev-server`. If your config has
-  plugins of its own, list both, or the spread is overwritten:
-  `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`plugins`**: the template compiler (below), `gyral:template-locations` and
+  `gyral:dev-server`. If your config has plugins of its own, list them all, or the spread is
+  overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`gyral:template-locations`** (dev server and Vitest only, 0.3.1): tells the development
+  runtime where each `html` template was written, so template rule errors and hydration
+  mismatches name your file, line and column (view/01-templates.md "Source locations"). It
+  rewrites each call site to `(html.at?.("src/x.ts:12:5") ?? html)`…`` and moves no line.
 - **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
   (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
   Vite instead of Node, so it renders development output and they all share one `@gyral/core`.

@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ConfigEnv, EnvironmentOptions, Plugin } from 'vite';
 import type { CompilerHooks } from './compiler/hooks.js';
+import type { LocatorHooks } from './compiler/locate.js';
 
 export interface TemplateCompilerOptions {
   /**
@@ -55,13 +56,9 @@ function addCondition(
   }
 }
 
-/**
- * The compiler's hooks. From core's TypeScript source (this workspace, `link:` checkouts) they
- * load through Vite's module runner, as a vite.config.ts would; from the published package,
- * with require.
- */
-async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHooks> {
-  const settings = {
+/** The settings both plugins pass to their lazily loaded implementation. */
+function settingsOf(options: TemplateCompilerOptions) {
+  return {
     sources: options.sources ?? DEFAULT_TEMPLATE_SOURCES,
     parse5:
       options.parse5 === false
@@ -70,21 +67,31 @@ async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHook
           ? options.parse5
           : 'parse5',
   };
+}
+
+/**
+ * A module of ./compiler/. From core's TypeScript source (this workspace, `link:` checkouts) it
+ * loads through Vite's module runner, as a vite.config.ts would; from the published package,
+ * with require.
+ */
+async function loadCompiler<M>(name: string): Promise<M> {
   const require = createRequire(import.meta.url);
-  if (!import.meta.url.endsWith('.ts')) {
-    return (require('./compiler/hooks.js') as typeof import('./compiler/hooks.js')).createCompiler(
-      settings,
-    );
-  }
+  if (!import.meta.url.endsWith('.ts')) return require(`./compiler/${name}.js`) as M;
   const { runnerImport } = require('vite') as typeof import('vite');
   const nodeEnv = process.env['NODE_ENV']; // the runner sets it when unset; the build owns it
-  const { module } = await runnerImport<typeof import('./compiler/hooks.js')>(
-    fileURLToPath(new URL('./compiler/hooks.ts', import.meta.url)),
+  const { module } = await runnerImport<M>(
+    fileURLToPath(new URL(`./compiler/${name}.ts`, import.meta.url)),
     { configFile: false, logLevel: 'silent' },
   );
   if (nodeEnv === undefined) delete process.env['NODE_ENV'];
   else process.env['NODE_ENV'] = nodeEnv;
-  return module.createCompiler(settings);
+  return module;
+}
+
+/** The compiler's hooks (`vite build`). */
+async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHooks> {
+  const hooks = await loadCompiler<typeof import('./compiler/hooks.js')>('hooks');
+  return hooks.createCompiler(settingsOf(options));
 }
 
 /** The template compiler alone (`gyralVitePreset()` includes it). */
@@ -114,6 +121,36 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
     },
     generateBundle(output, bundle, isWrite) {
       return ready().generateBundle.call(this, output, bundle, isWrite);
+    },
+  };
+}
+
+/**
+ * Development source locations (view/01-templates.md "Source locations"): in `vite serve` (the
+ * dev server, Vitest) each html`…` call site of the template sources tells the runtime where it
+ * was written, so template rule errors and hydration mismatches name `file:line:col`
+ * (./compiler/locate.ts, loaded on the first hook). `vite build` compiles templates instead.
+ */
+export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
+  let hooks: LocatorHooks | undefined;
+  const ready = (): LocatorHooks => {
+    if (hooks === undefined) throw new Error('gyral: the template locator is not loaded yet');
+    return hooks;
+  };
+  return {
+    name: 'gyral:template-locations',
+    enforce: 'pre',
+    apply: 'serve',
+    async configResolved(config) {
+      const locate = await loadCompiler<typeof import('./compiler/locate.js')>('locate');
+      hooks = locate.createLocator(settingsOf(options).sources);
+      await hooks.configResolved.call(this, config);
+    },
+    transform: {
+      filter: { id: /\.[cm]?[jt]sx?$/, code: 'html' },
+      handler(code, id, opts) {
+        return ready().transform.call(this, code, id, opts);
+      },
     },
   };
 }
@@ -201,7 +238,11 @@ export interface GyralViteConfig {
  */
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
-    plugins: [gyralTemplateCompiler(options.compiler), gyralDevServer()],
+    plugins: [
+      gyralTemplateCompiler(options.compiler),
+      gyralTemplateLocations(options.compiler),
+      gyralDevServer(),
+    ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };
 }

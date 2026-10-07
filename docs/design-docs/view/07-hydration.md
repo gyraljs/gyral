@@ -220,9 +220,9 @@ deployment.
 - Messages, for example:
   `gyral: hydration mismatch in <shop-cart> at ul[1] › li[2] › #text[0]: expected text "3", found text "4".`
   Development adds the explanation; production keeps the path and the expected/found part (useful in
-  field reports). The `(template at file:line:col)` part appears only for a template object that
-  carries `loc`; runtime and compiled objects don't (01 "The template object"), so in apps the tag
-  and path locate the mismatch.
+  field reports). The `(template at file:line:col)` part appears for a template object that
+  carries `loc`: development runtime templates do since 0.3.1 (01 "Source locations"); compiled
+  and production ones don't, so there the tag and path locate the mismatch.
 
 No in-place patching of a mismatched DOM: rebuilding one component is simple and predictable.
 

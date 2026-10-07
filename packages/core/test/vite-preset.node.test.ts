@@ -25,8 +25,12 @@ const noExternal = async (
 
 describe('gyralVitePreset() (gyral-a7r)', () => {
   it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
-    const [compiler, devServer, ...rest] = gyralVitePreset().plugins;
+    const [compiler, locations, devServer, ...rest] = gyralVitePreset().plugins;
     expect(rest).toEqual([]);
+    // Development source locations for runtime templates (view/01 "Source locations").
+    expect(locations?.name).toBe('gyral:template-locations');
+    expect(locations?.apply).toBe('serve');
+    expect(locations?.enforce).toBe('pre');
     expect(devServer?.name).toBe('gyral:dev-server');
     expect(devServer?.apply).toBe('serve');
     expect(compiler?.name).toBe('gyral:template-compiler');

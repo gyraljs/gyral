@@ -9,11 +9,11 @@
 //   - `generateBundle`: fails when an uncompiled `html` survived in a chunk anyway (re-exports
 //     across modules, dynamic imports): the guarantee that the `#prepare` stub is never hit.
 import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 import type { Node } from './ast.js';
 import { CompileError, compileModule } from './compile.js';
 import { loadParse5, type Parse5 } from './parse5-check.js';
+import { VIEW } from './locate.js';
 import { findUses, htmlImports } from './scan.js';
 import { Lines } from './source.js';
 
@@ -33,10 +33,6 @@ export interface CompilerSettings {
   readonly parse5: string | undefined;
 }
 
-/** Core's own view modules: always sources (core-internal templates, tests). */
-const VIEW = ['index', 'template'].flatMap((name) =>
-  ['.ts', '.js'].map((ext) => fileURLToPath(new URL(`../view/${name}${ext}`, import.meta.url))),
-);
 /** template.ts's symbol description: the module defining `html`, in any copy of core. */
 const DEFINES_HTML = /Symbol\(['"]gyral\.template['"]\)/;
 const SCRIPT = /\.[cm]?[jt]sx?$/;

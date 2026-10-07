@@ -130,9 +130,10 @@ initial chunk 8.91 → 8.87 KiB), since the renderer's own checks got shorter to
 about a fifth of the corpus' gzip size (random base-36 text doesn't compress), so production
 client builds now leave them out ("Template ids").
 
-`loc` is set only when the normalizer is given a call site: the compiler does, for its build
-errors, and leaves `loc` out of the objects it emits. The runtime preparer has no call site to
-give, so runtime template objects carry none either.
+`loc` is set only when the normalizer is given a call site. The compiler does, for its build
+errors, and leaves `loc` out of the objects it emits. The runtime preparer gives the call site
+in development ("Source locations" below), so development runtime objects carry it;
+production ones never do.
 
 `segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
 strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
@@ -189,6 +190,33 @@ in the browser is an error.
   measures builds made with the preset. Messages may later move behind the `development`
   condition.
 - Node and the server renderer never parse HTML: they only need the normalizer's output.
+
+### Source locations (development, 0.3.1, gyral-g1r.24)
+
+Decision F promised development errors with the template's source location. Runtime templates
+know their call site in development, so a `TemplateError` (`at src/cart.ts:12:5`) and a
+`HydrationMismatch` (`(template at src/cart.ts:12:5)`) name it:
+
+- **Recorded once per call site** (strings array, `view/loc.ts`), before the first preparation,
+  which passes it to the normalizer (`analyze(strings, loc)`).
+- **Under Vite** (the dev server and Vitest, i.e. `vite serve`): the preset's
+  `gyral:template-locations` plugin (serve only, `enforce: 'pre'`, loaded lazily like the
+  compiler, `compiler/locate.ts`) rewrites each `html` call site of the template sources into
+  `(html.at?.("src/cart.ts:12:5") ?? html)`…``: the author's own file (relative to the Vite
+  root), line and column, which Vite's transformed modules no longer have (TypeScript stripping
+  reprints the code). No line moves; `html.at` exists only in development, so the `??` keeps the
+  rewrite harmless anywhere else. Templates in `node_modules` and uses it can't follow (an
+  aliased `html`) are left alone.
+- **Elsewhere** (no build step, other bundlers' dev servers, Node): the first `html` call of a
+  call site reads it from `new Error().stack` (V8, SpiderMonkey and JavaScriptCore frame
+  formats; scheme, host, query and Vite's `/@fs` dropped). Exact for code the browser runs as
+  written; shifted for code a tool transformed without keeping lines.
+- **Production pays nothing:** every step is behind `if (DEV)` (`#view-dev`), `html.at` is
+  attached only in development, and `pnpm size` is unchanged. Compiled templates carry no `loc`
+  in any build (development builds made with `vite build --mode development` included; the
+  compiler could add it, but no workflow needs it: the dev server uses the runtime path).
+- Tested in `core/test/view/source-location.test.ts` (both messages name this test file's
+  line and column), `source-location.prod.test.ts` and `loc.node.test.ts` (stack formats).
 
 Both paths produce identical ids, so a precompiled server and a runtime client (or the reverse)
 hydrate each other. A production client build carries no ids and hydrates any server's output
