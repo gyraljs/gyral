@@ -12,7 +12,7 @@ Compute derived values in plain helper functions of state.
 | Text, attributes                  | `${value}`, `attr=${value}`; `null`/`undefined`/`nothing` remove it  |
 | Several pieces in one attribute   | `class="btn ${s.kind}"` (quoted)                                     |
 | Presence-only attribute           | `?disabled=${s.busy}`                                                |
-| Data for a child Gyral component  | `.items=${s.items}` (property binding)                               |
+| Data for a child Gyral component  | `.items=${s.items}` (property binding; data, never functions)        |
 | Text input value                  | `value=${s.text}` — live: written whenever the model's value changes |
 | Checkbox/radio, option, indeterm. | `?checked=${s.on}`, `?selected=${…}`, `?indeterminate=${…}`          |
 | `<details>`/`<dialog>` open       | `?open=${s.open}`                                                    |
@@ -25,6 +25,10 @@ Compute derived values in plain helper functions of state.
   `${s.open && html`…`}` works. `true` renders nothing and warns in development.
 - Never bind form state with properties (`.value=`, `.checked=`): the server drops property
   bindings on plain elements. Use the attribute spellings above.
+- Never pass functions in holes: `.onclick=${fn}` or `.format=${fn}` on a Gyral component warns
+  in development (props are data and travel in hydration seeds), and the ESLint rule reports
+  `${() => …}` anywhere in a template. Events are intents; behaviour on an element is a hook.
+  (A third-party custom element whose API takes a callback is the exception.)
 - Form state is written only when the model's value for it changes (then it overwrites the
   user's edit). A render for any other reason leaves what the user typed or toggled alone, and
   so does a refused edit (the reducer kept the state). To put a control back, change the model:

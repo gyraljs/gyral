@@ -12,7 +12,7 @@ import { DEV } from '#view-dev';
 import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
 import { nothing, UNSET } from './values.js';
-import { badHook, warnTrue, warnValue } from './warn.js';
+import { badHook, warnFunctionProp, warnTrue, warnValue } from './warn.js';
 
 /** What every part of an instance implements: commit its value(s) from this render's values. */
 export interface Part {
@@ -136,6 +136,7 @@ export class AttrPart implements Part {
       }
       case PROP:
         if (Object.is(v, this.value)) return;
+        if (DEV && typeof v === 'function') warnFunctionProp(this, el, this.name);
         this.value = v;
         live[this.name] = v;
         return;

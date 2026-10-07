@@ -136,6 +136,24 @@ describe('gyral/template', () => {
     ],
   });
 
+  // Views attach no closures (view/02 "Properties", gyral-g1r.28): a function written in a hole.
+  tester.run('gyral/template: closures in holes', templateRule, {
+    valid: [
+      `${IMPORT}const go = () => 1;\nexport const v = html\`<button .onclick=\${go}>x</button>\`;`,
+      `${IMPORT}export const v = (xs) => html\`<ul>\${xs.map((x) => html\`<li>\${x}</li>\`)}</ul>\`;`,
+    ],
+    invalid: [
+      {
+        code: `${IMPORT}export const v = html\`<button .onclick=\${() => 1}>x</button>\`;`,
+        errors: [{ messageId: 'closure', line: 2, column: 42 }],
+      },
+      {
+        code: `${IMPORT}export const v = html\`<p>\${function () {}}</p><i title=\${() => 2}></i>\`;`,
+        errors: [{ messageId: 'closure' }, { messageId: 'closure' }],
+      },
+    ],
+  });
+
   tsTester.run('gyral/template: TypeScript', templateRule, {
     valid: ["import type { html } from '@gyral/core';\ndeclare const h: typeof html;\nh`<div/>`;"],
     invalid: [

@@ -46,6 +46,26 @@ export function warnValue(part: object, value: unknown, where: string): void {
   );
 }
 
+/**
+ * A property binding got a function, once per part (02 "Properties"): views attach no
+ * closures. Built-in elements and Gyral components warn; other custom elements may take a
+ * callback (a third-party widget's API), so they don't.
+ */
+export function warnFunctionProp(part: object, el: Element, name: string): void {
+  const gyral = (el.constructor as { readonly spec?: unknown }).spec !== undefined;
+  if (warned.has(part) || (el.localName.includes('-') && !gyral)) return;
+  warned.add(part);
+  console.warn(
+    `gyral: .${name}=\${…} on <${el.localName}> got a function. Views attach no closures: ` +
+      (gyral
+        ? 'props are data (they travel in hydration seeds); pass data and let the component ' +
+          'decide what to do with it, and hear back from it through its outputs'
+        : 'name an intent with data-intent=${i.Name} for events, and put behaviour on an ' +
+          'element in a hook (defineHook)') +
+      ` (${SPEC}/02-bindings.md "Properties").`,
+  );
+}
+
 let rawWarned = false;
 
 /** `raw()` parsed in the browser, once per page. */

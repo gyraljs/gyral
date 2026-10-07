@@ -1,6 +1,8 @@
 // Element parts in hydration (view/07-hydration.md "The parallel walk", "Form state"): an
 // attribute, property, hook or text part built over server DOM takes this render's values as
 // committed. Lives with the walk, in the lazily loaded hydration code, not in attr-parts.ts.
+import { DEV } from '#view-dev';
+import { warnFunctionProp } from './warn.js';
 import {
   absent,
   ATTR,
@@ -33,6 +35,7 @@ export function adoptAttr(part: AttrPart, values: readonly unknown[]): void {
   const kind = part.kind;
   if (kind === HOOK) part.hook(v);
   else if (kind === PROP) {
+    if (DEV && typeof v === 'function') warnFunctionProp(part, el, name);
     part.value = v;
     const own = live[name] !== undefined && el.localName.includes('-');
     if (!own && !Object.is(live[name], v)) live[name] = v;

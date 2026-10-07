@@ -99,6 +99,21 @@ data props to Gyral components. On the server a property binding on a Gyral comp
 prop for that component's render (06). On any other element it is dropped, so form state must
 not use property bindings (09, rule 4).
 
+**Functions** (0.3.1, gyral-g1r.28): views attach no closures, so a function value warns in
+development, once per part, and is still set:
+
+- on a built-in element (`.onclick=${fn}`): events are intents (`data-intent=${i.Name}`),
+  behaviour on an element is a hook;
+- on a Gyral component: props are data. They travel in hydration seeds (JSON), and a function
+  prop is a closure over the parent's view. Pass data and hear back through outputs. No
+  exception for a `prop.value` whose guard accepts functions: the seed couldn't carry it;
+- not on other custom elements (a dash in the name, not Gyral's): a third-party widget's API
+  may take a callback, and that is the author's call.
+
+`@gyral/core/eslint`'s `gyral/template` also reports a function written directly in any hole
+(`${() => …}`, `${function () {}}`), which is never right: a child hole can't render it, an
+attribute would get its source text, a hook position rejects it (09 "ESLint").
+
 ## Live form state
 
 One spelling per piece of form state. The compiler and runtime know this table, which replaces

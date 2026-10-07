@@ -66,7 +66,8 @@ A flat-config plugin with two rules, both in `gyral.configs.recommended` (setup:
 [consumer-setup.md](../../references/consumer-setup.md) "ESLint"). ESLint (9 or 10) is an
 optional peer dependency.
 
-- **`gyral/template`** (rules 1–7, 10, 12, 13): every `html` tagged template whose tag is
+- **`gyral/template`** (rules 1–7, 10, 12, 13, and a function expression written directly in
+  a hole, `${() => …}`: views attach no closures, 02 "Properties"): every `html` tagged template whose tag is
   imported from a template source (`import { html } from '@gyral/core'` under any local name,
   or `ns.html` for `import * as ns`) goes through `checkTemplate` (`view/normalize/check.ts`):
   the normalizer's own steps, which also report where they stopped. The message is the
@@ -100,6 +101,7 @@ it.
 | `raw()` rendered in the browser                        | It works, but every change re-parses the markup (02) | development runtime, once per page                   |
 | `true` in a child hole                                 | Usually a `cond && x` slip (02)                      | development runtime and server render, once per part |
 | An object in an attribute or text-content hole         | It is written as `String(v)` (02)                    | development runtime and server render, once per part |
+| A function in a property binding (`.onclick=${fn}`)    | Views attach no closures; props are data (02)        | development runtime, once per part (0.3.1)           |
 | An intent parser that the component's view never names | Probably a renamed intent or dead code               | not checked yet: no tool reports it in 0.3.0         |
 
 ## Native primitives
