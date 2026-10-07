@@ -85,7 +85,7 @@ https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.
 
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
-`strict`, `moduleResolution: "bundler"`, `useDefineForClassFields: false`.
+`strict`, `moduleResolution: "bundler"`.
 
 ## Decision tables
 

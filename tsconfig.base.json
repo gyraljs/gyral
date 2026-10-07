@@ -12,6 +12,9 @@
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
+    // Gyral's own build only (dist/, tests, examples): class fields without an initializer are
+    // assigned in constructors, and emitting them as field declarations too would add ~0.1 KiB
+    // gzip to every app. Apps don't need it: create-gyral's templates leave it out (gyral-g1r.26).
     "useDefineForClassFields": false,
     "skipLibCheck": true,
     "declaration": true,

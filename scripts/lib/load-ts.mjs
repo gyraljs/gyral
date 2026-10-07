@@ -29,7 +29,7 @@ if (!(FLAG in globalThis)) {
         compilerOptions: {
           module: ts.ModuleKind.ESNext,
           target: ts.ScriptTarget.ES2022,
-          useDefineForClassFields: false,
+          useDefineForClassFields: false, // as tsconfig.base.json
           verbatimModuleSyntax: true,
         },
       });
