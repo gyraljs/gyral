@@ -20,6 +20,11 @@ test('increment', () => {
 });
 ```
 
+Element tests run in a real browser (Vitest browser mode, not jsdom): mount the element,
+dispatch events, then `await settled()` (from `@gyral/core`) before you check the DOM. Swap
+drivers for fakes with `fakeDriver` and `withDrivers`; `mountSsr` and `hydrated` test
+server-rendered pages through hydration.
+
 `@gyral/testing/arbitraries` derives [fast-check](https://fast-check.dev) arbitraries from schemas (install `fast-check` to use it).
 
 ## Documentation

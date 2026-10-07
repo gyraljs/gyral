@@ -35,7 +35,10 @@ define<{ count: number }, Msg>('gy-counter', {
 
 `@gyral/core/vite` exports `gyralVitePreset()`, the Vite/Vitest settings every Gyral app needs
 (the build-time template compiler). `@gyral/core/eslint` is an ESLint plugin with the same
-template rules for the editor: `export default [gyral.configs.recommended]`.
+template rules for the editor (`import gyral from '@gyral/core/eslint'`, then
+`gyral.configs.recommended` in your flat config). `@gyral/core/server` renders components to
+HTML on the server (`@gyral/ssr` builds pages on it). In tests, `await settled()` waits until
+every component has rendered.
 
 ## Documentation
 

@@ -1,8 +1,8 @@
 // Typechecks every ```ts block in the Gyral agent skill (skills/gyral) and in the user-facing
-// references listed in DOCS against the workspace packages, so they can't drift from the real
-// API (gyral-7se.1). Each block is compiled as its own module: write complete snippets (imports
-// included), or use a ```text fence for fragments that are not meant to compile (0.2 "before"
-// code in the migration note).
+// docs listed in DOCS (README, references, package READMEs) against the workspace packages, so
+// they can't drift from the real API (gyral-7se.1). Each block is compiled as its own module:
+// write complete snippets (imports included), or use a ```text fence for fragments that are not
+// meant to compile (0.2 "before" code in the migration note).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -12,8 +12,20 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const skillDir = join(root, 'skills', 'gyral');
 const outDir = join(root, '.skill-check');
 
-/** User-facing references whose ts blocks are checked too. */
-export const DOCS = ['docs/references/migrating-0.2-to-0.3.md'];
+/**
+ * User-facing references whose ts blocks are checked too. The @gyral/ssr and @gyral/testing
+ * READMEs are left out: their examples import the reader's own modules (`./app.js`).
+ */
+export const DOCS = [
+  'README.md',
+  'docs/references/consumer-setup.md',
+  'docs/references/migrating-0.2-to-0.3.md',
+  'packages/core/README.md',
+  'packages/devtools/README.md',
+  'packages/http/README.md',
+  'packages/router/README.md',
+  'packages/time/README.md',
+];
 
 /** Every `ts`/`typescript` fenced block in a markdown file, with its line number. */
 export function tsBlocks(markdown) {
