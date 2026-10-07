@@ -2,7 +2,7 @@
 // gyral-czi.26): accessible names across shadow boundaries. `aria-labelledby="page-title"`
 // inside a shadow root can't see an id in the page, so the id is resolved outward through the
 // shadow-including ancestors.
-import { defineHook } from '../view/index.js';
+import { defineBasicHook } from '../view/index.js';
 
 interface Reflecting extends Element {
   ariaLabelledByElements: readonly Element[] | null;
@@ -45,7 +45,7 @@ function name(el: Element, id: string, fallback: string | undefined): boolean {
  * target's text. It has no server half: render a plain `aria-label` too (from a `label`
  * prop) for the page before scripts run; the reflected `aria-labelledby` wins over it.
  */
-export const labelledBy = defineHook<[id: string, fallback?: string]>({
+export const labelledBy = defineBasicHook<[id: string, fallback?: string]>({
   client: (el, [id, fallback]) => {
     // The labelling element may render after this one (a later sibling): try again once.
     if (!name(el, id, fallback)) {

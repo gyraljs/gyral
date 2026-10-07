@@ -55,7 +55,7 @@ export function render(
   } finally {
     listenFor(outer);
   }
-  runHooks(mark);
+  runHooks(mark, root);
 }
 
 /** Hydration (hydrate.ts): `part`, built over server DOM, is `root`'s part from now on. */

@@ -169,9 +169,72 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - `client(el, args, prev)` runs after the instance's parts have committed, when `args` differ
   from the previous call (shallow `Object.is` per argument). `prev` is `undefined` on the first
   call. During hydration it runs once with the hydrated args (07).
+- `dispose(el, args)` (optional, 0.3.1, gyral-c5d.2) is the teardown, with the last arguments
+  `client` got. See "Widgets with a lifecycle" below.
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
-  there is no disconnection tracking and no cleanup callback.
+  a hook that only listens needs no `dispose`.
 - Core ships `invalid` and `labelledBy` as hooks.
+
+### Widgets with a lifecycle
+
+Something with setup and teardown (a WebGL or Three.js stage, a chart library, a map, an
+observer, a timer, a connection) has a native home: **a custom element of its own**. Give it
+one property for its input (`<my-stage .view=${s.scene}>`), keep its state inside, set up in
+`connectedCallback`, tear down in `disconnectedCallback`, and report back with events (a Gyral
+component, or any custom element dispatching `OUTPUT_EVENT`, ADR 0010). The platform then tells
+it about every connect, disconnect and move, the view stays a pure description, and the
+widget can be tested on its own. A Gyral component works for it too (`prop.value` for the
+input, `outputs<Out>()` for its events), and so does a plain `HTMLElement` subclass when its
+work is all imperative.
+
+For **small imperative behaviours** on an element of the view (scrolling it into view,
+observing its size, a third-party enhancer on one input), a hook with `dispose` is the
+lighter option:
+
+```ts
+const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/** Highlights the element for a moment whenever `value` changes. */
+export const flash = defineHook<[value: unknown]>({
+  client: (el, _args, prev) => {
+    if (prev === undefined) return; // not on first render
+    el.classList.add('flash');
+    clearTimeout(timers.get(el));
+    timers.set(
+      el,
+      setTimeout(() => el.classList.remove('flash'), 600),
+    );
+  },
+  dispose: (el) => {
+    clearTimeout(timers.get(el));
+  },
+});
+```
+
+- **When:** `dispose` runs when the element leaves its render root (Gyral removed it: its part
+  cleared, its instance replaced by another template or by text, its `each` row or array item
+  removed, its list emptied), when the position stops holding the hook (`nothing`, or another
+  hook, whose `client` then starts with `prev` undefined), and when the host disconnects. It
+  never runs for moves: rows reordered within a list, or a host moved with `moveBefore()`
+  (`connectedMoveCallback`).
+- **Timing:** removal is noticed after the render's commit (the element has left the DOM),
+  before that render's `client` calls; a disconnect disposes in `disconnectedCallback`.
+- **Reconnect:** after a host disconnects and reconnects (a plain move without `moveBefore`, or
+  re-inserting it later), the host renders, and each hook disposed by the disconnect runs
+  `client` again with `prev` undefined, with its current arguments.
+- **How:** a hook with `dispose` is tracked per render root from its commit, with the spec and
+  arguments to dispose (`render/dispose.ts`). After each render of a root commits, every
+  tracked hook whose element is no longer inside the root (`root.contains`), or whose position
+  holds something else, is disposed. Moves keep elements inside the root, so nothing else is
+  needed to tell a move from a removal.
+- **Cost (measured 2026-10-07, gzip):** the tracking comes with `defineHook` (05 "Features
+  register themselves") and runs only once a hook with `dispose` has committed. Core's own
+  hooks (`invalid`, `labelledBy`) are built with an internal `defineBasicHook` without it, so
+  apps that only use them don't bundle it. Every app: about 20 B (a check per render and per
+  disconnect). Apps that call `defineHook`: about 0.25 KiB more (the `autocomplete-search`
+  example and the `view` line; their budgets were raised by that much, as for the frame lane,
+  04). Hooks without `dispose` pay no run-time cost.
+- Tested in `core/test/view/render-hooks-dispose.test.ts`.
 
 ## `raw(html)`
 
@@ -195,7 +258,8 @@ removes the attribute (also in a multi-attribute).
 
 - Parts commit in document order. On first render an instance's parts commit **before** the
   instance is inserted, so a child component connects with its props already set.
-- After commit, hooks run (in document order), then the scheduler's post-render work (04).
+- After commit, hooks whose element left the root (or whose position changed) are disposed,
+  then hooks run `client` (in document order), then the scheduler's post-render work (04).
 
 ## Native primitives
 

@@ -2,7 +2,7 @@
 // errors mirrored to native validity, so `:user-invalid` and native bubbles agree with the
 // model. The server half writes `aria-invalid` into the start tag, so it is no longer written
 // twice.
-import { defineHook } from '../view/index.js';
+import { defineBasicHook } from '../view/index.js';
 
 type Errors = readonly string[] | string | undefined;
 
@@ -79,7 +79,7 @@ function apply(el: Element, errors: Errors): void {
  * dropped and the form is submitted again once. An error is applied again only when a new value
  * arrives (keep `fieldErrors()` results in state): `client` runs only when the errors change.
  */
-export const invalid = defineHook<[errors?: Errors]>({
+export const invalid = defineBasicHook<[errors?: Errors]>({
   server: ([errors]) => (messageOf(errors) === '' ? {} : { 'aria-invalid': 'true' }),
   client: (el, [errors]) => {
     apply(el, errors);

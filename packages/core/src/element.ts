@@ -29,7 +29,7 @@ import {
 import { stateSync, type StateSync } from './states.js';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
-import { render, sheetsFor, type Markup } from './view/index.js';
+import { render, sheetsFor, suspendHooks, type Markup } from './view/index.js';
 
 const DEFER = 'defer-hydration';
 
@@ -153,6 +153,8 @@ export function elementClass<S, M extends Tagged, P>(
 
     disconnectedCallback(): void {
       this.#model.disconnect();
+      // Element hooks' dispose; they run client again after the render on reconnect (02).
+      if (suspendHooks(this.#root)) this.#stale = true;
       if (DEVTOOLS_ENABLED) devConnect(this, tag, false);
     }
 

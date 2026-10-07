@@ -33,5 +33,5 @@ export function hydrate(
     listenFor(outer);
   }
   setRootPart(root, part);
-  runHooks(mark);
+  runHooks(mark, root);
 }

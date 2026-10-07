@@ -2,7 +2,12 @@
 // queue of client calls. A hook position (attr-parts.ts, kind HOOK) queues itself when its
 // arguments change (shallow `Object.is` per argument, hook-part.ts, which also holds
 // `defineHook`); `render` runs the queued `client` calls after the commit, in document order.
-// There is no cleanup: listeners a hook adds to its element are collected with it.
+// An optional `dispose` runs when the element leaves its render root (Gyral removed it: its
+// part cleared, its instance replaced, its row removed), when the position stops holding the
+// hook, or when the host disconnects; not on moves. That machinery (dispose.ts) registers
+// itself in `disposal` when the first hook with `dispose` commits, and only apps that call
+// `defineHook` bundle it (core's own hooks use `defineBasicHook`): other apps pay one empty
+// check per render and per disconnect.
 
 const HOOK: unique symbol = Symbol('gyral.hook');
 /** Internal: a hook result's commit function (hook-part.ts), so apps without hooks skip it. */
@@ -16,6 +21,12 @@ export interface HookSpec<A extends readonly unknown[]> {
   server?(args: A): HookAttributes;
   /** Runs after the commit when `args` changed; `prev` is undefined the first time. */
   client(el: Element, args: A, prev: A | undefined): void;
+  /**
+   * Teardown, with the last arguments `client` got: runs when Gyral removes the element, when
+   * the position stops holding this hook, or when the host disconnects (not on `moveBefore`
+   * moves). After a host reconnects, `client` runs again with `prev` undefined.
+   */
+  dispose?(el: Element, args: A): void;
 }
 
 /** What a hook returns in a template: `<input ${invalid(errors)}>`. */
@@ -31,6 +42,11 @@ export interface HookPart {
   spec: HookSpec<readonly unknown[]> | null;
   args: readonly unknown[] | undefined;
   prev: readonly unknown[] | undefined;
+  /** dispose.ts: the tracked hook with `dispose`, its last arguments, and whether a disconnect
+   * disposed it (`client` runs again after the next render). */
+  kept?: HookSpec<readonly unknown[]> | undefined;
+  keptArgs?: readonly unknown[] | undefined;
+  off?: boolean | undefined;
 }
 
 export const isHook = (value: unknown): value is HookResult =>
@@ -54,6 +70,23 @@ export function sameArgs(a: readonly unknown[], b: readonly unknown[] | undefine
   return true;
 }
 
+/**
+ * Hook disposal (dispose.ts), set when the first hook with `dispose` commits: `disposal(root)`
+ * after a render of `root` commits (before its client calls), `disposal(root, true)` when the
+ * host owning `root` disconnects (true when hooks wait to run `client` again after the next
+ * render). A plain variable, not an object, to keep apps without it small.
+ */
+let disposal: ((root: Node, disconnect?: boolean) => boolean) | undefined;
+
+/** Internal (dispose.ts): turns hook disposal on. */
+export function useDisposal(run: (root: Node, disconnect?: boolean) => boolean): void {
+  disposal = run;
+}
+
+/** The host owning `root` disconnected (element.ts): disposes its hooks that have `dispose`. */
+export const suspendHooks = (root: Node | undefined): boolean | undefined =>
+  disposal?.(root as Node, true);
+
 const queue: HookPart[] = [];
 
 /** Queues `part`'s client call for the end of the render (document order). */
@@ -64,8 +97,9 @@ export function queueHook(part: HookPart): void {
 /** The queue position before a render, for `runHooks`/`dropHooks`. */
 export const hookMark = (): number => queue.length;
 
-/** Runs the `client` calls queued since `mark`, in document order. */
-export function runHooks(mark: number): void {
+/** Runs the `client` calls queued since `mark`, in document order, after `root` committed. */
+export function runHooks(mark: number, root: Node): void {
+  disposal?.(root); // hooks whose element left `root` dispose first (dispose.ts)
   try {
     for (let i = mark; i < queue.length; i++) {
       const part = queue[i] as HookPart;

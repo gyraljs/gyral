@@ -123,7 +123,8 @@ A hook is a small behaviour attached to the element it sits on, written in the s
 ships `invalid(errors)` (forms.md) and `labelledBy(id, fallback?)`. Write your own with
 `defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
 (`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
-server-rendered start tag. A hook acts only on its own element.
+server-rendered start tag; the optional `dispose(el, args)` tears down (below). A hook acts only
+on its own element.
 
 ```ts
 import { defineHook, define, html } from '@gyral/core';
@@ -152,6 +153,97 @@ export const Steps = define<State, Msg>('my-steps', {
     </ol>
     <button type="button" data-intent=${i.Next}>Next</button>
   `,
+});
+```
+
+## Widgets with a lifecycle: their own element, or a hook with `dispose`
+
+Anything with setup and teardown (a Three.js or WebGL stage, a chart or map library, an
+observer, a connection) belongs in **its own custom element**: one input property, its own
+state, teardown in `disconnectedCallback`. The platform tells it about every connect,
+disconnect and move, and the Gyral view stays a pure description that passes data down:
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface Scene {
+  readonly cubes: number;
+}
+
+/** The widget: one property in, its own lifecycle. */
+class StageElement extends HTMLElement {
+  #scene: Scene = { cubes: 0 };
+  #frame = 0;
+
+  set view(scene: Scene) {
+    this.#scene = scene;
+    this.#schedule();
+  }
+
+  connectedCallback(): void {
+    this.#schedule(); // set up renderer, canvas, observers here
+  }
+
+  disconnectedCallback(): void {
+    cancelAnimationFrame(this.#frame); // dispose renderer, GPU buffers, listeners here
+  }
+
+  #schedule(): void {
+    cancelAnimationFrame(this.#frame);
+    this.#frame = requestAnimationFrame(() => {
+      this.textContent = `${String(this.#scene.cubes)} cubes`;
+    });
+  }
+}
+customElements.define('my-stage', StageElement);
+
+interface State {
+  readonly scene: Scene;
+}
+type Msg = { readonly _tag: 'Add' };
+
+export const Game = define<State, Msg>('my-game', {
+  init: () => ({ scene: { cubes: 1 } }),
+  intent: { Add: () => ({ _tag: 'Add' }) },
+  update: { Add: (s) => ({ scene: { cubes: s.scene.cubes + 1 } }) },
+  view: (s, i) => html`
+    <my-stage .view=${s.scene}></my-stage>
+    <button type="button" data-intent=${i.Add}>Add a cube</button>
+  `,
+});
+```
+
+The widget reports back with events: dispatch `OUTPUT_EVENT` with a tagged `detail` and the
+parent parses it like a child component's output (composition.md). It can be a Gyral component
+itself (`prop.value` input, `outputs<Out>()`) when it has a model of its own.
+
+For a **small imperative behaviour** on an element of the view, a hook's optional
+`dispose(el, args)` is the lighter option. It runs when Gyral removes the element (its part
+cleared, its template replaced, its row removed), when the position stops holding the hook,
+and when the host disconnects; never on moves (`moveBefore`, list reorders). After a host
+reconnects, `client` runs again with `prev` undefined.
+
+```ts
+import { defineHook } from '@gyral/core';
+
+const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/** Highlights the element for a moment whenever `value` changes. */
+export const flash = defineHook<[value: unknown]>({
+  client: (el, _args, prev) => {
+    if (prev === undefined) return; // not on first render
+    el.classList.add('flash');
+    clearTimeout(timers.get(el));
+    timers.set(
+      el,
+      setTimeout(() => {
+        el.classList.remove('flash');
+      }, 600),
+    );
+  },
+  dispose: (el) => {
+    clearTimeout(timers.get(el));
+  },
 });
 ```
 

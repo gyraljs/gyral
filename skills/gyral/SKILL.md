@@ -113,7 +113,7 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
-- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `labelledBy`), `focus`
+- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `dispose`, `labelledBy`), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path

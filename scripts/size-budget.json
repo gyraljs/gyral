@@ -1,9 +1,9 @@
 {
-  "$comment": "Max gzip KiB per example production bundle (ADR 0018, gyral-g1r.2). \"budgets\": all chunks concatenated; \"initial\": the entry chunk and its static imports, what a page downloads before any import() (gyral-g1r.18); \"view\": the view layer's client API built with the gyral-compiled condition (scripts/size/view-entry.js). Only ever lower these: pnpm size --check fails above a budget and suggests tightening when a bundle is 0.5 KiB under. Size pass (gyral-g1r.18): every budget is at most measured + 0.1 KiB; hello-world's initial budget is ADR 0018's 9.0 KiB target. The all-chunks budgets of examples that use each(), stores or forms (animated-letters, animation, autocomplete-search, devtools, http-search-github, nested-folders, no-js-first, shared-cart, typeahead-race) stay above their 0.2.0 baseline + 0.1: the lazily loaded hydration and invoker-fallback chunks (about 3.2 KiB gzip, compressed on their own) count there although client-only pages never fetch them; every initial chunk is 2.4-5.4 KiB below its 0.2.0 bundle. Template ids out of production client builds (gyral-g1r.22): every budget set to measured + 0.1 KiB, rounded to 0.1.",
+  "$comment": "Max gzip KiB per example production bundle (ADR 0018, gyral-g1r.2). \"budgets\": all chunks concatenated; \"initial\": the entry chunk and its static imports, what a page downloads before any import() (gyral-g1r.18); \"view\": the view layer's client API built with the gyral-compiled condition (scripts/size/view-entry.js). Only ever lower these: pnpm size --check fails above a budget and suggests tightening when a bundle is 0.5 KiB under. Size pass (gyral-g1r.18): every budget is at most measured + 0.1 KiB; hello-world's initial budget is ADR 0018's 9.0 KiB target. The all-chunks budgets of examples that use each(), stores or forms (animated-letters, animation, autocomplete-search, devtools, http-search-github, nested-folders, no-js-first, shared-cart, typeahead-race) stay above their 0.2.0 baseline + 0.1: the lazily loaded hydration and invoker-fallback chunks (about 3.2 KiB gzip, compressed on their own) count there although client-only pages never fetch them; every initial chunk is 2.4-5.4 KiB below its 0.2.0 bundle. Template ids out of production client builds (gyral-g1r.22): every budget set to measured + 0.1 KiB, rounded to 0.1. Hook dispose (gyral-c5d.2, 0.3.1): apps that call defineHook bundle the tracking (about 0.25 KiB gzip), so autocomplete-search (+0.3 all, +0.3 initial) and the view line (+0.3) were raised by that much, as for the frame lane (view/02 \"Widgets with a lifecycle\").",
   "budgets": {
     "animated-letters": 14.5,
     "animation": 13.1,
-    "autocomplete-search": 17.4,
+    "autocomplete-search": 17.7,
     "bmi": 12.5,
     "bmi-nested": 12.6,
     "checkbox": 11.3,
@@ -25,11 +25,11 @@
     "typeahead-race": 15.1,
     "undo-replay": 14.8
   },
-  "view": 7,
+  "view": 7.3,
   "initial": {
     "animated-letters": 12.2,
     "animation": 10.8,
-    "autocomplete-search": 15,
+    "autocomplete-search": 15.3,
     "bmi": 10.1,
     "bmi-nested": 10.2,
     "checkbox": 8.9,
