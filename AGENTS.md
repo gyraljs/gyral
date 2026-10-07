@@ -18,7 +18,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm install`                                  | Install (pnpm workspaces: `packages/*`, `examples/*`)                                                              |
 | `pnpm check`                                    | **The gate.** typecheck + lint + format + invariants + tests                                                       |
 | `pnpm test`                                     | Vitest: browser project (Chromium) + node project (scripts)                                                        |
-| `pnpm invariants`                               | Docs map, workflow triggers, public-API purity                                                                     |
+| `pnpm invariants`                               | Docs map, workflow triggers, public-API purity, skill/doc code blocks typecheck, clean-room provenance             |
 | `pnpm ci:local`                                 | Run `.github/workflows/ci.yml` locally in Docker via `gh act`                                                      |
 | `pnpm --filter @gyral-examples/<name> dev`      | Run an example with Vite                                                                                           |
 | `pnpm examples [name…]`                         | Run all (or named) examples; index at http://localhost:5100 (`EXAMPLES_PORT=5400` for a second copy)               |
@@ -32,23 +32,23 @@ First run needs `pnpm exec playwright install chromium`.
 
 ## Where things are
 
-| Path                                                                                             | Contents                                                                       |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                     |
-| `packages/core`                                                                                  | `define()`, intent parsing, MVI runtime (`@gyral/core`)                        |
-| `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                 |
-| `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                           |
-| `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                                |
-| [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                   |
-| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler               |
-| [docs/references/releasing.md](docs/references/releasing.md)                                     | npm release runbook: placeholders, trusted publishing, `release.yml`           |
-| [docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md)               | 0.2 → 0.3 upgrade: every breaking change, before/after (ts blocks typechecked) |
-| [docs/references/capability-audit-2026-10-05.md](docs/references/capability-audit-2026-10-05.md) | Capability audit: docs gaps, feature gaps, spikes (epic gyral-1zd)             |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                       |
-| [skills/gyral/](skills/gyral/SKILL.md)                                                           | Agent skill for Gyral users; update it with API changes (check-skill)          |
-| [packages/mcp/](packages/mcp/README.md)                                                          | `@gyral/mcp` MCP server; `pnpm mcp:refresh [--from <site dist>]` updates docs  |
-| `.claude-plugin/marketplace.json`                                                                | Claude Code plugin marketplace serving the skill (`claude plugin validate .`)  |
-| `archive/` (gitignored)                                                                          | Old Cycle.js source. Reference only; never import or copy-paste blindly        |
+| Path                                                                                             | Contents                                                                                          |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                                        |
+| `packages/core`                                                                                  | `define()`, intents, MVI runtime, view layer (`src/view/`); `/server`, `/vite`, `/eslint` entries |
+| `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                                    |
+| `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                                              |
+| `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                                                   |
+| [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                                      |
+| [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler                                  |
+| [docs/references/releasing.md](docs/references/releasing.md)                                     | npm release runbook: placeholders, trusted publishing, `release.yml`                              |
+| [docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md)               | 0.2 → 0.3 upgrade: every breaking change, before/after (ts blocks typechecked)                    |
+| [docs/references/capability-audit-2026-10-05.md](docs/references/capability-audit-2026-10-05.md) | Capability audit: docs gaps, feature gaps, spikes (epic gyral-1zd)                                |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                                          |
+| [skills/gyral/](skills/gyral/SKILL.md)                                                           | Agent skill for Gyral users; update it with API changes (check-skill)                             |
+| [packages/mcp/](packages/mcp/README.md)                                                          | `@gyral/mcp` MCP server; `pnpm mcp:refresh [--from <site dist>]` updates docs                     |
+| `.claude-plugin/marketplace.json`                                                                | Claude Code plugin marketplace serving the skill (`claude plugin validate .`)                     |
+| `archive/` (gitignored)                                                                          | Old Cycle.js source. Reference only; never import or copy-paste blindly                           |
 
 ## Design docs to read before changing…
 

@@ -9,8 +9,8 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
        └──────── DOM (shadow root) ◄──────┴──────────── result messages ◄─────────────┘
 ```
 
-- **Intent** reads `data-intent` elements in the component's own shadow root and parses the
-  event (click, submit, input, change) into a typed message. Nested components are isolated
+- **Intent** reads `data-intent` elements in the component's own shadow root (or its own
+  light-DOM subtree with `shadow: false`, ADR 0014) and parses the event (click, submit, input, change) into a typed message. Nested components are isolated
   by Shadow DOM, which replaces Cycle's `isolate()`.
 - **Model** is a record of pure reducers keyed by message tag (exhaustive by type).
 - **View** is a pure template of state, rendered by Gyral's own view layer
@@ -28,18 +28,19 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
 
-| Layer | Package          | Status  | May depend on                                                                                                                           |
-| ----- | ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | `@gyral/core`    | v0 work | no runtime peers; `vite`, `parse5` (optional peers, `src/compiler/` at build time only); `src/view/` imports nothing else from core     |
-| 1     | `@gyral/testing` | v0 work | core, `@sinonjs/fake-timers`                                                                                                            |
-| 1     | `@gyral/http`    | v0 work | core, `@standard-schema/spec` (types only)                                                                                              |
-| 1     | `@gyral/router`  | v0 work | core                                                                                                                                    |
-| 1     | `@gyral/time`    | v0 work | core                                                                                                                                    |
-| 2     | `@gyral/ssr`     | v0 work | core (incl. `@gyral/core/server`), router (ADR 0012, 0018)                                                                              |
-| 2     | `@gyral/effect`  | planned | core; peer-depends on `effect` (opt-in API)                                                                                             |
-| tool  | `create-gyral`   | v0 work | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                           |
-| tool  | `@gyral/mcp`     | v0 work | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill) |
-| app   | `examples/*`     | —       | any public package entry point, never `src/internal`                                                                                    |
+| Layer | Package           | Status  | May depend on                                                                                                                                                              |
+| ----- | ----------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | `@gyral/core`     | v0 work | `@standard-schema/spec` (types only); `vite`, `parse5`, `eslint` (optional peers for `./vite` and `./eslint`, build time only); `src/view/` imports nothing else from core |
+| 1     | `@gyral/testing`  | v0 work | core, `@sinonjs/fake-timers`; `fast-check` (optional peer for `./arbitraries`)                                                                                             |
+| 1     | `@gyral/http`     | v0 work | core, `@standard-schema/spec` (types only)                                                                                                                                 |
+| 1     | `@gyral/router`   | v0 work | core                                                                                                                                                                       |
+| 1     | `@gyral/time`     | v0 work | core                                                                                                                                                                       |
+| 1     | `@gyral/devtools` | v0 work | core (a dev-only panel built with `define()`, ADR 0017)                                                                                                                    |
+| 2     | `@gyral/ssr`      | v0 work | core (incl. `@gyral/core/server`), router (ADR 0012, 0018)                                                                                                                 |
+| 2     | `@gyral/effect`   | planned | core; peer-depends on `effect` (opt-in API)                                                                                                                                |
+| tool  | `create-gyral`    | v0 work | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                                                              |
+| tool  | `@gyral/mcp`      | v0 work | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill)                                    |
+| app   | `examples/*`      | —       | any public package entry point, never `src/internal`                                                                                                                       |
 
 Enforced by `eslint.config.js` (import restrictions for core, layer-1 packages and the tools) and `scripts/check-public-api.mjs`.
 
@@ -50,7 +51,7 @@ packages/<pkg>/
   src/index.ts       public API: plain TypeScript only
   src/*.ts           public modules
   src/internal/      implementation detail; not exported
-  test/*.test.ts     Vitest, runs in real Chromium
+  test/*.test.ts     Vitest, runs in real Chromium (*.node.test.ts run in Node)
   tsconfig.build.json  declaration build (used by the public-API check)
 ```
 

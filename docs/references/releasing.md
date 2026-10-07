@@ -72,8 +72,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 - **Tag ruleset** for `v*` and `@gyral/*`: block deletion and updates (non-fast-forward). If
   you also restrict creation, add the GitHub Actions app as a bypass actor so the workflow
   can push release tags.
-- **Visibility**: npm provenance needs a **public** repository. Make gyraljs/gyral public
-  before the first release. Until then a release fails at the publish step.
+- **Visibility**: npm provenance needs a **public** repository. gyraljs/gyral is public
+  (since 2026-10-05); a private repository fails at the publish step.
 
 ## Cutting a release
 
@@ -99,8 +99,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 6. Check npmjs.com shows the version with the provenance badge, then try
    `npm create gyral@latest` (both templates) in a scratch directory.
 
-The first real release must be **0.1.0** or higher: the placeholders already occupy 0.0.0.
-`.changeset/first-public-release.md` is a `minor` changeset for exactly that.
+The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the first one,
+0.1.0, came from a `minor` changeset).
 
 ## Before publishing: local checks
 
@@ -124,7 +124,9 @@ with Lit and its SSR packages as peers. Since 0.3 the only peer installed is fas
 Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typecheck, build and
 pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and
 `dist/static/index.html` is the prerendered page). Client builds: basic 151.6 KiB JS
-(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015). 0.2.0 drops Effect: about 11 KiB gzip for an empty app.
+(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015).
+0.2.0 dropped Effect; 0.3.0's sizes are in ADR 0018's measured sections and
+`scripts/size-budget.json`.
 
 Last recorded `verify:install` with `@gyral/mcp` (2026-10-05, 9 tarballs): all entries imported,
 SSR ok, and `gyral-mcp` answered over stdio with 7 tools.

@@ -1,6 +1,6 @@
-// Packs every package as a prerelease tarball for the apps (ADR 0018 "Migration"): nothing is
-// published before 0.3.0. The version is rewritten inside the tarballs only, so pnpm's store
-// never confuses them with the published 0.2.0.
+// Packs every package as a prerelease tarball, so apps can try unreleased changes without an npm
+// prerelease (ADR 0018 "Migration" did this for 0.3.0). The version is rewritten inside the
+// tarballs only, so pnpm's store never confuses them with a published version.
 //   pnpm pack:next                 → ../gyral-tarballs/<name>-0.3.0-next.0.tgz
 //   pnpm pack:next 0.3.0-next.2    → another prerelease number
 //   GYRAL_TARBALLS=/path pnpm pack:next

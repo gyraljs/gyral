@@ -7,7 +7,7 @@ const isGyral = (name) => name.startsWith('@gyral/') || name === 'create-gyral';
 /**
  * The packed manifest at a prerelease `version`: every @gyral/* (and create-gyral) entry in
  * dependencies, peers, optional and dev dependencies points at that same prerelease (pnpm
- * rewrote `workspace:*` to the workspace's 0.2.0); other entries are kept as they are.
+ * rewrote `workspace:*` to the workspace's own version); other entries are kept as they are.
  */
 export function prereleaseManifest(manifest, version) {
   const out = { ...manifest, version };

@@ -69,7 +69,7 @@ invariants`), so it can't drift from the real API.
 - **MCP server (any MCP client):** `@gyral/mcp` searches the docs, looks up API signatures,
   returns examples, scaffolds components and typechecks snippets against your project. Claude
   Code: `claude mcp add gyral -- npx -y @gyral/mcp`; other clients in
-  [packages/mcp/README.md](packages/mcp/README.md). (Published with the next release.)
+  [packages/mcp/README.md](packages/mcp/README.md).
 - **New apps:** `npm create gyral@latest` writes an `AGENTS.md` (and a `CLAUDE.md` that
   imports it) into every project, so any agent that opens it learns the rules.
 
