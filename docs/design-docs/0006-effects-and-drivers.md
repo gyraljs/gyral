@@ -139,6 +139,48 @@ disconnected). A streaming `run` usually returns a promise that never resolves; 
 it. A finite stream may resolve, and its resolved value is delivered last. Used by
 `listen()` in `@gyral/router` and by `@gyral/time`.
 
+### Outside sources: `subscription()` (gyral-c5d.5, 0.3.1)
+
+Apps keep some state in stores Gyral doesn't own: sabacc.starwars.run's game lives in a
+TC39-signals store, read through a hand-written streaming driver (`Signal.subtle.Watcher`,
+re-armed in a microtask, unwatched on abort) and written with a `play` command whose driver
+calls `store.dispatch` synchronously. Every such driver repeats the same plumbing: a promise
+that never resolves, an abort listener, the unsubscribe, ignoring late values. Core now ships
+it once:
+
+```ts
+function subscription<O, I = undefined, E = unknown>(
+  name: string,
+  subscribe: (emit: (value: O) => void, ctx: SubscriptionContext<I>) => Unsubscribe,
+  options?: SubscriptionOptions<E>, // concurrency (default 'switch'), retry, toError
+): Driver<I, O, E>;
+interface SubscriptionContext<I> {
+  readonly input: I;
+  readonly signal: AbortSignal;
+  readonly fail: (error: unknown) => void; // ends it: onFailure, after retry
+}
+type Unsubscribe = (() => void) | { readonly unsubscribe: () => void };
+```
+
+- It returns a driver, not a command: drivers are what tests and pages substitute by name,
+  and `command(driver, input, { onSuccess, key? })` already maps values to messages with the
+  lane rules. A `fromSource({ subscribe, getSnapshot })` shape was rejected: Redux
+  (`subscribe` + `getState`), XState (`subscribe` returns `{ unsubscribe }`), signals (a
+  watcher) and sockets (events) differ in exactly the part such a shape would fix, while
+  "subscribe and return how to stop" covers them all in two or three lines (recipes in the
+  skill's `references/outside-stores.md`).
+- Cleanup is automatic: abort (lane `switch`, disconnect) and `fail()` release the source
+  once, emits after that are ignored, and an unsubscribe that throws is logged. A `subscribe`
+  that throws, or `fail(error)`, rejects the run with that error as is, so `toError`,
+  `onFailure` and `retry` (which subscribes again: socket reconnects) work as for any driver.
+- Default lane policy `'switch'` (like `listen()` and `periodic()`): re-issuing the command
+  replaces the subscription; a per-input `key` keeps several.
+- Writing stays a plain driver; the change comes back through the subscription.
+- A standalone module (`subscription.ts`), so apps that don't import it don't bundle it; it
+  needs no feature slot because `command()` already registers the interpreter.
+- `settled()` doesn't wait for subscriptions (they never finish) but waits for the messages
+  they deliver (view/04 "`settled()`").
+
 ### `@gyral/time` (gyral-ud5.3)
 
 One `time` driver (substitutable by name) with four commands. Each command kind has its own

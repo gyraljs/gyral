@@ -132,9 +132,13 @@ it('loads the user when clicked', async () => {
 });
 ```
 
-- `await settled()` (from `@gyral/core`) waits until every component has rendered: child props,
-  outputs reaching parents, focus commands and view transitions included. It doesn't wait for
-  drivers: answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`.
+- `await settled()` (from `@gyral/core`) waits until every component has rendered and messages
+  have stopped arriving: child props, outputs reaching parents, focus commands, view
+  transitions, and chains of messages a few microtasks apart (a stream re-arming in a
+  microtask, a store notifying in one, a driver that answers at once) included. Commands that
+  never end (a store watch, a socket) don't block it; it never waits for timers or the network:
+  answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`. No
+  `await Promise.resolve()` loops before it.
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
   `signal`, so you can assert that `switch` aborted it.

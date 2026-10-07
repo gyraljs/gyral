@@ -21,7 +21,9 @@ test('increment', () => {
 ```
 
 Element tests run in a real browser (Vitest browser mode, not jsdom): mount the element,
-dispatch events, then `await settled()` (from `@gyral/core`) before you check the DOM. Swap
+dispatch events, then `await settled()` (from `@gyral/core`) before you check the DOM: it
+waits until every component has rendered and messages have stopped arriving (streams that
+never end don't block it; timers are yours to advance). Swap
 drivers for fakes with `fakeDriver` and `withDrivers`; `mountSsr` and `hydrated` test
 server-rendered pages through hydration.
 

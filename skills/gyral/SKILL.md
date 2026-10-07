@@ -56,8 +56,11 @@ export const Counter = define<State, Msg>('my-counter', {
 5. **Props are read-only context** (`ctx.props`), declared with `prop.*` builders
    (Standard Schema; attributes are kebab-case and always validated). They enter state only
    through `init(props)` and the optional `PropsChanged` reducer.
-6. **State, props and store state must be JSON-serializable.** They travel to the browser in
-   hydration seeds (no `Map`, class instances, functions or `Date` objects in state).
+6. **Server-rendered state is JSON.** State, props and store state of anything rendered on
+   the server travel to the browser in hydration seeds, so they must survive a JSON round trip
+   (no `Map`, class instances, functions or `Date` objects; the server warns). Client-only
+   components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
+   still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
    `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
    config: `vite build` then compiles templates and checks their rules; add
@@ -97,6 +100,8 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
   `ctx.read(store)`, `send(store, msg)`).
 - A child must tell its parent something → an output (`const emit = outputs<Out>()` in the
   child, `child()` intent in the parent; plain DOM listens for `OUTPUT_EVENT`).
+- It already lives outside Gyral (a signals store, Redux, XState, a socket) → keep it there;
+  read it with a `subscription()` command, write with a plain driver (outside-stores.md).
 
 **Which concurrency for a command?** (per lane = `key`, default the driver name)
 
@@ -105,8 +110,9 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
 `@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router`
-(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
-`defineDriver()` + `command()`.
+(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. A store or feed
+Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
+(`references/outside-stores.md`). Anything else → `defineDriver()` + `command()`.
 
 ## References (read on demand)
 
@@ -115,6 +121,7 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
 - `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `dispose`, `labelledBy`), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
+- `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP

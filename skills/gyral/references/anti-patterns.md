@@ -29,7 +29,7 @@
 | Parent reading or setting a child's internal state                                | props down, `emit()` outputs up, or a store                             |
 | Global singletons / module-level mutable state for shared data                    | `defineStore` + `send` + `ctx.read`                                     |
 | Booleans `isLoading`, `hasError`, `data` side by side                             | one tagged union                                                        |
-| `Map`, `Set`, `Date`, class instances, functions in state                         | plain JSON (arrays, objects, ISO strings)                               |
+| `Map`, `Set`, `Date`, class instances, functions in server-rendered state         | plain JSON (arrays, objects, ISO strings); client-only state may differ |
 | Passwords or tokens in state                                                      | keep them only in the submitted `FormData`                              |
 | Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                  |
 | Importing `lit` (0.2's renderer) or another renderer's `html` in Gyral components | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
@@ -43,6 +43,7 @@
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Click does nothing                                           | no `data-intent`, wrong trigger, parser returned `undefined`, or the element is inside a nested component | check markup, add `data-intent-on`, check the parser; open devtools (`?devtools`)      |
 | TypeScript: property missing in `update`                     | `update` must handle every tag of `Msg`                                                                   | add the reducer (even `(s) => s`)                                                      |
+| TypeScript: long "`IntentParser<…>` is not assignable" error | a parser or `child()` mapper annotated with the whole union (`(out): Msg => …`)                           | no annotation in the spec, or `Extract<Msg, { _tag: 'X' }>`; outside, `'X' as const`   |
 | TypeScript: prop builder doesn't fit the props type          | a builder without `required`/`default` includes `undefined`                                               | `prop.string({ required: true })`, a `default`, or a type with `undefined`             |
 | `vite build` fails with a template rule error                | the template compiler checks every `html` (rows, form state, holes)                                       | fix the template as the message says (docs/design-docs/view/09-template-rules.md)      |
 | "Vite unexpectedly reloaded a test" on the first run         | a dependency discovered mid-run                                                                           | `gyralVitePreset({ optimize: ['the-module'] })`                                        |

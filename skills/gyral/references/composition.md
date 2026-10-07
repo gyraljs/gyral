@@ -115,6 +115,11 @@ export const List = define<ListState, ListMsg>('my-list', {
 For a component that contains itself (a folder tree) or is defined later, pass a function:
 `child(() => Folder, …)` and annotate the constant as `GyralElementClass<S, M, P, O>`.
 
+Don't annotate the mapper as `(out): Msg => …`: an intent must produce its own variant, so the
+whole union fails with a long `IntentParser<…>` error. Leave the return type off inside the spec
+(as above), or annotate `Extract<ListMsg, { _tag: 'ItemOut' }>` (plus `| undefined` when it
+ignores some outputs); a mapper defined outside the spec needs `_tag: 'ItemOut' as const`.
+
 ### Outputs to a parent that isn't Gyral
 
 An output is a `gyral-output` `CustomEvent` (`OUTPUT_EVENT`) dispatched on the child's host in a
