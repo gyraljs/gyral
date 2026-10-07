@@ -19,6 +19,9 @@ client-rendered with Vite. This file tells coding agents how the project works.
 - `src/counter.test.ts`: model tests without a DOM (`step`, `run`) and a browser test.
 - `src/main.ts`: the entry; imports components and the page CSS (`src/styles.css`).
 - `index.html`: the page that uses the components.
+- `vite.config.ts`: `gyralVitePreset({ clientOnly: true })`, because this app renders only in
+  the browser (no hydration code in builds). Delete `clientOnly: true` before adding server
+  rendering or prerendering (`@gyral/ssr`); `vitest.config.ts` reuses this config.
 
 ## Gyral rules (follow them in every change)
 

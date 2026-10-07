@@ -19,10 +19,10 @@ npm create gyral@latest my-app -- --template ssr
 npm create gyral@latest my-app -- --yes   # basic template
 ```
 
-| Template | What you get                                                                             |
-| -------- | ---------------------------------------------------------------------------------------- |
-| `basic`  | Vite, a counter component and a Vitest browser test                                      |
-| `ssr`    | Pages rendered on the server, prerendered to static HTML and hydrated; production server |
+| Template | What you get                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `basic`  | Vite, a counter component and a Vitest browser test; client-only build (`clientOnly: true`, remove it before adding server rendering) |
+| `ssr`    | Pages rendered on the server, prerendered to static HTML and hydrated; production server                                              |
 
 Options: `-t, --template <basic|ssr>`, `-y, --yes`, `-h, --help`, `-v, --version`. The target
 directory must not exist yet or be empty (a `.git` folder is fine).
