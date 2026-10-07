@@ -1,10 +1,10 @@
 # 09 — Template rules
 
-Status: **accepted** (2026-10-06). ADR 0018 (decision I). Phases 1 (rule engine, runtime) and 6
-(compiler surface, ESLint).
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018 (decision I). Phases 1 (rule engine,
+runtime) and 6 (compiler surface, ESLint).
 
-Templates are static, so mistakes can be found before code runs. Lit found most of them at
-runtime, some only during SSR.
+Templates are static, so mistakes can be found before code runs. With Lit (Gyral 0.2) most of
+them showed up at runtime, some only during SSR.
 
 ## One rule set, three places
 
@@ -17,7 +17,8 @@ messages:
 | Runtime preparer, development mode | first render of the call site: throws                                                  | the no-build-step path, tests    |
 | ESLint (`@gyral/core/eslint`)      | in the editor and `eslint .`: one error per template, at the markup it is about        | everyone, before saving          |
 
-Production builds contain none of this code. Every message follows core belief 7: it says what
+Production builds made with the Vite preset contain none of this code (a build without it
+keeps the runtime preparer, 01 "Runtime"). Every message follows core belief 7: it says what
 is wrong **and what to write instead**, and links the spec section. The rule engine stops at a
 template's first error (its tokenizer can't recover), so every tool reports one per template:
 fix it, and the next one shows.
@@ -37,9 +38,8 @@ fix it, and the next one shows.
 | 9   | `each` without a key function                                                                                                                                                                                                                                                             | Keys are required (03)                                                | `each(items, (x) => x.id, Row)`                                  |
 | 10  | SVG-only top level (`<g>`, `<path>` outside an `<svg>`)                                                                                                                                                                                                                                   | No `svg` tag; the HTML parser would not create SVG elements           | wrap in `<svg>`                                                  |
 | 11  | A document-level template (`<html>`, `<head>`, `<body>`, doctype) rendered in the browser                                                                                                                                                                                                 | Page shells are server-only (01)                                      | render it with `@gyral/core/server`                              |
-
-| 12 | A hole in `<textarea>`/`<title>` that isn't the whole content | The content is one value (02) | `<textarea>${v}</textarea>` |
-| 13 | A named character reference other than `&amp;` `&lt;` `&gt;` `&quot;` `&apos;` `&nbsp;` in attribute text | The full entity table is too large to ship | the character itself, or a numeric reference |
+| 12  | A hole in `<textarea>`/`<title>` that isn't the whole content                                                                                                                                                                                                                             | The content is one value (02)                                         | `<textarea>${v}</textarea>`                                      |
+| 13  | A named character reference other than `&amp;` `&lt;` `&gt;` `&quot;` `&apos;` `&nbsp;` in the static text of a bound or custom-element attribute                                                                                                                                         | The full entity table is too large to ship                            | the character itself, or a numeric reference                     |
 
 Allowed: `<textarea>${v}</textarea>` (live value, 02) and `<title>${t}</title>` (text).
 
@@ -51,8 +51,9 @@ Not handled yet: `<select>` content under the new customizable-select parsing, C
 - **Compiler:** parse5, a spec-compliant HTML parser, runs as a **build-time-only** dependency.
   Its tree is compared with the normalizer's own tree; any difference is a repair. parse5 never
   reaches the browser or the server renderer.
-- **Development runtime:** a repaired template loses or moves part markers when the browser
-  parses it, so the part count or paths don't match the normalizer's. That is reported with the
+- **Runtime preparer:** the normalizer's own repair checks run first; then the browser parses
+  the template HTML (`<template>` + `innerHTML`) and the whole parse is compared with the tree
+  the normalizer computed paths for (`view/prepare.ts`). Any difference is reported with the
   same message.
 - **ESLint:** runs the normalizer's own repair checks (the common cases above, by tag
   structure), as the development runtime does before the browser parses. The parse5 comparison
@@ -87,17 +88,19 @@ Not checked by ESLint: rule 7's parse5 comparison (compiler) and the browser's o
 shell is right on the server); rows ESLint can't follow statically (a row returned by a call, a
 parameter), which 03's development check covers.
 
-Options (both rules): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the
-Vite preset's `sources`. Core's own code and tests, which import `html` and `each` from core's
-modules by relative path, are recognised without it.
+Options (both rules): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the Vite
+preset's `compiler.sources` (`gyralVitePreset({ compiler: { sources } })`). Core's own code and
+tests, which import `html` and `each` from core's modules by relative path, are recognised without
+it.
 
 ## Warnings
 
-| Pattern                                                | Why                                                  |
-| ------------------------------------------------------ | ---------------------------------------------------- |
-| `raw()` in a component that renders in the browser     | It works, but every change re-parses the markup (02) |
-| An intent parser that the component's view never names | Probably a renamed intent or dead code               |
-| `true` in a child hole (runtime, development)          | Usually a `cond && x` slip (02)                      |
+| Pattern                                                | Why                                                  | Where                                                |
+| ------------------------------------------------------ | ---------------------------------------------------- | ---------------------------------------------------- |
+| `raw()` rendered in the browser                        | It works, but every change re-parses the markup (02) | development runtime, once per page                   |
+| `true` in a child hole                                 | Usually a `cond && x` slip (02)                      | development runtime and server render, once per part |
+| An object in an attribute or text-content hole         | It is written as `String(v)` (02)                    | development runtime and server render, once per part |
+| An intent parser that the component's view never names | Probably a renamed intent or dead code               | not checked yet: no tool reports it in 0.3.0         |
 
 ## Native primitives
 

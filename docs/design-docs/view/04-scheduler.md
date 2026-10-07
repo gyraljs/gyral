@@ -1,6 +1,7 @@
 # 04 — Scheduler and `settled()`
 
-Status: **accepted** (2026-10-06). ADR 0018 (decisions C and H). Phase 3 (with spike gyral-g1r.8).
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018 (decisions C and H). Phase 3 (with
+spike gyral-g1r.8).
 
 One global scheduler renders every component. Components don't keep their own promise chains,
 update maps or completion promises.
@@ -46,8 +47,8 @@ the parent render they cause.
 **Loop guard:** more than 10 renders of one host, or 100 passes, in one flush means a cycle (two
 components feeding each other props or messages). Development throws, naming the tags involved:
 waiting `settled()` promises reject with the error, or, when nothing waits, it is thrown from the
-flush (an uncaught error). Production logs the same message and drops the remaining work, so the
-page doesn't freeze.
+flush (an uncaught error). Production logs the error (without the explanation) and drops the
+remaining work, so the page doesn't freeze.
 
 ## Post-render queue
 
@@ -68,7 +69,8 @@ Before 0.3.0 these were spread over Lit lifecycle hooks and `updateComplete` cha
 When `spec.viewTransition(prev, next, msg)` returns `true` for any message in a pending flush,
 the whole flush runs inside `document.startViewTransition(() => flush())`, so the change is one
 transition. The transition starts where the flush would have run (the microtask), not inside
-`send()`; marks that arrive while its update callback is pending join that flush. Without support, or with `prefers-reduced-motion: reduce`, the flush runs as normal.
+`send()`; marks that arrive while its update callback is pending join that flush. Without
+support, or with `prefers-reduced-motion: reduce`, the flush runs as normal (`transitions.ts`).
 `settled()` waits for the transition's update callback, so focus and tests see the same DOM with
 or without a transition.
 
@@ -125,11 +127,11 @@ await settled(); // no host is dirty, no flush is scheduled, no transition updat
   until the hosts waiting for it have started (`hold()` in the scheduler).
 - It covers rendering only. Driver work (HTTP, timers) is outside it; tests drive time with
   `@gyral/testing`'s `virtualTime` and then `await settled()`.
-- `@gyral/testing`'s `hydrated()` becomes: wait for the document's islands to be released (if
-  asked), then `await settled()`. No polling passes.
-- Shipped before the swap (gyral-g1r.4), backed by Lit, so tests were renderer-agnostic first.
-  Since Phase 3 `packages/core/src/settled.ts` implements it on the scheduler
-  (`packages/core/src/scheduler.ts`).
+- `@gyral/testing`'s `hydrated()` releases the document's islands (if asked), then awaits
+  `settled()`. No polling passes.
+- `settled()` first shipped while Lit still rendered (gyral-g1r.4), so tests moved to it before
+  the renderer changed. Since Phase 3 `packages/core/src/settled.ts` implements it on the
+  scheduler (`packages/core/src/scheduler.ts`).
 - Replaces `el.updateComplete` everywhere (about 270 test sites, the scaffold's `AGENTS.md`, the
   docs and the skill).
 

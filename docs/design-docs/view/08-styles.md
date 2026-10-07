@@ -1,6 +1,6 @@
 # 08 — Styles
 
-Status: **accepted** (2026-10-06). ADR 0018 (decision G). Phases 3–5.
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018 (decision G). Phases 3–5.
 
 ## Authoring
 
@@ -21,24 +21,25 @@ define('gy-letters', {
 });
 ```
 
-- `css` returns a **style source**: the CSS text plus a cache slot. String and number
-  interpolations are inserted as written, so `unsafeCSS` is gone; another style source
-  interpolates its text. CSS is trusted author code: never interpolate user input.
+- `css` returns a **style source**: the CSS text, keyed to one cached sheet. String and number
+  interpolations are inserted as written (0.2's `unsafeCSS` wrapper is gone); another style
+  source interpolates its text. CSS is trusted author code: never interpolate user input.
 - `spec.styles` accepts a style source, a plain string (for example
   `import base from './base.css?inline'`) or an array of them, nested freely.
 - Raw `CSSStyleSheet` objects are no longer accepted: the server can't read their text. Share
   styles by sharing the `css` value; it maps to one sheet (below).
-- The Vite compiler may minify `css` text at build time.
+- The Vite compiler leaves `css` text as written; minifying it at build time is possible later.
 
 ## Browser
 
-- **One `CSSStyleSheet` per style source**, created on first use with `replaceSync` and cached on
-  the source. Components that share a source share the sheet.
-- Each shadow root gets `adoptedStyleSheets = [...sheets]` once, when its root is created or
-  hydrated. Instances cost nothing more.
+- **One `CSSStyleSheet` per style source** (and per distinct plain string), created on first
+  use with `replaceSync` and cached (`view/styles.ts`). Components that share a source share
+  the sheet.
+- Each shadow root gets `adoptedStyleSheets` set to the class's sheets once, when its root is
+  created or hydrated. Instances cost nothing more.
 - There is no `<style>` fallback: constructable stylesheets are widely available (ADR 0003).
-- `shadow: false` components ignore `styles` and warn, as today (ADR 0014): they use document
-  CSS (cascade layers and tokens, as the shop already does).
+- `shadow: false` components ignore `styles`, with a development warning (ADR 0014): they use
+  document CSS (cascade layers and tokens, as the shop does).
 
 ## Server
 

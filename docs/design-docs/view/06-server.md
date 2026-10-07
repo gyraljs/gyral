@@ -1,7 +1,8 @@
 # 06 — Server rendering
 
-Status: **accepted** (2026-10-06), implemented in Phase 4 (gyral-g1r.9; deviations and
-implementation notes marked "Phase 4"). ADR 0018. Replaces the Lit parts of ADRs 0012 and 0014.
+Status: **accepted** (2026-10-06), shipped in 0.3.0; implemented in Phase 4 (gyral-g1r.9;
+deviations and implementation notes marked "Phase 4"). ADR 0018. Replaces the Lit parts of ADRs
+0012 and 0014.
 
 ## What changes
 
@@ -9,7 +10,7 @@ The server knows every component's spec, so rendering a component is just
 `view(init(props))` written as text. There is no fake DOM, no element instances, no HTML parser
 and no VM: the renderer walks template objects (01) and writes strings.
 
-- No `@lit-labs/ssr`, no DOM shim, no parse5 at runtime.
+- No DOM shim and no parse5 at runtime (0.2 used Lit's `@lit-labs/ssr` with a DOM shim).
 - Light DOM and Declarative Shadow DOM are both native output modes, so ADR 0014's stream filter
   and hidden markers go away.
 - Runtime-agnostic: no Node-only APIs (no `node:crypto`, no `Buffer`), so it runs in
@@ -40,9 +41,11 @@ StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope
 - **Chunked.** `render` yields at least at every component boundary. `@gyral/ssr`'s
   `renderToStream`/`renderPage` pull chunks into a `ReadableStream` and run each pull inside
   the request's store scope, so ADR 0013's per-step isolation keeps working unchanged.
-- `@gyral/ssr` keeps `page()`, `renderToStream`, `renderPage`, `storeSeed`, `documentStyles`,
-  static generation and form actions. `serverHtml` is gone: `page()` is written with core's
-  `html` (page templates are `server` templates, 01).
+- `@gyral/ssr` keeps the serving side: `page()` (which writes the page's store seed and global
+  `<style>` elements itself), `renderToString`, `renderToStream`, `renderPage`,
+  `contentSecurityPolicy`, static generation and production serving (`@gyral/ssr/static`) and
+  form actions. `serverHtml` is gone: `page()` is written with core's `html` (page templates
+  are `server` templates, 01).
 
 ## Writing a template result
 
@@ -73,11 +76,10 @@ The server writes the template HTML (01), putting each value in at its hole:
   (2026-10-06): no markup such as `<script>` appears raw in an attribute, whatever later
   reads the page (a raw-text context, naive tooling, a filter). The browser decodes them, so
   values and hydration are unchanged (`packages/ssr/test/fixtures/textarea.ssr.html`).
-- Per template, the renderer caches the template HTML split at its holes, keyed by template id.
-  **Phase 4:** that split is the template object's `segments` (01), already cached with the
-  template object (per call site, or a compiled module constant), so the renderer keeps no
-  cache of its own. Child segments carry `in`, the parent element's name (absent at the
-  template root), for the table check below.
+- The renderer writes from the template object's `segments` (01): the template HTML split at
+  its holes, cached with the template object (per call site, or a compiled module constant), so
+  the renderer keeps no cache of its own (Phase 4). Child segments carry `in`, the parent
+  element's name (absent at the template root), for the table check below.
 - **Phase 4, `?indeterminate`:** writes nothing on any element (there is no such attribute).
   `textarea`/`title` content follows the client's flattening exactly (objects as `String(v)`,
   with the development warning).
@@ -96,7 +98,7 @@ nested components again) when it reaches one. So:
 - markup without components costs no generator overhead: a 1,000-row benchmark table (the
   js-framework-benchmark row template, `each` with `pick`) renders in 0.2 ms to a string and
   1.3 ms including UTF-8 encoding (Node 24, median of 101; 226 KB), against 24–28 ms and
-  349 KB for 0.2's Lit SSR (`@gyral/ssr` on `main`, same rows with `repeat`);
+  349 KB for 0.2's Lit SSR (`@gyral/ssr` 0.2.0, same rows with `repeat`);
 - a provider's scope is passed down explicitly (`ServerRenderInput.scope`, 05), not set as a
   global around its subtree, because the subtree can span several steps.
 
@@ -170,8 +172,7 @@ place:
 
 - **Seed** (ADR 0012, kept): `props` that no attribute carries (property holes) and `state`
   unless it equals `init(props)`'s state. Single-quoted JSON, so its double quotes stay raw
-  (`&`, `'`, `<` and `>` are escaped).
-  The JSON-hazard check runs in development.
+  (`&`, `'`, `<` and `>` are escaped). The JSON-hazard check runs in development.
 - **Phase 4:** `.initialMessages=${[…]}` on a component is passed as `initialMessages`, not
   as a prop. Attribute order: the tag's own attributes, then `data-gyral-light` (light),
   `data-gyral-seed`, then `defer-hydration data-gyral-hydrate="…"` (islands). A shadow

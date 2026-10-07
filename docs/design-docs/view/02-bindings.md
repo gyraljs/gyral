@@ -1,6 +1,6 @@
 # 02 — Bindings
 
-Status: **accepted** (2026-10-06). ADR 0018. Phase 2.
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018. Phase 2.
 
 Gyral views are pure functions of state: no closures, no listeners. That fixes the binding
 surface to what views actually use. There are **no event bindings**: intents are plain
@@ -145,7 +145,8 @@ the model's value again, change the model:
   with them; a `focus(selector)` command puts it back). `form.reset()` is not a substitute: it
   restores the first values (the attributes), not the model's.
 
-Tested in `core/test/form-edits-hydration.test.ts` (both builds) and `render-form.test.ts`.
+Tested in `core/test/form-edits-hydration.test.ts` (both builds) and
+`core/test/view/render-form.test.ts`.
 
 ## Element hooks
 

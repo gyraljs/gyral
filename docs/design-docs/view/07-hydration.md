@@ -1,8 +1,8 @@
 # 07 — Hydration
 
-Status: **accepted** (2026-10-06), implemented in Phase 5 (gyral-g1r.10; implementation notes
-and resolved points marked "Phase 5"). ADR 0018 (decision F). Replaces the Lit parts of ADRs
-0012 and 0014.
+Status: **accepted** (2026-10-06), shipped in 0.3.0; implemented in Phase 5 (gyral-g1r.10;
+implementation notes and resolved points marked "Phase 5"). ADR 0018 (decision F). Replaces
+the Lit parts of ADRs 0012 and 0014.
 
 Hydration is built into core. There is no separate hydrate-support import, nothing patches a
 class at load time, and module evaluation order can't break it. Its code (the walk and islands)
@@ -34,24 +34,24 @@ The walk, the mismatch messages and islands live in one internal module
   work, 04).
 - If the module fails to load (a stale deployment whose chunks are gone), the error is logged
   and waiting hosts render fresh: their roots are cleared, so a view is never doubled.
-- **Preloading (gyral-g1r.21):** a server-rendered page knows it will need the chunk, so the
-  server says so up front. `clientAssetsFromManifest(manifest, entry)` (`@gyral/ssr/static`)
-  reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry
-  itself first (when anything else is listed: with route chunks added it would otherwise queue
-  behind them on HTTP/1.1's six connections — measured in gyral-shop, the buy box defined at
-  979 ms instead of 698 ms), then its static imports (depth first) and the hydration chunk (the dynamic import whose source is
-  core's `hydration-client`, from `packages/core/src/` or an installed `@gyral/core/dist/`)
-  with its own imports. The app's own lazy chunks are not included unless named:
-  `clientAssets(manifest, entry, also)` adds those modules (manifest keys such as a route's
-  `src/routes/product.ts`) with their imports, and `productionServer` gives `createApp` a
-  `preload(modules)` that returns the list with them (cached per list), so a route preloads
-  its own chunk (2026-10-06, found migrating gyral-shop). `page({ modulepreload })`
-  writes one `<link rel="modulepreload">` per URL before the module scripts, and
-  `productionServer` hands the list to `createApp`. The browser then fetches the entry, its
-  imports and the hydration chunk in parallel, instead of the entry, then its imports, then
-  the chunk once the first seeded host connects. No bytes change; client-only pages, which
-  aren't rendered by `page()`, still never fetch the chunk. Checked by the isomorphic
-  example's production test (`examples/isomorphic/test/prod.node.test.ts`) and
+- **Preloading (gyral-g1r.21):** a server-rendered page knows it will need the chunk, so the server
+  says so up front. `clientAssetsFromManifest(manifestPath, entry, also?)` (`@gyral/ssr/static`)
+  reads Vite's build manifest and returns the entry's URL plus `modulepreload`: the entry itself
+  first (when anything else is listed: with route chunks added it would otherwise queue behind them
+  on HTTP/1.1's six connections — measured in gyral-shop, the buy box defined at 979 ms instead of
+  698 ms), then its static imports (depth first) and the hydration chunk (the dynamic import whose
+  source is core's `hydration-client`, from `packages/core/src/` or an installed
+  `@gyral/core/dist/`) with its own imports. The app's own lazy chunks are not included unless
+  named: `clientAssets(manifest, entry, also)` (or `clientAssetsFromManifest`'s `also`) adds those
+  modules (manifest keys such as a route's `src/routes/product.ts`) with their imports, and
+  `productionServer` gives `createApp` a `preload(modules)` that returns the list with them (cached
+  per list), so a route preloads its own chunk (2026-10-06, found migrating gyral-shop).
+  `page({ modulepreload })` writes one `<link rel="modulepreload">` per URL before the module
+  scripts, and `productionServer` hands the list to `createApp`. The browser then fetches the entry,
+  its imports and the hydration chunk in parallel, instead of the entry, then its imports, then the
+  chunk once the first seeded host connects. No bytes change; client-only pages, which aren't
+  rendered by `page()`, still never fetch the chunk. Checked by the isomorphic example's production
+  test (`examples/isomorphic/test/prod.node.test.ts`) and
   `packages/ssr/test/modulepreload.node.test.ts`.
 
 ## Each component hydrates on its own
@@ -155,9 +155,9 @@ toggle a `<details>` before scripts run.
   as a client render would, so the first update skips unchanged rows.
 - **`raw()`:** the start anchor, then as many nodes as the markup parses to on its own (a
   `<template>` parse, as the client does): non-text nodes by node name, text by length.
-- **Elements:** the local name must match; parts are adopted (`AttrPart.adopt`: committed
-  values set, nothing written); then the children are walked unless a text part owns them
-  (`<textarea>`, `<title>`), the element is a light host, or it is a custom element without
+- **Elements:** the local name must match; parts are adopted (`adoptAttr` in `adopt-attr.ts`:
+  committed values set, nothing written); then the children are walked unless a text part owns
+  them (`<textarea>`, `<title>`), the element is a light host, or it is a custom element without
   template children. Server-only attributes on nested hosts (`data-gyral-seed`,
   `data-gyral-light`, `defer-hydration`, `data-gyral-hydrate`) are never compared: the walk
   checks bound attributes only, never the static attribute set (hooks' server halves and
@@ -201,10 +201,10 @@ locale differences), third parties changing the DOM before scripts run (translat
 managers, extensions, CDN email obfuscation), or a stale cached page served with a new
 deployment.
 
-| Mode        | Detection                                                                                                            | On mismatch                                                                                                                                                |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| development | every row of the walk table above, plus the template id comment before each instance (06) and text content of values | **throw** `HydrationMismatch` with the tag, the template's `loc` (01), the path, and expected vs found                                                     |
-| production  | structural only: node type and local name at each step, and enough text length                                       | **recover this component only:** `replaceChildren()` on its root, render fresh, log a warning (and a devtools event). The rest of the page stays hydrated. |
+| Mode        | Detection                                                                                                            | On mismatch                                                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| development | every row of the walk table above, plus the template id comment before each instance (06) and text content of values | **throw** `HydrationMismatch` with the tag, the template's `loc` when it has one (01), the path, and expected vs found              |
+| production  | structural only: node type and local name at each step, and enough text length                                       | **recover this component only:** `replaceChildren()` on its root, render fresh, log a warning. The rest of the page stays hydrated. |
 
 **Phase 5 notes:**
 
@@ -217,9 +217,12 @@ deployment.
 - The thrown error is caught by the scheduler like any render error (04 "Errors"): it is
   logged with the tag, the host keeps the server DOM, and the next render tries again. The
   devtools hook gets a `mismatch` event (development builds; production has no hook).
-- Messages: `gyral: hydration mismatch in <shop-cart> (template at src/cart.ts:12:5) at
-ul[1] › li[2] › #text[0]: expected text "3", found text "4".` Production keeps the path and
-  the expected/found part (useful in field reports) without the explanation.
+- Messages, for example:
+  `gyral: hydration mismatch in <shop-cart> at ul[1] › li[2] › #text[0]: expected text "3", found text "4".`
+  Development adds the explanation; production keeps the path and the expected/found part (useful in
+  field reports). The `(template at file:line:col)` part appears only for a template object that
+  carries `loc`; runtime and compiled objects don't (01 "The template object"), so in apps the tag
+  and path locate the mismatch.
 
 No in-place patching of a mismatched DOM: rebuilding one component is simple and predictable.
 
@@ -244,7 +247,7 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 
 - `@gyral/testing`'s `mountSsr` keeps parsing server output with `setHTMLUnsafe` (Chromium-only
   tests; newly available is fine there).
-- `hydrated()` becomes: release islands if asked, then `await settled()` (04).
+- `hydrated()` releases islands if asked, then awaits `settled()` (04).
 - Every hydration test runs against development and production builds of core (the
   `browser-prod` Vitest project stays).
 - **Phase 5:** `core/test/view/walk-hydration.test.ts` (the walk), `mismatch-hydration.test.ts`
@@ -253,13 +256,10 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
   (hosts, style swap, child-first and parent-first order, islands), the `@gyral/ssr` suites
   and the examples' hydration tests (both projects), and `pnpm smoke:prod`, which now also
   checks that every element the parser built is still in the page after hydration.
-- **Phase 5, size:** hydration added about 1.8 KiB gzip to every client bundle (the view line
-  went from 5.47 to 7.22 KiB), whether the app server-rendered or not. **gyral-g1r.18:** it now
-  loads lazily ("Loading"): a client-only app's initial chunk carries none of it (hello-world's
-  initial chunk 10.3 → 9.1 KiB gzip when it landed). The separate chunk is about 2.8 KiB gzip and is fetched
-  only by server-rendered pages; split from the main chunk it compresses worse, so all chunks
-  together are about 1 KiB larger than one bundle, and a server-rendered page fetches it one
-  round trip after the entry, unless the server preloads it ("Loading", gyral-g1r.21).
+- **Size:** Phase 5 added hydration to every client bundle (about 1.8 KiB gzip); since
+  gyral-g1r.18 it loads lazily ("Loading"), so a client-only app's initial chunk carries none
+  of it and only server-rendered pages fetch the separate chunk, preloaded by the server
+  ("Loading", gyral-g1r.21). Measured sizes: ADR 0018 "Size pass" and "Result".
   `loading-hydration.test.ts` checks both sides.
 
 ## Native primitives

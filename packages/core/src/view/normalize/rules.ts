@@ -68,11 +68,11 @@ export const msg = {
     `creates SVG elements only inside <svg>. Wrap it: <svg viewBox="…"><${tag} …></${tag}></svg>.`,
   // 11
   serverOnly: (): string => SERVER_ONLY,
-  // 12 (proposed)
+  // 12
   textContent: (tag: string): string =>
     `A hole in <${tag}> must be its whole content. Write <${tag}>${H}</${tag}> and build the ` +
     `text in the value: <${tag}>\${\`\${page} | Site\`}</${tag}>.`,
-  // 13 (proposed)
+  // 13
   charRef: (ref: string): string =>
     `&${ref}; in the static text of a bound or custom-element attribute is a named character ` +
     `reference the normalizer doesn't decode (it knows &amp; &lt; &gt; &quot; &apos; &nbsp;). ` +

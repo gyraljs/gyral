@@ -1,16 +1,21 @@
 # 03 — Lists
 
-Status: **accepted** (2026-10-06). ADR 0018 (decision D). Phase 2.
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018 (decision D). Phase 2.
 
 ## The API
 
 ```ts
-each<T, K extends string | number, P = undefined>(
+each<T>(
   items: readonly T[],
-  key: (item: T) => K,
+  key: (item: T) => string | number,
+  row: (item: T) => ChildValue,
+): ListResult;
+each<T, P>(
+  items: readonly T[],
+  key: (item: T) => string | number,
   row: (item: T, picked: P) => ChildValue,
-  pick?: (item: T) => P,
-): ListResult
+  pick: (item: T) => P,
+): ListResult;
 ```
 
 ```ts
@@ -79,11 +84,12 @@ Two guards:
    `ctx`, locals) is an error: "`row` reads `s.selected`; return it from `pick` and take it as
    the second argument." A helper function declared beside the row is followed instead of
    flagged: calling it is fine when it, too, reads only those.
-2. **Development check:** skipped rows are re-evaluated anyway and their template results
-   compared with the committed ones (template, by id or identity, and values, recursively). A
-   difference warns once per call site: "a row depends on something not passed through `item` or `pick`". It
-   catches what the lint can't see, such as a helper reading changing module state. At most 200 (per flush, reset by the scheduler)
-   skipped rows are checked per flush, rotating through the list. Production has no check.
+2. **Development check:** after each commit, rows are re-evaluated anyway and their results
+   compared with what is committed (template, by id or identity, and values, recursively). A
+   difference warns once per row function: "… depends on something not passed through `item`
+   or `pick`" (`view/render/dev-check.ts`). It catches what the lint can't see, such as a
+   helper reading changing module state. At most 200 rows are checked per flush (per `render`
+   call outside one), rotating through each list. Production has no check.
 
 ## Keys
 
@@ -141,12 +147,12 @@ compare columns, not absolute values):
 - `moveBefore` costs 0–10% over `insertBefore` on move-heavy changes; it stays (it keeps focus
   and element state, step 4).
 
-**Size of each half (gyral-g1r.18):** in a production bundle the two-ended scan costs about
-0.08 KiB gzip and the LIS about 0.13 KiB (both only in apps that call `each`). Neither is dropped:
-with LIS only, "swap rows" (0.15 ms) is no longer faster than lit-html's (0.13–0.15 ms in the
-renderer benchmark); with the two-ended scan only, "replace first and last" takes 0.63 ms instead
-of 0.13 ms. Bench rerun after the size pass: (a) 0.150 / 0.125, (b) 0.070 / 0.625, (c) 0.070 /
-0.130 ms (swap / replace first and last).
+**Size of each half (gyral-g1r.18):** in a production bundle the two-ended scan costs about 0.08 KiB
+gzip and the LIS about 0.13 KiB (both only in apps that call `each`). Neither is dropped: with LIS
+only, "swap rows" (0.15 ms) was no longer faster than lit-html's (0.13–0.15 ms in the last in-repo
+comparison, below); with the two-ended scan only, "replace first and last" takes 0.63 ms instead of
+0.13 ms. Bench rerun after the size pass: (a) 0.150 / 0.125, (b) 0.070 / 0.625, (c) 0.070 / 0.130 ms
+(swap / replace first and last).
 
 ### The renderer against lit-html (last in-repo run, 2026-10-06)
 

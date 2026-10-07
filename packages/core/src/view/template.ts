@@ -19,7 +19,7 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): Templ
   return { [SOURCE]: strings, values };
 }
 
-/** Internal: what the template compiler (Phase 6) rewrites `html` calls into. */
+/** Internal: what the template compiler (`@gyral/core/vite`) rewrites `html` calls into. */
 export function compiled(template: TemplateObject, values: readonly unknown[]): TemplateResult {
   return { [SOURCE]: template, values };
 }

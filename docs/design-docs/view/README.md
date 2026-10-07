@@ -4,8 +4,9 @@ Behavioural specs for Gyral's own view layer ([ADR 0018](../0018-view-layer.md),
 gyral-g1r). They say **what** happens and why, in Gyral's terms. They are the only design input
 for implementation (clean room, below).
 
-Status: **accepted** (2026-10-06, reviewed by the owner). Change a spec before
-changing behaviour; a spec and its conformance tests move together.
+Status: **accepted** (2026-10-06, reviewed by the owner), shipped in 0.3.0. Change a spec
+before changing behaviour; a spec and its conformance tests move together. The Phase column
+records which implementation phase built each part.
 
 | Spec                                         | Covers                                                                                    | Phase |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------- | ----- |
@@ -44,7 +45,8 @@ changing behaviour; a spec and its conformance tests move together.
 - Write tests from the specs. Don't port another library's tests.
 - When choosing an algorithm (for example keyed reconciliation), benchmark the candidates and
   record the result and the reason in the spec.
-- `scripts/check-provenance.mjs` (Phase 1) fails on Lit identifiers and markers in Gyral source.
+- `scripts/check-provenance.mjs` (part of `pnpm invariants`) fails on Lit identifiers and
+  markers in Gyral source.
 
 ## Conformance
 

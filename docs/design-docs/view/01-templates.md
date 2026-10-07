@@ -1,6 +1,7 @@
 # 01 — Templates
 
-Status: **accepted** (2026-10-06). ADR 0018. Phases 1 (normalizer, runtime path) and 6 (compiler).
+Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018. Phases 1 (normalizer, runtime path)
+and 6 (compiler).
 
 ## Authoring
 
@@ -30,12 +31,12 @@ function, so server and client can't disagree about a template's structure or id
 
 Steps, in order:
 
-1. **Tokenize** the strings with an HTML tokenizer state machine (data, tag name, attribute
-   name, attribute value in double/single/no quotes, comment, raw text for `<script>` and
-   `<style>`, escapable raw text for `<textarea>` and `<title>`). The state at each hole decides
-   its kind (02) or a rule violation (09).
-2. **Minify whitespace** (rules below). Binding positions never move: the strings keep their
+1. **Minify whitespace** (rules below). Binding positions never move: the strings keep their
    count, so holes line up.
+2. **Tokenize** the minified strings with an HTML tokenizer state machine (data, tag name,
+   attribute name, attribute value in double/single/no quotes, comment, raw text for `<script>`
+   and `<style>`, escapable raw text for `<textarea>` and `<title>`) and build the tree. The
+   state at each hole decides its kind (02) or a rule violation (09).
 3. **Emit the template HTML** for the client: static markup with every bound attribute removed
    and every child hole replaced by nothing, or by an anchor comment where the anchor rule
    needs one (02). The emitted HTML is also exactly what the server writes around values (06).
@@ -46,7 +47,7 @@ Steps, in order:
    strings for attribute holes; a child hole's kind also says whether it is its parent's only
    child node (`sole`). Paths are child-index paths from the template's content root. Entries
    are compact tuples (below).
-5. **Compute the template id** from the normalized strings (after step 2).
+5. **Compute the template id** from the minified strings (step 1).
 
 ### Whitespace
 
@@ -90,10 +91,8 @@ There is no opt-out tag. Exact whitespace belongs in `<pre>`, or in a value.
   markup at call sites in two modules is two objects, so switching between them replaces the
   instance instead of patching it. Hydration in such a build is structural only, which is
   already the production rule (07).
-- Measured on the corpus (the examples' and packages' templates: 264 call sites, 210 objects,
-  client production build, minified): 35.8 → 32.4 KB raw, 10.32 → 8.27 KiB gzip (−2.06 KiB,
-  a fifth). Every example's bundle got 2-98 B gzip smaller, initial chunks 5-81 B; the
-  examples have few templates (hello-world's initial chunk 8.87 → 8.86 KiB).
+- Measured on the corpus and every example: ADR 0018 "Template ids out of production client
+  builds".
 
 ### The template object
 
@@ -104,7 +103,7 @@ interface TemplateObject {
   readonly parts: readonly PartSpec[]; // compact tuples, below; see 02 for kinds
   readonly server?: true; // only when it has document-level tags (<!doctype>, <html>, …)
   readonly segments?: readonly Segment[]; // the server's writing plan (06); not in client builds
-  readonly loc?: string; // development only: file:line:column of the call site
+  readonly loc?: string; // file:line:column of the call site, when known (below)
 }
 
 type PartSpec =
@@ -130,6 +129,10 @@ Every example's bundle got smaller (35-97 B gzip all chunks, 26-75 B initial; he
 initial chunk 8.91 → 8.87 KiB), since the renderer's own checks got shorter too. Ids were then
 about a fifth of the corpus' gzip size (random base-36 text doesn't compress), so production
 client builds now leave them out ("Template ids").
+
+`loc` is set only when the normalizer is given a call site: the compiler does, for its build
+errors, and leaves `loc` out of the objects it emits. The runtime preparer has no call site to
+give, so runtime template objects carry none either.
 
 `segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
 strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
@@ -194,8 +197,8 @@ structurally (07).
 ## Instantiation
 
 - Each template object gets one `<template>` element, created on first use.
-- Single-root templates clone only the root node. Instances are created with
-  `document.importNode(template.content, true)`, not
+- A template with one root node and no root-level holes clones only that node. Instances are
+  created with `document.importNode(template.content, true)`, not
   `template.content.cloneNode(true)`: nested custom elements are created in the document and
   upgraded at once, so parts set props on upgraded elements (05, upgrade capture).
 - Parts are found by following paths with `firstChild`/`nextSibling`, sharing prefixes between
