@@ -113,9 +113,16 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `fake.emitNext(value)` pushes into the newest running call, or use `calls[i].emit(value)`
   for a specific one (gyral-czi.15). Emits into a settled or aborted call are ignored, like
   the real runtime.
-- **Disconnect is asynchronous:** removing an element interrupts its commands on a later
-  tick, so a test must yield before asserting `signal.aborted` — `await clock.advance(0)`
-  under `virtualTime()`, or `await new Promise((r) => setTimeout(r, 0))` with real timers.
+- **Disconnect interrupts synchronously** (contract since 0.3.0, written down in 0.3.1,
+  gyral-g1r.29): `disconnectedCallback` disposes the element's interpreter, which aborts every
+  running or queued command's `AbortController`. `abort` listeners run inside `abort()`, so
+  when `el.remove()` returns, each command's `signal.aborted` is `true`, the listeners a driver
+  added to the signal have run, and no later result of those commands is dispatched. What a
+  driver does after an `await` (a `finally` once its aborted promise settles, a rejection
+  handler) runs on later microtasks, like any promise continuation. Tests assert
+  `signal.aborted` right after `remove()`; they yield (`await Promise.resolve()`, or
+  `await clock.advance(0)` under `virtualTime()`) only to observe such promise-based cleanup.
+  (Until 0.2 the Lit element disconnected through an update cycle and tests had to yield first.)
 - **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
   microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
   promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's

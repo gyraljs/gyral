@@ -206,10 +206,12 @@ describe('commands and drivers', () => {
     await vi.waitFor(() => {
       expect(calls).toHaveLength(1);
     });
+    let heard = false;
+    calls[0]?.signal.addEventListener('abort', () => (heard = true));
     el.remove();
-    await vi.waitFor(() => {
-      expect(calls[0]?.signal.aborted).toBe(true);
-    });
+    // Synchronous (ADR 0006 "Disconnect interrupts synchronously"): no yield needed.
+    expect(calls[0]?.signal.aborted).toBe(true);
+    expect(heard).toBe(true);
     calls[0]?.resolve('a');
     await new Promise((r) => setTimeout(r, 10));
     expect(el.state.log).toEqual(['done:init']);

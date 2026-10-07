@@ -138,6 +138,10 @@ it('loads the user when clicked', async () => {
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
   `signal`, so you can assert that `switch` aborted it.
+- Removing an element interrupts its commands **synchronously**: right after `el.remove()`,
+  every running call's `signal.aborted` is `true` and its `abort` listeners have run; assert
+  without yielding. Only cleanup a driver runs after an `await` needs a yield
+  (`await Promise.resolve()`).
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
   fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
   `reply(status, body)`, `failNext()`.

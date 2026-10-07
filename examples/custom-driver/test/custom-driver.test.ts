@@ -59,8 +59,9 @@ describe('component with a fake chart driver', () => {
     expect(el.shadowRoot?.textContent).toContain('Bar 0:');
     expect(el.shadowRoot?.querySelectorAll('output')[1]?.textContent).toBe('2');
 
+    // Disconnecting interrupts synchronously: disconnectedCallback aborts every running
+    // command's signal (and runs its abort listeners) before remove() returns (ADR 0006).
     el.remove();
-    await clock.advance(0); // interruption on disconnect completes asynchronously
     expect(stream?.signal.aborted).toBe(true);
   });
 });
