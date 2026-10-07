@@ -90,11 +90,16 @@ schema library.
   `prop.value(check)` (a property-only prop, whose check can't run in production) with
   `void 0` in production client builds when the check is a plain reference (`prop.value(Game)`,
   `schemas.game`) or an inline function, so the check and whatever only it uses (a schema
-  module) tree-shake (`compiler/prop-schemas.ts`). A call (`prop.value(v.array(Item))`) is
-  kept: evaluating it could have effects, and the build never changes what runs. To drop such
-  a schema, declare it once (`const Items = v.array(Item)`) with a library whose builders are
-  marked side-effect free, and pass `prop.value(Items)`. `prop.json` keeps its check (attributes
-  are parsed through it), and so do development builds.
+  module) can tree-shake (`compiler/prop-schemas.ts`). The bundler decides: Rolldown (Vite
+  8.3) keeps schema builders in a lazily loaded chunk once the schema library sits in a chunk
+  shared with the entry, even builders marked `/* @__NO_SIDE_EFFECTS__ */` (seen in
+  gyral-shop: valibot used by the entry, an unused `v.array(v.object(…))` kept in a lazy
+  chunk). So the saving applies to single-chunk builds and to schemas whose library isn't
+  shared across chunks; it is a bundler limitation the pass can't work around. A call
+  (`prop.value(v.array(Item))`) is kept: evaluating it could have effects, and the build never
+  changes what runs. To drop such a schema, declare it once (`const Items = v.array(Item)`)
+  with a library whose builders are marked side-effect free, and pass `prop.value(Items)`.
+  `prop.json` keeps its check (attributes are parsed through it), and so do development builds.
 - No property-to-attribute reflection. State that CSS needs goes through custom states
   (`spec.states`).
 

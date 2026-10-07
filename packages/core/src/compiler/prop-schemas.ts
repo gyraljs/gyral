@@ -3,7 +3,9 @@
 // production never checks property sets (or seeds), so its schema or type guard can't run
 // there. Replacing a check that is a plain reference (`prop.value(Game)`, `schemas.game`) or an
 // inline function (`prop.value((u): u is Game => …)`) with `void 0` lets the bundler drop it and
-// whatever only it used, e.g. a schema module. Calls (`prop.value(v.array(Item))`) stay: their
+// whatever only it used, e.g. a schema module (when the bundler can: Rolldown in Vite 8.3 keeps
+// side-effect-free schema builders in a lazy chunk once their library is in a chunk shared with
+// the entry; view/05 "When props are validated"). Calls (`prop.value(v.array(Item))`) stay: their
 // evaluation could have effects, and this pass never changes what runs. `prop.json` keeps its
 // check (attributes are parsed through it in production). Development builds keep everything:
 // they validate property sets.
