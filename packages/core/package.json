@@ -1,7 +1,7 @@
 {
   "name": "@gyral/core",
-  "version": "0.2.0",
-  "description": "Gyral core: Model-View-Intent web components on Lit and the web platform. Inspired by Cycle.js.",
+  "version": "0.3.0",
+  "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer. Inspired by Cycle.js.",
   "license": "MIT",
   "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",
@@ -17,12 +17,23 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./vite": "./src/vite.ts"
+    "./server": "./src/server.ts",
+    "./vite": "./src/vite.ts",
+    "./compiled": "./src/view/compiled.ts",
+    "./eslint": "./src/eslint/index.ts"
   },
   "imports": {
     "#devtools": {
       "development": "./src/devtools.ts",
       "default": "./src/devtools-off.ts"
+    },
+    "#prepare": {
+      "gyral-compiled": "./src/view/prepare-stub.ts",
+      "default": "./src/view/prepare.ts"
+    },
+    "#view-dev": {
+      "development": "./src/view/dev.ts",
+      "default": "./src/view/dev-off.ts"
     }
   },
   "publishConfig": {
@@ -31,15 +42,35 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
       "./vite": {
         "types": "./dist/vite.d.ts",
         "default": "./dist/vite.js"
+      },
+      "./compiled": {
+        "types": "./dist/view/compiled.d.ts",
+        "default": "./dist/view/compiled.js"
+      },
+      "./eslint": {
+        "types": "./dist/eslint/index.d.ts",
+        "default": "./dist/eslint/index.js"
       }
     },
     "imports": {
       "#devtools": {
         "development": "./dist/devtools.js",
         "default": "./dist/devtools-off.js"
+      },
+      "#prepare": {
+        "gyral-compiled": "./dist/view/prepare-stub.js",
+        "default": "./dist/view/prepare.js"
+      },
+      "#view-dev": {
+        "development": "./dist/view/dev.js",
+        "default": "./dist/view/dev-off.js"
       }
     }
   },
@@ -58,9 +89,24 @@
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
-    "lit": "^3.3.0"
+    "eslint": "^9.0.0 || ^10.0.0",
+    "parse5": "^7.0.0 || ^8.0.0",
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "eslint": {
+      "optional": true
+    },
+    "parse5": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "lit": "3.3.3"
+    "eslint": "10.12.0",
+    "parse5": "8.0.1",
+    "vite": "8.3.2"
   }
 }

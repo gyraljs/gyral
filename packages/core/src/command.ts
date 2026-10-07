@@ -1,6 +1,9 @@
-// Effects as data (docs/design-docs/0006-effects-and-drivers.md). Plain TypeScript only:
+// Effects as data (docs/design-docs/0006-effects-and-drivers.md). Plain TypeScript only: the
+// interpreter lives in ./internal/ (ADR 0015); `command()` registers it (features.ts), so apps
+// that build no commands don't bundle it.
+import { features } from './features.js';
+import { hostInterpreter } from './internal/interpreter.js';
 import type { IntentRejected } from './types.js';
-// the interpreter lives in ./internal/ (ADR 0015).
 
 /** How commands in the same lane interact. See ADR 0006 for the table. */
 export type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';
@@ -79,6 +82,7 @@ export function command<I, O, E, MS, MF = MS>(
   input: I,
   handlers: CommandHandlers<O, E, MS, MF>,
 ): Command<MS | MF> {
+  features.commands = hostInterpreter;
   const { onFailure, key, concurrency } = handlers;
   return {
     driver: driver,

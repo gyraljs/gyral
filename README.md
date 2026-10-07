@@ -9,7 +9,7 @@ _Inspired by [Cycle.js](https://cycle.js.org)._
 
 Gyral keeps the core idea of Cycle.js (your app is a pure function, side effects happen at
 the edges as data, and data flows in one visible loop) and rebuilds it on today's platform:
-custom elements and Shadow DOM, [Lit](https://lit.dev) templates, semantic HTML, modern CSS.
+custom elements and Shadow DOM, its own small template layer, semantic HTML, modern CSS.
 No stream library to learn.
 
 ```ts
@@ -43,8 +43,9 @@ define<{ count: number }, Msg>('gy-counter', {
 > (`bd ready`); architecture is in [ARCHITECTURE.md](ARCHITECTURE.md), decisions in
 > [docs/design-docs](docs/design-docs/index.md).
 
-Using Gyral in your own app (peer dependencies, Vite dedupe, SSR checklist):
-[docs/references/consumer-setup.md](docs/references/consumer-setup.md).
+Using Gyral in your own app (packages, Vite preset, template compiler, server rendering):
+[docs/references/consumer-setup.md](docs/references/consumer-setup.md). Upgrading from 0.2:
+[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md).
 
 ## Using Gyral with AI coding agents
 

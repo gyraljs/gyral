@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/rejected.ssr.html?raw';
 
 // The no-JS path (server.node.test.ts golden file) and the JS path (form() intent in the
@@ -12,12 +13,23 @@ const rejected = {
   confirm: 'different!',
 };
 
-/** Structure + sorted attributes + text; ignores Lit's comment markers and whitespace. */
+/**
+ * Structure + sorted attributes + text; ignores comments and whitespace. An input's value is
+ * read live: the client writes the `value` attribute only on first creation, then `.value`
+ * (view/02-bindings.md "Live form state"), while the server writes the current value.
+ * Passwords are the exception: the model never holds them, so no render writes them and the
+ * JS path keeps what the user typed, while the no-JS page can't refill them. They are
+ * compared by attribute (the model's `''`).
+ */
 function canonical(node: Node): string {
   if (node instanceof Text) return node.data.replace(/\s+/g, ' ').trim();
   if (!(node instanceof Element)) return '';
+  const live =
+    node instanceof HTMLInputElement && node.type !== 'password' ? [`value="${node.value}"`] : [];
   const attrs = [...node.attributes]
+    .filter((a) => live.length === 0 || a.name !== 'value')
     .map((a) => `${a.name}="${a.value}"`)
+    .concat(live)
     .sort()
     .join(' ');
   const children = [...node.childNodes].map(canonical).filter((s) => s !== '');
@@ -39,7 +51,7 @@ describe('JS and no-JS rejections render the same markup', () => {
     await import('../src/register.js');
     const el = document.createElement('gy-register');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const root = el.shadowRoot;
     for (const [name, value] of Object.entries(rejected)) {
       const field = root?.querySelector(`input[name=${name}]`);
@@ -47,7 +59,7 @@ describe('JS and no-JS rejections render the same markup', () => {
     }
     root?.querySelector('form')?.requestSubmit();
     await new Promise((r) => setTimeout(r, 20));
-    await el.updateComplete;
+    await settled();
     const form = root?.querySelector('form');
     if (form == null) throw new Error('no client form');
     expect(el.state.errors).toEqual({
@@ -55,5 +67,7 @@ describe('JS and no-JS rejections render the same markup', () => {
       confirm: ['The passwords do not match.'],
     });
     expect(canonical(form)).toBe(expected);
+    const password = root?.querySelector('input[name=password]') as HTMLInputElement;
+    expect(password.value).toBe('longenough'); // kept for the user to resubmit
   });
 });

@@ -1,4 +1,4 @@
-import { css, define, html, liveBoolean } from '@gyral/core';
+import { css, define, html } from '@gyral/core';
 
 export interface State {
   readonly on: boolean;
@@ -17,7 +17,7 @@ export const Checkbox = define<State, Msg>('gy-checkbox', {
   },
   view: (s, i) => html`
     <p>
-      <input id="toggle" type="checkbox" ?checked=${liveBoolean(s.on)} data-intent=${i.Toggled} />
+      <input id="toggle" type="checkbox" ?checked=${s.on} data-intent=${i.Toggled} />
       <label for="toggle">Toggle me</label>
     </p>
     <p>

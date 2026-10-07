@@ -1,128 +1,71 @@
-// Server rendering for Gyral (docs/design-docs/0012-ssr.md). Runtime-agnostic: returns web
-// `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
-import {
-  defineStoresProvider,
-  scriptSafeJson,
-  STORE_SEED_ATTRIBUTE,
-  StoreRegistry,
-  warnJsonHazard,
-  withStoreScope,
-  type AnyStoreInstance,
-} from '@gyral/core';
-import { nothing } from 'lit';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { renderChunks, serverHtml, type StepScope } from './internal/lit.js';
+// Server rendering for Gyral (docs/design-docs/0012-ssr.md, view/06-server.md). Runtime-agnostic:
+// returns web `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
+// Rendering is `@gyral/core/server`'s; this package adds the page shell, streaming with the
+// request's store scope (ADR 0013), static generation and form actions.
+import { StoreRegistry, withStoreScope, type ChildValue } from '@gyral/core';
+import { development, render, renderToString as renderString } from '@gyral/core/server';
+import { checkPolicy, policyAtRender } from './csp.js';
+import { page, type PageOptions, type RenderOptions } from './page.js';
 
-// <gyral-stores> must be a registered element before templates using it are prepared, so
-// components rendered inside it find its instances and its state is seeded (ADR 0013).
-defineStoresProvider();
-
-export { serverHtml };
+export { page, type PageOptions, type RenderOptions } from './page.js';
+export { contentSecurityPolicy, type CspDirectives, type CspOptions } from './csp.js';
 export { formAction, rejectWith, seeOther } from './forms.js';
 export type { FormActionHandlers, FormReject } from './forms.js';
 
-export interface RenderOptions {
-  /**
-   * This request's store instances (ADR 0013). Components read them during the render; a
-   * store not listed starts from its `init`. Create new instances per request.
-   */
-  readonly stores?: readonly AnyStoreInstance[];
-}
+const coreOptions = (options: RenderOptions) =>
+  options.dev === undefined ? {} : { dev: options.dev };
 
-export interface PageOptions extends RenderOptions {
-  readonly title: string;
-  /** The hydratable app: a regular `lit` `html` template, usually one custom element. */
-  readonly body: unknown;
-  readonly lang?: string;
-  readonly dir?: 'ltr' | 'rtl' | 'auto';
-  readonly description?: string;
-  /** Extra server-only head content, written with `serverHtml` (links, meta). */
-  readonly head?: unknown;
-  /**
-   * Global CSS for the document (your app's own stylesheet text, e.g. a `?raw` import), written
-   * as `<style>` elements in the head. A `</style` inside the text is escaped, so it can't
-   * close the element early. Trusted CSS only: never put user input here.
-   */
-  readonly styles?: string | readonly string[];
-  /** Module scripts to load, e.g. the client entry that imports `@gyral/ssr/hydrate` first. */
-  readonly scripts?: readonly string[];
-}
-
-/** The page-level store seed the client restores before components hydrate (ADR 0013). */
-function storeSeed(stores: readonly AnyStoreInstance[]): unknown {
-  if (stores.length === 0) return nothing;
-  const snapshot = new StoreRegistry(stores).snapshot();
-  for (const [name, state] of Object.entries(snapshot)) {
-    warnJsonHazard(`store "${name}"`, state, 'state');
-  }
-  const json = scriptSafeJson(snapshot);
-  return unsafeHTML(`<script type="application/json" ${STORE_SEED_ATTRIBUTE}>${json}</script>`);
-}
-
-// `</style` (any case) would end the element; `<\/style` is the same text to CSS.
-const styleSafe = (css: string): string => css.replace(/<\/(style)/gi, '<\\/$1');
-
-/** `<style>` elements for `page({ styles })`. */
-function documentStyles(styles: string | readonly string[] | undefined): unknown {
-  if (styles === undefined) return nothing;
-  const sheets = typeof styles === 'string' ? [styles] : styles;
-  return unsafeHTML(sheets.map((css) => `<style>${styleSafe(css)}</style>`).join(''));
-}
-
-/** The server-only document shell around the hydratable body. Never hydrated itself. */
-export function page(options: PageOptions): unknown {
-  const { title, body, description, head, scripts = [], stores = [], styles } = options;
-  return serverHtml`<!doctype html>
-<html lang=${options.lang ?? 'en'} dir=${options.dir ?? 'ltr'}>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${title}</title>
-    ${description === undefined ? nothing : serverHtml`<meta name="description" content=${description}>`}
-    ${documentStyles(styles)}${head ?? nothing}${storeSeed(stores)}
-    ${scripts.map((src) => serverHtml`<script type="module" src=${src}></script>`)}
-  </head>
-  <body>
-    ${body}
-  </body>
-</html>`;
-}
-
-/** Every render step runs with this request's stores in scope. */
-function scopeOf(options: RenderOptions): StepScope {
+/**
+ * Renders to a complete string (tests, caching, static generation), with this request's stores
+ * in scope (ADR 0013).
+ */
+export function renderToString(value: ChildValue, options: RenderOptions = {}): Promise<string> {
   const registry = new StoreRegistry(options.stores ?? []);
-  return (step) => withStoreScope(registry, step);
+  return new Promise((resolve) => {
+    resolve(withStoreScope(registry, () => renderString(value, coreOptions(options))));
+  });
 }
 
-/** Renders to a complete string (tests, caching, static generation). */
-export async function renderToString(value: unknown, options: RenderOptions = {}): Promise<string> {
-  let html = '';
-  for await (const chunk of renderChunks(value, scopeOf(options))) html += chunk;
-  return html;
-}
-
-/** Renders to a byte stream, so the first bytes leave before the whole page is ready. */
+/**
+ * Renders to a byte stream, so the first bytes leave before the whole page is ready. Each pull
+ * renders up to the next component boundary inside this request's store scope, so interleaved
+ * requests never see each other's stores (ADR 0013), on any runtime.
+ */
 export function renderToStream(
-  value: unknown,
+  value: ChildValue,
   options: RenderOptions = {},
 ): ReadableStream<Uint8Array> {
-  const chunks = renderChunks(value, scopeOf(options));
+  const registry = new StoreRegistry(options.stores ?? []);
   const encoder = new TextEncoder();
+  let chunks: Iterator<string> | undefined;
   return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      const next = await chunks.next();
-      if (next.done === true) controller.close();
-      else controller.enqueue(encoder.encode(next.value));
+    pull(controller) {
+      const step = withStoreScope(registry, () => {
+        chunks ??= render(value, coreOptions(options))[Symbol.iterator]();
+        return chunks.next();
+      });
+      if (step.done === true) controller.close();
+      else controller.enqueue(encoder.encode(step.value));
     },
-    async cancel() {
-      await chunks.return(undefined);
+    cancel() {
+      chunks?.return?.();
     },
   });
 }
 
-/** A streaming HTML `Response` for a full page. */
+/**
+ * A streaming HTML `Response` for a full page. `csp` sets the `Content-Security-Policy`
+ * header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
+ * component registered by the time the page renders (and the page's `styles`).
+ */
 export function renderPage(options: PageOptions, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
   if (!headers.has('content-type')) headers.set('content-type', 'text/html; charset=utf-8');
+  const { csp } = options;
+  if (csp !== undefined && !headers.has('content-security-policy')) {
+    const header = typeof csp === 'string' ? csp : policyAtRender(csp, options.styles);
+    if (typeof csp === 'string' && (options.dev ?? development)) checkPolicy(csp);
+    headers.set('content-security-policy', header);
+  }
   return new Response(renderToStream(page(options), options), { ...init, headers });
 }

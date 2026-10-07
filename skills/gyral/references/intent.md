@@ -16,7 +16,9 @@ typo fails to compile). When that element's trigger event fires, Gyral calls the
 
 Override with `data-intent-on`: `keydown`, `keyup`, `focusin`, `focusout`, `toggle`
 (popover, `<details>`), `command` (invoker commands), `change`, `input`, `click`, `submit`.
-Other event types must be listed in `spec.events` (e.g. `['pointerdown']`).
+Any other event type works too when written statically (`data-intent-on="pointerdown"`): the
+component listens for the events its templates name. Only a type that comes from a bound
+`data-intent-on=${…}` and isn't in the list above must be added to `spec.events`.
 
 ## `IntentInput`
 
@@ -71,12 +73,10 @@ export const Filters = define<State, Msg>('my-filters', {
     <div data-intent=${i.Cancel} data-intent-on="keydown">
       <label>
         Search
-        <input type="search" .value=${s.query} data-intent=${i.Typed} />
+        <input type="search" value=${s.query} data-intent=${i.Typed} />
       </label>
     </div>
-    <label
-      >Qty <input type="number" min="1" max="99" .value=${String(s.qty)} data-intent=${i.Qty}
-    /></label>
+    <label>Qty <input type="number" min="1" max="99" value=${s.qty} data-intent=${i.Qty} /></label>
   `,
 });
 ```

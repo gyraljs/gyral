@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run } from '@gyral/testing';
 import { Checkbox } from '../src/checkbox.js';
 
@@ -18,17 +19,17 @@ it('update follows the checked state', () => {
 it('shows ON while checked and off otherwise', async () => {
   const el = document.createElement('gy-checkbox');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const output = () => el.shadowRoot?.querySelector('output')?.textContent;
   const box = el.shadowRoot?.querySelector('input');
   if (box == null) throw new Error('missing checkbox');
   expect(output()).toBe('off');
   box.click();
-  await el.updateComplete;
+  await settled();
   expect(output()).toBe('ON');
   expect(el.state.on).toBe(true);
   box.click();
-  await el.updateComplete;
+  await settled();
   expect(output()).toBe('off');
   expect(el.shadowRoot?.querySelector('label')?.htmlFor).toBe(box.id);
 });

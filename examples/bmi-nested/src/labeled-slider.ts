@@ -1,4 +1,4 @@
-import { css, define, emit, html, live, type Stateless } from '@gyral/core';
+import { css, define, emit, html, prop, type Stateless } from '@gyral/core';
 
 export interface SliderProps {
   readonly label: string;
@@ -17,18 +17,19 @@ type Msg = { readonly _tag: 'Changed'; readonly value: number };
  * A reusable, *controlled* slider: the parent owns the value and passes it down as a prop;
  * the slider only reports changes up. It needs no model state of its own (Cycle's version kept
  * a local `value$` seeded from `props.initial`; here the parent's state is the single source).
- * `live()` compares against the input's current value, so a value the parent clamps or rejects
- * is written back even if it equals the last rendered prop.
+ * `value=` on an input is live form state (view/02-bindings.md): every render compares with the
+ * input's current value, so a value the parent clamps or rejects is written back even if it
+ * equals the last rendered prop.
  */
 export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
   'gy-labeled-slider',
   {
     props: {
-      label: { type: String, required: true },
-      unit: { type: String, required: true },
-      min: { type: Number, required: true },
-      max: { type: Number, required: true },
-      value: { type: Number, required: true },
+      label: prop.string({ required: true }),
+      unit: prop.string({ required: true }),
+      min: prop.number({ required: true }),
+      max: prop.number({ required: true }),
+      value: prop.number({ required: true }),
     },
     // Stateless: no init needed.
     intent: {
@@ -51,7 +52,7 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
         type="range"
         min=${props.min}
         max=${props.max}
-        .value=${live(String(props.value))}
+        value=${props.value}
         data-intent=${i.Changed}
       />
       <output for="slider">${props.value} ${props.unit}</output>

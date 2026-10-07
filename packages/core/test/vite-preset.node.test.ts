@@ -1,43 +1,85 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolveConfig, type UserConfig } from 'vite';
 import { describe, expect, it } from 'vitest';
-import { gyralVitePreset, LIT_PACKAGES, LIT_PREBUNDLE } from '../src/vite.js';
+import {
+  DEFAULT_TEMPLATE_SOURCES,
+  GYRAL_PACKAGES,
+  gyralDependents,
+  gyralVitePreset,
+} from '../src/vite.js';
 
-const SRC = join(import.meta.dirname, '../src');
-
-/** Every `lit` / `lit/...` module imported anywhere in core's source. */
-function litImports(): string[] {
-  const found = new Set<string>();
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) walk(path);
-      else if (entry.name.endsWith('.ts')) {
-        const text = readFileSync(path, 'utf8');
-        for (const m of text.matchAll(/from '(lit(?:\/[^']+)?)'/g)) found.add(m[1] ?? '');
-      }
-    }
-  };
-  walk(SRC);
-  return [...found].sort();
-}
+const noExternal = async (
+  command: 'build' | 'serve',
+  extra: UserConfig = {},
+): Promise<Record<string, unknown>> => {
+  const config = await resolveConfig(
+    { configFile: false, logLevel: 'silent', ...gyralVitePreset(), ...extra },
+    command,
+  );
+  return Object.fromEntries(
+    Object.entries(config.environments).map(([name, env]) => [name, env.resolve.noExternal]),
+  );
+};
 
 describe('gyralVitePreset() (gyral-a7r)', () => {
-  it('dedupes every Lit package and pre-bundles Lit modules', () => {
-    const preset = gyralVitePreset();
-    expect(preset.resolve.dedupe).toEqual([...LIT_PACKAGES]);
-    expect(preset.optimizeDeps.include).toEqual([...LIT_PREBUNDLE]);
+  it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
+    const [compiler, devServer, ...rest] = gyralVitePreset().plugins;
+    expect(rest).toEqual([]);
+    expect(devServer?.name).toBe('gyral:dev-server');
+    expect(devServer?.apply).toBe('serve');
+    expect(compiler?.name).toBe('gyral:template-compiler');
+    expect(compiler?.apply).toBe('build');
+    expect(compiler?.enforce).toBe('pre');
   });
 
-  it('adds extra modules without duplicates', () => {
-    const include = gyralVitePreset({ optimize: ['lit', 'lit/directives/unsafe-html.js'] })
-      .optimizeDeps.include;
-    expect(include.filter((m) => m === 'lit')).toHaveLength(1);
-    expect(include).toContain('lit/directives/unsafe-html.js');
+  it("compiles @gyral/core's html by default (ADR 0018, Phase 3)", () => {
+    expect(DEFAULT_TEMPLATE_SOURCES).toEqual(['@gyral/core']);
   });
 
-  it('pre-bundles every Lit module that core imports (keep LIT_PREBUNDLE in sync)', () => {
-    const missing = litImports().filter((m) => !LIT_PREBUNDLE.includes(m));
-    expect(missing).toEqual([]);
+  it('pre-bundles nothing by default, and extra modules without duplicates', () => {
+    expect(gyralVitePreset().optimizeDeps.include).toEqual([]);
+    expect(gyralVitePreset().resolve.dedupe).toEqual([]);
+    const include = gyralVitePreset({ optimize: ['a', 'b', 'a'] }).optimizeDeps.include;
+    expect(include).toEqual(['a', 'b']);
+  });
+
+  it("runs Gyral's packages through Vite in the dev server's SSR, not in builds (view/06)", async () => {
+    const serve = await noExternal('serve');
+    expect(serve['ssr']).toEqual([GYRAL_PACKAGES]);
+    expect(serve['client']).toEqual([]);
+    expect((await noExternal('build', { environments: { ssr: {} } }))['ssr']).toEqual([]);
+    expect(GYRAL_PACKAGES.test('@gyral/core')).toBe(true);
+    expect(GYRAL_PACKAGES.test('gyral-ish')).toBe(false);
+  });
+
+  it("keeps the app's own noExternal", async () => {
+    expect((await noExternal('serve', { ssr: { noExternal: true } }))['ssr']).toBe(true);
+    const own = await noExternal('serve', { ssr: { noExternal: ['mine'] } });
+    expect(own['ssr']).toEqual(['mine', GYRAL_PACKAGES]);
+  });
+});
+
+describe('gyralDependents()', () => {
+  it("lists the app's dependencies that depend on a Gyral package", () => {
+    const root = mkdtempSync(join(tmpdir(), 'gyral-dependents-'));
+    const pkg = (dir: string, manifest: object): void => {
+      mkdirSync(join(root, dir), { recursive: true });
+      writeFileSync(join(root, dir, 'package.json'), JSON.stringify(manifest));
+    };
+    try {
+      pkg('.', {
+        dependencies: { '@gyral/core': '*', ds: '*', plain: '*', missing: '*' },
+        devDependencies: { kit: '*' },
+      });
+      pkg('node_modules/ds', { peerDependencies: { '@gyral/core': '*' } });
+      pkg('node_modules/kit', { dependencies: { '@gyral/router': '*' } });
+      pkg('node_modules/plain', { dependencies: { other: '*' } });
+      expect(gyralDependents(root)).toEqual(['ds', 'kit']);
+      expect(gyralDependents(join(root, 'nowhere'))).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

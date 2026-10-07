@@ -1,5 +1,3 @@
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '@gyral/ssr/hydrate';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 // The server's real output for /about (kept in sync by server.node.test.ts).

@@ -1,6 +1,6 @@
 {
   "name": "@gyral/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Gyral MCP server: docs search, API lookup, examples, scaffolding and snippet checks for coding agents.",
   "keywords": [
     "gyral",
@@ -8,8 +8,7 @@
     "model-context-protocol",
     "ai",
     "agents",
-    "web-components",
-    "lit"
+    "web-components"
   ],
   "license": "MIT",
   "author": "Mike Zupper",
@@ -69,9 +68,6 @@
     "@gyral/core": "workspace:*",
     "@gyral/http": "workspace:*",
     "@gyral/ssr": "workspace:*",
-    "@gyral/testing": "workspace:*",
-    "@lit-labs/ssr": "4.1.0",
-    "@lit-labs/ssr-client": "1.1.8",
-    "lit": "3.3.3"
+    "@gyral/testing": "workspace:*"
   }
 }

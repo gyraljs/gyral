@@ -25,7 +25,7 @@ export const Race = define<State, Msg>('gy-typeahead-race', {
         type="search"
         autocomplete="off"
         spellcheck="false"
-        .value=${s.query}
+        value=${s.query}
         data-intent=${i.Typed}
       />
     </p>

@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { html, nothing } from 'lit';
+import { html, nothing } from '@gyral/core';
 import type { IntentRejected } from '@gyral/core';
-import { formAction, rejectWith, renderPage, seeOther, serverHtml } from '@gyral/ssr';
+import { formAction, rejectWith, renderPage, seeOther } from '@gyral/ssr';
 import '../src/register.js'; // registers <gy-register> so the server can render it
 import { RegisterForm } from '../src/schema.js';
 
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
   /**
    * Registered accounts. The dev server re-creates the app on every request (to follow source
    * edits), so it creates this once with createState() and passes it in (examples/shared/
@@ -27,11 +29,13 @@ export const createState = (): RegisterState => ({ emails: new Set() });
 /** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
 const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
 
-const baseStyles = serverHtml`<link rel="stylesheet" href="/shared/base.css" />
+const baseStyles = html`<link rel="stylesheet" href="/shared/base.css" />
   <style>
     @layer reset, base;
     @layer base {
-      body > main { max-inline-size: 30rem; }
+      body > main {
+        max-inline-size: 30rem;
+      }
     }
   </style>`;
 
@@ -54,6 +58,7 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
         ></gy-register>
       </main>`,
       scripts: [options.clientEntry],
+      modulepreload: options.modulepreload ?? [],
     },
     { status },
   );

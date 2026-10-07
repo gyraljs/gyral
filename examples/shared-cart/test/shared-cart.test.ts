@@ -1,10 +1,8 @@
 import { afterEach, expect, it } from 'vitest';
-import { resetDocumentStores } from '@gyral/core';
+import { resetDocumentStores, settled } from '@gyral/core';
 import { stepStore } from '@gyral/testing';
 import { cart, count, totalCents } from '../src/cart.js';
 import '../src/components.js';
-
-type Updatable = HTMLElement & { updateComplete: Promise<unknown> };
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -16,17 +14,14 @@ async function mountPage() {
     <main><gy-product-list></gy-product-list></main>
     <aside><gy-cart-panel></gy-cart-panel></aside>`;
   const els = [
-    ...document.querySelectorAll<Updatable>('gy-cart-badge, gy-product-list, gy-cart-panel'),
+    ...document.querySelectorAll<HTMLElement>('gy-cart-badge, gy-product-list, gy-cart-panel'),
   ];
-  const settle = async () => {
-    for (const el of els) await el.updateComplete;
-  };
-  await settle();
+  await settled();
   const [badge, list, panel] = els;
   if (badge === undefined || list === undefined || panel === undefined) throw new Error('mount');
   const click = async (host: Element, selector: string) => {
     host.shadowRoot?.querySelector<HTMLButtonElement>(selector)?.click();
-    await settle();
+    await settled();
   };
   return { badge, list, panel, click };
 }

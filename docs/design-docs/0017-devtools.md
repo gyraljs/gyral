@@ -16,6 +16,9 @@ must cost nothing in production and almost nothing in development when no panel 
   (`performance.now()`):
   - `connect` / `disconnect`: a component instance (`{ tag, id, element }`).
   - `hydrated`: after the first update, with `serverRendered`.
+  - `mismatch`: hydration found server DOM that doesn't match the first render, with the
+    message (view/07-hydration.md "Mismatches"; added in gyral-g1r.10). The panel shows it as
+    a component row.
   - `update`: a message went through a reducer, with `prev` and `next` state.
   - `command`: `issued`, `dropped` (exhaust), `interrupted` (switch, disconnect), `settled`
     (with the driver's output) or `failed` (with its error), plus driver, lane, policy, input

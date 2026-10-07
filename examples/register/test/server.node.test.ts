@@ -18,8 +18,9 @@ const valid = {
 const rejected = { ...valid, name: 'admin', confirm: 'different!' };
 
 const seedOf = (body: string): unknown => {
-  const raw = /data-gyral-seed="([^"]*)"/.exec(body)?.[1] ?? '';
-  return JSON.parse(raw.replaceAll('&quot;', '"').replaceAll('&amp;', '&'));
+  // Single-quoted; only & and ' are escaped (view/06-server.md "Escaping").
+  const raw = /data-gyral-seed='([^']*)'/.exec(body)?.[1] ?? '';
+  return JSON.parse(raw.replaceAll('&#39;', "'").replaceAll('&amp;', '&'));
 };
 
 describe('register server (no-JS path)', () => {

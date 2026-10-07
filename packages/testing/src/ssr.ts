@@ -1,7 +1,7 @@
 // Browser tests for server-rendered pages (gyral-czi.22): put real server output into the
 // document the way a page load would, then import components so they hydrate in place.
 // Server output usually comes from golden fixtures written by Node route tests.
-import { resetDocumentStores } from '@gyral/core';
+import { ISLAND_ATTRIBUTE, resetDocumentStores, settled } from '@gyral/core';
 
 export interface MountSsrOptions {
   /** Restore the page-level store seed (`data-gyral-stores`). Default `true`. */
@@ -18,9 +18,6 @@ export interface MountedSsr {
   readonly unmount: () => void;
 }
 
-// Lit's dev-mode banner is expected noise, not a problem.
-const BENIGN = [/Lit is in dev mode/, /Multiple versions of Lit loaded/];
-
 const describe = (value: unknown): string =>
   value instanceof Error ? `${value.name}: ${value.message}` : String(value);
 
@@ -33,7 +30,7 @@ function watchProblems(): { readonly problems: string[]; readonly stop: () => vo
     (kind: string, original: (...args: unknown[]) => void) =>
     (...args: unknown[]): void => {
       const text = args.map(describe).join(' ');
-      if (!BENIGN.some((re) => re.test(text))) problems.push(`${kind}: ${text}`);
+      problems.push(`${kind}: ${text}`);
       original.apply(console, args);
     };
   console.error = record('console.error', error);
@@ -121,17 +118,17 @@ export function customElementsIn(root: ParentNode): Element[] {
   ]);
 }
 
-const settle = (): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
 export interface HydratedOptions {
   /**
    * Custom element tags allowed to stay undefined (never upgraded). `gyral-stores` is always
    * allowed: in the browser it is a plain scoping element.
    */
   readonly allowUndefined?: readonly string[];
+  /**
+   * Release every lazy island first (`defer-hydration` + `data-gyral-hydrate`), as if each
+   * one's trigger had fired. Default `false`: islands keep waiting.
+   */
+  readonly releaseIslands?: boolean;
 }
 
 // Server-only or deliberately plain elements that are fine to leave un-upgraded.
@@ -151,10 +148,9 @@ export function undefinedElementsIn(
 }
 
 /**
- * Waits until every Gyral/Lit element under the page (shadow roots included) has finished
- * updating, re-scanning until no new elements appear (nested children hydrate after their
- * parents). Elements still deferred (lazy islands and their children) are skipped. A
- * hydration mismatch rejects. It throws when a server-rendered custom element never upgraded
+ * Waits until the page's Gyral components have rendered (docs/design-docs/view/04-scheduler.md
+ * "`settled()`"): releases lazy islands if asked, then `await settled()`. Islands still
+ * deferred are left alone. It throws when a server-rendered custom element never upgraded
  * (import its module, or list it in `allowUndefined`). Given a `MountedSsr`, it also throws
  * when console errors/warnings or uncaught errors were recorded since mounting.
  */
@@ -163,25 +159,14 @@ export async function hydrated(
   options: HydratedOptions = {},
 ): Promise<void> {
   const root = 'unmount' in page ? page.root : page;
-  // Elements still under Lit's `defer-hydration` (lazy islands waiting for their trigger,
-  // and children inside them) have nothing to wait for yet (gyral-4k7.4). A child released by
-  // its parent's hydration joins the ready set on the next pass.
-  const ready = (): Element[] =>
-    customElementsIn(root).filter((el) => !el.hasAttribute('defer-hydration'));
-  let seen = new Set<Element>();
-  for (let pass = 0; pass < 10; pass += 1) {
-    await Promise.all(
-      ready().map(
-        (el) =>
-          (el as Partial<{ updateComplete: Promise<unknown> }>).updateComplete ?? Promise.resolve(),
-      ),
-    );
-    await settle();
-    const now = new Set(ready());
-    const stable = now.size === seen.size && [...now].every((el) => seen.has(el));
-    seen = now;
-    if (stable) break;
+  if (options.releaseIslands === true) {
+    for (const el of customElementsIn(root)) {
+      if (!el.hasAttribute(ISLAND_ATTRIBUTE)) continue;
+      el.removeAttribute(ISLAND_ATTRIBUTE);
+      el.removeAttribute('defer-hydration'); // the element connects now (view/07 "Islands")
+    }
   }
+  await settled();
   const never = undefinedElementsIn(root, options.allowUndefined);
   if (never.length > 0) {
     throw new Error(

@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04). Requested by gyral-shop (P1, SEO).
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): light DOM is a native output mode of the new server renderer; the stream filter and hidden markers go away. Lit-specific text below describes 0.2.x.
+
 ## Context
 
 Every Gyral component rendered into a shadow root, and on the server into Declarative Shadow
@@ -163,3 +165,18 @@ Before the fix, six light-DOM hydration tests failed there; they all pass now.
 
 **Remaining private API.** None for light DOM. The czi.31 monitor (upstream light-DOM SSR)
 still applies to the marker-hiding SSR filter.
+
+## Addendum: native light-DOM output (gyral-g1r.9, 2026-10-06)
+
+The Gyral server renderer writes a light component's view as its children directly (no DSD to
+unwrap, no hidden markers), still marking the host `data-gyral-light`. Children written inside
+a light component's tag by its parent are now a server error (whitespace-only children are
+dropped), since the component owns its children. See view/06-server.md "Components".
+
+## Addendum: hydrating light hosts in core (gyral-g1r.10, 2026-10-06)
+
+A light host hydrates its own children in place with core's walk (view/07-hydration.md): no
+markers to reveal, no hydrate import, no dependence on evaluation order. `data-gyral-light`
+stays on the host after hydration; a parent's walk uses it to skip the host's content whole,
+so a light child may hydrate before or after its parent. A parent template that gives a light
+host children (other than whitespace) is a hydration mismatch, as it is a server error.

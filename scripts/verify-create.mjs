@@ -93,6 +93,10 @@ try {
       if (!html.includes('<h1>Hello, Gyral</h1>') || !html.includes('shadowrootmode="open"')) {
         throw new Error('ssr: dist/static/index.html is not the prerendered home page');
       }
+      // The installed @gyral/core's hydration chunk is found in the manifest (gyral-g1r.21).
+      if (!/<link rel="modulepreload" href="\/assets\/hydration-client-[\w-]+\.js">/.test(html)) {
+        throw new Error('ssr: the prerendered page does not preload the hydration chunk');
+      }
     }
     const size = jsSize(join(app, 'dist', template === 'ssr' ? 'client' : ''));
     results.push(`${template}: typecheck, build, test ok; client build ${size}`);

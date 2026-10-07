@@ -1,6 +1,8 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
-import type { AnyDriver, Command, Concurrency, RetryPolicy } from '../command.js';
+import type { AnyDriver, Command, Concurrency, DriverOverrides, RetryPolicy } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
+import { providedDriver } from '../drivers-scope.js';
+import type { FeatureHost } from '../features.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`, retry schedules are timers
@@ -21,14 +23,12 @@ interface Task {
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
 type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
 
-/** Internal rejection for an aborted task; callers check `signal.aborted`, never this. */
-class Interrupted extends Error {}
-
 /** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
 const aborted = (signal: AbortSignal): Promise<never> => {
   const promise = new Promise<never>((_resolve, reject) => {
+    // Callers check `signal.aborted`, never the reason.
     const interrupt = (): void => {
-      reject(new Interrupted('gyral: command interrupted'));
+      reject(signal.reason as Error);
     };
     if (signal.aborted) interrupt();
     else signal.addEventListener('abort', interrupt, { once: true });
@@ -211,3 +211,23 @@ export function makeInterpreter<M>(
 
   return { run, dispose };
 }
+
+/**
+ * A component's interpreter (registered by `command()`, features.ts). Drivers resolve by name:
+ * el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
+ */
+export const hostInterpreter = <M>(
+  el: FeatureHost,
+  drivers: DriverOverrides | undefined,
+  dispatch: (msg: M) => void,
+  trace: CommandTrace | undefined,
+): Interpreter<M> =>
+  makeInterpreter(
+    (driver) =>
+      el.drivers[driver.name] ??
+      providedDriver(el, driver.name) ??
+      drivers?.[driver.name] ??
+      driver,
+    dispatch,
+    trace,
+  );

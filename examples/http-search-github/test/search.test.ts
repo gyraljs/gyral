@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import type { HttpError, HttpRequest } from '@gyral/http';
 import {
   fakeDriver,
@@ -28,7 +29,7 @@ async function mount({ realDebounce = false } = {}) {
     ? { http: github }
     : { http: github, time: fakeDriver(timeDriver, { impl: () => undefined }) };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return { el, github };
 }
 
@@ -53,18 +54,18 @@ afterEach(() => {
 describe('<gy-github-search>', () => {
   it('searches after typing and renders results as links', async () => {
     const { el, github } = await mount();
-    type(el, 'lit');
+    type(el, 'cycle');
     await vi.waitFor(() => {
-      expect(github.inputs.map((r) => r.url)).toEqual([searchUrl('lit')]);
+      expect(github.inputs.map((r) => r.url)).toEqual([searchUrl('cycle')]);
     });
     expect(shadowText(el, 'output')).toEqual(['Searching…']);
-    github.resolveNext({ items: [repo(1, 'lit'), repo(2, 'lit-ssr')] });
+    github.resolveNext({ items: [repo(1, 'cycle'), repo(2, 'cycle-dom')] });
     await vi.waitFor(() => {
-      expect(shadowText(el, 'h2 a')).toEqual(['gyral/lit', 'gyral/lit-ssr']);
+      expect(shadowText(el, 'h2 a')).toEqual(['gyral/cycle', 'gyral/cycle-dom']);
     });
     expect(shadowText(el, 'output')).toEqual(['2 repositories']);
     expect(el.shadowRoot?.querySelector('a')?.getAttribute('href')).toBe(
-      'https://github.com/gyral/lit',
+      'https://github.com/gyral/cycle',
     );
   });
 
@@ -103,7 +104,7 @@ describe('<gy-github-search>', () => {
   it('does not search for blank input', async () => {
     const { el, github } = await mount();
     type(el, '   ');
-    await el.updateComplete;
+    await settled();
     await new Promise((r) => setTimeout(r, 10));
     expect(github.calls).toHaveLength(0);
     expect(shadowText(el, 'output')).toEqual(['Type to search.']);

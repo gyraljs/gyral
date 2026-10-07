@@ -65,6 +65,29 @@ describe('isomorphic production build', () => {
     expect(res.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
   });
 
+  it('preloads the hydration chunk and the entry imports, and serves each (gyral-g1r.21)', async () => {
+    const pages = [
+      readFileSync(join(dist, 'static', 'index.html'), 'utf8'),
+      await (await req('/about')).text(),
+    ];
+    for (const html of pages) {
+      const hrefs = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(
+        (m) => m[1] ?? '',
+      );
+      expect(hrefs.some((h) => /^\/assets\/hydration-client-[\w-]+\.js$/.test(h))).toBe(true);
+      expect(hrefs.length).toBeGreaterThan(1); // the entry's own static imports too
+      expect(hrefs.some((h) => /contact/.test(h))).toBe(false); // lazy app chunks stay lazy
+      expect(html.indexOf('rel="modulepreload"')).toBeLessThan(
+        html.indexOf('<script type="module"'),
+      );
+      for (const href of hrefs) {
+        const res = await req(href);
+        expect(res.status, href).toBe(200);
+        expect(res.headers.get('content-type')).toContain('text/javascript');
+      }
+    }
+  });
+
   it('keeps 404s and refuses paths outside the build', async () => {
     expect((await req('/nope')).status).toBe(404);
     expect((await req('/assets/..%2F..%2Fpackage.json')).status).toBe(404);

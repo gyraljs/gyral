@@ -1,28 +1,51 @@
-import { commandOf, shimInvokers } from './invokers.js';
-import type { IntentInput, IntentParser, Tagged } from './types.js';
+import { commandOf, invokersSupported } from './invokers.js';
+import { hold } from './scheduler.js';
+import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
+import type { Markup } from './view/index.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010). */
 export const OUTPUT_EVENT = 'gyral-output';
 
-/**
- * Events the intent layer listens for on each component's shadow root (capture phase, so
- * non-bubbling events such as `toggle` are seen too). Only `click`, `submit`, `input`,
- * `change` and outputs are default triggers; the rest fire via `data-intent-on="…"`.
- * Components may add more with `spec.events`.
- */
-export const INTENT_EVENTS = [
+/** Default triggers (`defaultTrigger`): every component root listens for these. */
+export const DEFAULT_EVENTS: readonly string[] = [
   'click',
   'submit',
   'input',
   'change',
+  OUTPUT_EVENT,
+];
+
+/**
+ * The events `data-intent-on` usually names. A component root listens (capture phase, so
+ * non-bubbling events such as `toggle` are seen too) for the defaults, for `spec.events`, and
+ * for the `data-intent-on` values in the templates it renders; a template that binds
+ * `data-intent-on` dynamically adds all of these (view/05-element.md "Intent events").
+ */
+export const INTENT_EVENTS: readonly string[] = [
+  ...DEFAULT_EVENTS,
   'keydown',
   'keyup',
   'focusin',
   'focusout',
   'toggle',
   'command',
-  OUTPUT_EVENT,
-] as const;
+];
+
+/** A static `data-intent-on` value, quoted or not (event names have no spaces or quotes). */
+const INTENT_ON = /\sdata-intent-on=["']?([^"'\s>]+)/gi;
+const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
+
+/** The intent events a template's (or `raw()` markup's) `data-intent-on` attributes name. */
+export function eventsOf(markup: Markup): readonly string[] {
+  let events = eventsByTemplate.get(markup);
+  if (events === undefined) {
+    events = markup.parts?.some((p) => p[2] === 'data-intent-on') // a bound attribute's name
+      ? INTENT_EVENTS
+      : Array.from(markup.html.matchAll(INTENT_ON), (m) => m[1] ?? '');
+    eventsByTemplate.set(markup, events);
+  }
+  return events;
+}
 
 const isToggle = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
@@ -33,20 +56,25 @@ function toggleState(event: Event): 'open' | 'closed' | undefined {
   return event.newState === 'open' ? 'open' : 'closed';
 }
 
-const CLICK_INPUT_TYPES = new Set(['button', 'submit', 'reset', 'image']);
+const CLICK_INPUT_TYPES = /^(button|submit|reset|image)$/;
 
 /** The event that fires an intent unless `data-intent-on` overrides it. */
 export function defaultTrigger(el: Element): string {
-  if (el instanceof HTMLFormElement) return 'submit';
-  if (el instanceof HTMLSelectElement) return 'change';
-  if (el instanceof HTMLTextAreaElement) return 'input';
-  if (el instanceof HTMLInputElement) {
-    if (CLICK_INPUT_TYPES.has(el.type)) return 'click';
-    return el.type === 'checkbox' || el.type === 'radio' ? 'change' : 'input';
+  switch (el.localName) {
+    case 'form':
+      return 'submit';
+    case 'select':
+      return 'change';
+    case 'textarea':
+      return 'input';
+    case 'input': {
+      const type = (el as HTMLInputElement).type;
+      if (CLICK_INPUT_TYPES.test(type)) return 'click';
+      return type === 'checkbox' || type === 'radio' ? 'change' : 'input';
+    }
   }
   // Custom elements (autonomous: the name has a dash) talk to their parent via outputs.
-  if (el.localName.includes('-')) return OUTPUT_EVENT;
-  return 'click';
+  return el.localName.includes('-') ? OUTPUT_EVENT : 'click';
 }
 
 function triggerOf(el: Element): string {
@@ -61,6 +89,19 @@ export function markGyralHost(ctor: object): void {
 }
 
 const isGyralHost = (node: Node): boolean => hostClasses.has(node.constructor);
+
+/**
+ * The number of Gyral host ancestors of `el` in the composed tree (across shadow roots): the
+ * scheduler renders smaller depths first (view/04-scheduler.md "Marking").
+ */
+export function hostDepth(el: Element): number {
+  let depth = 0;
+  for (let node: Node | null = el.parentNode; node !== null;) {
+    if (isGyralHost(node)) depth += 1;
+    node = node instanceof ShadowRoot ? node.host : node.parentNode;
+  }
+  return depth;
+}
 
 /**
  * Does `node` belong to the component whose intent root is `root`? `root` is the component's
@@ -141,16 +182,41 @@ export const intentNames: unknown = new Proxy(
   { get: (_target, key) => (typeof key === 'string' ? key : undefined) },
 );
 
-/** Listens for intent events on a component root (capture phase: `toggle` doesn't bubble). */
+/**
+ * A component's intent names as a module-level constant, so pure list rows can name intents
+ * without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
+ * the view gets as `i`:
+ *
+ *   const i = intents<Msg>();
+ *   const Row = (t: Todo) => html`<input value=${t.id} data-intent=${i.Toggle} />`;
+ */
+export function intents<M extends Tagged>(): IntentNames<M> {
+  return intentNames as IntentNames<M>;
+}
+
+/**
+ * Adds capture listeners for `types` to a component root, skipping those in `listening`. A
+ * root that listens for `command` in a browser without invoker commands loads the fallback
+ * (invokers-shim.ts, ADR 0003 tier 3); settled() waits for it.
+ */
 export function listenForIntents(
   root: Node,
-  extra: readonly string[],
+  listening: Set<string>,
+  types: readonly string[],
   handler: (event: Event) => void,
 ): void {
-  for (const type of new Set([...INTENT_EVENTS, ...extra])) {
+  for (const type of types) {
+    if (listening.has(type)) continue;
+    listening.add(type);
     root.addEventListener(type, handler, { capture: true });
+    if (type === 'command' && !invokersSupported()) {
+      hold(
+        import('./invokers-shim.js').then((shim) => {
+          shim.shimInvokers(root);
+        }, reportError),
+      );
+    }
   }
-  shimInvokers(root); // `command` intents in browsers without invoker commands
 }
 
 /** Parses one event with its matching parser and delivers the message (sync or async). */

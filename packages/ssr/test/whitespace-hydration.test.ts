@@ -1,12 +1,10 @@
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/whitespace.ssr.html?raw';
 
 interface Live extends HTMLElement {
   send(msg: { _tag: 'Rename'; name: string }): void;
-  readonly updateComplete: Promise<boolean>;
 }
 
 let page: MountedSsr | undefined;
@@ -34,7 +32,7 @@ describe('indented templates hydrate in place (gyral-9rf)', () => {
   it('hydrates without mismatch and stays live', async () => {
     const before = root('test-ws-table').querySelector('tr');
     el('test-ws-table').send({ _tag: 'Rename', name: 'Grace' });
-    await el('test-ws-table').updateComplete;
+    await settled();
     expect(root('test-ws-table').querySelector('tr')).toBe(before);
     expect(root('test-ws-table').querySelector('b')?.textContent).toBe('Grace');
     expect(errors).not.toHaveBeenCalled();
@@ -49,7 +47,7 @@ describe('indented templates hydrate in place (gyral-9rf)', () => {
     expect(light?.textContent.replace(/\s+/g, ' ').trim()).toBe('Hello Ada again');
   });
 
-  it('builds 13 nodes per table row: 6 elements, 3 texts, 4 Lit markers', () => {
+  it('builds 9 nodes per table row: 6 elements and 3 texts, no markers', () => {
     const row = root('test-ws-table').querySelector('tr');
     if (row === null) throw new Error('no row');
     const nodes: Node[] = [];
@@ -64,7 +62,7 @@ describe('indented templates hydrate in place (gyral-9rf)', () => {
     const count = (type: number): number => nodes.filter((n) => n.nodeType === type).length;
     expect(count(Node.ELEMENT_NODE)).toBe(6);
     expect(count(Node.TEXT_NODE)).toBe(3);
-    expect(count(Node.COMMENT_NODE)).toBe(4);
-    expect(nodes).toHaveLength(13);
+    expect(count(Node.COMMENT_NODE)).toBe(0);
+    expect(nodes).toHaveLength(9);
   });
 });

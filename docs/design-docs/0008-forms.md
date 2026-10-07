@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04). Client half: gyral-czi.3. Server half: gyral-4k7.2 (below).
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): form state uses plain attribute bindings ([view/02-bindings.md](view/02-bindings.md)), `invalid()` is an element hook with a server half, and server output carries no Lit markers. Lit-specific text below describes 0.2.x.
+
 ## Context
 
 Industry direction (React 19 actions, SvelteKit form actions and Superforms, SolidStart

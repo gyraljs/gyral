@@ -5,7 +5,7 @@ import {
   form,
   html,
   invalid,
-  nothing,
+  prop,
   type FormFields,
   type IntentRejected,
 } from '@gyral/core';
@@ -71,8 +71,8 @@ const FIELDS: readonly FieldSpec[] = [
   { name: 'confirm', label: 'Repeat password', type: 'password', autocomplete: 'new-password' },
 ];
 
-// aria-invalid is also rendered as a plain attribute: the server can't run invalid() (it calls
-// setCustomValidity), but no-JS users still need the error announced (ADR 0008 server half).
+// invalid() writes aria-invalid on the server too (its server half), so no-JS users still get
+// the error announced (ADR 0008 server half, view/02-bindings.md "Element hooks").
 const fieldView = (s: State, f: FieldSpec) => {
   const errors = s.errors[f.name];
   return html`<p>
@@ -82,11 +82,10 @@ const fieldView = (s: State, f: FieldSpec) => {
       name=${f.name}
       type=${f.type}
       autocomplete=${f.autocomplete}
-      minlength=${f.minlength ?? nothing}
+      minlength=${f.minlength}
       required
       value=${text(s.values, f.name)}
       aria-describedby=${`${f.name}-error`}
-      aria-invalid=${errors === undefined ? nothing : 'true'}
       ${invalid(errors)}
     />
     <span id=${`${f.name}-error`} class="error">${errors?.join(' ') ?? ''}</span>
@@ -94,7 +93,7 @@ const fieldView = (s: State, f: FieldSpec) => {
 };
 
 export const Register = define<State, Msg, Props>('gy-register', {
-  props: { welcome: { type: String } },
+  props: { welcome: prop.string() },
   init: (props) => ({ values: {}, errors: {}, welcome: props.welcome, pending: undefined }),
   intent: {
     Register: form(RegisterForm, (data, raw) => ({ _tag: 'Register', name: data.name, form: raw })),

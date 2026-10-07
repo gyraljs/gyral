@@ -4,6 +4,12 @@ A read-only audit of what developers would expect from Gyral, checked against th
 ADRs and the gyral.dev docs (`gyral.dev/content/docs`). Every gap below is tracked under epic
 **gyral-1zd**. This file is a snapshot; the beads are the live record.
 
+> **Superseded in part by [ADR 0018](../design-docs/0018-view-layer.md)** (0.3.0): Gyral now
+> renders with its own view layer. The Lit-related items below ("Coming from Lit", the
+> `@lit/localize`, `@lit/context` and `@lit/task` spikes, the lit-html list leak,
+> `ElementDirective`) describe 0.2.x and no longer apply; gyral-1zd.12 is re-scoped to an i18n
+> design of Gyral's own.
+
 ## Already covered well
 
 Declarative Shadow DOM and server rendering (`renderPage`, streaming), lazy hydration
@@ -44,8 +50,9 @@ focus and scroll after SPA navigation on the `pushState` fallback; an accessibil
 
 ## Found later the same day
 
-- **lit-html leak** (benchmark, gyral-9y6): see
-  [consumer-setup.md](consumer-setup.md#known-issue-lit-html-331-list-leak).
+- **lit-html leak** (benchmark, gyral-9y6): a comment node leaked per removed `repeat()` row in
+  lit-html ≥ 3.3.1, worked around with a 3.3.0 pin. Gone with ADR 0018 (`each()` emits no
+  per-row comments).
 - **Demo examples** (gyral-7se.6): `focus()` inside a View Transition update runs too early
   (gyral-6zz); `@gyral/testing` can't step `Hydrated` (gyral-evw); example dev servers recreate
   the app per request (gyral-abk).

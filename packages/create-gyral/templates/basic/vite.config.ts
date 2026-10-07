@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
 import { gyralVitePreset } from '@gyral/core/vite';
 
-// gyralVitePreset(): one copy of Lit, and Lit's modules pre-bundled.
+// gyralVitePreset(): the template compiler (`vite build` checks and precompiles templates).
 export default defineConfig({ ...gyralVitePreset() });

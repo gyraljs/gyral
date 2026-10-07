@@ -27,15 +27,16 @@ before submit; the schema adds what HTML can't express. Schemas may be async (a 
 - `form(definition, (data, formData) => msg)` validates the submission. Invalid → Gyral sends
   `IntentRejected { intent, issues, values }` to the optional `IntentRejected` reducer.
 - `fieldErrors(issues)` groups issues by field name; keep the result in state.
-- `invalid(errors)` mirrors model errors to native validity (`setCustomValidity`,
-  `aria-invalid`, `:user-invalid`); it clears when the user edits the field.
-- Also render `aria-invalid` and the error text as plain markup, so the no-JS (server) render
-  announces errors too.
+- `invalid(errors)` is an element hook: it mirrors model errors to native validity
+  (`setCustomValidity`, `aria-invalid`, `:user-invalid`) and clears when the user edits the
+  field. Its server half writes `aria-invalid="true"` into the start tag, so don't write it
+  twice.
+- Render the error text as plain markup, so the no-JS (server) render announces errors too.
 - `submitForm(url, formData, { onSuccess, onFailure, csrf? })` posts the valid submission; a
   server 422 comes back as the same `IntentRejected`.
 
 ```ts
-import { define, fieldErrors, form, html, invalid, nothing, type FormFields } from '@gyral/core';
+import { define, fieldErrors, form, html, invalid, type FormFields } from '@gyral/core';
 import { submitForm } from '@gyral/http';
 import * as v from 'valibot';
 
@@ -100,7 +101,6 @@ export const Signup = define<State, Msg>('my-signup', {
                 required
                 value=${text(s.values, f)}
                 aria-describedby=${`${f}-error`}
-                aria-invalid=${errors === undefined ? nothing : 'true'}
                 ${invalid(errors)}
               />
               <span id=${`${f}-error`}>${errors?.join(' ') ?? ''}</span>
@@ -114,6 +114,55 @@ export const Signup = define<State, Msg>('my-signup', {
 
 Never keep passwords in state (or re-fill them from `values`): state is serialized into the
 page.
+
+## What the user typed stays until the model changes
+
+`value=`, `?checked`, `?selected`, `?open` and `<textarea>` content are written only when the
+model's value for them changes; then the model wins, even over an edit. Any other render
+(another field's message, a refused edit, a rejection that keeps `values`) leaves the controls
+as the user left them, so passwords the model never holds stay typed after a rejection.
+
+To clear or restore a form, change the model. A keyed row re-creates the controls with the
+model's values (`form.reset()` would restore the first render's values instead):
+
+```ts
+import { define, each, html, intents } from '@gyral/core';
+
+interface State {
+  readonly note: string;
+  readonly formKey: number;
+}
+type Msg = { readonly _tag: 'Note'; readonly value: string } | { readonly _tag: 'Clear' };
+const i = intents<Msg>();
+
+const fields = (s: State) =>
+  html`<form>
+    <textarea name="note" data-intent=${i.Note}>${s.note}</textarea>
+    <button type="button" data-intent=${i.Clear}>Clear</button>
+  </form>`;
+
+export const Notes = define<State, Msg>('my-notes', {
+  init: () => ({ note: '', formKey: 0 }),
+  intent: {
+    Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
+    Clear: () => ({ _tag: 'Clear' }),
+  },
+  update: {
+    Note: (s, m) => ({ ...s, note: m.value }),
+    // A new key: the form's elements are replaced by fresh ones with the model's values.
+    Clear: (s) => ({ note: '', formKey: s.formKey + 1 }),
+  },
+  view: (s) =>
+    html`${each(
+      [s],
+      (x) => x.formKey,
+      (x) => fields(x),
+    )}`,
+});
+```
+
+Here `note: ''` alone would also clear the textarea whenever the model held text; the key also
+covers edits the model never saw (or refused).
 
 ## One control, live: `field()`
 
@@ -140,7 +189,7 @@ export const ZipInput = define<State, Msg>('my-zip', {
     IntentRejected: (s, m) => ({ ...s, error: m.issues[0]?.message }),
   },
   view: (s, i) =>
-    html`<label>ZIP <input name="zip" .value=${s.zip} data-intent=${i.Zip} /></label>
+    html`<label>ZIP <input name="zip" value=${s.zip} data-intent=${i.Zip} /></label>
       <span>${s.error ?? ''}</span>`,
 });
 ```
@@ -155,9 +204,10 @@ export const ZipInput = define<State, Msg>('my-zip', {
   `.initialMessages=${[rejected]}`, so the same `IntentRejected` reducer renders the errors.
   JSON clients get `422` with the issues instead.
 
+The re-rendered page seeds the rejected state, so hydration resumes with the errors shown.
+
 ```ts
-import { html } from 'lit';
-import { defineForm, type IntentRejected } from '@gyral/core';
+import { defineForm, html, type IntentRejected } from '@gyral/core';
 import { formAction, rejectWith, renderPage, seeOther } from '@gyral/ssr';
 import * as v from 'valibot';
 

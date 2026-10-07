@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkDependencies, findEffectLeaks } from './lib/invariants.mjs';
+import { checkDependencies, findEffectLeaks, findEscapedBackticks } from './lib/invariants.mjs';
 
 function dtsFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -44,9 +44,9 @@ for (const pkg of readdirSync('packages')) {
     for (const file of dtsFiles(out)) {
       // Internal modules are implementation details; only what index.d.ts can reach is public.
       if (file.includes(`${join(out, 'internal')}`)) continue;
-      errors.push(
-        ...findEffectLeaks(file.replace(out, `packages/${pkg}/dist`), readFileSync(file, 'utf8')),
-      );
+      const name = file.replace(out, `packages/${pkg}/dist`);
+      const text = readFileSync(file, 'utf8');
+      errors.push(...findEffectLeaks(name, text), ...findEscapedBackticks(name, text));
     }
   }
   rmSync(out, { recursive: true, force: true });
@@ -56,4 +56,6 @@ if (errors.length > 0) {
   console.error(errors.join('\n'));
   process.exit(1);
 }
-console.log('public API: plain declarations; dependency rules hold (ADR 0015)');
+console.log(
+  'public API: plain declarations, Markdown-safe doc comments; dependency rules hold (ADR 0015)',
+);

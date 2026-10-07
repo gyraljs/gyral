@@ -5,7 +5,6 @@
   "keywords": [
     "gyral",
     "web-components",
-    "lit",
     "mvi"
   ],
   "license": "MIT",

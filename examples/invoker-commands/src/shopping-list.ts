@@ -1,4 +1,4 @@
-import { css, define, html, repeat } from '@gyral/core';
+import { css, define, each, html } from '@gyral/core';
 
 export interface State {
   readonly items: readonly string[];
@@ -40,7 +40,7 @@ export const ShoppingList = define<State, Msg>('gy-shopping-list', {
     <section id="list" data-intent=${i.Command} data-intent-on="command" aria-labelledby="list-h">
       <h2 id="list-h">List (${s.items.length})</h2>
       <ul>
-        ${repeat(
+        ${each(
           s.items,
           (item) => item,
           (item) => html`<li>${item}</li>`,

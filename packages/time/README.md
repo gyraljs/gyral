@@ -5,7 +5,7 @@ Gyral time: delays, debounces, periodic ticks and animation frames as commands, 
 ## Install
 
 ```sh
-pnpm add @gyral/time @gyral/core lit
+pnpm add @gyral/time @gyral/core
 ```
 
 ## Example
@@ -21,8 +21,9 @@ import { debounce, delay } from '@gyral/time';
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
-consumer setup guide (peer dependencies, Vite preset, SSR checklist):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral).
+consumer setup guide (packages, Vite preset, server rendering):
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:
+[docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
 
 > Status: pre-alpha. APIs change between 0.x releases.
 

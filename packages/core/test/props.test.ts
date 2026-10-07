@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html } from '../src/index.js';
+import { command, define, defineDriver, html, prop, settled } from '../src/index.js';
 
 interface Props {
   readonly userId: string;
@@ -17,12 +17,13 @@ type Msg =
   | { readonly _tag: 'Loaded'; readonly id: string };
 
 const changes: { props: Props; prev: Props }[] = [];
-let renders = 0;
+/** Each render as `props.userId>state.loadedFor:state.fetched`. */
+let renders: string[] = [];
 
 const load = defineDriver<string, string>({ name: 'load', run: (id) => id });
 
 const Card = define<State, Msg, Props>('test-card', {
-  props: { userId: { type: String, required: true }, label: { type: String, required: true } },
+  props: { userId: prop.string({ required: true }), label: prop.string({ required: true }) },
   init: (props) => ({ draft: '', loadedFor: props.userId, saved: [], fetched: [] }),
   intent: { Save: () => ({ _tag: 'Save' }) },
   update: {
@@ -39,7 +40,7 @@ const Card = define<State, Msg, Props>('test-card', {
     },
   },
   view: (s, i, { props }) => {
-    renders += 1;
+    renders.push(`${props.userId}>${s.loadedFor}:${s.fetched.join()}`);
     return html`<h2>${props.label}</h2>
       <p>${s.loadedFor}|${s.draft}</p>
       <button data-intent=${i.Save}>Save</button>`;
@@ -47,7 +48,7 @@ const Card = define<State, Msg, Props>('test-card', {
 });
 
 const Plain = define<{ readonly n: number }, never, { readonly label: string }>('test-plain', {
-  props: { label: { type: String, required: true } },
+  props: { label: prop.string({ required: true }) },
   init: () => ({ n: 0 }),
   intent: {},
   update: {},
@@ -58,7 +59,7 @@ async function mount(): Promise<InstanceType<typeof Card>> {
   const el = new Card();
   Object.assign(el, { userId: 'u1', label: 'First' });
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return el;
 }
 
@@ -67,7 +68,7 @@ const text = (el: Element, sel: string) => el.shadowRoot?.querySelector(sel)?.te
 afterEach(() => {
   document.body.replaceChildren();
   changes.length = 0;
-  renders = 0;
+  renders = [];
 });
 
 describe('props (ADR 0007)', () => {
@@ -83,21 +84,22 @@ describe('props (ADR 0007)', () => {
   it('sends PropsChanged once per change and renders the new state in the same pass', async () => {
     const el = await mount();
     el.send({ _tag: 'Edit' });
-    await el.updateComplete;
-    renders = 0;
+    await settled();
+    renders = [];
     Object.assign(el, { userId: 'u2' });
-    await el.updateComplete;
+    await settled();
     expect(changes).toHaveLength(1);
     expect(changes[0]?.prev.userId).toBe('u1');
     expect(changes[0]?.props.userId).toBe('u2');
     expect(text(el, 'p')).toBe('u2|');
-    expect(renders).toBe(1);
+    // No render shows the new props with the old state; the second is the Loaded result.
+    expect(renders).toEqual(['u2>u2:', 'u2>u2:u2']);
   });
 
   it('runs commands returned from PropsChanged', async () => {
     const el = await mount();
     Object.assign(el, { userId: 'u3' });
-    await el.updateComplete;
+    await settled();
     await new Promise((r) => setTimeout(r, 0));
     expect(el.state.fetched).toEqual(['u3']);
   });
@@ -106,7 +108,7 @@ describe('props (ADR 0007)', () => {
     const el = await mount();
     el.send({ _tag: 'Edit' });
     Object.assign(el, { label: 'Second' });
-    await el.updateComplete;
+    await settled();
     expect(text(el, 'h2')).toBe('Second');
     expect(el.state.draft).toBe('edited');
   });
@@ -115,9 +117,9 @@ describe('props (ADR 0007)', () => {
     const el = new Plain();
     el.setAttribute('label', 'a');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.setAttribute('label', 'b');
-    await el.updateComplete;
+    await settled();
     expect(text(el, 'p')).toBe('b');
   });
 });
@@ -131,9 +133,9 @@ describe('honest prop types (ADR 0007 addendum)', () => {
 
   const Badge = define<{ readonly n: number }, never, BadgeProps>('test-badge', {
     props: {
-      label: { type: String, required: true },
-      size: { type: Number, default: 3 },
-      note: { type: String },
+      label: prop.string({ required: true }),
+      size: prop.number({ default: 3 }),
+      note: prop.string(),
     },
     init: () => ({ n: 0 }),
     intent: {},
@@ -146,11 +148,11 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     const el = new Badge();
     el.label = 'Sale';
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     expect(text(el, 'p')).toBe('Sale|3|-');
     expect((el as unknown as { size: unknown }).size).toBeUndefined();
     el.size = 5;
-    await el.updateComplete;
+    await settled();
     expect(text(el, 'p')).toBe('Sale|5|-');
   });
 
@@ -163,9 +165,9 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     try {
       const el = new Badge();
       document.body.append(el);
-      await el.updateComplete;
+      await settled();
       el.size = 4;
-      await el.updateComplete;
+      await settled();
     } finally {
       console.warn = original;
     }
@@ -175,7 +177,7 @@ describe('honest prop types (ADR 0007 addendum)', () => {
   it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {
     define<{ readonly n: number }, never, { readonly code: string }>('test-badge-types', {
       // @ts-expect-error -- `code: string` needs `required: true` or a `default`
-      props: { code: { type: String } },
+      props: { code: prop.string() },
       init: () => ({ n: 0 }),
       intent: {},
       update: {},
@@ -183,28 +185,16 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     });
   });
 
-  it('warns once at define() when a prop shadows a built-in element property (gyral-czi.33)', () => {
-    const warnings: string[] = [];
-    const original = console.warn;
-    console.warn = (message: string) => warnings.push(message);
-    try {
-      define<
-        { readonly n: number },
-        never,
-        { readonly hidden?: boolean; readonly title?: string; readonly label?: string }
-      >('test-shadowing-props', {
-        props: { hidden: { type: Boolean }, title: { type: String }, label: { type: String } },
+  it('rejects a prop that shadows a built-in element property in development (view/05)', () => {
+    const shadowing = () =>
+      define('test-shadowing-props', {
+        props: { hidden: prop.boolean(), title: prop.string(), label: prop.string() },
         init: () => ({ n: 0 }),
         intent: {},
         update: {},
         view: () => html``,
       });
-    } finally {
-      console.warn = original;
-    }
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('<test-shadowing-props>');
-    expect(warnings[0]).toContain('hidden, title');
-    expect(warnings[0]).not.toContain('label');
+    expect(shadowing).toThrow(/<test-shadowing-props>.*hidden, title/);
+    expect(shadowing).not.toThrow(/label/);
   });
 });

@@ -1,16 +1,15 @@
-// ORDER IS LOAD-BEARING: hydrate support before anything that imports `lit` (ADR 0012).
-import '../src/hydrate.js';
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import serverHtml from './fixtures/invalid.ssr.html?raw';
 
 interface Live extends HTMLElement {
   readonly state: { readonly saves: number };
-  readonly updateComplete: Promise<boolean>;
   send(msg: { readonly _tag: string }): void;
 }
 
 let page: MountedSsr;
+let serverInput: Element | null | undefined;
 const host = (): Live => {
   const el = document.querySelector('test-invalid-form');
   if (!(el instanceof HTMLElement)) throw new Error('no host');
@@ -29,12 +28,13 @@ const form = (): HTMLFormElement => {
 const settle = () => new Promise((r) => setTimeout(r, 10));
 const reject = async () => {
   host().send({ _tag: 'Reject' });
-  await host().updateComplete;
+  await settled();
   expect(field().validity.customError).toBe(true);
 };
 
 beforeAll(async () => {
   page = mountSsr(serverHtml);
+  serverInput = document.querySelector('test-invalid-form')?.shadowRoot?.querySelector('input');
   await import('./support/invalid.js');
   await hydrated(page);
 });
@@ -44,7 +44,8 @@ afterAll(() => {
 });
 
 describe('invalid() after hydration', () => {
-  it('applies the model error to native validity once hydrated', () => {
+  it('applies the model error to native validity once hydrated, on the server input', () => {
+    expect(field()).toBe(serverInput);
     expect(field().validationMessage).toBe('Email is taken');
     expect(field().getAttribute('aria-invalid')).toBe('true');
   });
@@ -61,7 +62,7 @@ describe('invalid() after hydration', () => {
   it('clears when the model clears the error', async () => {
     await reject();
     host().send({ _tag: 'Clear' });
-    await host().updateComplete;
+    await settled();
     expect(field().validity.valid).toBe(true);
     expect(field().hasAttribute('aria-invalid')).toBe(false);
   });

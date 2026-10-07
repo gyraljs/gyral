@@ -1,6 +1,16 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
-import { child, define, emit, html, repeat, type GyralElementClass } from '../src/index.js';
+import {
+  child,
+  define,
+  each,
+  emit,
+  html,
+  prop,
+  settled,
+  type GyralElementClass,
+} from '../src/index.js';
 import { ctxOf } from './ctx.js';
 
 interface Item {
@@ -8,6 +18,18 @@ interface Item {
   readonly text: string;
   readonly done: boolean;
 }
+
+/** A tiny Standard Schema for Item (no schema library needed in core's tests). */
+const itemSchema: StandardSchemaV1<Item> = {
+  '~standard': {
+    version: 1,
+    vendor: 'test',
+    validate: (value) =>
+      typeof value === 'object' && value !== null && 'id' in value
+        ? { value: value as Item }
+        : { issues: [{ message: 'expected an item' }] },
+  },
+};
 
 type ItemOut = { readonly _tag: 'Toggled'; readonly done: boolean } | { readonly _tag: 'Removed' };
 type ItemMsg =
@@ -17,7 +39,7 @@ type ItemMsg =
 const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>(
   'test-item',
   {
-    props: { item: { attribute: false, required: true } },
+    props: { item: prop.value(itemSchema, { required: true }) },
     init: () => ({ pokes: 0 }),
     intent: {
       Toggle: () => ({ _tag: 'Toggle' }),
@@ -67,10 +89,11 @@ const TestList = define<{ readonly items: readonly Item[] }, ListMsg>('test-list
   view: (s, i) => html`
     <button id="reverse" data-intent=${i.Reverse}>reverse</button>
     <ul>
-      ${repeat(
+      ${each(
         s.items,
         (it) => it.id,
-        (it) => html`<li><test-item .item=${it} data-intent=${i.Item}></test-item></li>`,
+        (it, intent) => html`<li><test-item .item=${it} data-intent=${intent}></test-item></li>`,
+        () => i.Item,
       )}
     </ul>
   `,
@@ -83,14 +106,11 @@ const settle = () => new Promise((r) => setTimeout(r, 0));
 async function mount() {
   const list = new TestList();
   document.body.append(list);
-  await list.updateComplete;
+  await settled();
   const items = () => [...(list.shadowRoot?.querySelectorAll('test-item') ?? [])] as ItemEl[];
-  await Promise.all(items().map((el) => el.updateComplete));
   const press = async (el: ItemEl, cls: string) => {
     el.shadowRoot?.querySelector<HTMLButtonElement>(`.${cls}`)?.click();
-    await settle();
-    await list.updateComplete;
-    await Promise.all(items().map((x) => x.updateComplete));
+    await settled();
   };
   return { list, items, press };
 }
@@ -124,7 +144,7 @@ describe('child components (ADR 0010)', () => {
     if (a === undefined) throw new Error('no item');
     await press(a, 'poke');
     list.shadowRoot?.querySelector<HTMLButtonElement>('#reverse')?.click();
-    await list.updateComplete;
+    await settled();
     const [first, second] = items();
     expect(first?.item.id).toBe('b');
     expect(second).toBe(a);
@@ -167,7 +187,7 @@ describe('child() with a lazy source', () => {
   // A recursive component: it renders itself and parses its own outputs.
   const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
     define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
-      props: { nodeId: { type: String, required: true } },
+      props: { nodeId: prop.string({ required: true }) },
       init: () => ({ kids: [] }),
       intent: {
         Add: () => ({ _tag: 'Add' }),
@@ -187,10 +207,11 @@ describe('child() with a lazy source', () => {
       view: (s, i) => html`
         <button class="add" data-intent=${i.Add}>add</button>
         <button class="rm" data-intent=${i.Remove}>remove</button>
-        ${repeat(
+        ${each(
           s.kids,
           (k) => k,
-          (k) => html`<test-tree .nodeId=${k} data-intent=${i.Child}></test-tree>`,
+          (k, intent) => html`<test-tree .nodeId=${k} data-intent=${intent}></test-tree>`,
+          () => i.Child,
         )}
       `,
     });
@@ -199,14 +220,14 @@ describe('child() with a lazy source', () => {
     const root = new Tree();
     root.nodeId = 'r';
     document.body.append(root);
-    await root.updateComplete;
+    await settled();
     root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
     root.shadowRoot?.querySelector<HTMLButtonElement>('.add')?.click();
-    await root.updateComplete;
+    await settled();
     expect(root.state.kids).toEqual(['r.0', 'r.1']);
     const first = root.shadowRoot?.querySelector('test-tree');
     if (!(first instanceof Tree)) throw new Error('no child tree');
-    await first.updateComplete;
+    await settled();
     first.shadowRoot?.querySelector<HTMLButtonElement>('.rm')?.click();
     await settle();
     expect(root.state.kids).toEqual(['r.1']);

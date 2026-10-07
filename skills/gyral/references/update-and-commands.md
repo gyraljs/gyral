@@ -113,7 +113,7 @@ export const Search = define<State, Msg>('my-search', {
     Hits: (s, m) => (m.query === s.query ? { ...s, hits: m.hits } : s),
   },
   view: (s, i) => html`
-    <input type="search" .value=${s.query} data-intent=${i.Typed} />
+    <input type="search" value=${s.query} data-intent=${i.Typed} />
     <ul>
       ${s.hits.map((h) => html`<li>${h}</li>`)}
     </ul>

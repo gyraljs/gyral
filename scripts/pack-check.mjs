@@ -2,15 +2,48 @@
 // applied, workspace:* rewritten) and checks each tarball with publint, @arethetypeswrong/cli and
 // content assertions. `npm pack --dry-run` must agree on the file list, so the `files` allowlist
 // means the same thing to both tools.
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { publint } from 'publint';
-import { formatMessage } from 'publint/utils';
 
 const run = promisify(execFile);
+const PUBLINT_TIMEOUT_MS = 120_000;
+
+/**
+ * publint's messages for a tarball, from a child process (lib/publint-child.mjs explains why):
+ * resolved from the child's one line of JSON, after which the child is stopped, so neither its
+ * exit nor a hang in it can keep this process alive.
+ */
+function publintMessages(tarball) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['scripts/lib/publint-child.mjs', tarball], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    const done = (fn) => {
+      clearTimeout(timer);
+      child.kill('SIGKILL');
+      fn();
+    };
+    const timer = setTimeout(() => {
+      done(() => reject(new Error(`publint did not answer within ${PUBLINT_TIMEOUT_MS} ms`)));
+    }, PUBLINT_TIMEOUT_MS);
+    child.stderr.on('data', (chunk) => (stderr += chunk));
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+      const line = stdout.indexOf('\n');
+      if (line !== -1) done(() => resolve(JSON.parse(stdout.slice(0, line)).messages));
+    });
+    child.on('exit', (code) => {
+      if (!stdout.includes('\n')) {
+        done(() => reject(new Error(`publint exited ${String(code)} without output:\n${stderr}`)));
+      }
+    });
+  });
+}
 const out = mkdtempSync(join(tmpdir(), 'gyral-pack-'));
 const REQUIRED = ['package.json', 'README.md', 'LICENSE', 'NOTICE'];
 const OPTIONAL = ['CHANGELOG.md']; // written by `changeset version`
@@ -68,15 +101,11 @@ async function check(dir) {
     problems.push(`npm pack --dry-run lists different files:\n  ${npmFiles.join('\n  ')}`);
   }
 
-  // Copy out exactly the file's bytes: a small Buffer can be a view into Node's shared pool,
-  // so `.buffer` alone would hand publint unrelated data ("incorrect header check").
-  const bytes = readFileSync(tarball);
-  const lint = await publint({
-    pack: { tarball: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) },
-    level: 'suggestion',
-    strict: true,
-  });
-  for (const message of lint.messages) problems.push(`publint: ${formatMessage(message, packed)}`);
+  try {
+    for (const message of await publintMessages(tarball)) problems.push(`publint: ${message}`);
+  } catch (error) {
+    problems.push(`publint: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   try {
     await run('pnpm', [

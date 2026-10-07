@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { step } from '@gyral/testing';
 import { Animation, DURATION_MS, keyframes, path } from '../src/animation.js';
 
@@ -34,13 +35,13 @@ describe('<gy-animation>', () => {
   it('starts a fresh CSS animation on every click', async () => {
     const el = document.createElement('gy-animation');
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const target = () => el.shadowRoot?.querySelector('.target');
     const first = target();
     expect(first?.getAnimations()).toEqual([]);
 
     el.shadowRoot?.querySelector('button')?.click();
-    await el.updateComplete;
+    await settled();
     const second = target();
     expect(second).not.toBe(first);
     const [animation] = second?.getAnimations() ?? [];
@@ -48,7 +49,7 @@ describe('<gy-animation>', () => {
     expect((animation as CSSAnimation).animationName).toMatch(/^(travel|flash)$/);
 
     el.shadowRoot?.querySelector('button')?.click();
-    await el.updateComplete;
+    await settled();
     expect(target()).not.toBe(second);
     expect(el.state.runs).toBe(2);
   });

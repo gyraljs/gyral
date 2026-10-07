@@ -1,10 +1,7 @@
 // Tree-scoped driver overrides (gyral-czi.35, ADR 0006 addendum): which driver a command uses.
 // Resolution: el.drivers → nearest driver provider (across shadow roots) → spec.drivers →
 // the command's own driver. Mirrors <gyral-stores> (ADR 0013) for stores.
-import { isServer } from 'lit';
 import type { AnyDriver, DriverOverrides } from './command.js';
-
-const onServer: boolean = isServer;
 
 /** Provider element name: `<gyral-drivers .drivers=${{ http: fake }}>…</gyral-drivers>`. */
 export const DRIVERS_ELEMENT = 'gyral-drivers';
@@ -34,10 +31,9 @@ function overridesOf(node: Element): DriverOverrides | undefined {
 /**
  * The override for `name` from the nearest provider that has one. Providers nest: an inner
  * provider without that driver lets an outer one supply it. Commands never run on the server,
- * so there is nothing to resolve there.
+ * so only the browser calls this.
  */
 export function providedDriver(host: Element, name: string): AnyDriver | undefined {
-  if (onServer) return undefined;
   for (let node: Node | null = host.parentNode; node !== null;) {
     if (node instanceof Element) {
       const driver = overridesOf(node)?.[name];

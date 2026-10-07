@@ -1,6 +1,6 @@
 // CSS follows the same Baseline policy as JS (docs/design-docs/0003-browser-baseline.md):
 // widely available features only, newer ones inside @supports as progressive enhancement.
-// postcss-lit reads the css`` templates in TypeScript components.
+// postcss-styled-syntax reads the css`` templates in TypeScript components.
 /** @type {import('stylelint').Config} */
 export default {
   plugins: ['stylelint-plugin-use-baseline'],
@@ -15,6 +15,6 @@ export default {
       },
     ],
   },
-  overrides: [{ files: ['**/*.ts'], customSyntax: 'postcss-lit' }],
+  overrides: [{ files: ['**/*.ts'], customSyntax: 'postcss-styled-syntax' }],
   ignoreFiles: ['**/node_modules/**', '**/dist/**', 'archive/**', '.claude/worktrees/**'],
 };

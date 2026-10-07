@@ -8,7 +8,6 @@ import {
   type DevEvent,
   type DevtoolsHook,
 } from './devtools-events.js';
-import { warnLeakingLitHtmlOnce } from './lit-html-check.js';
 import type { Tagged } from './types.js';
 
 export const DEVTOOLS_ENABLED: boolean = true;
@@ -50,7 +49,6 @@ export function devLiveComponents(): readonly DevComponentRef[] {
 }
 
 export function devConnect(element: Element, tag: string, connected: boolean): void {
-  warnLeakingLitHtmlOnce();
   if (connected) live.set(element, tag);
   else live.delete(element);
   emit(() => ({
@@ -72,6 +70,10 @@ export function devUpdate(
 
 export function devHydrated(element: Element, tag: string, serverRendered: boolean): void {
   emit(() => ({ kind: 'hydrated', component: ref(element, tag), serverRendered, at: now() }));
+}
+
+export function devMismatch(element: Element, tag: string, message: string): void {
+  emit(() => ({ kind: 'mismatch', component: ref(element, tag), message, at: now() }));
 }
 
 export function devStore(store: string, msg: Tagged, prev: unknown, next: unknown): void {

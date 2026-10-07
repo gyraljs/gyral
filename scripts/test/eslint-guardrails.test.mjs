@@ -1,7 +1,7 @@
 // Proves the ESLint guardrails in eslint.config.js fire, with their remediation messages,
 // on real paths (rules are scoped by file globs, and type-aware linting needs files on disk).
 // Fixtures are written next to real sources, linted with the real config, then removed.
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
@@ -26,17 +26,41 @@ const FIXTURES = {
     'packages/http/src/__lint_fixture_layer__.ts',
     "export { routes } from '@gyral/router';\nexport { define } from '@gyral/core';\n",
   ],
-  ssrLabs: [
-    'packages/ssr/src/__lint_fixture_labs__.ts',
-    "export { render } from '@lit-labs/ssr';\n",
+  ssrLayer: [
+    'packages/ssr/src/__lint_fixture_layer__.ts',
+    "export { mountDevtools } from '@gyral/devtools';\nexport { routes } from '@gyral/router';\n",
+  ],
+  viewEscape: [
+    'packages/core/src/view/__lint_fixture_escape__.ts',
+    "export { define } from '../define.js';\nexport { html } from './template.js';\n",
+  ],
+  viewNestedEscape: [
+    'packages/core/src/view/normalize/__lint_fixture_escape__.ts',
+    "export { html } from '../../templates.js';\nexport { normalize } from './normalize.js';\nexport { html as h } from '../template.js';\n",
+  ],
+  viewInternalImport: [
+    'packages/core/src/view/__lint_fixture_hash__.ts',
+    "export { DEVTOOLS_ENABLED } from '#devtools';\nexport { prepare } from '#prepare';\n",
+  ],
+  viewServer: [
+    'packages/core/src/view/server/__lint_fixture_server__.ts',
+    "export { html } from '../template.js';\nexport { define } from '../../define.js';\n",
   ],
   checked: [
     'packages/core/src/__lint_fixture_checked__.ts',
     [
-      "import { html } from 'lit';",
-      "import { liveBoolean } from './live-boolean.js';",
+      "import { html } from './view/index.js';",
       'export const bad = (on: boolean) => html`<input type="checkbox" .checked=${on} />`;',
-      'export const good = (on: boolean) => html`<input type="checkbox" ?checked=${liveBoolean(on)} />`;',
+      'export const good = (on: boolean) => html`<input type="checkbox" ?checked=${on} />`;',
+      '',
+    ].join('\n'),
+  ],
+  impureRow: [
+    'packages/http/src/__lint_fixture_row__.ts',
+    [
+      "import { each, html } from '@gyral/core';",
+      'export const view = (s: { readonly rows: readonly number[]; readonly selected: number }) =>',
+      '  html`<ul>${each(s.rows, (n) => n, (n) => html`<li>${n === s.selected}</li>`)}</ul>`;',
       '',
     ].join('\n'),
   ],
@@ -45,9 +69,19 @@ const FIXTURES = {
 /** @type {Record<string, import('eslint').Linter.LintMessage[]>} */
 const results = {};
 
+/** Directories created for fixtures (e.g. view/server/ before it exists), removed again. */
+const createdDirs = [];
+
+function cleanUp() {
+  for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
+  for (const dir of createdDirs.splice(0)) rmdirSync(dir);
+}
+
 beforeAll(async () => {
   for (const [file, text] of Object.values(FIXTURES)) {
-    mkdirSync(dirname(join(root, file)), { recursive: true });
+    const dir = dirname(join(root, file));
+    if (!existsSync(dir)) createdDirs.push(dir);
+    mkdirSync(dir, { recursive: true });
     writeFileSync(join(root, file), text);
   }
   try {
@@ -57,13 +91,11 @@ beforeAll(async () => {
       results[key] = linted.find((r) => r.filePath === join(root, file))?.messages ?? [];
     }
   } finally {
-    for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
+    cleanUp();
   }
 }, 120_000);
 
-afterAll(() => {
-  for (const [file] of Object.values(FIXTURES)) rmSync(join(root, file), { force: true });
-});
+afterAll(cleanUp);
 
 const ruleMessages = (key, ruleId) =>
   (results[key] ?? []).filter((m) => m.ruleId === ruleId).map((m) => m.message);
@@ -92,16 +124,38 @@ describe('ESLint guardrails', () => {
     expect(messages[0]).toContain('Layer-1 packages may only import @gyral/core');
   });
 
-  it('keeps @lit-labs/ssr behind the internal adapter', () => {
-    const messages = ruleMessages('ssrLabs', 'no-restricted-imports');
+  it('lets @gyral/ssr import only @gyral/core and @gyral/router', () => {
+    const messages = ruleMessages('ssrLayer', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain('src/internal/lit.ts');
+    expect(messages[0]).toContain('@gyral/ssr may only import @gyral/core and @gyral/router');
   });
 
-  it('rejects .checked property bindings and accepts ?checked with liveBoolean', () => {
-    const messages = results.checked?.filter((m) => m.ruleId === 'no-restricted-syntax') ?? [];
+  it('keeps view/ self-contained (ADR 0018), at every depth', () => {
+    for (const key of ['viewEscape', 'viewNestedEscape', 'viewInternalImport']) {
+      const messages = ruleMessages(key, 'no-restricted-imports');
+      expect(messages, key).toHaveLength(1);
+      expect(messages[0]).toContain('view/ is self-contained');
+    }
+  });
+
+  it('lets view/server/ import only view/', () => {
+    const messages = ruleMessages('viewServer', 'no-restricted-imports');
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.line).toBe(3);
-    expect(messages[0]?.message).toContain('liveBoolean');
+    expect(messages[0]).toContain('view/server/ may import only view/');
+  });
+
+  it('rejects .checked property bindings and accepts ?checked (gyral/template, rule 4)', () => {
+    const messages = results.checked?.filter((m) => m.ruleId === 'gyral/template') ?? [];
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.line).toBe(2);
+    expect(messages[0]?.message).toContain('[gyral template rule 4]');
+    expect(messages[0]?.message).toContain('?checked=${…}');
+  });
+
+  it("checks each() rows in the repo's own code (gyral/each-row-purity)", () => {
+    const messages = ruleMessages('impureRow', 'gyral/each-row-purity');
+    expect(messages).toEqual([
+      '`row` reads `s.selected`; return it from `pick` and take it as the second argument (view/03-lists.md).',
+    ]);
   });
 });

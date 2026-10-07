@@ -2,16 +2,16 @@
 // `npm run build`, after `vite build`: renders every static path to dist/static.
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clientEntryFromManifest, prerender } from '@gyral/ssr/static';
+import { clientAssetsFromManifest, prerender } from '@gyral/ssr/static';
 import { createApp, staticPaths } from './app.js';
 
 const dist = fileURLToPath(new URL('../dist', import.meta.url));
-const clientEntry = await clientEntryFromManifest(
+const assets = await clientAssetsFromManifest(
   join(dist, 'client', '.vite', 'manifest.json'),
   'src/entry-client.ts',
 );
 const pages = await prerender({
-  app: createApp({ clientEntry }),
+  app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
   paths: staticPaths,
   outDir: join(dist, 'static'),
 });

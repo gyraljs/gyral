@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { mountDevtools } from '@gyral/devtools';
 import { Demo } from '../src/demo.js';
 
@@ -10,12 +11,12 @@ it('feeds the devtools timeline with updates, store messages and command lanes',
   const tools = mountDevtools({ open: true });
   const el = new Demo();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const buttons = el.shadowRoot?.querySelectorAll('button') ?? [];
   buttons[0]?.click();
   buttons[1]?.click();
   await new Promise((r) => setTimeout(r, 0));
-  await tools.panel.updateComplete;
+  await settled();
   const text = tools.panel.shadowRoot?.textContent ?? '';
   expect(text).toContain('Increment');
   expect(text).toContain('store:tally');

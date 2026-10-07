@@ -2,6 +2,8 @@
 
 Status: **accepted** (2026-10-04)
 
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): the view is a Gyral `html` template, not a Lit template. Lit-specific text below describes 0.2.x.
+
 ## Context
 
 Cycle.js's Model-View-Intent kept intent, model and view separate, which made apps easy to
@@ -21,8 +23,8 @@ A component is `define(tag, { props?, init, intent, update, view, styles? })`:
 
 - **Messages** are a tagged union (`{ _tag: 'Add', text }`). A message's tag is also its
   intent name.
-- **View** is `(state, i) => html\`…\``. It names intents in markup: `data-intent=${i.Add}`.
-`i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
+- **View** is `` (state, i) => html`…` ``. It names intents in markup: `data-intent=${i.Add}`.
+  `i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
 - **Intent** maps tags to parsers: `(IntentInput) => Message | undefined`. `IntentInput` holds
   the event, the element, `value`, `checked`, and `FormData` for form submissions. Returning
   `undefined` ignores the event. Parsers are where "parse, don't validate" happens for UI
@@ -60,14 +62,21 @@ add others with `spec.events` (for example `['pointerdown']`). `IntentInput` gai
 Parsers may call `event.preventDefault()` to cancel default input handling (arrow keys moving
 the caret); they must not do other side effects.
 
+**Update (gyral-g1r.20, 2026-10-06):** a component root no longer listens for every intent
+event. It listens for the default triggers, `spec.events`, and the `data-intent-on` values in
+the templates it renders, added when a template first renders (all intent events when a
+template binds `data-intent-on` dynamically). Any statically named event type now works
+without `spec.events`; list a type there only when a bound `data-intent-on` produces it and it
+isn't one of the intent events above. Details: view/05-element.md "Intent events".
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the
 render happens inside `document.startViewTransition`. It is a pure predicate over state, so the
 model still owns "what changed"; CSS (`::view-transition-*`) owns how it looks. It is an ADR
 0003 enhancement: skipped without the API or when `prefers-reduced-motion: reduce` matches.
-`updateComplete` waits for the transition's update callback, so callers and tests see the new
-DOM. A transition skipped by a newer one still runs its update (per spec).
+`settled()` (before it, `updateComplete`) waits for the transition's update callback, so callers
+and tests see the new DOM. A transition skipped by a newer one still runs its update (per spec).
 
 ## Addendum: model state as CSS custom states (gyral-czi.4, 2026-10-04)
 
@@ -113,6 +122,7 @@ An element with `data-intent-on="command"` receives intents for invoker commands
 source }`. Browsers with invoker commands dispatch a native `CommandEvent` on the target. Since
 invokers are Baseline newly available, not widely (ADR 0003), Gyral's intent wiring also
 listens for clicks on custom-command (`--…`) invokers and, only when `CommandEvent` is missing,
-dispatches an equivalent `command` CustomEvent on the `commandfor` target, so the same markup
+dispatches an equivalent `command` event (with the native event's `command` and `source`
+properties since gyral-g1r.18; it loads lazily, ADR 0003 tier 3) on the `commandfor` target, so the same markup
 works everywhere. Built-in commands (`show-modal`, `toggle-popover`, …) are left to the browser.
 `invokersSupported()` is exported. Example: `examples/invoker-commands`.

@@ -13,12 +13,43 @@ export function findEffectLeaks(file, text) {
   );
 }
 
-/** Runtime dependencies @gyral/core may have besides its `lit` peer (types-only packages). */
+const COMMENT = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/g;
+
+/**
+ * Doc comments are Markdown, where a backslash can't escape a backtick inside a code span, so
+ * such spans render wrong in editors and on gyral.dev's API page. Use a double-backtick span
+ * or a fence.
+ */
+export function findEscapedBackticks(file, text) {
+  return [...text.matchAll(COMMENT)]
+    .filter((m) => m[0].includes('\\`'))
+    .map(
+      (m) =>
+        `${file}: a doc comment escapes a backtick (${m[0]
+          .split('\n')
+          .find((l) => l.includes('\\`'))
+          ?.trim()}). ` +
+        'Markdown code spans have no escapes: write `` html`<p>${s.text}</p>` `` (double ' +
+        'backticks with spaces) or a fenced example.',
+    );
+}
+
+/** Runtime dependencies @gyral/core may have (types-only packages). */
 export const CORE_ALLOWED_DEPENDENCIES = ['@standard-schema/spec'];
+
+/** @gyral/core's runtime peer dependencies: none since the view layer (ADR 0018). */
+export const CORE_PEERS = [];
+/**
+ * Optional peers that only core's build-time tools load: `@gyral/core/vite` (parse5, vite;
+ * view/01-templates.md "Compiled") and `@gyral/core/eslint` (eslint; view/09-template-rules.md).
+ * Never imported by browser or server code, so they are no runtime dependency.
+ */
+export const CORE_BUILD_TIME_PEERS = ['eslint', 'parse5', 'vite'];
 
 /**
  * Dependency rules (docs/design-docs/0015-runtime-size-spike.md): no package depends on
- * `effect`, and @gyral/core has no runtime dependency beyond the allowlist.
+ * `effect`, and @gyral/core has no runtime dependency beyond the allowlist: its only peers are
+ * optional build-time tools.
  */
 export function checkDependencies(file, manifest) {
   const errors = [];
@@ -38,9 +69,26 @@ export function checkDependencies(file, manifest) {
     for (const dep of Object.keys(manifest.dependencies ?? {})) {
       if (!CORE_ALLOWED_DEPENDENCIES.includes(dep)) {
         errors.push(
-          `${file}: @gyral/core must have no runtime dependencies besides its lit peer ` +
+          `${file}: @gyral/core must have no runtime dependencies ` +
             `(allowed: ${CORE_ALLOWED_DEPENDENCIES.join(', ')}). Remove "${dep}" or ` +
             `implement what you need inside packages/core/src/internal/.`,
+        );
+      }
+    }
+    for (const dep of Object.keys(manifest.peerDependencies ?? {})) {
+      if (CORE_PEERS.includes(dep)) continue;
+      if (!CORE_BUILD_TIME_PEERS.includes(dep)) {
+        errors.push(
+          `${file}: @gyral/core's only peers are the build-time-only ` +
+            `${CORE_BUILD_TIME_PEERS.join(', ')}. Remove the "${dep}" peer, or, if only a ` +
+            `build-time tool (@gyral/core/vite or @gyral/core/eslint) loads it, add it to ` +
+            `CORE_BUILD_TIME_PEERS (scripts/lib/invariants.mjs) with a reason.`,
+        );
+      } else if (manifest.peerDependenciesMeta?.[dep]?.optional !== true) {
+        errors.push(
+          `${file}: the build-time peer "${dep}" must be optional ` +
+            `(peerDependenciesMeta: { "${dep}": { "optional": true } }): apps that never ` +
+            `use @gyral/core/vite or @gyral/core/eslint don't install it.`,
         );
       }
     }

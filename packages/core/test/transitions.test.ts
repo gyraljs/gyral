@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Go'; readonly page: string } | { readonly _tag: 'Tick' };
 
@@ -41,7 +41,7 @@ function stubTransitions(reducedMotion: boolean): void {
 async function mount() {
   const el = new Pages();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return el;
 }
 
@@ -61,8 +61,9 @@ describe('viewTransition hook', () => {
     stubTransitions(false);
     const el = await mount();
     el.send({ _tag: 'Go', page: 'about' });
+    expect(calls).toEqual([]); // the flush (and so the transition) starts in a microtask
+    await settled(); // waits for the transition's update callback
     expect(calls).toEqual(['start']);
-    await el.updateComplete; // waits for the transition's update callback
     expect(heading(el)).toBe('about');
   });
 
@@ -70,7 +71,7 @@ describe('viewTransition hook', () => {
     stubTransitions(false);
     const el = await mount();
     el.send({ _tag: 'Tick' });
-    await el.updateComplete;
+    await settled();
     expect(calls).toEqual([]);
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('1');
   });
@@ -79,7 +80,7 @@ describe('viewTransition hook', () => {
     stubTransitions(true);
     const el = await mount();
     el.send({ _tag: 'Go', page: 'about' });
-    await el.updateComplete;
+    await settled();
     expect(calls).toEqual([]);
     expect(heading(el)).toBe('about');
   });
@@ -88,7 +89,7 @@ describe('viewTransition hook', () => {
     const el = await mount();
     el.send({ _tag: 'Go', page: 'a' });
     el.send({ _tag: 'Go', page: 'b' }); // skips the first transition; its update still runs
-    await el.updateComplete;
+    await settled();
     expect(heading(el)).toBe('b');
   });
 });

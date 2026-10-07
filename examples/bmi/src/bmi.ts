@@ -47,7 +47,7 @@ export const Bmi = define<State, Msg>('gy-bmi', {
           type="range"
           min=${WEIGHT.min}
           max=${WEIGHT.max}
-          .value=${String(s.weight)}
+          value=${s.weight}
           data-intent=${i.Weight}
         />
         <output for="weight">${s.weight} kg</output>
@@ -60,14 +60,14 @@ export const Bmi = define<State, Msg>('gy-bmi', {
           type="range"
           min=${HEIGHT.min}
           max=${HEIGHT.max}
-          .value=${String(s.height)}
+          value=${s.height}
           data-intent=${i.Height}
         />
         <output for="height">${s.height} cm</output>
       </p>
     </form>
     <h2>BMI is <output>${bmiOf(s)}</output></h2>
-    <meter min="10" max="40" low="18.5" high="25" optimum="21.7" .value=${bmiOf(s)}>
+    <meter min="10" max="40" low="18.5" high="25" optimum="21.7" value=${bmiOf(s)}>
       ${bmiOf(s)}
     </meter>
   `,

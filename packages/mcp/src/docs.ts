@@ -142,7 +142,8 @@ const API_WEIGHT = 0.7;
 
 /**
  * BM25 over sections (substring matches, so "hydrat" finds "hydration"), plus a bonus when a
- * term is in the page title or heading trail. Sections matching only some terms are scaled down.
+ * term is in the page title or heading trail, and a larger one when the section's own heading
+ * contains the whole query. Sections matching only some terms are scaled down.
  */
 export function searchDocs(pages: readonly DocPage[], query: string, limit = 8): SearchHit[] {
   const words = [...new Set(terms(query))];
@@ -172,6 +173,8 @@ export function searchDocs(pages: readonly DocPage[], query: string, limit = 8):
         score += weight * ((tf * (K1 + 1)) / (tf + norm)) + (inHeading ? 1.5 * weight : 0);
       }
       if (phrase.includes(' ') && body.includes(phrase)) score *= 1.5;
+      // A section named after the query is about it (`Lazy hydration` for "lazy hydration").
+      if (section.heading.toLowerCase().includes(phrase)) score *= 2;
       score *= (matched / words.length) ** 2;
       if (page.url.includes('/docs/api/')) score *= API_WEIGHT;
       return {

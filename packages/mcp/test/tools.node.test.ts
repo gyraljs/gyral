@@ -48,8 +48,12 @@ describe('docs', () => {
   });
 
   it('ranks the guide section first for a conceptual query', () => {
+    // Two guides have a `Lazy hydration` section (server rendering, code-splitting); either
+    // beats a page that only mentions it.
     const [first] = searchDocs(corpus.docs, 'lazy hydration', 3);
-    expect(first?.url).toBe('https://gyral.dev/docs/server-rendering/#lazy-hydration');
+    expect(first?.url).toMatch(
+      /^https:\/\/gyral\.dev\/docs\/(server-rendering|code-splitting)\/#lazy-hydration$/,
+    );
     expect(searchDocs(corpus.docs, 'switch concurrency', 1)[0]?.url).toBe(
       'https://gyral.dev/docs/effects/#concurrency-lanes',
     );
@@ -88,6 +92,22 @@ describe('api', () => {
     for (const s of ['@gyral/core', '@gyral/ssr/static', '@gyral/http/testing', '@gyral/testing'])
       expect(specifiers).toContain(s);
     expect(findApi(corpus.api, 'prerender', 'ssr').matches[0]?.specifier).toBe('@gyral/ssr/static');
+  });
+
+  it("teaches 0.3's view layer from the sources, examples and skill, with no Lit left", () => {
+    const at = (name: string) => findApi(corpus.api, name).matches.map((m) => m.specifier);
+    expect(at('each')).toContain('@gyral/core');
+    expect(at('prop')).toContain('@gyral/core');
+    expect(at('renderToString')).toContain('@gyral/core/server');
+    expect(at('clientAssetsFromManifest')).toContain('@gyral/ssr/static');
+    expect(corpus.api.some((e) => e.specifier === '@gyral/core/eslint')).toBe(true);
+    for (const gone of ['repeat', 'liveBoolean', 'serverHtml', 'unsafeCSS']) {
+      expect(findApi(corpus.api, gone).matches, gone).toEqual([]);
+    }
+    // Example titles and descriptions come from the docs snapshot (refreshed with mcp:refresh).
+    const sources = corpus.examples.map((e) => e.components);
+    const taught = JSON.stringify([corpus.api, sources, corpus.skill]);
+    expect(taught).not.toMatch(/from 'lit|lit-html|@lit-labs|liveBoolean|serverHtml/);
   });
 
   it('suggests close names and lists exports', () => {

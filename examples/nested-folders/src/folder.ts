@@ -2,10 +2,11 @@ import {
   child,
   css,
   define,
+  each,
   emit,
   html,
   nothing,
-  repeat,
+  prop,
   type GyralElementClass,
 } from '@gyral/core';
 
@@ -40,6 +41,12 @@ export function hueOf(id: string): number {
  * list of its direct children; a child removes itself by emitting `Removed` up one level.
  * Ids are paths (`1.2.1`), so making a new one is pure.
  */
+/** One child folder; its intent name comes through `pick`, so the row stays pure. */
+const subfolder = (id: string, intent: string) =>
+  html`<li>
+    <gy-folder folder-id=${id} removable data-intent=${intent}></gy-folder>
+  </li>`;
+
 // The explicit type lets `child(() => Folder, …)` refer to the constant being defined.
 export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define<
   State,
@@ -48,9 +55,9 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
   FolderOutput
 >('gy-folder', {
   props: {
-    folderId: { type: String, attribute: 'folder-id', required: true },
+    folderId: prop.string({ required: true }), // attribute "folder-id"
     // A boolean attribute: absent on the root folder means "not removable" (found by ui:check).
-    removable: { type: Boolean, default: false },
+    removable: prop.boolean(),
   },
   init: () => ({ children: [], next: 1 }),
   intent: {
@@ -86,13 +93,11 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
         s.children.length === 0
           ? nothing
           : html`<ul>
-              ${repeat(
+              ${each(
                 s.children,
                 (id) => id,
-                (id) =>
-                  html`<li>
-                    <gy-folder folder-id=${id} removable data-intent=${i.Child}></gy-folder>
-                  </li>`,
+                subfolder,
+                () => i.Child,
               )}
             </ul>`
       }

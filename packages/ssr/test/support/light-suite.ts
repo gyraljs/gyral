@@ -1,6 +1,5 @@
-// The light-DOM hydration suite (ADR 0014), shared by light-hydration.test.ts (hydrate support
-// loaded first, as documented) and late-support-light-hydration.test.ts (Lit loaded first, as a
-// bundler that moves shared code into an earlier chunk evaluates it; gyral-czi.41).
+// The light-DOM hydration suite (ADR 0014), run by light-hydration.test.ts. A function so a
+// production-build variant can run it again (view/07-hydration.md "Testing").
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import serverHtml from '../fixtures/light.ssr.html?raw';
@@ -18,7 +17,6 @@ export function lightHydrationSuite(label = ''): void {
 
   interface Live extends HTMLElement {
     readonly state: Record<string, unknown>;
-    readonly updateComplete: Promise<boolean>;
   }
   const one = (sel: string, root: ParentNode = document): Live => {
     const el = root.querySelector(sel);
@@ -52,7 +50,7 @@ export function lightHydrationSuite(label = ''): void {
       (n) => n.nodeType === Node.TEXT_NODE && /\d/.test(n.textContent ?? ''),
     );
     if (text === undefined) throw new Error('no count text');
-    text.textContent = String(count);
+    text.textContent = (text.textContent ?? '').replace(/\d+/, String(count));
   }
 
   beforeAll(async () => {

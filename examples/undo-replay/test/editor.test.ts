@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run, step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { Editor, STEP_MS, type Msg } from '../src/editor.js';
 import { emptyHistory, pixelsAt, record, redo, seek, undo } from '../src/history.js';
@@ -63,27 +64,27 @@ it('paints, undoes with the keyboard and replays in the page', async () => {
   clock = virtualTime();
   const el = document.createElement('gy-pixel-editor');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const root = el.shadowRoot;
   const pixel = (n: number) => root?.querySelector<HTMLButtonElement>(`[data-cell="${String(n)}"]`);
   pixel(0)?.click();
   pixel(1)?.click();
-  await el.updateComplete;
+  await settled();
   expect(pixel(1)?.dataset['color']).toBe('ink');
 
   pixel(1)?.dispatchEvent(
     new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, composed: true }),
   );
-  await el.updateComplete;
+  await settled();
   expect(pixel(1)?.dataset['color']).toBe('none');
   expect(root?.querySelector('.where strong')?.textContent).toBe('Edit 1 of 2');
 
   const buttons = [...(root?.querySelectorAll<HTMLButtonElement>('.actions button') ?? [])];
   buttons.find((b) => b.textContent.trim() === 'Replay')?.click();
-  await el.updateComplete;
+  await settled();
   expect(el.state.history.cursor).toBe(0);
   await clock.advance(STEP_MS * 2);
-  await el.updateComplete;
+  await settled();
   expect(el.state).toMatchObject({ playing: false, history: { cursor: 2 } });
   expect(pixel(1)?.dataset['color']).toBe('ink');
 });

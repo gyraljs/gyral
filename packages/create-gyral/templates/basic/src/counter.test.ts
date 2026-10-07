@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { run, step } from '@gyral/testing';
 import { Counter } from './counter.js';
 
@@ -21,11 +22,11 @@ it('counts up and down', () => {
 it('counts clicks', async () => {
   const el = document.createElement('app-counter');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const [decrement, increment] = el.shadowRoot?.querySelectorAll('button') ?? [];
   increment?.click();
   increment?.click();
   decrement?.click();
-  await el.updateComplete;
+  await settled();
   expect(el.shadowRoot?.querySelector('output')?.textContent).toBe('1');
 });

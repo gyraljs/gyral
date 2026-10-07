@@ -1,4 +1,4 @@
-import { define, html, liveBoolean, nothing, type Next } from '@gyral/core';
+import { define, html, nothing, type Next } from '@gyral/core';
 import { delay } from '@gyral/time';
 import {
   COLORS,
@@ -117,7 +117,7 @@ export const Editor = define<State, Msg>('gy-pixel-editor', {
                   type="radio"
                   name="tool"
                   value=${tool}
-                  ?checked=${liveBoolean(s.tool === tool)}
+                  ?checked=${s.tool === tool}
                   data-intent=${i.Pick}
                 />
                 <span>${tool}</span>
@@ -164,7 +164,7 @@ export const Editor = define<State, Msg>('gy-pixel-editor', {
               min="0"
               max=${edits.length}
               step="1"
-              .value=${String(cursor)}
+              value=${cursor}
               ?disabled=${edits.length === 0}
               aria-valuetext=${where}
               data-intent=${i.Scrub}

@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@gyral/ssr": "workspace:*",
-    "@gyral/testing": "workspace:*",
-    "lit": "3.3.3"
+    "@gyral/testing": "workspace:*"
   }
 }

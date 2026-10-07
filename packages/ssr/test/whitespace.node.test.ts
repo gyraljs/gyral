@@ -10,7 +10,8 @@ describe('indented templates on the server (gyral-9rf)', () => {
     );
     expect(out).not.toMatch(/<tr>\s+</);
     expect(out).toContain('Hello <b>');
-    expect(out).toContain('\n  keep   this\n');
+    // The parser drops the newline right after <pre>, and so does the normalizer (01).
+    expect(out).toContain('<pre class="code">  keep   this\n</pre>');
     // Golden file for whitespace-hydration.test.ts (update with `pnpm test -u`).
     await expect(out).toMatchFileSnapshot('./fixtures/whitespace.ssr.html');
   });

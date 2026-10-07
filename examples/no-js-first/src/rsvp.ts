@@ -1,16 +1,18 @@
 import {
   define,
+  each,
   field,
   fieldErrors,
   form,
   html,
   invalid,
-  keyed,
   nothing,
+  prop,
   type FormFields,
   type IntentRejected,
 } from '@gyral/core';
 import { submitForm } from '@gyral/http';
+import * as v from 'valibot';
 import { LIVE_FIELDS, RsvpForm, type Attendee } from './schema.js';
 import { styles } from './styles.js';
 
@@ -76,7 +78,6 @@ const textField = (
       required
       value=${text(s.values, f.name)}
       aria-describedby=${`${f.name}-error`}
-      aria-invalid=${errors === undefined ? nothing : 'true'}
       ${invalid(errors)}
       data-intent=${checked}
       data-intent-on="input"
@@ -85,10 +86,40 @@ const textField = (
   </p>`;
 };
 
+/** The form, as a list row: it reads only what `pick` passes it (view/03-lists.md). */
+const rsvpForm = (_sent: number, { s, join, checked }: FormArgs) =>
+  html`<form data-intent=${join} action="/" method="post">
+    ${textField(s, checked, { name: 'name', label: 'Name', type: 'text', autocomplete: 'name' })}
+    ${textField(s, checked, { name: 'email', label: 'Email', type: 'email', autocomplete: 'email' })}
+    <p class="field">
+      <label for="guests">Bringing</label>
+      <select id="guests" name="guests">
+        ${['0', '1', '2', '3'].map(
+          (n) =>
+            html`<option value=${n} ?selected=${text(s.values, 'guests') === n}>
+              ${n === '0' ? 'Just me' : `+${n}`}
+            </option>`,
+        )}
+      </select>
+    </p>
+    <p class="error" role="alert">${s.errors['']?.join(' ') ?? ''}</p>
+    <button ?disabled=${s.pending !== undefined}>
+      ${s.pending === undefined ? 'Count me in' : 'Sending…'}
+    </button>
+  </form>`;
+
+interface FormArgs {
+  readonly s: State;
+  readonly join: string;
+  readonly checked: string;
+}
+
 export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
   props: {
-    attendees: { attribute: false, default: [] },
-    joined: { type: String },
+    attendees: prop.value(v.array(v.object({ name: v.string(), guests: v.number() })), {
+      default: [],
+    }),
+    joined: prop.string(),
   },
   init: (props) => ({
     values: {},
@@ -155,28 +186,15 @@ export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
           : 'The form posts to the server, which checks it and sends a new page.'
       }
     </p>
-    ${keyed(
-      s.sent,
-      html`<form data-intent=${i.Join} action="/" method="post">
-        ${textField(s, i.Checked, { name: 'name', label: 'Name', type: 'text', autocomplete: 'name' })}
-        ${textField(s, i.Checked, { name: 'email', label: 'Email', type: 'email', autocomplete: 'email' })}
-        <p class="field">
-          <label for="guests">Bringing</label>
-          <select id="guests" name="guests">
-            ${['0', '1', '2', '3'].map(
-              (n) =>
-                html`<option value=${n} ?selected=${text(s.values, 'guests') === n}>
-                  ${n === '0' ? 'Just me' : `+${n}`}
-                </option>`,
-            )}
-          </select>
-        </p>
-        <p class="error" role="alert">${s.errors['']?.join(' ') ?? ''}</p>
-        <button ?disabled=${s.pending !== undefined}>
-          ${s.pending === undefined ? 'Count me in' : 'Sending…'}
-        </button>
-      </form>`,
-    )}
+    ${
+      // Keyed by the number of replies sent: a new reply gets a fresh form element.
+      each(
+        [s.sent],
+        (n) => n,
+        rsvpForm,
+        () => ({ s, join: i.Join, checked: i.Checked }),
+      )
+    }
     <p class="joined" role="status">
       ${s.joined === undefined ? '' : html`You're on the list, <strong>${s.joined}</strong>!`}
     </p>

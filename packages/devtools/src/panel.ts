@@ -1,6 +1,6 @@
 // <gyral-devtools>: the in-page panel (ADR 0017). A Gyral component itself; install.ts filters
 // its own events out of the stream so it never watches itself.
-import { define, devtoolsEnabled, html, liveBoolean, nothing, repeat } from '@gyral/core';
+import { define, devtoolsEnabled, each, html, nothing, prop } from '@gyral/core';
 import {
   componentLabel,
   initialPanel,
@@ -29,8 +29,44 @@ const stateOf = (element: Element): unknown => (element as { readonly state?: un
 
 const time = (at: number): string => `${(at / 1000).toFixed(3)}s`;
 
+// List rows are pure (docs/design-docs/view/03-lists.md): they read only their item and pick.
+type Row = PanelState['rows'][number];
+type ComponentEntry = PanelState['components'][number];
+type Lane = PanelState['lanes'][number];
+
+const KindToggle = (kind: RowKind, { on, intent }: { on: boolean; intent: string }) =>
+  html`<label
+    ><input type="checkbox" value=${kind} ?checked=${on} data-intent=${intent} /> ${kind}</label
+  >`;
+
+const TimelineRow = (r: Row) =>
+  html`<li data-kind=${r.kind}>
+    <span class="at">${time(r.at)}</span>
+    <span class="kind">${r.kind}</span>
+    <code class="who">${r.who}</code>
+    <strong class="what">${r.what}</strong>
+    <span class="detail">${r.detail === '' ? nothing : r.detail}</span>
+  </li>`;
+
+const ComponentRow = (c: ComponentEntry, state: string) =>
+  html`<li>
+    <details>
+      <summary><code>${componentLabel(c)}</code></summary>
+      <pre>${state}</pre>
+    </details>
+  </li>`;
+
+const LaneRow = (l: Lane) =>
+  html`<tr>
+    <td><code>${l.owner}</code></td>
+    <td>${l.lane}</td>
+    <td>${l.policy}</td>
+    <td>${l.last}</td>
+    <td>${l.inFlight}</td>
+  </tr>`;
+
 export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boolean }>(PANEL_TAG, {
-  props: { open: { type: Boolean, default: false } },
+  props: { open: prop.boolean() },
   init: (props) => initialPanel(props.open),
   intent: {
     Toggle: () => ({ _tag: 'Toggle' }),
@@ -83,51 +119,33 @@ export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boole
         <details open>
           <summary>Timeline (${rows.length})</summary>
           <div class="filters">
-            <label>Filter <input type="search" data-intent=${i.Filter} .value=${s.filter} /></label>
+            <label>Filter <input type="search" data-intent=${i.Filter} value=${s.filter} /></label>
             <fieldset>
               <legend>Show</legend>
-              ${ROW_KINDS.map(
-                (kind) =>
-                  html`<label
-                    ><input
-                      type="checkbox"
-                      value=${kind}
-                      ?checked=${liveBoolean(s.kinds.includes(kind))}
-                      data-intent=${i.Kind}
-                    />
-                    ${kind}</label
-                  >`,
+              ${each(
+                ROW_KINDS,
+                (kind) => kind,
+                KindToggle,
+                (kind) => ({
+                  on: s.kinds.includes(kind),
+                  intent: i.Kind,
+                }),
               )}
             </fieldset>
           </div>
           <ol class="timeline" aria-label="Events, newest first">
-            ${repeat(
-              rows,
-              (r) => r.seq,
-              (r) =>
-                html`<li data-kind=${r.kind}>
-                  <span class="at">${time(r.at)}</span>
-                  <span class="kind">${r.kind}</span>
-                  <code class="who">${r.who}</code>
-                  <strong class="what">${r.what}</strong>
-                  <span class="detail">${r.detail === '' ? nothing : r.detail}</span>
-                </li>`,
-            )}
+            ${each(rows, (r) => r.seq, TimelineRow)}
           </ol>
         </details>
         <details open>
           <summary>Components (${s.components.length})</summary>
           <ul class="components">
-            ${repeat(
+            ${each(
               s.components,
               (c) => c.id,
-              (c) =>
-                html`<li>
-                  <details>
-                    <summary><code>${componentLabel(c)}</code></summary>
-                    <pre>${preview(stateOf(c.element), 2000)}</pre>
-                  </details>
-                </li>`,
+              ComponentRow,
+              // The element's state changes without the row's item changing: pass it through pick.
+              (c) => preview(stateOf(c.element), 2000),
             )}
           </ul>
         </details>
@@ -147,18 +165,7 @@ export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boole
                     </tr>
                   </thead>
                   <tbody>
-                    ${repeat(
-                      s.lanes,
-                      (l) => l.key,
-                      (l) =>
-                        html`<tr>
-                          <td><code>${l.owner}</code></td>
-                          <td>${l.lane}</td>
-                          <td>${l.policy}</td>
-                          <td>${l.last}</td>
-                          <td>${l.inFlight}</td>
-                        </tr>`,
-                    )}
+                    ${each(s.lanes, (l) => l.key, LaneRow)}
                   </tbody>
                 </table>`
           }

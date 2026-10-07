@@ -7,9 +7,9 @@ describe('demos:record arguments', () => {
   });
 
   it('takes example names, a port and a scheme', () => {
-    const { options, errors } = parseArgs(['themes', '--port=5800', '--scheme=dark']);
+    const { options, errors } = parseArgs(['counter', '--port=5800', '--scheme=dark']);
     expect(errors).toEqual([]);
-    expect(options).toEqual({ examples: ['themes'], port: 5800, scheme: 'dark' });
+    expect(options).toEqual({ examples: ['counter'], port: 5800, scheme: 'dark' });
   });
 
   it('rejects bad values and unknown flags', () => {
@@ -45,7 +45,7 @@ describe('demo modules', () => {
   });
 
   it('names one-scene demos after the example', () => {
-    expect(sceneStem('themes', 'main', 1)).toBe('themes');
+    expect(sceneStem('counter', 'main', 1)).toBe('counter');
     expect(sceneStem('no-js-first', 'js-off', 2)).toBe('no-js-first-js-off');
   });
 });

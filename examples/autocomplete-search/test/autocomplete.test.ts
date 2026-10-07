@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { settled } from '@gyral/core';
 import type { HttpError, HttpRequest } from '@gyral/http';
 import { fakeDriver, run, step } from '@gyral/testing';
 import { time } from '@gyral/time';
@@ -61,7 +62,7 @@ describe('<gy-autocomplete>', () => {
     // Debounce fires at once; requests wait until the test answers them. No network.
     el.drivers = { http, time: fakeDriver(time, { impl: () => undefined }) };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     const $ = <T extends Element>(sel: string, type: new () => T): T => {
       const found = el.shadowRoot?.querySelector(sel);
       if (!(found instanceof type)) throw new Error(`missing ${sel}`);
@@ -81,11 +82,11 @@ describe('<gy-autocomplete>', () => {
       await vi.waitFor(() => {
         expect(el.state.status).toBe('idle');
       });
-      await el.updateComplete;
+      await settled();
     };
     const key = async (k: string) => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, composed: true }));
-      await el.updateComplete;
+      await settled();
     };
     const options = () => [...list.querySelectorAll('[role=option]')];
     return { el, http, input, list, type, answer, key, options };
@@ -119,7 +120,7 @@ describe('<gy-autocomplete>', () => {
   });
 
   it('closes on Escape and picks on click', async () => {
-    const { el, input, list, type, answer, key, options } = await mount();
+    const { input, list, type, answer, key, options } = await mount();
     await type('cy');
     await answer('cy', ['Cycle', 'Cyclone']);
     await key('Escape');
@@ -127,7 +128,7 @@ describe('<gy-autocomplete>', () => {
     await key('ArrowDown');
     expect(list.hidden).toBe(false);
     (options()[1] as HTMLElement).click();
-    await el.updateComplete;
+    await settled();
     expect(input.value).toBe('Cyclone');
   });
 
@@ -152,7 +153,7 @@ describe('<gy-autocomplete>', () => {
     await vi.waitFor(() => {
       expect(el.state.status).toBe('error');
     });
-    await el.updateComplete;
+    await settled();
     expect(el.shadowRoot?.querySelector('[role=status]')?.textContent).toContain('unavailable');
   });
 

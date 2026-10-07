@@ -1,6 +1,6 @@
 // Indented templates (gyral-9rf): rendered by whitespace.node.test.ts, hydrated by
-// whitespace-hydration.test.ts. Gyral's `html` minifies the same way on server and client.
-import { define, html, repeat } from '@gyral/core';
+// whitespace-hydration.test.ts. One normalizer for server and client (view/01-templates.md).
+import { define, each, html } from '@gyral/core';
 
 interface Row {
   readonly id: number;
@@ -32,7 +32,7 @@ export const WhitespaceTable = define<State, Msg>('test-ws-table', {
     </p>
     <table>
       <tbody>
-        ${repeat(
+        ${each(
           s.rows,
           (row) => row.id,
           (row) => html`

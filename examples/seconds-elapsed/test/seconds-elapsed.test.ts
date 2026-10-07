@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { settled } from '@gyral/core';
 import { virtualTime, type VirtualTime } from '@gyral/testing';
 import { duration } from '../src/seconds-elapsed.js';
 
@@ -18,11 +19,11 @@ it('counts seconds from zero (virtual time)', async () => {
   clock = virtualTime();
   const el = document.createElement('gy-seconds-elapsed');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   const text = () => el.shadowRoot?.querySelector('time')?.textContent;
   expect(text()).toBe('0');
   await clock.advance(3000);
-  await el.updateComplete;
+  await settled();
   expect(text()).toBe('3');
   expect(el.shadowRoot?.querySelector('time')?.getAttribute('datetime')).toBe('PT3S');
 });
@@ -31,7 +32,7 @@ it('stops ticking once removed', async () => {
   clock = virtualTime();
   const el = document.createElement('gy-seconds-elapsed');
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await clock.advance(2000);
   el.remove();
   await clock.advance(5000);

@@ -6,8 +6,8 @@ export default defineConfig({
   test: {
     projects: [
       {
-        // One Lit copy, and Lit's modules pre-bundled so the first browser run doesn't
-        // discover them mid-test and reload (gyral-a7r).
+        // The Gyral preset (gyral-a7r): pre-bundled modules and the template compiler (which
+        // applies to `vite build` only, so tests use the runtime template path).
         ...gyralVitePreset(),
         test: {
           name: 'browser',
@@ -23,9 +23,10 @@ export default defineConfig({
         },
       },
       {
-        // The hydration tests again, against Lit's PRODUCTION build (gyral-czi.38). Lit renames
-        // private fields in production, so code that touches Lit internals can pass in
-        // development and break in shipped apps. No `development` export condition here.
+        // The hydration tests again, against core's PRODUCTION build (no `development` export
+        // condition: `#view-dev` and `#devtools` resolve to their production modules), so
+        // behaviour that differs between builds is covered (view/07-hydration.md "Testing"):
+        // every package's and example's hydration tests.
         ...gyralVitePreset(),
         resolve: {
           ...gyralVitePreset().resolve,
@@ -33,7 +34,11 @@ export default defineConfig({
         },
         test: {
           name: 'browser-prod',
-          include: ['packages/*/test/**/*-hydration.test.ts', 'packages/*/test/**/*.prod.test.ts'],
+          include: [
+            'packages/*/test/**/*-hydration.test.ts',
+            'packages/*/test/**/*.prod.test.ts',
+            'examples/*/test/**/*hydration*.test.ts',
+          ],
           browser: {
             enabled: true,
             headless: true,

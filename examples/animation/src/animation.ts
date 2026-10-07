@@ -1,4 +1,4 @@
-import { css, define, html, keyed, unsafeCSS } from '@gyral/core';
+import { css, define, each, html } from '@gyral/core';
 
 // Cycle's version tweened coordinates in JS on every frame. Here the model only counts runs;
 // the motion is a CSS animation the browser runs on its own (no per-frame state, no JS timer).
@@ -68,6 +68,9 @@ export interface State {
 
 export type Msg = { readonly _tag: 'Animate' };
 
+/** One run's element; keyed by the run number, so each run gets a fresh one. */
+const target = (run: number) => html`<div class=${run === 0 ? 'target' : 'target moving'}></div>`;
+
 export const Animation = define<State, Msg>('gy-animation', {
   init: () => ({ runs: 0 }),
   intent: { Animate: () => ({ _tag: 'Animate' }) },
@@ -75,10 +78,11 @@ export const Animation = define<State, Msg>('gy-animation', {
   view: (s, i) => html`
     <button type="button" data-intent=${i.Animate}>Animate it!</button>
     <div class="stage" aria-hidden="true">
-      ${keyed(
+      ${each(
         // A new key per run replaces the element, which restarts the CSS animation.
-        s.runs,
-        html`<div class=${s.runs === 0 ? 'target' : 'target moving'}></div>`,
+        [s.runs],
+        (run) => run,
+        target,
       )}
     </div>
   `,
@@ -121,7 +125,7 @@ export const Animation = define<State, Msg>('gy-animation', {
       .moving {
         animation: travel ${DURATION_MS}ms both;
       }
-      ${unsafeCSS(keyframes(path()))}
+      ${keyframes(path())}
       @keyframes flash {
         50% {
           opacity: 0.3;

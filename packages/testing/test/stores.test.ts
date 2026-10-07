@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { changed, define, defineStore, html, send } from '@gyral/core';
+import { changed, define, defineStore, html, send, settled } from '@gyral/core';
 import { run, sentTo, step, stepStore, testStore } from '../src/index.js';
 
 interface Cart {
@@ -90,9 +90,9 @@ describe('store testing helpers', () => {
     const el = new Buyer();
     el.stores = { [cart.name]: instance };
     document.body.append(el);
-    await el.updateComplete;
+    await settled();
     el.send({ _tag: 'Buy', sku: 'b' });
-    await el.updateComplete;
+    await settled();
     expect(instance.state.lines).toEqual(['a', 'b']);
     expect(el.state.seen).toBe(2);
     expect(el.shadowRoot?.querySelector('p')?.textContent).toBe('2/2');

@@ -4,11 +4,31 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import compat from 'eslint-plugin-compat';
 import globals from 'globals';
+// Gyral's own ESLint plugin, straight from its TypeScript source (no build step).
+import './scripts/lib/load-ts.mjs';
+
+/** @type {import('./packages/core/src/eslint/index.ts').GyralPlugin} */
+const gyral = (await import('./packages/core/src/eslint/index.ts')).default;
 
 const EFFECT_BOUNDARY =
   'Gyral has no Effect dependency since 0.2.0 (docs/design-docs/0015-runtime-size-spike.md). ' +
   'Write it in plain TypeScript (Promise, AbortSignal, tagged unions); Effect integration ' +
   'belongs in an optional adapter package such as @gyral/effect, not in src/internal/.';
+
+const VIEW_BOUNDARY =
+  'packages/core/src/view/ is self-contained (ADR 0018 "Where it lives"): it imports nothing ' +
+  'from the rest of core, so it can become @gyral/view later. Move what you need into view/, ' +
+  'or have the caller pass it in; code outside view/ imports view/index.ts.';
+
+const VIEW_SERVER_BOUNDARY =
+  'view/server/ may import only view/ (ADR 0018): the server renderer must never pull browser ' +
+  'or element code into a server bundle. Move shared code into view/.';
+
+const PARSE5_BUILD_ONLY =
+  'parse5 is a build-time-only, optional peer dependency (view/09-template-rules.md "How rule 7 ' +
+  'is checked"): only the template compiler loads it (packages/core/src/compiler/parse5-check.ts), ' +
+  'so it never reaches browser or server code. Check markup with the normalizer instead.';
+const parse5Imports = { group: ['parse5', 'parse5/*'], message: PARSE5_BUILD_ONLY };
 
 const effectImports = {
   paths: [{ name: 'effect', message: EFFECT_BOUNDARY }],
@@ -37,20 +57,21 @@ export default tseslint.config(
     },
     rules: {
       'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
-      'no-restricted-syntax': [
-        'error',
-        {
-          // Lit SSR serializes `.checked=${false}` as checked="false", which checks the box.
-          selector:
-            'TaggedTemplateExpression[tag.name=/^(html|serverHtml)$/] TemplateElement[value.raw=/\\.(checked|selected|open|indeterminate|defaultChecked)=$/]',
-          message:
-            'Bind boolean form state with ?checked=${liveBoolean(x)} (from @gyral/core), not a .checked property binding: server rendering turns .checked=${false} into checked="false" (docs/design-docs/0012-ssr.md).',
-        },
-      ],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
       'no-restricted-imports': ['error', effectImports],
     },
+  },
+  {
+    // The template rules (view/09-template-rules.md) and pure each() rows (view/03-lists.md),
+    // from @gyral/core/eslint: the same checks as the template compiler and the dev runtime.
+    files: [
+      'packages/*/src/**/*.ts',
+      'packages/*/test/**/*.ts',
+      'packages/*/bench/**/*.ts',
+      'examples/*/{src,server,test}/**/*.ts',
+    ],
+    ...gyral.configs.recommended,
   },
   {
     // Layer 0: @gyral/core may not depend on any other Gyral package (ARCHITECTURE.md).
@@ -68,6 +89,51 @@ export default tseslint.config(
               message:
                 '@gyral/core is the bottom layer and must not import other Gyral packages (ARCHITECTURE.md). Invert the dependency.',
             },
+            parse5Imports,
+          ],
+        },
+      ],
+    },
+  },
+  // The view layer (ADR 0018 "Where it lives"): view/ imports nothing else from core (its own
+  // `#prepare`/`#view-dev` conditions aside); view/server/ imports only view/. Relative imports
+  // are matched by depth, so each level gets the pattern that would climb out of view/. The
+  // clean room (no other renderer's code, names or packages) is scripts/check-provenance.mjs.
+  ...[
+    ['packages/core/src/view/*.ts', '^\\.\\./'],
+    ['packages/core/src/view/*/*.ts', '^\\.\\./\\.\\./'],
+    ['packages/core/src/view/*/*/*.ts', '^\\.\\./\\.\\./\\.\\./'],
+  ].map(([files, escape]) => ({
+    files: [files],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            { group: ['@gyral/*'], message: VIEW_BOUNDARY },
+            { regex: escape, message: VIEW_BOUNDARY },
+            { regex: '^#(?!(prepare|view-dev)$)', message: VIEW_BOUNDARY },
+            parse5Imports,
+          ],
+        },
+      ],
+    },
+  })),
+  {
+    files: ['packages/core/src/view/server/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            { group: ['@gyral/*'], message: VIEW_SERVER_BOUNDARY },
+            { regex: '^\\.\\./\\.\\./', message: VIEW_SERVER_BOUNDARY },
+            { regex: '^#', message: VIEW_SERVER_BOUNDARY },
+            parse5Imports,
           ],
         },
       ],
@@ -110,19 +176,14 @@ export default tseslint.config(
               message:
                 '@gyral/ssr may only import @gyral/core and @gyral/router (ARCHITECTURE.md).',
             },
-            {
-              group: ['@lit-labs/ssr', '@lit-labs/ssr/*'],
-              message:
-                'Labs APIs stay behind packages/ssr/src/internal/lit.ts (ADR 0005). Add what you need there.',
-            },
           ],
         },
       ],
     },
   },
   {
-    // Internal modules host the Labs adapters (ssr/src/internal/lit.ts); Effect is still
-    // excluded there by the dependency check in scripts/check-public-api.mjs.
+    // Internal modules are implementation details; Effect is still excluded there by the
+    // dependency check in scripts/check-public-api.mjs.
     files: ['packages/*/src/internal/**/*.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },

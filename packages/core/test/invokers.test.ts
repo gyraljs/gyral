@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, invokersSupported } from '../src/index.js';
+import { define, html, invokersSupported, settled } from '../src/index.js';
 
 interface State {
   readonly items: readonly string[];
@@ -28,7 +28,7 @@ const List = define<State, Msg>('test-invokers', {
 async function mount(): Promise<InstanceType<typeof List>> {
   const el = new List();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   return el;
 }
 
@@ -45,14 +45,14 @@ describe('invoker commands as an intent source (gyral-czi.6)', () => {
     expect(invokersSupported()).toBe(true); // Chromium ships invoker commands
     const el = await mount();
     click(el, 'button');
-    await el.updateComplete;
+    await settled();
     expect(el.state).toEqual({ items: [], from: 'button' });
   });
 
   it('does not run the fallback when invokers are native', async () => {
     const el = await mount();
     click(el, '.fake'); // a <span> is not an invoker natively
-    await el.updateComplete;
+    await settled();
     expect(el.state.items).toEqual(['a', 'b']);
   });
 
@@ -63,7 +63,7 @@ describe('invoker commands as an intent source (gyral-czi.6)', () => {
       expect(invokersSupported()).toBe(false);
       const el = await mount();
       click(el, '.fake'); // only the fallback can turn this click into a command
-      await el.updateComplete;
+      await settled();
       expect(el.state).toEqual({ items: [], from: 'span' });
     } finally {
       if (saved !== undefined) Object.defineProperty(globalThis, 'CommandEvent', saved);

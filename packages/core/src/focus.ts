@@ -1,12 +1,18 @@
 // Focus management from the model (gyral-czi.28). Moving focus is a side effect, so the model
-// asks for it with a command; define() runs it against the component's own render root after
-// the render that the same reducer caused, so the element to focus already exists.
+// asks for it with a command; define() queues it as the scheduler's first post-render work
+// (view/04-scheduler.md "Post-render queue"), against the component's own root, so the element
+// to focus already exists.
 import type { Command } from './command.js';
+import type { LocalHost } from './features.js';
+import { afterRender, POST_FOCUS } from './scheduler.js';
 
-/** Marker driver: `define()` handles focus commands itself. */
+/** Marker driver: the host runs focus commands itself (`local`). */
 export const FOCUS = {
   name: '@gyral/focus',
   run: () => undefined,
+  local: (host: LocalHost, input: unknown) => {
+    queueFocus(host.el, host.root, host.tag, input as FocusInput);
+  },
 } as const;
 
 export interface FocusOptions {
@@ -34,7 +40,7 @@ export function focus(selector: string, options: FocusOptions = {}): Command<nev
   return { driver: FOCUS, input, onSuccess: () => undefined };
 }
 
-/** Runs a focus command against `root` (called by define() after the update completes). */
+/** Runs a focus command against `root` (the scheduler calls it after the render). */
 export function runFocus(root: ParentNode, tag: string, input: FocusInput): void {
   const target = root.querySelector(input.selector);
   if (!(target instanceof HTMLElement || target instanceof SVGElement)) {
@@ -47,21 +53,18 @@ export function runFocus(root: ParentNode, tag: string, input: FocusInput): void
   }
 }
 
-/** What focusAfterUpdate needs from a component: Lit's update promise and its render root. */
-export interface FocusHost {
-  readonly updateComplete: Promise<boolean>;
-  readonly isConnected: boolean;
-  readonly renderRoot: ParentNode;
-}
-
 /**
- * Runs a focus command after the render the same update caused, view transition included:
- * define() runs commands before #dispatch registers that update's view transition, so wait a
- * microtask first, then for updateComplete, which waits for the transition (gyral-6zz).
+ * Runs a focus command after the flush that renders the same update, view transition
+ * included: it is post-render work, so the DOM already shows the new state.
  */
-export function focusAfterUpdate(host: FocusHost, tag: string, input: FocusInput): void {
-  void Promise.resolve().then(async () => {
-    await host.updateComplete;
-    if (host.isConnected) runFocus(host.renderRoot, tag, input);
+export function queueFocus(
+  host: Element,
+  root: () => ParentNode | undefined,
+  tag: string,
+  input: FocusInput,
+): void {
+  afterRender(POST_FOCUS, () => {
+    const target = root();
+    if (host.isConnected && target !== undefined) runFocus(target, tag, input);
   });
 }

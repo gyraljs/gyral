@@ -1,18 +1,21 @@
 # @gyral/ssr
 
-Gyral server rendering: whole pages of Gyral components rendered to Declarative Shadow DOM on the server, with hydration seeds so the browser picks up where the server left off. Works in any runtime with the Fetch API `Response` (Node, Hono, workers).
+Gyral server rendering: whole pages of Gyral components rendered on the server (shadow components as Declarative Shadow DOM, light components as plain children), with hydration seeds so the browser picks up where the server left off. Rendering is `@gyral/core/server`'s: synchronous, no DOM, no Node-only APIs. Works in any runtime with the Fetch API `Response` (Node, Hono, Deno, workers).
 
 ## Install
 
 ```sh
-pnpm add @gyral/ssr @gyral/core lit @lit-labs/ssr @lit-labs/ssr-client
+pnpm add @gyral/ssr @gyral/core
 ```
+
+Hydration is built into `@gyral/core` (docs/design-docs/view/07-hydration.md): the client
+entry imports the components and each one adopts the server's DOM in place.
 
 ## Example
 
 ```ts
 // server.ts
-import { html } from 'lit';
+import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
 import './app.js'; // defines <my-app>
 
@@ -23,18 +26,20 @@ export const handle = (req: Request): Response =>
     scripts: ['/client.js'],
   });
 
-// client.ts: import the hydration support first
-import '@gyral/ssr/hydrate';
+// client.ts: hydration is built into @gyral/core
 import './app.js';
 ```
 
-`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`).
+`renderPage({ …, csp: { directives } })` sets a `Content-Security-Policy` whose `style-src` allows every component's `<style>` and the page's `styles` by hash, built when the page renders, so components imported late are covered. `contentSecurityPolicy({ styles, directives })` returns the same header ahead of time, for the components registered when it is called (development warns if a registered component's hash is missing from a header passed to `renderPage`). `formAction` handles no-JS form posts with the same schema as the browser.
+
+`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts, modulepreload })` so server-rendered pages hydrate without extra round trips. A route whose module is imported lazily adds it with `clientAssets(manifest, entry, also)`, or `preload(modules)` from `productionServer`'s `createApp` options.
 
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
-consumer setup guide (peer dependencies, Vite preset, SSR checklist):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral).
+consumer setup guide (packages, Vite preset, server rendering):
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:
+[docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
 
 > Status: pre-alpha. APIs change between 0.x releases.
 

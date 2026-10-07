@@ -40,7 +40,7 @@ const Search = define<State, Msg>('test-search', {
     ],
     Hits: (s, m) => ({ ...s, hits: m.hits }),
   },
-  view: (s, i) => html`<input .value=${s.query} data-intent=${i.Typed} />`,
+  view: (s, i) => html`<input value=${s.query} data-intent=${i.Typed} />`,
 });
 
 describe('search model', () => {
@@ -49,13 +49,13 @@ describe('search model', () => {
   });
 
   it('asks for results when typing, and shows them', () => {
-    const typed = step(Search.spec, { query: '', hits: [] }, { _tag: 'Typed', query: 'lit' });
-    expect(inputsFor(typed.commands, http)).toEqual([{ url: '/api?q=lit' }]);
+    const typed = step(Search.spec, { query: '', hits: [] }, { _tag: 'Typed', query: 'gyral' });
+    expect(inputsFor(typed.commands, http)).toEqual([{ url: '/api?q=gyral' }]);
     // Simulate the driver: what message would this response produce?
     const [command] = typed.commands;
     if (command === undefined) throw new Error('expected a command');
-    const msg = resolve(command, { hits: ['lit', 'lit-ssr'] });
-    expect(msg).toEqual({ _tag: 'Hits', hits: ['lit', 'lit-ssr'] });
+    const msg = resolve(command, { hits: ['gyral', 'gyral-ssr'] });
+    expect(msg).toEqual({ _tag: 'Hits', hits: ['gyral', 'gyral-ssr'] });
   });
 
   it('folds a sequence of messages', () => {
@@ -83,7 +83,7 @@ describe('search model', () => {
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest';
-import { define, html } from '@gyral/core';
+import { define, html, settled } from '@gyral/core';
 import { get } from '@gyral/http';
 import { fakeHttp } from '@gyral/http/testing';
 
@@ -119,7 +119,7 @@ it('loads the user when clicked', async () => {
   const el = new Who();
   el.drivers = { http: api };
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
 
   el.shadowRoot?.querySelector('button')?.click();
   await vi.waitFor(() => {
@@ -132,6 +132,9 @@ it('loads the user when clicked', async () => {
 });
 ```
 
+- `await settled()` (from `@gyral/core`) waits until every component has rendered: child props,
+  outputs reaching parents, focus commands and view transitions included. It doesn't wait for
+  drivers: answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`.
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
   `signal`, so you can assert that `switch` aborted it.
@@ -144,6 +147,11 @@ body)`, `failNext()`.
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 
 ## SSR tests
+
+`hydrated(page, { releaseIslands? })` releases islands if asked, then awaits `settled()`; it
+fails on console errors and warnings (a hydration mismatch is one) and on elements that never
+upgraded. Run SSR tests against production builds of core too: mismatches are reported
+differently there (a warning and a fresh render instead of an error).
 
 ```ts
 import { expect, it } from 'vitest';

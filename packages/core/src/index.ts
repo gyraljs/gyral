@@ -19,6 +19,8 @@ export { ISLAND_ATTRIBUTE } from './islands.js';
 export type { HydrateStrategy } from './islands.js';
 export type { ChildSource, OutputSource } from './children.js';
 export { define } from './define.js';
+export { intents } from './intent.js';
+export { settled } from './settled.js';
 export { changed, defineStore, send } from './store.js';
 export type {
   AnyStore,
@@ -44,7 +46,6 @@ export {
   STORES_ELEMENT,
   withStoreScope,
 } from './store-scope.js';
-export { defineStoresProvider } from './stores-provider.js';
 export { DRIVERS_ELEMENT, provideDrivers } from './drivers-scope.js';
 export { jsonHazard, warnJsonHazard } from './json-safety.js';
 export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
@@ -60,12 +61,11 @@ export {
   validateForm,
 } from './forms.js';
 export type { FormDefinition, FormRedirected, FormResult, FormValue } from './forms.js';
-export { ElementDirective } from './element-directive.js';
 export { runInit } from './init.js';
-export { invalid } from './invalid.js';
-export { findInScope, labelledBy } from './accessible-name.js';
-export { liveBoolean } from './live-boolean.js';
-export { textarea, textareaMarkup } from './textarea.js';
+export { invalid } from './hooks/invalid.js';
+export { findInScope, labelledBy } from './hooks/labelled-by.js';
+export { prop } from './prop.js';
+export type { Prop, PropKind, PropsOf } from './prop.js';
 // Devtools event stream (ADR 0017): emitted in development builds only.
 export {
   DEVTOOLS_ENABLED as devtoolsEnabled,
@@ -79,10 +79,8 @@ export type {
   DevEvent,
   DevtoolsHook,
 } from './devtools-events.js';
-export type { TextareaAttribute, TextareaOptions } from './textarea.js';
-export type { Styles } from './styles.js';
-// Used by @gyral/ssr to render light-DOM components as plain children (ADR 0014).
-export { HIDDEN_MARKER, HYDRATE_KEY, isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
+// Used by the server renderer and @gyral/ssr (ADR 0014, view/06-server.md).
+export { isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
 export type { GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
@@ -103,13 +101,17 @@ export type {
   Update,
 } from './types.js';
 
-// The view layer is Lit. Re-exported so most apps need a single import. `html` and `svg` are
-// Lit's tags with indentation whitespace removed (template-whitespace.ts, gyral-9rf).
-export { css, nothing, unsafeCSS } from 'lit';
-export { html, svg } from './templates.js';
-export { directive } from 'lit/directive.js';
-export { classMap } from 'lit/directives/class-map.js';
-export { keyed } from 'lit/directives/keyed.js';
-export { live } from 'lit/directives/live.js';
-export { repeat } from 'lit/directives/repeat.js';
-export { styleMap } from 'lit/directives/style-map.js';
+// The view layer (ADR 0018, docs/design-docs/view/): templates, lists, hooks and styles.
+export { css, defineHook, each, html, HydrationMismatch, nothing, raw } from './view/index.js';
+export type {
+  ChildValue,
+  CssValue,
+  HookAttributes,
+  HookResult,
+  HookSpec,
+  ListResult,
+  RawResult,
+  StyleSource,
+  Styles,
+  TemplateResult,
+} from './view/index.js';

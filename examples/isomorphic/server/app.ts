@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { html } from 'lit';
-import { renderPage, serverHtml } from '@gyral/ssr';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
 import '../src/app.js'; // registers <gy-iso-app> so the server can render it
 import '../src/contact.js'; // and <gy-iso-contact>, rendered inside it on /about
 import { pageTitle, site } from '../src/routes.js';
@@ -9,16 +9,22 @@ import { pageTitle, site } from '../src/routes.js';
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
 }
 
 /** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
 const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
 
-const baseStyles = serverHtml`<link rel="stylesheet" href="/shared/base.css" />
+const baseStyles = html`<link rel="stylesheet" href="/shared/base.css" />
   <style>
     @layer reset, base;
     @layer base {
-      gy-iso-app { max-inline-size: 40rem; margin-inline: auto; padding: 2rem 1rem; }
+      gy-iso-app {
+        max-inline-size: 40rem;
+        margin-inline: auto;
+        padding: 2rem 1rem;
+      }
     }
   </style>`;
 
@@ -38,6 +44,7 @@ export function createApp(options: AppOptions): Hono {
         head: baseStyles,
         body: html`<gy-iso-app path=${pathname}></gy-iso-app>`,
         scripts: [options.clientEntry],
+        modulepreload: options.modulepreload ?? [],
       },
       { status: site.match(pathname) === undefined ? 404 : 200 },
     );

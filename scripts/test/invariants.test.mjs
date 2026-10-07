@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkDependencies,
   checkWorkflow,
   findEffectLeaks,
+  findEscapedBackticks,
   relativeLinks,
   workflowTriggers,
 } from '../lib/invariants.mjs';
@@ -22,6 +24,22 @@ describe('findEffectLeaks', () => {
   });
 });
 
+describe('findEscapedBackticks', () => {
+  it('flags an escaped backtick in a doc comment', () => {
+    const dts =
+      '/** The template tag: `html\\`<p>${s.text}</p>\\``. */\nexport declare function html(): void;';
+    const errors = findEscapedBackticks('template.d.ts', dts);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('template.d.ts');
+  });
+
+  it('accepts double-backtick spans and escapes outside comments', () => {
+    const dts =
+      '/** The template tag: `` html`<p>${s.text}</p>` ``. */\nexport declare const t: "\\`";';
+    expect(findEscapedBackticks('template.d.ts', dts)).toEqual([]);
+  });
+});
+
 describe('checkDependencies', () => {
   it('rejects effect in any package', () => {
     const errors = checkDependencies('packages/http/package.json', {
@@ -36,7 +54,6 @@ describe('checkDependencies', () => {
     const manifest = {
       name: '@gyral/core',
       dependencies: { '@standard-schema/spec': '1.1.0', 'left-pad': '1.0.0' },
-      peerDependencies: { lit: '^3.3.0' },
     };
     const errors = checkDependencies('packages/core/package.json', manifest);
     expect(errors).toHaveLength(1);
@@ -44,13 +61,27 @@ describe('checkDependencies', () => {
   });
 
   it('accepts the real core manifest shape', () => {
-    expect(
-      checkDependencies('packages/core/package.json', {
-        name: '@gyral/core',
-        dependencies: { '@standard-schema/spec': '1.1.0' },
-        peerDependencies: { lit: '^3.3.0' },
-      }),
-    ).toEqual([]);
+    const manifest = JSON.parse(readFileSync('packages/core/package.json', 'utf8'));
+    expect(checkDependencies('packages/core/package.json', manifest)).toEqual([]);
+  });
+
+  it('allows only optional build-time peers in @gyral/core (vite, parse5, eslint)', () => {
+    const errors = checkDependencies('packages/core/package.json', {
+      name: '@gyral/core',
+      peerDependencies: {
+        react: '^19.0.0',
+        parse5: '^8.0.0',
+        vite: '^8.0.0',
+        eslint: '^10.0.0',
+        jsdom: '^26.0.0',
+      },
+      peerDependenciesMeta: { parse5: { optional: true } },
+    });
+    expect(errors).toHaveLength(4);
+    expect(errors[0]).toContain('Remove the "react" peer');
+    expect(errors[1]).toContain('"vite" must be optional');
+    expect(errors[2]).toContain('"eslint" must be optional');
+    expect(errors[3]).toContain('Remove the "jsdom" peer');
   });
 });
 

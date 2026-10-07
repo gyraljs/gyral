@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { html } from 'lit';
+import { html } from '@gyral/core';
 import { page, renderToString } from '@gyral/ssr';
 import { cart } from '../src/cart.js';
 import '../src/components.js';

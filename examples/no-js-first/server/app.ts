@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
-import { html, nothing } from 'lit';
+import { html, nothing } from '@gyral/core';
 import type { IntentRejected } from '@gyral/core';
-import { formAction, rejectWith, renderPage, seeOther, serverHtml } from '@gyral/ssr';
+import { formAction, rejectWith, renderPage, seeOther } from '@gyral/ssr';
 import '../src/rsvp.js'; // registers <gy-rsvp> so the server can render it
 import { RsvpForm, type Attendee } from '../src/schema.js';
 
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
   readonly clientEntry: string;
+  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
+  readonly modulepreload?: readonly string[];
   /**
    * The replies so far. The dev server re-creates the app on every request (to follow source
    * edits), so it creates this once and passes it in; otherwise each app starts its own.
@@ -19,9 +21,11 @@ export interface AppOptions {
 /** The examples' shared page styles (examples/shared/base.css), served at /shared/base.css. */
 const sharedCss = readFileSync(new URL('../../shared/base.css', import.meta.url), 'utf8');
 
-const head = serverHtml`<link rel="stylesheet" href="/shared/base.css" />
+const head = html`<link rel="stylesheet" href="/shared/base.css" />
   <style>
-    body > main { max-inline-size: 32rem; }
+    body > main {
+      max-inline-size: 32rem;
+    }
   </style>`;
 
 export interface Reply extends Attendee {
@@ -58,6 +62,7 @@ function page(options: AppOptions, { attendees, joined, rejected }: View, status
         ></gy-rsvp>
       </main>`,
       scripts: [options.clientEntry],
+      modulepreload: options.modulepreload ?? [],
     },
     { status },
   );

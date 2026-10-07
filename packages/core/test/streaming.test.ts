@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html } from '../src/index.js';
+import { command, define, defineDriver, html, settled } from '../src/index.js';
 
 // A driver that streams ticks until aborted; tests push values through the recorded emit.
 let streams: { emit: (n: number) => void; signal: AbortSignal }[] = [];
@@ -47,7 +47,7 @@ const settle = () => new Promise((r) => setTimeout(r, 0));
 async function mount() {
   const el = new Ticker();
   document.body.append(el);
-  await el.updateComplete;
+  await settled();
   await settle();
   return el;
 }

@@ -1,7 +1,7 @@
 # AGENTS.md
 
-A [Gyral](https://gyral.dev) app: Model-View-Intent web components on Lit, rendered on the
-server, prerendered to static HTML and hydrated in place. Pages work before JavaScript loads.
+A [Gyral](https://gyral.dev) app: Model-View-Intent web components with Gyral's own view layer,
+rendered on the server, prerendered to static HTML and hydrated in place. Pages work before JavaScript loads.
 This file tells coding agents how the project works.
 
 ## Commands
@@ -19,9 +19,11 @@ This file tells coding agents how the project works.
 - `src/home-page.ts`: the page, a light-DOM component (`shadow: false`) styled by
   `src/styles.css`.
 - `src/counter.ts`: a widget in shadow DOM (`styles` inside).
-- `src/entry-client.ts`: browser entry. `import '@gyral/ssr/hydrate'` MUST stay first.
+- `src/entry-client.ts`: browser entry: imports the components (hydration is built in).
 - `server/app.ts`: renders each page with `renderPage`. Add a route there, and its path to
-  `staticPaths` to prerender it. `server/app.test.ts` tests the rendered HTML.
+  `staticPaths` to prerender it. `server/app.test.ts` tests the rendered HTML. Pages send a
+  `Content-Security-Policy` whose `style-src` lists style hashes (`renderPage({ csp })`):
+  put CSS in `src/styles.css` or a component's `styles`, not in `style="…"` attributes.
 
 ## Gyral rules (follow them in every change)
 
@@ -35,12 +37,12 @@ This file tells coding agents how the project works.
    store instances (`renderPage({ stores })`); never fetch while rendering.
 5. State, props and store state must be JSON-serializable (they are the hydration seed) and
    must never hold secrets. Server and client must render the same markup for the same state.
-6. Boolean form state: `?checked=${liveBoolean(x)}`, never `.checked=${x}`. Textareas: the
-   `textarea()` directive. For JS-only UI, switch in the `Hydrated` reducer.
+6. Form state uses attributes: `value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`,
+   never `.value=`/`.checked=`. Lists: `each(items, key, row, pick?)` with pure rows. For
+   JS-only UI, switch in the `Hydrated` reducer.
 7. Page-level content in light DOM (`shadow: false`, document CSS); widgets in shadow DOM.
 8. Forms: one schema for `form()` (client) and `formAction` (server, works without JS).
-9. Use semantic HTML and modern CSS; keep the CSP's `style-src 'unsafe-inline'` (Declarative
-   Shadow DOM styles are inline).
+9. Use semantic HTML and modern CSS in `@layer component` inside `styles`.
 
 ## Testing approach
 
