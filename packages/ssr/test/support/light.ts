@@ -43,7 +43,6 @@ export const LightPage = define<PageState, PageMsg>('test-light-page', {
       const by = (detail as Partial<Bump> | undefined)?.by;
       return typeof by === 'string' ? { _tag: 'Bumped', by } : undefined;
     },
-    Noop: () => ({ _tag: 'Noop' }),
   },
   update: {
     More: (s) => ({ ...s, more: s.more + 1 }),

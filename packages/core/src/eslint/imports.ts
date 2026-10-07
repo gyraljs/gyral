@@ -56,7 +56,10 @@ export function findVariable(scope: Scope.Scope | null, name: string): Scope.Var
 }
 
 /** How `id` was imported from a template source: the export's name, or `*`. */
-function importedAs(context: Rule.RuleContext, id: NodeOf<'Identifier'>): string | undefined {
+export function importedAs(
+  context: Rule.RuleContext,
+  id: NodeOf<'Identifier'>,
+): string | undefined {
   const variable = findVariable(context.sourceCode.getScope(id), id.name);
   const def = variable?.defs[0];
   if (def?.type !== 'ImportBinding') return undefined;

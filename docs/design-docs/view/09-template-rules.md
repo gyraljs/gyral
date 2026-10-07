@@ -62,7 +62,7 @@ Not handled yet: `<select>` content under the new customizable-select parsing, C
 
 ## ESLint: `@gyral/core/eslint`
 
-A flat-config plugin with two rules, both in `gyral.configs.recommended` (setup:
+A flat-config plugin with three rules, all in `gyral.configs.recommended` (setup:
 [consumer-setup.md](../../references/consumer-setup.md) "ESLint"). ESLint (9 or 10) is an
 optional peer dependency.
 
@@ -84,12 +84,33 @@ optional peer dependency.
   function declared beside the row is followed: calling it is fine when it reads only the same.
   An `each` call without a key function is rule 9.
 
+- **`gyral/unused-intent`** (a warning, 0.3.1, gyral-g1r.25): a parser in
+  `define(tag, { intent: { Name: … } })` that no template in the module names with
+  `data-intent`. A parser runs only when an element names it, so it is a renamed intent or dead
+  code (messages that only come from commands need no parser). A name counts as used when the
+  module mentions it as a property (`i.Name`, a module-level `intents<Msg>()` constant's
+  `r.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal `data-intent` value in an
+  `html` template.
+  - **Why static:** the rule sees every template in the module, including branches that never
+    rendered (a dialog's buttons, an error state). A runtime check only knows the templates
+    rendered so far, so it would warn about conditional intents or have to guess when to
+    judge (after N renders, at disconnect); either gives false positives. So there is no
+    runtime warning.
+  - **Skipped** (no false positives where names may be used elsewhere): a component whose
+    view is imported, whose view hands its intents to an imported function, or whose module
+    exports an `intents()` constant; and every component of a module whose templates call or
+    pass on a function imported from another module (a shared table header that renders
+    `data-intent="Sort"`, rows defined elsewhere). Intents named only in `raw()` markup or in
+    another module's templates are the remaining blind spot: disable the warning on that line.
+  - On 2026-10-07 it reported two dead parsers in this repo's test fixtures and nothing in the
+    examples, gyral.dev or gyral-shop.
+
 Not checked by ESLint: rule 7's parse5 comparison (compiler) and the browser's own parse
 (development runtime); rule 11, because the editor can't tell where a template renders (a page
 shell is right on the server); rows ESLint can't follow statically (a row returned by a call, a
 parameter), which 03's development check covers.
 
-Options (both rules): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the Vite
+Options (every rule): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the Vite
 preset's `compiler.sources` (`gyralVitePreset({ compiler: { sources } })`). Core's own code and
 tests, which import `html` and `each` from core's modules by relative path, are recognised without
 it.
@@ -102,7 +123,7 @@ it.
 | `true` in a child hole                                 | Usually a `cond && x` slip (02)                      | development runtime and server render, once per part |
 | An object in an attribute or text-content hole         | It is written as `String(v)` (02)                    | development runtime and server render, once per part |
 | A function in a property binding (`.onclick=${fn}`)    | Views attach no closures; props are data (02)        | development runtime, once per part (0.3.1)           |
-| An intent parser that the component's view never names | Probably a renamed intent or dead code               | not checked yet: no tool reports it in 0.3.0         |
+| An intent parser that the component's view never names | Probably a renamed intent or dead code               | ESLint `gyral/unused-intent` (0.3.1, below)          |
 
 ## Native primitives
 

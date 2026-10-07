@@ -111,8 +111,9 @@ export default [
 
 `recommended` turns on `gyral/template` (every `html` template imported from `@gyral/core`)
 and `gyral/each-row-purity` (`each` rows read only their arguments; keys required), both as
-errors. If your templates come from a package that re-exports `html` (a design system), give
-both rules the same `sources` list as the Vite preset:
+errors, and `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as
+a warning. If your templates come from a package that re-exports `html` (a design system), give
+the rules the same `sources` list as the Vite preset:
 
 ```js
 // eslint.config.js
@@ -127,6 +128,7 @@ export default [
     rules: {
       'gyral/template': ['error', { sources }],
       'gyral/each-row-purity': ['error', { sources }],
+      'gyral/unused-intent': ['warn', { sources }],
     },
   },
 ];

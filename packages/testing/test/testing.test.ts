@@ -46,7 +46,7 @@ const Profile = define<State, Msg, { readonly userId: string }>('test-profile', 
     { id: props.userId, user: undefined, error: undefined },
     [loadUser(props.userId)],
   ],
-  intent: { Load: ({ value }) => ({ _tag: 'Load', id: value ?? '' }) },
+  intent: {}, // Load comes from tests (send, step), not from the DOM
   update: {
     Load: (s, m) => [{ ...s, id: m.id }, [loadUser(m.id)]],
     Loaded: (s, m) => ({ ...s, user: m.name, error: undefined }),

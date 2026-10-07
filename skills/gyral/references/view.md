@@ -38,8 +38,9 @@ Compute derived values in plain helper functions of state.
   need appears; inline `<svg>` inside `html` works.)
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
   time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
-- `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages, and
-  flags `each` rows that read the view's scope (`gyral/each-row-purity`). Enable it once:
+- `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
+  flags `each` rows that read the view's scope (`gyral/each-row-purity`), and warns about
+  intent parsers that no template in the module names (`gyral/unused-intent`). Enable it once:
 
 ```ts
 // eslint.config.ts (eslint.config.js works the same)
