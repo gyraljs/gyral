@@ -1,6 +1,6 @@
-# Gyral 0.3.0-next.5: complete documentation
+# Gyral 0.3.0: complete documentation
 
-> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Inspired by Cycle.js.
+> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
 Generated from https://gyral.dev. Each section below is one page; its source URL follows its title.
 
@@ -347,13 +347,13 @@ export const Badge = define<Stateless, never, Props>('my-badge', {
 
 ### Builders and attributes
 
-| Builder                     | The attribute is parsed with                 | Attribute name         |
-| --------------------------- | -------------------------------------------- | ---------------------- |
-| `prop.string(opts?)`        | nothing: the string as is                    | kebab-case of the prop |
-| `prop.number(opts?)`        | `Number(v)`; empty or `NaN` is invalid       | kebab-case             |
-| `prop.boolean(opts?)`       | presence: there is `true`, absent is `false` | kebab-case             |
-| `prop.json(schema, opts?)`  | `JSON.parse`, then the schema                | kebab-case             |
-| `prop.value(schema, opts?)` | no attribute: set it as a property           | none                   |
+| Builder                     | The attribute is parsed with           | Attribute name         |
+| --------------------------- | -------------------------------------- | ---------------------- |
+| `prop.string(opts?)`        | nothing: the string as is              | kebab-case of the prop |
+| `prop.number(opts?)`        | `Number(v)`; empty or `NaN` is invalid | kebab-case             |
+| `prop.boolean(opts?)`       | present is `true`, absent is `false`   | kebab-case             |
+| `prop.json(schema, opts?)`  | `JSON.parse`, then the schema          | kebab-case             |
+| `prop.value(schema, opts?)` | no attribute: set it as a property     | none                   |
 
 A prop named `maxValue` reads the attribute `max-value`; pass `attribute: 'name'` to choose
 another, or `attribute: false` for a property only. The options are `required`, `default`,
@@ -478,8 +478,7 @@ export const Total = define<State, Msg>('my-total', {
 - Any custom element can talk to a Gyral parent by dispatching `gyral-output` with a tagged
   `detail`, so children don't have to be Gyral components.
 
-This replaces Cycle.js's `isolate()` and collections: Shadow DOM does the isolating, and `each`
-does the list.
+Shadow DOM does the isolating, and `each` does the list.
 
 ## Escape hatches
 
@@ -573,8 +572,9 @@ Override it with `data-intent-on`, such as `data-intent-on="keydown"`. Any event
 there: `keyup`, `focusin`, `focusout`, `toggle` (popovers and `<details>`), `command` (invoker
 commands, below), `pointerdown` or a third-party element's own event. A component listens only
 for the events its templates name, so a component without keyboard intents never runs intent
-lookup on a keystroke. If the value itself is bound, `data-intent-on=${…}`, list the event types
-it can produce in the spec: `events: ['pointerdown']`.
+lookup on a keystroke. If the value itself is bound, `data-intent-on=${…}`, the component listens
+for `keydown`, `keyup`, `focusin`, `focusout`, `toggle` and `command` as well; list any other
+event type it can produce in the spec: `events: ['pointerdown']`.
 
 An element carries one `data-intent`. To give a control a second intent, put it on an
 ancestor, as the example does: the `keydown` intent sits on `<search>` around the input whose
@@ -674,8 +674,7 @@ everywhere. Built-in commands such as `show-modal` are left to the browser.
 
 Only `data-intent` elements in the component's own render root count. A click inside a child
 component belongs to the child, never to the parent, because the child's shadow root is a
-boundary. Light-DOM components keep the same rule by stopping at the next Gyral host. This is
-what Cycle.js needed `isolate()` for.
+boundary. Light-DOM components keep the same rule by stopping at the next Gyral host.
 
 ---
 
@@ -762,8 +761,8 @@ Keep state a record of JSON values: strings, numbers, booleans, `null`, arrays a
 objects. No `Date`, `Map` or class instances. Three things depend on it:
 
 - **Server rendering** writes each component's state into the page as JSON, and the browser
-  resumes from it. A `Date` would come back as a string. The server warns when a seed won't
-  survive the trip.
+  resumes from it. A `Date` would come back as a string. In development, the server warns when
+  a seed won't survive the trip.
 - **Devtools** and tests can print and compare state.
 - **Reducers return new objects.** State is never mutated, so "did it change?" is a reference
   check.
@@ -1667,8 +1666,8 @@ Source: https://gyral.dev/docs/effects/
 
 Reducers can't fetch, wait or write to storage, because they're pure. Instead they return
 **commands**: plain objects that describe a side effect and say which message the outcome
-becomes. A **driver** runs the command and answers with that message. This is the idea Gyral
-keeps from [Cycle.js](https://cycle.js.org): effects are data, and they happen at the edges.
+becomes. A **driver** runs the command and answers with that message. Effects are data, and
+they happen at the edges.
 
 ## Commands as data
 
@@ -2184,10 +2183,11 @@ server.get('*', (c) => {
 });
 ```
 
-The server doesn't run `listen()` (commands never run on the server). In the browser,
-`listen()` starts after hydration and delivers the same URL, so nothing re-renders. Pass the
-request path as a prop if the first render must show the route, as Gyral's
-[isomorphic example](https://gyral.dev/examples/#isomorphic) does.
+The server doesn't run `listen()` (commands never run on the server), so the shell above is
+server-rendered with no route and gets one only after hydration, when `listen()` delivers the
+URL. Pass the request path as a prop and start from it in `init` if the first render must show
+the route, as Gyral's [isomorphic example](https://gyral.dev/examples/#isomorphic) does: then `listen()` delivers
+the same URL and nothing changes.
 
 ## Memory history
 
@@ -2396,11 +2396,11 @@ Every client-side instance then gets the `Hydrated` message once. Use it for pro
 enhancement: render the no-JavaScript version on the server and in the first client render, then
 switch to the enhanced one.
 
-The seed carries state as JSON, so keep state and props JSON-serializable. The server warns,
-with the exact path, when a value won't survive the trip (a `Date`, a `Map`, `NaN`). State that
-equals `init(props)` isn't written twice. Form controls keep what the user typed before scripts
-ran: hydration never overwrites it, and a control is written again only when the model's value
-for it changes.
+The seed carries state as JSON, so keep state and props JSON-serializable. In development the
+server warns, with the exact path, when a value won't survive the trip (a `Date`, a `Map`,
+`NaN`). State that equals `init(props)` isn't written twice. Form controls keep what the user
+typed before scripts ran: hydration never overwrites it, and a control is written again only
+when the model's value for it changes.
 
 ## Mismatches
 
@@ -2615,9 +2615,10 @@ export default defineConfig({
   A path that doesn't answer `200` fails the build, so an error page can't ship by accident.
 - **`origin`** is the URL the requests are made with. Set it to your real site, so absolute
   URLs your pages build from the request (canonical links, Open Graph tags) come out right.
-- **`clientAssetsFromManifest(manifest, entry)`** reads Vite's manifest and returns the hashed
-  URL of your client entry (`entry`, for example `/assets/entry-client-Ab12.js`) and the chunks
-  it needs (`modulepreload`): its static imports and Gyral's hydration chunk.
+- **`clientAssetsFromManifest(manifestPath, entry)`** reads Vite's manifest and returns the
+  hashed URL of your client entry (`entry`, for example `/assets/entry-client-Ab12.js`) and the
+  chunks to preload with it (`modulepreload`): the entry itself, its static imports and Gyral's
+  hydration chunk.
   `renderPage({ modulepreload })` writes a `<link rel="modulepreload">` for each, so the browser
   fetches them alongside the entry instead of a round trip later. A third argument lists
   modules a page imports lazily, by source path (`['src/routes/product.ts']`); they are
@@ -2764,10 +2765,10 @@ its module loads, a server-rendered `<my-gallery>` is the server's HTML, already
 first state; when the module defines the element, it hydrates in place, with no flash.
 
 A page that you know needs a lazy chunk can preload it with the entry instead of finding it
-only after the entry has run. `clientAssetsFromManifest(manifest, entry, also)` from
-`@gyral/ssr/static` takes the source paths of those modules (`['src/widgets.ts']`) and adds
-them, with their static imports, to `modulepreload`; on a server, `productionServer` hands your
-app a `preload(modules)` that does the same per page (see
+only after the entry has run. `clientAssetsFromManifest(manifestPath, entry, also)` from
+`@gyral/ssr/static` reads Vite's build manifest; `also` takes the source paths of those modules
+(`['src/widgets.ts']`) and adds them, with their static imports, to `modulepreload`. On a
+server, `productionServer` hands your app a `preload(modules)` that does the same per page (see
 [Deploying](https://gyral.dev/docs/deploying/#node)).
 
 [gyral-shop](https://github.com/gyraljs/gyral-shop/blob/main/src/client/lazy.ts) uses this
@@ -2856,8 +2857,8 @@ Set the host's 404 page to your prerendered `404.html` if you render one.
 ## Node
 
 When some pages render per request, build into two folders and run Gyral's production server.
-`npm create gyral@latest my-app -- --template ssr` sets this up for you; this is what it
-generates.
+`npm create gyral@latest my-app -- --template ssr` sets this up for you; the files below are a
+trimmed-down version of what it generates.
 
 ```ts
 // src/counter.ts
@@ -3168,7 +3169,8 @@ Gyral renders on a schedule: reducers run as soon as a message arrives, and the 
 microtask, once for every message that arrived together. **`await settled()`** from
 `@gyral/core` waits until every component on the page has rendered its latest state, including
 view transitions, focus commands and lazily loaded code. Await it before you look at the DOM;
-there's nothing to poll.
+there's nothing to poll. It covers rendering, not driver work: answer fake drivers and advance
+virtual time first.
 
 ```ts
 // src/lookup.browser.test.ts
@@ -3324,10 +3326,10 @@ Alt+Shift to toggle it; default `KeyD`).
 ## What it shows
 
 - **Timeline.** Every event, newest first: components connecting, disconnecting and
-  hydrating; each message with the state before and after; each command as it's issued,
-  dropped (`exhaust`), interrupted (`switch`, disconnect), settled with the driver's output, or
-  failed with its error; and store messages. Filter by text or by kind. The last 500 events are
-  kept.
+  hydrating, and hydration mismatches; each message with the state before and after; each
+  command as it's issued, dropped (`exhaust`), interrupted (`switch`, disconnect), settled with
+  the driver's output, or failed with its error; and store messages. Filter by text or by kind.
+  The last 500 events are kept.
 - **Components.** The live instances, with a preview of each one's current state. Components that
   connected before the panel loaded are listed too.
 - **Command lanes.** Each lane's owner, policy, last phase and how many commands are in flight,
@@ -3342,7 +3344,7 @@ The instrumentation lives in `@gyral/core`, behind a package-internal import wit
 `development` condition. Vite resolves that condition in the dev server and in Vitest, and the
 production one in `vite build`, where every call site is guarded by a constant `false`. The
 bundler drops the call sites and the module: a production build contains neither the hook nor
-its event code. Measured across Gyral's examples, the largest size change was 0.1 KiB.
+its event code.
 
 With other bundlers, set the `development` resolve condition in development builds to get events.
 Without it you get the safe default: no events.
@@ -3698,8 +3700,8 @@ npm install -D @gyral/testing @gyral/devtools
 
 ## Optional peer dependencies
 
-No Gyral package needs another library at runtime. The build tools Gyral plugs into are optional
-peer dependencies: install the ones you use.
+No Gyral package asks you to install another library at runtime. The build tools Gyral plugs
+into are optional peer dependencies: install the ones you use.
 
 | Package          | Optional peers                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------- |
@@ -3728,13 +3730,15 @@ export default defineConfig({
 });
 ```
 
-- **`plugins`**: the template compiler. In `vite build` it checks every `html` template,
-  dependencies included, fails the build with a code frame on a rule violation, and replaces each
-  template with a precompiled object, so the bundle doesn't carry the runtime template preparer.
-  The dev server and Vitest keep the runtime path, which checks the same rules on first render.
-  With `parse5` installed, the build also compares each template with a full HTML parser's
-  result. If your config has plugins of its own, list both:
-  `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`plugins`**: the template compiler and a dev-server plugin. In `vite build` the compiler
+  checks every `html` template, dependencies included, fails the build with a code frame on a
+  rule violation, and replaces each template with a precompiled object, so the bundle doesn't
+  carry the runtime template preparer. The dev server and Vitest keep the runtime path, which
+  checks the same rules on first render. With `parse5` installed, the build also compares each
+  template with a full HTML parser's result. The dev-server plugin makes Vite, not Node, load
+  `@gyral/*` (and your dependencies that use them) in server code under `vite dev`, so server
+  rendering there gets development output and shares one copy of `@gyral/core`. If your config
+  has plugins of its own, list both: `plugins: [...gyralVitePreset().plugins, mine()]`.
 - **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the first
   browser test run and reloads the page, list it: `gyralVitePreset({ optimize: ['some-dep'] })`.
 
@@ -3771,9 +3775,9 @@ Measured on Gyral's examples (gzip, production builds with the preset):
 
 | App                      | 0.2.0    | 0.3: first load | 0.3: all chunks |
 | ------------------------ | -------- | --------------- | --------------- |
-| hello-world              | 12.2 KiB | 8.9 KiB         | 11.3 KiB        |
-| isomorphic (SSR)         | 17.3 KiB | 13.0 KiB        | 15.6 KiB        |
-| no-js-first (SSR, forms) | 18.7 KiB | 16.8 KiB        | 19.3 KiB        |
+| hello-world              | 12.2 KiB | 8.9 KiB         | 11.2 KiB        |
+| isomorphic (SSR)         | 17.3 KiB | 12.9 KiB        | 15.4 KiB        |
+| no-js-first (SSR, forms) | 18.7 KiB | 16.6 KiB        | 19.0 KiB        |
 
 "First load" is the entry chunk and what it imports statically: what a page downloads before any
 lazy `import()`. The [migration guide](https://gyral.dev/docs/migrating-0-2-to-0-3/#size) has this site's own
@@ -4206,9 +4210,9 @@ what a page loads before any `import()`:
 
 | Bundle                   | 0.2.0    | 0.3: first load | 0.3: all chunks |
 | ------------------------ | -------- | --------------- | --------------- |
-| hello-world              | 12.2 KiB | 8.9 KiB         | 11.3 KiB        |
-| isomorphic (SSR)         | 17.3 KiB | 13.0 KiB        | 15.6 KiB        |
-| no-js-first (SSR, forms) | 18.7 KiB | 16.8 KiB        | 19.3 KiB        |
+| hello-world              | 12.2 KiB | 8.9 KiB         | 11.2 KiB        |
+| isomorphic (SSR)         | 17.3 KiB | 12.9 KiB        | 15.4 KiB        |
+| no-js-first (SSR, forms) | 18.7 KiB | 16.6 KiB        | 19.0 KiB        |
 
 Features load with the API that uses them (`each`, `raw`, hooks, `command()`, stores, prop
 builders), so small apps shed the most. If you keep a size budget, budget the first load: the
@@ -7256,8 +7260,9 @@ interface ClientAssets {
     /** The entry chunk's URL, for `page({ scripts })`. */
     readonly entry: string;
     /**
-     * Chunks the entry is known to need, for `page({ modulepreload })`: its static imports and
-     * Gyral's lazily loaded hydration chunk with its imports. Without the hints the browser
+     * Chunks the entry is known to need, for `page({ modulepreload })`: the entry itself first
+     * (when there is anything else), then its static imports and Gyral's lazily loaded hydration
+     * chunk with its imports. Without the hints the browser
      * finds them only after it has fetched and parsed the entry (a server-rendered page would
      * fetch the hydration chunk a round trip later still).
      */
@@ -8182,7 +8187,7 @@ Transitions, Gyral uses it as an enhancement rather than building its own.
 ## Pure core, effects at the edges
 
 `update` and `view` are pure functions. Side effects are described as data, as commands, and
-carried out by drivers. This is the idea Gyral inherits from Cycle.js.
+carried out by drivers.
 
 It's what makes a component testable without a browser, renderable on a server, and observable
 in [devtools](https://gyral.dev/docs/devtools/): every change is a message, every effect a value.
@@ -8225,8 +8230,9 @@ hydration of real server output against production builds.
 ## Enforce invariants, not intentions
 
 Rules that matter become checks with error messages that explain the fix. In Gyral's own repo,
-`@gyral/core` is checked to have no runtime dependencies, views can't attach closures (the
-template compiler and the ESLint rules reject them), and every decision record is indexed. This site follows the same rule: every code sample on it compiles
+`@gyral/core` is checked to have no runtime dependencies, views can't bind event handlers (the
+template compiler and the ESLint rules reject `@event` bindings), and every decision record is
+indexed. This site follows the same rule: every code sample on it compiles
 against the real packages, and every page passes accessibility checks in light and dark mode.
 
 ## Measure, then budget
@@ -8240,7 +8246,7 @@ measured 8.9 KiB and says so.
 
 # Gyral examples
 
-> Gyral examples, from a counter to a server-rendered app: ports of the Cycle.js examples with their source, plus gyral-shop.
+> Gyral examples with their source, from a counter to a server-rendered app, plus gyral-shop.
 
 Source: https://gyral.dev/examples/
 
@@ -8251,7 +8257,6 @@ Source: https://gyral.dev/examples/
 Type a name and see a greeting: one input intent, one reducer, one view.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/hello-world
-- Ports Cycle.js `basic/hello-world`
 - Explained in: [Intent](https://gyral.dev/docs/intent/)
 
 `src/hello.ts`:
@@ -8290,7 +8295,6 @@ export const Hello = define<State, Msg>('gy-hello', {
 Two buttons and a number. The smallest complete Model-View-Intent loop.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/counter
-- Ports Cycle.js `basic/counter`
 - Explained in: [Getting started](https://gyral.dev/docs/getting-started/)
 
 `src/counter.ts`:
@@ -8330,7 +8334,6 @@ export const Counter = define<State, Msg>('gy-counter', {
 A checkbox whose state the model owns, bound with ?checked so it is right on the server and in the browser.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/checkbox
-- Ports Cycle.js `basic/checkbox`
 - Explained in: [Views](https://gyral.dev/docs/views/#form-state)
 
 `src/checkbox.ts`:
@@ -8370,10 +8373,9 @@ export const Checkbox = define<State, Msg>('gy-checkbox', {
 
 ### Hello, last name
 
-Two fields and a greeting derived from state, where Cycle.js needed three streams to express valid and invalid input.
+Two fields and a greeting derived from state: valid and invalid input are plain values in the model.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/hello-lastname
-- Ports Cycle.js `intermediate/hello-lastname`
 - Explained in: [Model and update](https://gyral.dev/docs/update/)
 
 `src/hello-lastname.ts`:
@@ -8390,12 +8392,12 @@ export type Msg =
   | { readonly _tag: 'First'; readonly value: string }
   | { readonly _tag: 'Last'; readonly value: string };
 
-/** Minimum last-name length before a greeting is shown (from the Cycle.js original). */
+/** Minimum last-name length before a greeting is shown. */
 export const MIN_LAST = 3;
 
 /**
  * Derived from state, never stored: "LAST, First" once both parts are valid, else ''.
- * The Cycle.js original needed three streams (raw, valid, invalid) to express this.
+ * Raw, valid and invalid input are plain values in the model, so no extra state is needed.
  */
 export const fullName = ({ first, last }: State): string =>
   first.length > 0 && last.length >= MIN_LAST ? `${last.toUpperCase()}, ${first}` : '';
@@ -8441,7 +8443,6 @@ export const HelloLastname = define<State, Msg>('gy-hello-lastname', {
 Range inputs parsed and bounded by a schema with field(), so the model only sees valid numbers.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/bmi
-- Ports Cycle.js `basic/bmi-naive, intermediate/bmi-typescript`
 - Explained in: [Forms](https://gyral.dev/docs/forms/)
 
 `src/bmi.ts`:
@@ -8531,7 +8532,6 @@ export const Bmi = define<State, Msg>('gy-bmi', {
 A periodic command started from init streams ticks until the component disconnects.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/seconds-elapsed
-- Ports Cycle.js `basic/jsx-seconds-elapsed, intermediate/tsx-seconds-elapsed`
 - Explained in: [Effects and drivers](https://gyral.dev/docs/effects/#streaming-results-with-emit)
 
 `src/seconds-elapsed.ts`:
@@ -8549,8 +8549,8 @@ export type Msg = { readonly _tag: 'Tick'; readonly seconds: number };
 /** ISO 8601 duration for `<time datetime>`, e.g. 75 → "PT75S". */
 export const duration = (seconds: number): string => `PT${String(seconds)}S`;
 
-// Cycle: Time.periodic(1000).map(i => i + 1).startWith(0). Here the periodic command
-// streams 1, 2, 3… and the initial state is the startWith(0).
+// The periodic command streams 1, 2, 3… one per second; the initial state supplies the 0
+// shown before the first tick.
 export const SecondsElapsed = define<State, Msg>('gy-seconds-elapsed', {
   init: () => [{ seconds: 0 }, [periodic(1000, (seconds) => ({ _tag: 'Tick', seconds }))]],
   intent: {},
@@ -8572,7 +8572,6 @@ export const SecondsElapsed = define<State, Msg>('gy-seconds-elapsed', {
 Randomness and HTTP as commands: pick a random id with randomInt, fetch the user, decode it with a schema.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/http-random-user
-- Ports Cycle.js `basic/http-random-user`
 - Explained in: [Effects and drivers](https://gyral.dev/docs/effects/)
 
 `src/random-user.ts`:
@@ -8676,7 +8675,6 @@ function userCard(user: User) {
 Search as you type: debounce() and a switch lane cancel stale requests, and late answers for old queries are ignored.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/http-search-github
-- Ports Cycle.js `intermediate/http-search-github`
 - Explained in: [Concurrency lanes](https://gyral.dev/docs/effects/#concurrency-lanes)
 
 `src/search.ts`:
@@ -8723,7 +8721,7 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
   update: {
     Typed: (s, m) => [
       { ...s, query: m.query },
-      // Each keystroke cancels the pending timer; replaces Cycle's Time.debounce(500).
+      // A 500 ms debounce: each keystroke cancels the pending timer.
       [debounce<Msg>(DEBOUNCE_MS, { _tag: 'Search', query: m.query })],
     ],
     Search: (s, m) => {
@@ -8803,7 +8801,6 @@ function repoItem(repo: Repo) {
 Wikipedia suggestions in a popover, with keyboard navigation through keydown intents and debounced requests.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/autocomplete-search
-- Ports Cycle.js `advanced/autocomplete-search`
 - Explained in: [Intent](https://gyral.dev/docs/intent/#trigger-events)
 
 `src/autocomplete.ts`:
@@ -9003,7 +9000,6 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
 A canvas chart as a driver: one command draws, another streams the bars the user clicks.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/custom-driver
-- Ports Cycle.js `advanced/custom-driver`
 - Explained in: [Writing a driver](https://gyral.dev/docs/effects/#writing-a-driver)
 
 `src/chart-driver.ts`:
@@ -9011,8 +9007,7 @@ A canvas chart as a driver: one command draws, another streams the bars the user
 ```ts
 // A custom driver (ADR 0006): a plain object that owns an imperative resource, here a
 // <canvas> outside any component, and talks to components only through commands.
-// The Cycle.js original wrapped Chart.js; this draws a bar chart with the 2D canvas API so the
-// example needs no charting dependency.
+// It draws a bar chart with the 2D canvas API, so the example needs no charting dependency.
 import { command, type Command, type Driver } from '@gyral/core';
 
 export interface ChartData {
@@ -9146,7 +9141,6 @@ export function chartClicks<M>(toMsg: (bar: number) => M | undefined): Command<M
 Two instances of one slider component. Props go down, outputs come up, and the parent owns the values.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/bmi-nested
-- Ports Cycle.js `advanced/bmi-nested`
 - Explained in: [Child components](https://gyral.dev/docs/components/#child-components-and-outputs)
 
 `src/bmi-nested.ts`:
@@ -9169,7 +9163,7 @@ export const bmiOf = ({ weight, height }: State): number =>
 
 /**
  * The parent owns both values and derives the BMI. Each slider is the same child component;
- * the two `data-intent` names tell their outputs apart (Cycle needed `isolate()` for that).
+ * the two `data-intent` names tell their outputs apart, with no extra scoping step.
  */
 export const BmiNested = define<State, Msg>('gy-bmi-nested', {
   init: () => ({ weight: 70, height: 170 }),
@@ -9211,7 +9205,6 @@ export const BmiNested = define<State, Msg>('gy-bmi-nested', {
 A folder that contains folders: a recursive component through child(() => Folder), each level owning its own children.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/nested-folders
-- Ports Cycle.js `advanced/nested-folders`
 - Explained in: [Child components](https://gyral.dev/docs/components/#child-components-and-outputs)
 
 `src/folder.ts`:
@@ -9247,7 +9240,7 @@ export type Msg =
   | { readonly _tag: 'Remove' }
   | { readonly _tag: 'Child'; readonly id: string; readonly out: FolderOutput };
 
-/** Stable pastel hue per id, replacing Cycle's `idToColor`. */
+/** Stable pastel hue per id, so a folder keeps its color across renders. */
 export function hueOf(id: string): number {
   let hue = 7;
   for (let n = 0; n < id.length; n += 1) hue = (hue * 31 + id.charCodeAt(n)) % 360;
@@ -9256,8 +9249,8 @@ export function hueOf(id: string): number {
 
 /**
  * A folder renders folders of its own kind: recursion through the custom-element tag.
- * Unlike Cycle's onionify version (one state tree, lenses per level), each folder owns the
- * list of its direct children; a child removes itself by emitting `Removed` up one level.
+ * Each folder owns the list of its direct children (no single state tree with lenses per
+ * level); a child removes itself by emitting `Removed` up one level.
  * Ids are paths (`1.2.1`), so making a new one is pure.
  */
 /** One child folder; its intent name comes through `pick`, so the row stays pure. */
@@ -9384,7 +9377,6 @@ export const cart = defineStore<Cart, CartMsg>('cart', {
 A typed route table, listen() streaming every location, setTitle(), and a View Transition between pages.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/routing-view
-- Ports Cycle.js `advanced/routing-view`
 - Explained in: [Routing](https://gyral.dev/docs/routing/)
 
 `src/app.ts`:
@@ -9514,7 +9506,6 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
 Rendered on the server with Declarative Shadow DOM, hydrated in place, with one route prerendered and one rendered per request.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/isomorphic
-- Ports Cycle.js `advanced/isomorphic`
 - Explained in: [Server rendering](https://gyral.dev/docs/server-rendering/)
 
 `src/app.ts`:
@@ -9800,7 +9791,6 @@ export const ShoppingList = define<State, Msg>('gy-shopping-list', {
 The model counts runs and CSS does the motion: no per-frame state, restarted by a one-item each().
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/animation
-- Ports Cycle.js `intermediate/animation`
 - Explained in: [Views](https://gyral.dev/docs/views/#lists)
 
 `src/animation.ts`:
@@ -9808,8 +9798,8 @@ The model counts runs and CSS does the motion: no per-frame state, restarted by 
 ```ts
 import { css, define, each, html } from '@gyral/core';
 
-// Cycle's version tweened coordinates in JS on every frame. Here the model only counts runs;
-// the motion is a CSS animation the browser runs on its own (no per-frame state, no JS timer).
+// The model only counts runs; the motion is a CSS animation the browser runs on its own
+// (no per-frame state, no JS timer, no coordinates tweened in JS).
 
 /** A keyframe: time (0..1), position in units of the travel distance, easing to the next stop. */
 export interface Stop {
@@ -9903,7 +9893,6 @@ export const Animation = define<State, Msg>('gy-animation', {
 Letters you type grow in and shrink out. The model tracks which are present or leaving; CSS transitions animate.
 
 - Source: https://github.com/gyraljs/gyral/tree/main/examples/animated-letters
-- Ports Cycle.js `advanced/animated-letters`
 - Explained in: [Model and update](https://gyral.dev/docs/update/)
 
 `src/letters.ts`:
@@ -9914,8 +9903,8 @@ import { delay } from '@gyral/time';
 
 import { letterKeys } from './keyboard.js';
 
-// Cycle's version ran a per-frame easing loop over every letter. Here the model only knows
-// which letters are present or leaving; CSS transitions do the growing and shrinking.
+// The model only knows which letters are present or leaving; CSS transitions do the growing
+// and shrinking, so there is no per-frame easing loop over the letters.
 
 /** How long a letter takes to grow in or shrink out. The model waits this long to drop it. */
 export const TRANSITION_MS = 600;

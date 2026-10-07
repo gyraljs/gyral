@@ -11,7 +11,7 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 - **Intent** reads `data-intent` elements in the component's own shadow root (or its own
   light-DOM subtree with `shadow: false`, ADR 0014) and parses the event (click, submit, input, change) into a typed message. Nested components are isolated
-  by Shadow DOM, which replaces Cycle's `isolate()`.
+  by Shadow DOM.
 - **Model** is a record of pure reducers keyed by message tag (exhaustive by type).
 - **View** is a pure template of state, rendered by Gyral's own view layer
   (`packages/core/src/view/`, ADR 0018). It names intents and never holds closures. One global

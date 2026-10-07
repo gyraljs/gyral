@@ -47,7 +47,7 @@ const page = `<!doctype html>
   li { border: 1px solid color-mix(in oklch, currentColor 25%, transparent); border-radius: 0.5rem; padding: 0.75rem 1rem; }
   a { font-weight: 600; } p { margin-block: 0.25rem 0; font-size: 0.9rem; opacity: 0.8; }
 </style></head>
-<body><main><h1>Gyral examples</h1><p>Ports of the Cycle.js examples. Each runs its own dev server.</p>
+<body><main><h1>Gyral examples</h1><p>Gyral's acceptance suite. Each example runs its own dev server.</p>
 <ul>
 ${rows}
 </ul></main></body></html>`;
