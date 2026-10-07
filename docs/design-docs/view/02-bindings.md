@@ -100,7 +100,9 @@ prop for that component's render (06). On any other element it is dropped, so fo
 not use property bindings (09, rule 4).
 
 **Functions** (0.3.1, gyral-g1r.28): views attach no closures, so a function value warns in
-development, once per part, and is still set:
+development, once per part, when a client render commits it (hydration adopts values without
+the check: a warning there would keep the code alive in production bundles, which share it
+across chunks), and is still set:
 
 - on a built-in element (`.onclick=${fn}`): events are intents (`data-intent=${i.Name}`),
   behaviour on an element is a hook;
