@@ -82,6 +82,14 @@ export const subscribe = <M>(url: string, toMsg: (data: string) => M): Command<M
   command(events, url, { onSuccess: toMsg, key: `events:${url}`, concurrency: 'switch' });
 ```
 
+### Sources Gyral doesn't own: `subscription()`
+
+For signals, Redux/Zustand stores, XState actors or sockets, `subscription(name, (emit, {
+input, signal, fail }) => unsubscribe, options?)` builds the streaming driver for you: it
+emits until the command is switched away or the component disconnects, then calls the
+returned unsubscribe (a function or `{ unsubscribe() }`). Recipes (TC39 signals, a
+Redux-style store, a store provided per page, a WebSocket) and testing: outside-stores.md.
+
 ## Packages that ship drivers
 
 ```ts

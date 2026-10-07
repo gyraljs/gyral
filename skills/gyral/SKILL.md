@@ -97,6 +97,8 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
   `ctx.read(store)`, `send(store, msg)`).
 - A child must tell its parent something → an output (`emit()` in the child, `child()` intent
   in the parent).
+- It already lives outside Gyral (a signals store, Redux, XState, a socket) → keep it there;
+  read it with a `subscription()` command, write with a plain driver (outside-stores.md).
 
 **Which concurrency for a command?** (per lane = `key`, default the driver name)
 
@@ -105,8 +107,9 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
 `@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router`
-(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
-`defineDriver()` + `command()`.
+(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. A store or feed
+Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
+(`references/outside-stores.md`). Anything else → `defineDriver()` + `command()`.
 
 ## References (read on demand)
 
@@ -115,6 +118,7 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
 - `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `labelledBy`), `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
+- `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
