@@ -72,7 +72,8 @@ general-purpose features. The priorities, in order: correctness, speed, bundle s
    `ElementDirective`/`directive`, `live`, `liveBoolean`, `textarea()`, `repeat`, `keyed`,
    `updateComplete`, `requestUpdate`. The `many`, `themes` and `view-transitions` examples go
    with `styleMap`. `svg` templates, `classMap` and `styleMap` may return if a real feature need
-   appears; inline `<svg>` inside `html` keeps working.
+   appears; inline `<svg>` inside `html` keeps working. **`svg` returned in 0.3.1** for a real
+   need: sabacc.starwars.run's card faces (below, "svg templates return").
 
 ### The design (each point has a spec)
 
@@ -228,6 +229,30 @@ benchmark repo's `gyral-next` branch; calibration spread 3.3%, no drift flag).
 - **Apps:** gyral-shop server rendering 2.6–3.7× faster (category 12.1 → 3.3 ms), entry chunk
   10.2 → 7.9 KiB, every page downloads less JS; gyral.dev island entry 17.6 → 14.1 KB gzip
   plus a 2.9 KB preloaded hydration chunk, strict CSP without `'unsafe-inline'` styles.
+
+### svg templates return (gyral-c5d.8, 0.3.1)
+
+The need: sabacc.starwars.run's card faces render small SVG fragments (suit marks, name lines)
+as templates of their own, ``${cond ? svg`<path …/>` : nothing}`` inside an `<svg>` of an `html`
+template. Rule 10 rejected them in `html` (the HTML parser would make HTML elements of a
+top-level `<path>`), so the team inlined every variant in one `<svg>` with `display="none"`
+slots. `svg` is back, on Gyral's terms (view/01 "svg templates"):
+
+- The template object carries `svg: true`; the normalizer builds its tree as SVG content from
+  the top (rule 10 turned around: HTML at its top level is the error), and its id differs from
+  the same strings as `html`.
+- The client parses its HTML inside an `<svg>` and keeps that element's children: the HTML
+  parser's own foreign-content rules create the nodes (namespace, camelCase names, namespaced
+  static attributes). The server writes it as is inside the parent's `<svg>`; hydration walks
+  it like any template.
+- An `svg` template renders only inside SVG content: elsewhere it is a development error on
+  both sides. Bound namespaced attributes (`xlink:href=${…}`) are a rule 10 error pointing to
+  SVG 2's `href`; bound attribute names on SVG elements take the parser's spelling
+  (`viewbox` → `viewBox`).
+- **Size:** only apps that use `svg` carry it (`svgTemplate` and `compiledSvg`, about 0.2 KB
+  minified); every example's `pnpm size` is unchanged within module-order noise (−19 to
+  +13 B gzip, `view` −4 B). An app toggling one `<path>` with `svg` instead of a
+  `display=${…}` attribute: +272 B minified, +85 B gzip, its extra template object included.
 
 ## Migration (decision K)
 

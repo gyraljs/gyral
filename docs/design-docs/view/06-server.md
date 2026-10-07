@@ -64,6 +64,11 @@ The server writes the template HTML (01), putting each value in at its hole:
 - Lists: rows one after another, **no markers** (03). Empty strings and `nothing` write
   nothing; hydration creates what it needs (07).
 - `raw(html)`: an anchor comment, then the string verbatim (02).
+- **svg templates** (0.3.1, 01 "svg templates"): written like any template, their HTML as is
+  inside the parent's `<svg>` (self-closing tags, attribute names as written, anchors and
+  development markers as usual), so the browser's parser builds SVG elements from it. Escaping
+  is the same: in SVG content the parser decodes character references in text and attribute
+  values as in HTML, and `<title>`/`<style>`/`<script>` inside SVG are not raw text there.
 - **Page shells:** a `server` template (01) has no anchors in its HTML, and a `raw()` value in
   one of its own holes is written without its start anchor: hydration never walks a shell.
   Templates nested in a shell's holes are ordinary templates and keep theirs. With 01's
@@ -118,6 +123,10 @@ In development (`dev`):
   there: the parser would foster-parent it out of the table, so the page would differ from
   the client's DOM (rule 7). Static text at a nested template's root is not checked;
 - other objects in child holes, non-hooks in hook holes, bad or duplicate `each` keys;
+- an svg template written outside SVG content (at a view's root, or in a hole whose parent is
+  an HTML element, `<foreignObject>`, `<desc>` or `<title>`): the parser would make HTML
+  elements of it. The child op's `svg` flag (01) says where SVG content is; a template's
+  root-level holes inherit their instance's place (0.3.1);
 - warnings, once per call site: `true` in a child hole, objects in attributes or text content.
 
 ### Development markers

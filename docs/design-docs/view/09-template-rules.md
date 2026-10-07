@@ -36,12 +36,24 @@ fix it, and the next one shows.
 | 7   | Markup the HTML parser **repairs** (strict: end tags must match, optional end tags are not inferred, duplicate attributes and stray `</p>`/`</br>` are errors): `<tr>` directly in `<table>`, a block element in `<p>`, `<a>` in `<a>`, `<form>` in `<form>`, `<li>` directly in `<div>`… | The DOM would differ from the source, and part paths would shift      | the valid structure (`<tbody>`, …)                               |
 | 8   | An `each` row that reads view-scope variables (03)                                                                                                                                                                                                                                        | Rows would be skipped and the UI would go stale                       | return it from `pick`                                            |
 | 9   | `each` without a key function                                                                                                                                                                                                                                                             | Keys are required (03)                                                | `each(items, (x) => x.id, Row)`                                  |
-| 10  | SVG-only top level (`<g>`, `<path>` outside an `<svg>`)                                                                                                                                                                                                                                   | No `svg` tag; the HTML parser would not create SVG elements           | wrap in `<svg>`                                                  |
+| 10  | SVG content in the wrong place: SVG-only elements (`<g>`, `<path>`) at the top level of an `html` template; HTML at the top level of an `svg` template; HTML-only elements inside SVG content; a bound `xlink:href=${…}` (0.3.1)                                                          | The parser creates SVG elements only in SVG content                   | `` svg`<g>…</g>` `` or `<svg>`; `html`; `href=${…}`              |
 | 11  | A document-level template (`<html>`, `<head>`, `<body>`, doctype) rendered in the browser                                                                                                                                                                                                 | Page shells are server-only (01)                                      | render it with `@gyral/core/server`                              |
 | 12  | A hole in `<textarea>`/`<title>` that isn't the whole content                                                                                                                                                                                                                             | The content is one value (02)                                         | `<textarea>${v}</textarea>`                                      |
 | 13  | A named character reference other than `&amp;` `&lt;` `&gt;` `&quot;` `&apos;` `&nbsp;` in the static text of a bound or custom-element attribute                                                                                                                                         | The full entity table is too large to ship                            | the character itself, or a numeric reference                     |
 
 Allowed: `<textarea>${v}</textarea>` (live value, 02) and `<title>${t}</title>` (text).
+
+**Rule 10 since 0.3.1** (gyral-c5d.8): the `svg` tag is back (01 "svg templates"). An `svg`
+template's top level is SVG content, so SVG-only elements are fine there; HTML at its top level
+is the error instead, and its message points to `html` or `<foreignObject>`. An `html`
+template's SVG-only top level stays an error, and its message now points to `svg`. Elements
+that end SVG content (`<div>`, `<p>`, `<b>`, … inside `<svg>`) stay rule 7 inside an element
+and are rule 10 at an `svg` template's top level. HTML-only elements that don't end it
+(`<button>`, `<input>`, `<section>`, …) would become unknown SVG elements that render nothing;
+they are rule 10 in both kinds of template (inline `<svg>` in `html` included). So are bound
+namespaced attributes on SVG elements (`xlink:href=${…}`, `xml:lang=${…}`, `xmlns…`): the
+parser puts them in their own namespace, `setAttribute` can't, so bind `href=${…}` (SVG 2);
+static ones are fine (02 "Attribute values").
 
 Not handled yet: `<select>` content under the new customizable-select parsing, CDATA in SVG,
 `<noscript>` as raw text.
@@ -66,9 +78,10 @@ A flat-config plugin with two rules, both in `gyral.configs.recommended` (setup:
 [consumer-setup.md](../../references/consumer-setup.md) "ESLint"). ESLint (9 or 10) is an
 optional peer dependency.
 
-- **`gyral/template`** (rules 1–7, 10, 12, 13): every `html` tagged template whose tag is
-  imported from a template source (`import { html } from '@gyral/core'` under any local name,
-  or `ns.html` for `import * as ns`) goes through `checkTemplate` (`view/normalize/check.ts`):
+- **`gyral/template`** (rules 1–7, 10, 12, 13): every `html` or `svg` tagged template whose tag
+  is imported from a template source (`import { html } from '@gyral/core'` under any local name,
+  or `ns.html` for `import * as ns`; the same for `svg`, checked as SVG content, 0.3.1) goes
+  through `checkTemplate` (`view/normalize/check.ts`):
   the normalizer's own steps, which also report where they stopped. The message is the
   TemplateError's first line, identical to the runtime's and the compiler's; the editor's
   location replaces the `near:`/`at` context. The location is mapped back from the minified
