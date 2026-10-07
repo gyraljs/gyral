@@ -107,7 +107,7 @@ async function loadCompiler<M>(name: string): Promise<M> {
 /** The compiler's hooks (`vite build`). */
 async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHooks> {
   const hooks = await loadCompiler<typeof import('./compiler/hooks.js')>('hooks');
-  return hooks.createCompiler(settingsOf(options));
+  return hooks.createCompiler({ ...settingsOf(options), ownEntry: OWN_COMPILED });
 }
 
 /** The template compiler alone (`gyralVitePreset()` includes it). */
@@ -129,9 +129,17 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
     buildStart(input) {
       return ready().buildStart.call(this, input);
     },
+    // The registration modules of spec-field features (./compiler/features.ts).
+    resolveId(source, importer, opts) {
+      return ready().resolveId.call(this, source, importer, opts);
+    },
+    load(id, opts) {
+      return ready().load.call(this, id, opts);
+    },
     transform: {
-      // Modules naming a template tag (html or svg); core's template module names both.
-      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg/ },
+      // Modules naming a template tag (html or svg; core's template module names both), or a
+      // spec field whose machinery the build adds only when named (view/05).
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg|viewTransition|renderOnFrame|states/ },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },

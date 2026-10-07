@@ -73,6 +73,9 @@ transition. The transition starts where the flush would have run (the microtask)
 support, or with `prefers-reduced-motion: reduce`, the flush runs as normal (`transitions.ts`).
 `settled()` waits for the transition's update callback, so focus and tests see the same DOM with
 or without a transition.
+Builds with the Vite preset bundle `transitions.ts` only when a module names
+`viewTransition` (05 "Features register themselves", gyral-c5d.12); otherwise every flush runs
+plainly, as without the API.
 
 ## Frame lane (opt-in)
 
@@ -110,8 +113,11 @@ define<State, Msg>('live-chart', {
 - The lane belongs to the mark, not the host: `markDirty(task, onFrame)`; `element.ts` takes it
   from the message's tag (`host-model.ts`). The frame's callback hands its hosts to a microtask
   flush, which runs right after the callback, before that frame's style, layout and paint.
-- Cost: about 0.14 KiB gzip in every app (it ships whether or not a spec uses it); the size
-  budgets it pushed over were raised by that much (`scripts/size-budget.json`).
+- Cost: about 0.14 KiB gzip, now only in apps that use it (`frame-lane.ts`): builds with the
+  Vite preset bundle it only when a module names `renderOnFrame` (05 "Features register
+  themselves", gyral-c5d.12, 0.3.1); without it a `renderOnFrame` message renders in the
+  microtask flush. The runtime path (no build step) always has it. Until 0.3.1 every app
+  shipped it, and the size budgets it pushed over had been raised by that much.
 
 ## `settled()`
 

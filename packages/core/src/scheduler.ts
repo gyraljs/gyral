@@ -3,9 +3,11 @@
 // whole page. A flush renders dirty hosts parents first (smallest depth, then marking order),
 // then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
 // and loops until nothing is dirty. Messages a spec lists in `renderOnFrame` mark their host in
-// the frame lane instead: it renders in the next animation frame (04 "Frame lane"). It lives
-// outside view/ (view/ never imports it) and drives the renderer through view/index.ts.
-import { canTransition, startTransition } from './transitions.js';
+// the frame lane instead: it renders in the next animation frame (04 "Frame lane",
+// frame-lane.ts). The frame lane and view transitions come through `#spec-features`, present
+// unless a compiled build found no module naming them (gyral-c5d.12). It lives outside view/
+// (view/ never imports it) and drives the renderer through view/index.ts.
+import { frameLane, viewTransitions } from '#spec-features';
 import { DEV, renderBatch } from './view/index.js';
 
 /** One host as the scheduler sees it. define() creates one per element. */
@@ -38,16 +40,8 @@ const SCHEDULED = 1;
 const TRANSITION = 2;
 const FLUSHING = 3;
 
-/** A frame-lane flush that no animation frame has run by then runs from a timer (hidden pages). */
-const FRAME_FALLBACK_MS = 100;
-
 const ignore = (): void => undefined;
 const dirty = new Set<HostTask>();
-/** Hosts marked only in the frame lane: they join `dirty` when the frame comes. */
-const framed = new Set<HostTask>();
-let frameRaf = 0;
-/** Set while a frame-lane flush is requested. */
-let frameTimer: ReturnType<typeof setTimeout> | undefined;
 let post: PostTask[] = [];
 let phase = IDLE;
 let transitionWanted = false;
@@ -71,7 +65,7 @@ export const activityCount = (): number => activity;
  * nothing is deferred.
  */
 export const isQuiet = (): boolean =>
-  phase === IDLE && dirty.size === 0 && framed.size === 0 && deferred === 0;
+  phase === IDLE && dirty.size === 0 && frameLane?.pending() !== true && deferred === 0;
 
 /** Resolves at the end of the flush that leaves the scheduler quiet. */
 export function whenQuiet(): Promise<void> {
@@ -96,32 +90,20 @@ function schedule(): void {
 
 /**
  * Marks `task` for the next flush: the microtask one, or with `onFrame` the next animation
- * frame's (04 "Frame lane"). Marking an already-dirty host does nothing; a microtask mark moves a
- * host waiting for the frame into the microtask flush. `requestAnimationFrame` doesn't run in
- * hidden pages, so a timer runs the frame's flush if no frame came first.
+ * frame's (04 "Frame lane"; the microtask one when the build left the frame lane out). Marking
+ * an already-dirty host does nothing; a microtask mark moves a host waiting for the frame into
+ * the microtask flush.
  */
 export function markDirty(task: HostTask, onFrame = false): void {
   activity += 1;
   if (dirty.has(task)) return;
-  if (onFrame) {
-    framed.add(task);
-    if (frameTimer === undefined) {
-      frameRaf = requestAnimationFrame(runFrame);
-      frameTimer = setTimeout(runFrame, FRAME_FALLBACK_MS);
-    }
+  if (onFrame && frameLane !== undefined) {
+    frameLane.add(task, markDirty);
     return;
   }
-  framed.delete(task);
+  frameLane?.drop(task);
   dirty.add(task);
   schedule();
-}
-
-/** The frame lane's hosts join a microtask flush, which runs right after this callback. */
-function runFrame(): void {
-  cancelAnimationFrame(frameRaf);
-  clearTimeout(frameTimer);
-  frameTimer = undefined;
-  for (const task of framed) markDirty(task);
 }
 
 /** Queues post-render work for the current (or next) flush. */
@@ -163,12 +145,11 @@ export function hold(work: Promise<void>): void {
 }
 
 function start(): void {
-  if (transitionWanted && canTransition()) {
+  if (transitionWanted) {
     phase = TRANSITION;
-    startTransition(flush);
-  } else {
-    flush();
+    if (viewTransitions?.(flush) === true) return;
   }
+  flush();
 }
 
 /** The dirty host with the smallest depth; ties go to the one marked first. */

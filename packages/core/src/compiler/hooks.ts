@@ -9,14 +9,19 @@
 //   - `generateBundle`: fails when an uncompiled `html` or `svg` survived in a chunk anyway
 //     (re-exports across modules, dynamic imports): the guarantee that the `#prepare` stub is
 //     never hit.
+//   - In client environments, `transform` also adds the registration of view transitions, the
+//     frame lane and custom states to every module that names their spec field, so the
+//     `gyral-compiled` condition can leave them out otherwise (features.ts, gyral-c5d.12);
+//     `resolveId` and `load` serve those registration modules.
 import { join, relative } from 'node:path';
 import type { Plugin } from 'vite';
 import type { Node } from './ast.js';
 import { CompileError, compileModule } from './compile.js';
+import { createFeatures } from './features.js';
 import { loadParse5, type Parse5 } from './parse5-check.js';
 import { VIEW } from './locate.js';
 import { findUses, htmlImports } from './scan.js';
-import { Lines } from './source.js';
+import { Lines, type SourceMap } from './source.js';
 
 type Fn<H> = H extends { handler: infer F } ? F : H;
 type HookFn<K extends keyof Plugin> = Fn<NonNullable<Plugin[K]>>;
@@ -24,6 +29,8 @@ type HookFn<K extends keyof Plugin> = Fn<NonNullable<Plugin[K]>>;
 export interface CompilerHooks {
   readonly configResolved: HookFn<'configResolved'>;
   readonly buildStart: HookFn<'buildStart'>;
+  readonly resolveId: HookFn<'resolveId'>;
+  readonly load: HookFn<'load'>;
   readonly transform: HookFn<'transform'>;
   readonly generateBundle: HookFn<'generateBundle'>;
 }
@@ -32,7 +39,25 @@ export interface CompilerSettings {
   readonly sources: readonly string[];
   /** The module to load parse5 from; undefined skips the parse5 check. */
   readonly parse5: string | undefined;
+  /** The compiled entry of the core copy running the plugin (features.ts). */
+  readonly ownEntry: string;
 }
+
+type TransformContext = ThisParameterType<HookFn<'transform'>>;
+type TransformOptions = Parameters<HookFn<'transform'>>[2];
+/** What `compile` returns: the rewritten module, or null when nothing changed. */
+type Transformed = { readonly code: string; readonly map: SourceMap | null } | null;
+
+/** Appends `imports` after the module's last line: no code moves, so source maps hold. */
+const appended = (result: Transformed, code: string, imports: string): Transformed =>
+  imports === ''
+    ? result
+    : result === null
+      ? { code: code + imports, map: null }
+      : { ...result, code: result.code + imports };
+
+/** Modules naming a template tag: only those can need compiling. */
+const NAMES_TAG = /html|svg/;
 
 /** template.ts's symbol description: the module defining `html` and `svg`, in any copy of core. */
 const DEFINES_HTML = /Symbol\(['"]gyral\.template['"]\)/;
@@ -73,6 +98,7 @@ const CANT_FOLLOW =
 
 export function createCompiler(settings: CompilerSettings): CompilerHooks {
   const { sources } = settings;
+  const features = createFeatures(['transitions', 'frame', 'states'], settings.ownEntry);
   /** Per environment (client, ssr, …): Vite may build them with one plugin instance. */
   const states = new WeakMap<object, BuildState>();
   const global = {};
@@ -108,6 +134,77 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
     return parse5.module;
   }
 
+  /** Compiles the module's template call sites (the transform proper). */
+  async function compile(
+    this: TransformContext,
+    code: string,
+    id: string,
+    opts: TransformOptions,
+  ): Promise<Transformed> {
+    if (id.startsWith('\0') || !SCRIPT.test(id)) return null;
+    const env = this.environment;
+    const state = stateOf(env);
+    if (DEFINES_HTML.test(code)) state.definers.add(id);
+    if (state.sourceIds.has(id)) return null;
+    let program: Node;
+    try {
+      program = this.parse(code, { lang: langOf(id) }) as unknown as Node;
+    } catch {
+      return null; // not ours to report: the bundler fails on it with a better message
+    }
+    const { imports, reexports } = htmlImports(program);
+    if (imports.length === 0 && reexports.length === 0) return null;
+    const isSource = async (specifier: string): Promise<boolean> => {
+      if (sources.includes(specifier)) return true;
+      const resolved = await this.resolve(specifier, id);
+      return resolved !== null && state.sourceIds.has(resolved.id);
+    };
+    const lines = new Lines(code);
+    const file = relative(root, id);
+    const where = (node: Node): string => `${file}:${String(lines.position(node.start).line)}`;
+    for (const r of reexports) {
+      if (!(await isSource(r.specifier))) continue;
+      this.warn(
+        `${where(r.node)}: re-exporting html or svg. The template compiler only follows the ` +
+          `tags imported straight from ${r.specifier}: templates written with this re-export ` +
+          `stay uncompiled and fail the build. Import them from ${r.specifier} instead.`,
+      );
+    }
+    const matched = [];
+    for (const binding of imports) if (await isSource(binding.specifier)) matched.push(binding);
+    if (matched.length === 0) return null;
+    const fail = (start: number, end: number, message: string): never =>
+      this.error({
+        message,
+        id,
+        loc: { file: id, ...lines.position(start) },
+        frame: lines.frame(start, end),
+      });
+    const { sites, leftovers } = findUses(program, matched);
+    for (const l of leftovers) {
+      if (l.exported)
+        this.warn(`${where(l.node)}: re-exporting a template tag; its users stay uncompiled.`);
+      else fail(l.node.start, l.node.end, CANT_FOLLOW);
+    }
+    if (sites.length === 0) return null;
+    const ssr = opts?.ssr === true || env.config.consumer === 'server';
+    try {
+      return compileModule({
+        lines,
+        id,
+        file,
+        sites,
+        ssr,
+        ids: ssr || developmentBuild(env.config),
+        parse5: loadOnce(),
+        seen: state.seen,
+      });
+    } catch (error) {
+      if (error instanceof CompileError) return fail(error.start, error.end, error.message);
+      throw error;
+    }
+  }
+
   return {
     configResolved(config) {
       root = config.root;
@@ -124,72 +221,23 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
         const resolved = await this.resolve(source, join(root, 'index.html'));
         if (resolved !== null) state.sourceIds.add(resolved.id);
       }
+      await features.buildStart((source, importer) => this.resolve(source, importer), root);
       loadOnce();
     },
 
+    resolveId(source) {
+      return features.resolveId(source);
+    },
+
+    load(id) {
+      return features.load(id);
+    },
+
     async transform(code, id, opts) {
-      if (id.startsWith('\0') || !SCRIPT.test(id)) return null;
-      const env = this.environment;
-      const state = stateOf(env);
-      if (DEFINES_HTML.test(code)) state.definers.add(id);
-      if (state.sourceIds.has(id)) return null;
-      let program: Node;
-      try {
-        program = this.parse(code, { lang: langOf(id) }) as unknown as Node;
-      } catch {
-        return null; // not ours to report: the bundler fails on it with a better message
-      }
-      const { imports, reexports } = htmlImports(program);
-      if (imports.length === 0 && reexports.length === 0) return null;
-      const isSource = async (specifier: string): Promise<boolean> => {
-        if (sources.includes(specifier)) return true;
-        const resolved = await this.resolve(specifier, id);
-        return resolved !== null && state.sourceIds.has(resolved.id);
-      };
-      const lines = new Lines(code);
-      const file = relative(root, id);
-      const where = (node: Node): string => `${file}:${String(lines.position(node.start).line)}`;
-      for (const r of reexports) {
-        if (!(await isSource(r.specifier))) continue;
-        this.warn(
-          `${where(r.node)}: re-exporting html or svg. The template compiler only follows the ` +
-            `tags imported straight from ${r.specifier}: templates written with this re-export ` +
-            `stay uncompiled and fail the build. Import them from ${r.specifier} instead.`,
-        );
-      }
-      const matched = [];
-      for (const binding of imports) if (await isSource(binding.specifier)) matched.push(binding);
-      if (matched.length === 0) return null;
-      const fail = (start: number, end: number, message: string): never =>
-        this.error({
-          message,
-          id,
-          loc: { file: id, ...lines.position(start) },
-          frame: lines.frame(start, end),
-        });
-      const { sites, leftovers } = findUses(program, matched);
-      for (const l of leftovers) {
-        if (l.exported)
-          this.warn(`${where(l.node)}: re-exporting a template tag; its users stay uncompiled.`);
-        else fail(l.node.start, l.node.end, CANT_FOLLOW);
-      }
-      if (sites.length === 0) return null;
-      const ssr = opts?.ssr === true || env.config.consumer === 'server';
-      try {
-        return compileModule({
-          lines,
-          id,
-          file,
-          sites,
-          ssr,
-          ids: ssr || developmentBuild(env.config),
-          parse5: loadOnce(),
-          seen: state.seen,
-        });
-      } catch (error) {
-        if (error instanceof CompileError) return fail(error.start, error.end, error.message);
-        throw error;
-      }
+      const client = opts?.ssr !== true && this.environment.config.consumer === 'client';
+      const imports = client ? features.inject(code, id) : '';
+      const compiled = NAMES_TAG.test(code) ? await compile.call(this, code, id, opts) : null;
+      return appended(compiled, code, imports);
     },
 
     generateBundle(_, bundle) {

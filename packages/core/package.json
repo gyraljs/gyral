@@ -45,6 +45,10 @@
         "default": "./src/invoker-fallback-used.ts"
       },
       "default": "./src/invoker-fallback.ts"
+    },
+    "#spec-features": {
+      "gyral-compiled": "./src/spec-features-used.ts",
+      "default": "./src/spec-features.ts"
     }
   },
   "publishConfig": {
@@ -93,6 +97,10 @@
           "default": "./dist/invoker-fallback-used.js"
         },
         "default": "./dist/invoker-fallback.js"
+      },
+      "#spec-features": {
+        "gyral-compiled": "./dist/spec-features-used.js",
+        "default": "./dist/spec-features.js"
       }
     }
   },

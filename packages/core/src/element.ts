@@ -26,10 +26,10 @@ import {
   POST_STATES,
   type HostTask,
 } from './scheduler.js';
-import { stateSync, type StateSync } from './states.js';
+import { checkSpecFeatures, customStates } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
-import { render, sheetsFor, suspendHooks, type Markup } from './view/index.js';
+import { DEV, render, sheetsFor, suspendHooks, type Markup } from './view/index.js';
 
 const DEFER = 'defer-hydration';
 
@@ -48,6 +48,7 @@ export function elementClass<S, M extends Tagged, P>(
   let sheets: CSSStyleSheet[] | undefined;
   const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
   const model = spec as unknown as ComponentSpec<S, Tagged, P>;
+  if (DEV) checkSpecFeatures(tag, spec);
 
   class Element extends HTMLElement implements GyralElement<S, M> {
     static readonly spec = spec;
@@ -88,7 +89,6 @@ export function elementClass<S, M extends Tagged, P>(
     #hydrating = false;
     /** init's commands for a server-rendered host: started after its first render. */
     #afterInit: readonly ModelCommand[] = [];
-    #states: StateSync | false | undefined;
     #task: HostTask = {
       tag,
       depth: 0,
@@ -247,7 +247,13 @@ export function elementClass<S, M extends Tagged, P>(
         hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
         this.#hydrating = false;
       } else render(view, root, this.#seen);
-      if (spec.states !== undefined) afterRender(POST_STATES, this.#syncStates);
+      const states = spec.states;
+      const sync = customStates;
+      if (states !== undefined && sync !== undefined) {
+        afterRender(POST_STATES, () => {
+          sync(this, states(this.state));
+        });
+      }
       if (this.#rendered) return;
       this.#rendered = true;
       if (DEVTOOLS_ENABLED) devHydrated(this, tag, this.#serverRendered);
@@ -265,13 +271,6 @@ export function elementClass<S, M extends Tagged, P>(
         });
       }
     }
-
-    #syncStates = (): void => {
-      // ElementInternals is attached lazily, once, when the first states sync needs it (05).
-      this.#states ??= stateSync(this.attachInternals());
-      if (this.#states !== false && spec.states !== undefined)
-        this.#states(spec.states(this.state));
-    };
 
     /** Intent event types this host's root listens for (view/05-element.md "Intent events"). */
     #listening = new Set<string>();
