@@ -12,6 +12,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ConfigEnv, EnvironmentOptions, Plugin } from 'vite';
+import type { FeatureHooks } from './compiler/features.js';
 import type { CompilerHooks } from './compiler/hooks.js';
 import type { LocatorHooks } from './compiler/locate.js';
 
@@ -36,26 +37,40 @@ export const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
 
 /** The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). */
 export const COMPILED_CONDITION = 'gyral-compiled';
+/** The client's resolve condition in client-only builds (view/07 "Client-only builds"). */
+export const CLIENT_ONLY_CONDITION = 'gyral-client-only';
 /** Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser). */
 export const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
 export const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
 
 /**
- * Adds the `gyral-compiled` condition to an environment, on top of the app's conditions or
- * Vite's defaults: Vite replaces the defaults when a config names any condition.
+ * Adds `condition` (default `gyral-compiled`) to an environment, on top of the app's
+ * conditions or Vite's defaults: Vite replaces the defaults when a config names any condition.
+ * `clientOnly`: only to environments that build for the browser.
  */
 function addCondition(
   name: string,
   config: EnvironmentOptions,
   env: ConfigEnv & { isSsrTargetWebworker?: boolean },
+  condition = COMPILED_CONDITION,
+  clientOnly = false,
 ): void {
   const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
   const client = consumer === 'client' || env.isSsrTargetWebworker === true;
+  if (clientOnly && consumer !== 'client') return;
   const current = config.resolve?.conditions ?? (client ? CLIENT_CONDITIONS : SERVER_CONDITIONS);
-  if (!current.includes(COMPILED_CONDITION)) {
-    config.resolve = { ...config.resolve, conditions: [...current, COMPILED_CONDITION] };
+  if (!current.includes(condition)) {
+    config.resolve = { ...config.resolve, conditions: [...current, condition] };
   }
 }
+
+/** The compiled entry of this copy of core, next to this module. */
+const OWN_COMPILED = fileURLToPath(
+  new URL(
+    import.meta.url.endsWith('.ts') ? './view/compiled.ts' : './view/compiled.js',
+    import.meta.url,
+  ),
+);
 
 /** The settings both plugins pass to their lazily loaded implementation. */
 function settingsOf(options: TemplateCompilerOptions) {
@@ -221,11 +236,61 @@ export function gyralDevServer(): Plugin {
   };
 }
 
+/**
+ * Client-only builds (view/07-hydration.md "Client-only builds", gyral-c5d.11), for apps no
+ * server renders: the browser environment resolves core with the `gyral-client-only`
+ * condition, so the bundle carries no hydration code (no seed reading, no hydration chunk and
+ * its import()), and in `vite build` the invoker-command fallback only when a module may use
+ * command intents (./compiler/features.ts). With no other import(), Vite's preload helper goes
+ * too. Server-rendered markup met anyway renders fresh (development warns). Dev servers and
+ * test runs get the condition too, and always keep the invoker fallback.
+ */
+export function gyralClientOnly(): Plugin {
+  let hooks: FeatureHooks | undefined;
+  let root = process.cwd();
+  return {
+    name: 'gyral:client-only',
+    enforce: 'pre',
+    configEnvironment(name, config, env) {
+      addCondition(name, config, env, CLIENT_ONLY_CONDITION, true);
+    },
+    async configResolved(config) {
+      root = config.root;
+      if (config.command !== 'build') return;
+      const features = await loadCompiler<typeof import('./compiler/features.js')>('features');
+      hooks = features.createFeatures(['invokers'], OWN_COMPILED);
+    },
+    async buildStart() {
+      await hooks?.buildStart((source, importer) => this.resolve(source, importer), root);
+    },
+    resolveId(source) {
+      return hooks?.resolveId(source) ?? null;
+    },
+    load(id) {
+      return hooks?.load(id) ?? null;
+    },
+    transform: {
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /data-intent-on|command|raw/ },
+      handler(code, id) {
+        if (hooks === undefined || this.environment.config.consumer !== 'client') return null;
+        const imports = hooks.inject(code, id);
+        // Appended after the last line: no code moves, so the incoming source map holds.
+        return imports === '' ? null : { code: code + imports, map: null };
+      },
+    },
+  };
+}
+
 export interface GyralViteOptions {
   /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
+  /**
+   * The app is never server-rendered: leave the hydration code out of the browser bundle
+   * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
+   */
+  readonly clientOnly?: boolean;
 }
 
 export interface GyralViteConfig {
@@ -243,6 +308,8 @@ export interface GyralViteConfig {
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
     plugins: [
+      // Before the compiler: its feature scan reads the author's templates, not compiled ones.
+      ...(options.clientOnly === true ? [gyralClientOnly()] : []),
       gyralTemplateCompiler(options.compiler),
       gyralTemplateLocations(options.compiler),
       gyralDevServer(),

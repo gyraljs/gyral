@@ -73,10 +73,10 @@ describe('the #prepare import map (ADR 0017 pattern)', () => {
   it('resolves to the preparer by default and to the stub under gyral-compiled', async () => {
     const { default: manifest } = (await import('../../package.json', {
       with: { type: 'json' },
-    })) as {
+    })) as unknown as {
       default: {
-        imports: Record<string, Record<string, string>>;
-        publishConfig: { imports: Record<string, Record<string, string>> };
+        imports: Record<string, unknown>;
+        publishConfig: { imports: Record<string, unknown> };
       };
     };
     expect(manifest.imports['#prepare']).toEqual({

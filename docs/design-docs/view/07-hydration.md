@@ -54,6 +54,39 @@ The walk, the mismatch messages and islands live in one internal module
   test (`examples/isomorphic/test/prod.node.test.ts`) and
   `packages/ssr/test/modulepreload.node.test.ts`.
 
+## Client-only builds (gyral-c5d.11, 0.3.1)
+
+An app no server renders can say so: `gyralVitePreset({ clientOnly: true })` (or the
+`gyralClientOnly()` plugin). The browser environment then resolves core with the
+`gyral-client-only` condition (dev server, Vitest and `vite build`; server environments are
+untouched):
+
+- `#hydration-loader` resolves to `hydration-off.ts`: no seed reading, no `import()` of the
+  hydration code, so no hydration chunk. Without other `import()`s Vite's preload helper (about
+  0.5 KiB gzip) leaves the bundle too. Measured on hello-world: 8.90 → 7.85 KiB gzip initial,
+  11.28 → 7.85 all chunks.
+- **Server-rendered markup met anyway** (a misconfigured app) renders fresh: a seeded host drops
+  its seed and runs `init` from its attributes, its root is cleared as after a failed load
+  ("Loading"), so a view is never doubled, and a `defer-hydration` island starts at once.
+  Development warns once, naming `clientOnly`; production renders fresh silently (the warning
+  would cost every client-only app its text, and dev servers and tests show it).
+- **The invoker-command fallback** (ADR 0003 tier 3, 05 "Intent events") stays reachable only
+  when the build may need it: `#invoker-fallback` resolves to a slot that `use-invokers.ts`
+  fills, and the preset's client-only plugin adds that module to the build when any module,
+  dependencies included, may make a root listen for `command`: a static
+  `data-intent-on="command"`, a bound `data-intent-on` (it listens for every intent event), a
+  quoted `"command"` (`events: ['command']`, a `setAttribute`), or a `raw()` call (its markup is
+  read at run time). The scan reads the authored source (the plugin runs before the template
+  compiler) and over-approximates; a module that never names any of these can't make a root
+  listen for `command`. Development (the `development` condition) always keeps the fallback.
+  The mechanism is the build-time detection of 05 "Features register themselves".
+- Apps without the option are unchanged (the loader moved behind a conditional import, about
+  10-20 B gzip in every app).
+
+Tested in `core/test/client-only.client-only.test.ts` (the `browser-client-only` Vitest project)
+and `core/test/compiler/client-only.node.test.ts` (builds); `pnpm size` measures
+`hello-world (clientOnly)` with a budget of its own (`--client-only` adds the other examples).
+
 ## Each component hydrates on its own
 
 - The client already has everything a component's first render needs: its state (seed, or

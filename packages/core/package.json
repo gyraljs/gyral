@@ -34,6 +34,17 @@
     "#view-dev": {
       "development": "./src/view/dev.ts",
       "default": "./src/view/dev-off.ts"
+    },
+    "#hydration-loader": {
+      "gyral-client-only": "./src/hydration-off.ts",
+      "default": "./src/hydration-loader.ts"
+    },
+    "#invoker-fallback": {
+      "gyral-client-only": {
+        "development": "./src/invoker-fallback.ts",
+        "default": "./src/invoker-fallback-used.ts"
+      },
+      "default": "./src/invoker-fallback.ts"
     }
   },
   "publishConfig": {
@@ -71,6 +82,17 @@
       "#view-dev": {
         "development": "./dist/view/dev.js",
         "default": "./dist/view/dev-off.js"
+      },
+      "#hydration-loader": {
+        "gyral-client-only": "./dist/hydration-off.js",
+        "default": "./dist/hydration-loader.js"
+      },
+      "#invoker-fallback": {
+        "gyral-client-only": {
+          "development": "./dist/invoker-fallback.js",
+          "default": "./dist/invoker-fallback-used.js"
+        },
+        "default": "./dist/invoker-fallback.js"
       }
     }
   },

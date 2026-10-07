@@ -157,7 +157,9 @@ instances of the same template); core reads the static `data-intent-on` values f
 template's HTML once per template, and listens for all intent events when the attribute is
 bound. A listener is added when its template first renders, before any of its elements can
 receive an event. A root that listens for `command` in a browser without invoker commands loads
-the fallback (`invokers-shim.ts`, ADR 0003 tier 3); `settled()` waits for it.
+the fallback (`invokers-shim.ts`, ADR 0003 tier 3); `settled()` waits for it. Client-only
+builds carry that `import()` only when a module may use command intents (07 "Client-only
+builds").
 
 Effect: 5 listeners per typical host instead of 12 (11 intent events plus the invoker shim's
 click listener on every root); keyboard and focus events no longer run intent lookup in

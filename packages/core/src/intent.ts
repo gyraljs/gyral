@@ -1,5 +1,5 @@
+import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
-import { hold } from './scheduler.js';
 import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
 import type { Markup } from './view/index.js';
 
@@ -209,13 +209,7 @@ export function listenForIntents(
     if (listening.has(type)) continue;
     listening.add(type);
     root.addEventListener(type, handler, { capture: true });
-    if (type === 'command' && !invokersSupported()) {
-      hold(
-        import('./invokers-shim.js').then((shim) => {
-          shim.shimInvokers(root);
-        }, reportError),
-      );
-    }
+    if (type === 'command' && !invokersSupported()) loadInvokerShim(root);
   }
 }
 

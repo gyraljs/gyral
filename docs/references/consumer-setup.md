@@ -73,6 +73,14 @@ export default defineConfig({
 - **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the
   first browser test run and reloads the page ("Vite unexpectedly reloaded a test"), list it:
   `gyralVitePreset({ optimize: ['some-dependency'] })`.
+- **`clientOnly: true`** (0.3.1), for apps no server renders:
+  `gyralVitePreset({ clientOnly: true })` adds `gyral:client-only`, which leaves the hydration
+  code out of the browser bundle (about 1 KiB gzip with Vite's preload helper; hello-world: 8.9
+  → 7.9 KiB) and keeps the invoker-command fallback only when a module may use `command`
+  intents. Server-rendered markup met anyway renders fresh, replacing the server's (development
+  warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
+  tests match the build (view/07-hydration.md "Client-only builds"). `gyralClientOnly()` is the
+  plugin alone.
 
 ### Template compiler
 

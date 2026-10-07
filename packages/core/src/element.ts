@@ -6,7 +6,7 @@ import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
 import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { HostModel, type ModelCommand } from './host-model.js';
-import { hydrationCode, takeSeed, whenHydrationLoads } from './hydration.js';
+import { hydrationCode, takeSeed, whenHydrationLoads } from '#hydration-loader';
 import {
   DEFAULT_EVENTS,
   eventsOf,

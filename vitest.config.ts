@@ -13,7 +13,12 @@ export default defineConfig({
           name: 'browser',
           include: ['packages/*/test/**/*.test.ts', 'examples/*/test/**/*.test.ts'],
           // Server-rendering tests run in Node (the `node` project below).
-          exclude: ['**/*.node.test.ts', '**/*.prod.test.ts', '**/node_modules/**'],
+          exclude: [
+            '**/*.node.test.ts',
+            '**/*.prod.test.ts',
+            '**/*.client-only.test.ts',
+            '**/node_modules/**',
+          ],
           browser: {
             enabled: true,
             headless: true,
@@ -36,6 +41,21 @@ export default defineConfig({
             'packages/*/test/**/*.prod.test.ts',
             'examples/*/test/**/*hydration*.test.ts',
           ],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+      {
+        // Client-only builds (view/07-hydration.md "Client-only builds"): the preset's
+        // clientOnly option resolves core with the gyral-client-only condition.
+        ...gyralVitePreset({ clientOnly: true }),
+        test: {
+          name: 'browser-client-only',
+          include: ['packages/*/test/**/*.client-only.test.ts'],
           browser: {
             enabled: true,
             headless: true,

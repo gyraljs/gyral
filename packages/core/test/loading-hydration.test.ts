@@ -3,7 +3,8 @@
 // Its own file: the module state it checks is per test file.
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, settled } from '../src/index.js';
-import * as hydration from '../src/hydration.js';
+import { SEED_ATTRIBUTE } from '../src/hydration.js';
+import * as hydration from '../src/hydration-loader.js';
 
 interface State {
   readonly text: string;
@@ -38,7 +39,7 @@ describe('loading the hydration code', () => {
   it('loads with the first seeded host; the host resumes at once and hydrates once loaded', async () => {
     const host = document.createElement('div');
     host.setHTMLUnsafe(
-      `<test-load-seeded ${hydration.SEED_ATTRIBUTE}='{"state":{"text":"server"},"props":{}}'>` +
+      `<test-load-seeded ${SEED_ATTRIBUTE}='{"state":{"text":"server"},"props":{}}'>` +
         '<template shadowrootmode="open"><p>server</p></template></test-load-seeded>',
     );
     const p = host.querySelector('test-load-seeded')?.shadowRoot?.querySelector('p');

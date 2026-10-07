@@ -44,6 +44,11 @@ its fallback falls into one of three tiers:
 - **Never patch globals.** Fallbacks are private to Gyral and never change `window`.
 - A lazily loaded tier-3 fallback makes that path asynchronous at startup on old browsers only
   (for example, the router matches its first route a moment later).
+- A tier-3 fallback's `import()` is part of every build that may reach it, even where no browser
+  fetches it (Vite adds its preload helper for it). A build may leave it out only when it can
+  tell no code can need it: client-only builds keep the invoker-command shim only when a module
+  may make a root listen for `command` (view/07-hydration.md "Client-only builds", 0.3.1); when
+  the build can't tell (a bound `data-intent-on`, `raw()` markup), the fallback stays.
 
 Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 
