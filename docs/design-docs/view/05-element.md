@@ -43,6 +43,12 @@ property only), `required`, `default`. The honesty rule of ADR 0007 stays: a pro
 excludes `undefined` must be `required` or have a `default`. Prop types are inferred from the
 schemas' output types. `prop.boolean()` defaults to `false` (an absent attribute).
 
+`default` replaces only `undefined` (`readProps` in `props.ts`): setting a prop to `undefined`
+or removing its attribute means "missing", so the default comes back. For an explicit "nobody"
+or "none" next to a default, use `null` with a nullable schema
+(`prop.value(v.nullable(User), { default: owner })`, or `prop.json` with the attribute
+`"null"`); `null` is a value and passes through (`packages/core/test/prop-null.test.ts`).
+
 Typing: `define()` infers the props type from the builders when it gets no type arguments.
 With explicit `define<State, Msg, Props>`, each builder must produce its prop's type (a builder
 without `required`/`default` produces `T | undefined`); `PropsOf<typeof props>` derives `Props`

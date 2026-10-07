@@ -177,8 +177,9 @@ carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStre
 
 Hydration is built into core (view/07-hydration.md): a server-rendered component resumes its
 state from its `data-gyral-seed` and adopts the server's DOM in place; there is no hydration
-import, and module order doesn't matter. Keep component state and props JSON-serializable:
-they travel in the hydration seed. A mismatch between server markup and the first client
+import, and module order doesn't matter. Keep the state and props of server-rendered
+components (and seeded store state) JSON-serializable: they travel in the hydration seed.
+Client-only components have no seed, so their state may hold other values. A mismatch between server markup and the first client
 render throws `HydrationMismatch` in development; production builds warn and re-render only
 that component. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
 server-rendered component, so client-only pages never fetch it. For server-rendered pages,

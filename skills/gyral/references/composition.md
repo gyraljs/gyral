@@ -112,6 +112,11 @@ export const List = define<ListState, ListMsg>('my-list', {
 For a component that contains itself (a folder tree) or is defined later, pass a function:
 `child(() => Folder, …)` and annotate the constant as `GyralElementClass<S, M, P, O>`.
 
+Don't annotate the mapper as `(out): Msg => …`: an intent must produce its own variant, so the
+whole union fails with a long `IntentParser<…>` error. Leave the return type off inside the spec
+(as above), or annotate `Extract<ListMsg, { _tag: 'ItemOut' }>` (plus `| undefined` when it
+ignores some outputs); a mapper defined outside the spec needs `_tag: 'ItemOut' as const`.
+
 Keep a child's own UI state inside the child; the parent owns only what it must coordinate.
 Don't reach into a child's state from the parent; ask with props, listen with outputs.
 

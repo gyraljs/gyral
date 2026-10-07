@@ -84,6 +84,11 @@ library works (valibot, zod, …); schemas must be synchronous and should valida
 - Don't name props after built-in element properties (`hidden`, `title`, `id`): it's an error
   in development, because setting them changes platform behaviour.
 
+A `default` replaces only `undefined`: setting a defaulted prop to `undefined` (or removing its
+attribute) brings the default back, so `undefined` can't mean "nobody on purpose". Use `null`
+for that, with a nullable schema: `owner: prop.value(v.nullable(User), { default: team })`,
+then `.owner=${null}` (or `prop.json(…)` and the attribute `owner="null"`).
+
 ## Stateless components
 
 `Stateless` (an empty record) makes `init` optional; use `never` when there are no messages:

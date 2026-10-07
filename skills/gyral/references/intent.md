@@ -84,6 +84,14 @@ export const Filters = define<State, Msg>('my-filters', {
 One element carries one `data-intent`. For a second trigger on the same control, put the
 second intent on a wrapper element: events bubble to it (here, `keydown` from the input).
 
+**Typing a parser.** Each key in `intent` must produce its own variant (`Qty` produces
+`{ _tag: 'Qty'; … }`), so don't annotate a parser with the whole union: `(): Msg => …` widens
+it, and TypeScript reports a long error ending in "`IntentParser<Msg>` is not assignable to
+`IntentParser<{ _tag: 'Qty'; … }>`". Inside the spec, leave the return type off: the key types
+it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
+type (`Extract<Msg, { _tag: 'Qty' }> | undefined`). The same holds for `child()`, `form()` and
+`field()` mappers.
+
 ## One intent, many elements
 
 Several elements can share a tag and carry data in `value`:

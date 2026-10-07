@@ -56,8 +56,11 @@ export const Counter = define<State, Msg>('my-counter', {
 5. **Props are read-only context** (`ctx.props`), declared with `prop.*` builders
    (Standard Schema; attributes are kebab-case and always validated). They enter state only
    through `init(props)` and the optional `PropsChanged` reducer.
-6. **State, props and store state must be JSON-serializable.** They travel to the browser in
-   hydration seeds (no `Map`, class instances, functions or `Date` objects in state).
+6. **Server-rendered state is JSON.** State, props and store state of anything rendered on
+   the server travel to the browser in hydration seeds, so they must survive a JSON round trip
+   (no `Map`, class instances, functions or `Date` objects; the server warns). Client-only
+   components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
+   still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
    `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
    config: `vite build` then compiles templates and checks their rules; add
