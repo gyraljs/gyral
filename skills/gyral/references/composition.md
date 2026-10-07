@@ -102,7 +102,7 @@ export const List = define<ListState, ListMsg>('my-list', {
       ${each(
         s.items,
         (it) => it.id,
-        // Rows are pure: the intent name is a module constant (listIntents below).
+        // Rows are pure: the intent name is a module constant (listIntents above).
         (it) => html`<li><my-item .item=${it} data-intent=${listIntents.ItemOut}></my-item></li>`,
       )}
     </ul>`,

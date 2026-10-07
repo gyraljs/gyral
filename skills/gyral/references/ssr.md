@@ -1,10 +1,10 @@
 # Server rendering and hydration
 
-> **0.3:** server rendering is Gyral's own (`@gyral/core/server`, spec:
-> docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
-> `renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration is built into
-> core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
-> place, on its own, with no hydration import.
+Server rendering is Gyral's own (`@gyral/core/server`, spec:
+docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
+`renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration is built into
+core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
+place, on its own, with no hydration import.
 
 The server renders the same components to HTML: shadow components as Declarative Shadow DOM
 (`<template shadowrootmode>` with the component's CSS in a `<style>`), light components
@@ -97,7 +97,8 @@ for the components registered when it is called: import them first (in developme
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
 Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
-CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()`.
+CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()` (every
+registered shadow component's hash) and `componentStyles()` (tag → `<style>` text).
 
 ## Client entry
 

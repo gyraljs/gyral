@@ -10,7 +10,8 @@ Gyral's own view layer (`html`, `css`, `each` and hooks, all from `@gyral/core`)
 Every component is one loop: **intent** parses DOM events into typed messages, **update** is
 one pure reducer per message, **view** is a pure function of state. Side effects are
 **commands** (data) that drivers perform. Pages render on the server with Declarative Shadow
-DOM and hydrate in place (see `references/ssr.md`). Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
+DOM and hydrate in place (see `references/ssr.md`).
+Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
 
 ## The shape of every component
 
@@ -79,7 +80,7 @@ npm create gyral@latest my-app -- --template basic   # client-rendered
 npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
 ```
 
-Upgrading a 0.2 app (Lit-based): follow
+Upgrading a 0.2 app (0.2 rendered with Lit; 0.3 has its own view layer): follow
 https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md.
 
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
@@ -103,8 +104,8 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
-`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router` (`listen`,
-`navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
+`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router`
+(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
 `defineDriver()` + `command()`.
 
 ## References (read on demand)

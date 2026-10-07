@@ -32,7 +32,7 @@
 | `Map`, `Set`, `Date`, class instances, functions in state                         | plain JSON (arrays, objects, ISO strings)                               |
 | Passwords or tokens in state                                                      | keep them only in the submitted `FormData`                              |
 | Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                  |
-| Importing `lit` (or another renderer's `html`) in Gyral components                | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
+| Importing `lit` (0.2's renderer) or another renderer's `html` in Gyral components | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
 | `attr=${x ?? nothing}`                                                            | `attr=${x}`: `null`/`undefined` remove the attribute                    |
 | jsdom/happy-dom tests                                                             | Vitest browser mode, plus DOM-free `step`/`run` tests                   |
 | Blanket `:not(:defined) { visibility: hidden }` in SSR apps                       | scope it to client-rendered tags only                                   |
@@ -47,7 +47,7 @@
 | `vite build` fails with a template rule error                | the template compiler checks every `html` (rows, form state, holes)                                       | fix the template as the message says (docs/design-docs/view/09-template-rules.md)      |
 | "Vite unexpectedly reloaded a test" on the first run         | a dependency discovered mid-run                                                                           | `gyralVitePreset({ optimize: ['the-module'] })`                                        |
 | "a row depends on something not passed through item or pick" | an `each` row reads changing outside state                                                                | return it from `pick` and take it as the row's second argument                         |
-| "Hydration value mismatch"                                   | server and client render different markup (dates, random, `window` checks)                                | render from state only; use the `Hydrated` message for JS-only UI                      |
+| `HydrationMismatch`: "gyral: hydration mismatch in …"        | server and client render different markup (dates, random, `window` checks)                                | render from state only; use the `Hydrated` message for JS-only UI                      |
 | Stale results overwrite new ones                             | default `merge` lane                                                                                      | `concurrency: 'switch'` with a `key`, and compare the query in the reducer             |
 | Double submits                                               | default lane allows concurrent requests                                                                   | `concurrency: 'exhaust'` (the default for `submitForm`)                                |
 | Form errors don't show without JS                            | the error text is only in native validity                                                                 | also render the error text in markup (`invalid()` writes `aria-invalid`)               |

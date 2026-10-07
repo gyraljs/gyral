@@ -1,9 +1,9 @@
 # Devtools
 
 Gyral's loop is data all the way through, so development builds emit a timeline: component
-connect/disconnect, `hydrated`, hydration `mismatch`es, every `update` (message with previous and next state), every
-command phase (`issued`, `dropped`, `interrupted`, `settled`, `failed`, with driver, lane and
-policy) and store messages. Production builds strip all of it (`@gyral/core` resolves its
+connect/disconnect, `hydrated`, hydration `mismatch`es, every `update` (message with previous
+and next state), every command phase (`issued`, `dropped`, `interrupted`, `settled`, `failed`,
+with driver, lane and policy) and store messages. Production builds strip all of it (`@gyral/core` resolves its
 `#devtools` import to a no-op through the `development`/`production` export conditions).
 
 ## Open the panel

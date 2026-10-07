@@ -3,7 +3,8 @@
 Gyral renders with its own view layer ([ADR 0018](../design-docs/0018-view-layer.md),
 [view/](../design-docs/view/README.md)): templates, keyed lists, element hooks, styles, the
 element base, the scheduler, server rendering and hydration all live in `@gyral/core`, which
-has no runtime dependencies. Upgrading from 0.2: [migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md).
+has no runtime dependencies. Upgrading from 0.2:
+[migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md).
 
 ## Install
 
@@ -16,10 +17,11 @@ pnpm add -D @gyral/testing
 pnpm add @gyral/ssr
 ```
 
-| Package                                                         | Peer dependencies                                               |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| `@gyral/core`                                                   | none at runtime; `vite`, `parse5`, `eslint` (optional, tooling) |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/testing` | none beyond `@gyral/core`                                       |
+| Package                                                     | Peer dependencies                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional) |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                         |
+| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`) |
 
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
 `defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.
@@ -33,10 +35,26 @@ Settings every Gyral app needs, shipped as a preset (safe in any config file):
 import { defineConfig } from 'vite';
 import { gyralVitePreset } from '@gyral/core/vite';
 
-export default defineConfig({ ...gyralVitePreset(), build: {/* … */} });
+export default defineConfig({ ...gyralVitePreset(), build: { manifest: true } });
+```
 
-// vitest.config.ts: spread it into each browser project
-projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */} } }];
+```ts
+// vitest.config.ts: components run in a real browser (with projects, spread it into each one)
+import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
+import { gyralVitePreset } from '@gyral/core/vite';
+
+export default defineConfig({
+  ...gyralVitePreset(),
+  test: {
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright(),
+      instances: [{ browser: 'chromium' }],
+    },
+  },
+});
 ```
 
 - **`plugins`**: the template compiler (below) and `gyral:dev-server`. If your config has
@@ -45,8 +63,8 @@ projects: [{ ...gyralVitePreset(), test: { name: 'browser', browser: {/* … */}
 - **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
   (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
   Vite instead of Node, so it renders development output and they all share one `@gyral/core`.
-  It adds them to `ssr.noExternal` in serve mode; builds keep them external
-  (view/06-server.md "Development markers").
+  It adds them to the server environments' `resolve.noExternal` in serve mode; builds keep
+  them external (view/06-server.md "Development markers").
 - **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the
   first browser test run and reloads the page ("Vite unexpectedly reloaded a test"), list it:
   `gyralVitePreset({ optimize: ['some-dependency'] })`.
@@ -68,6 +86,8 @@ and Vitest keep the runtime template path. In a build it:
   prints a one-time notice and keeps the normalizer's own check.
 
 Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
+`compiler: { sources: ['@gyral/core', 'my-design-system'] }` also compiles templates whose
+`html` comes from a package that re-exports it (that package must also export `compiled`).
 `gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
 
 ## ESLint: `@gyral/core/eslint`
@@ -91,11 +111,25 @@ export default [
 
 `recommended` turns on `gyral/template` (every `html` template imported from `@gyral/core`)
 and `gyral/each-row-purity` (`each` rows read only their arguments; keys required), both as
-errors. If your templates come from a package that re-exports `html` (a design system), list it
-the way you list it for the Vite preset:
+errors. If your templates come from a package that re-exports `html` (a design system), give
+both rules the same `sources` list as the Vite preset:
 
 ```js
-rules: { 'gyral/template': ['error', { sources: ['@gyral/core', 'my-design-system'] }] },
+// eslint.config.js
+import gyral from '@gyral/core/eslint';
+
+const sources = ['@gyral/core', 'my-design-system'];
+
+export default [
+  {
+    files: ['src/**/*.ts'],
+    ...gyral.configs.recommended,
+    rules: {
+      'gyral/template': ['error', { sources }],
+      'gyral/each-row-purity': ['error', { sources }],
+    },
+  },
+];
 ```
 
 The editor checks what the normalizer can see from the template's strings. `vite build` still
@@ -112,8 +146,12 @@ becomes one space; `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` ke
 
 ## Tests
 
+Test the model without a DOM (`step`, `run` and `initial` from `@gyral/testing`) and elements in
+a real browser with Vitest browser mode (the `vitest.config.ts` above), never jsdom. Swap
+drivers for fakes (`fakeDriver`, `fakeHttp` from `@gyral/http/testing`, `withDrivers`).
 `await settled()` (from `@gyral/core`) waits until every component has rendered, view
-transitions included (view/04-scheduler.md). It replaces 0.2's `el.updateComplete`.
+transitions included (view/04-scheduler.md); it doesn't wait for drivers. It replaces 0.2's
+`el.updateComplete`.
 
 ## Server rendering
 
@@ -122,7 +160,9 @@ transitions included (view/04-scheduler.md). It replaces 0.2's `el.updateComplet
 Node-only APIs). It is server-only: never import it from client code, so client bundles
 carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
 `renderToString` (with per-request `stores`), `page()`, `renderPage({ csp })` and
-`contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
+`contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and
+`@gyral/ssr/static`. `@gyral/core/server` itself exports `render`, `renderToString`,
+`styleHashes`, `styleHash`, `styleHashSync` and `componentStyles`.
 
 - Register components on the server by importing their modules: `define()` records the spec
   outside the browser, and the renderer renders it in place of its tag.
@@ -149,11 +189,10 @@ module lazily).
 ## Removed in 0.3.0
 
 `svg` templates, `classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,
-`liveBoolean`, `textarea()`, `directive`/`ElementDirective` and the renderer re-exports are
-gone (ADR 0018; every change, with before/after code, in
-[migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md)). Use `each(items, key, row, pick?)` for keyed lists, plain bindings for form state
-(`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`; written only when the model's
-value changes, so other renders keep the user's edits), class and style strings,
-`defineHook` for element behaviours, and plain interpolation in `css`. `svg` templates,
-`classMap` and `styleMap` may return if a real need appears; inline `<svg>` inside `html`
-works.
+`liveBoolean`, `textarea()`, `directive`/`ElementDirective` and 0.2's Lit re-exports are gone
+(ADR 0018; every change, with before/after code, in
+[migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md)). Use `each(items, key, row, pick?)` for
+keyed lists, plain bindings for form state (`value=${v}`, `?checked=${v}`,
+`<textarea>${v}</textarea>`; written only when the model's value changes, so other renders keep
+the user's edits), class and style strings, `defineHook` for element behaviours, and plain
+interpolation in `css`. Inline `<svg>` inside `html` works.

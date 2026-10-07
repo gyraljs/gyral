@@ -6,8 +6,8 @@ export default defineConfig({
   test: {
     projects: [
       {
-        // The Gyral preset (gyral-a7r): pre-bundled modules and the template compiler (which
-        // applies to `vite build` only, so tests use the runtime template path).
+        // The Gyral preset (gyral-a7r): the template compiler (which applies to `vite build`
+        // only, so tests use the runtime template path) and the dev-server SSR plugin.
         ...gyralVitePreset(),
         test: {
           name: 'browser',

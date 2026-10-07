@@ -139,8 +139,8 @@ it('loads the user when clicked', async () => {
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
   `signal`, so you can assert that `switch` aborted it.
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
-  fake `fetch`, so schemas and error mapping are exercised: `respondNext`, `reply(status,
-body)`, `failNext()`.
+  fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
+  `reply(status, body)`, `failNext()`.
 - `withDrivers(container, { http: fake })` provides fakes to every component below a container.
 - `virtualTime()` fakes timers: `await time.advance(500)`, `time.runAll()`, `time.restore()`.
 - Dispatch input events as the browser does: set `input.value`, then

@@ -45,8 +45,8 @@ Everything a view needs comes from `@gyral/core`:
 
 New exports: `each`, `raw`, `defineHook`, `prop`, `intents`, `settled`, `HydrationMismatch` and
 their types from `@gyral/core`; the entry points `@gyral/core/server`, `@gyral/core/eslint` and
-`@gyral/core/compiled` (used by compiled output); `contentSecurityPolicy`, `renderPage({ csp })` and
-`page({ modulepreload })` in `@gyral/ssr`; `clientAssets` and `clientAssetsFromManifest` in
+`@gyral/core/compiled` (used by compiled output); `contentSecurityPolicy`, `renderPage({ csp })`
+and `page({ modulepreload })` in `@gyral/ssr`; `clientAssets` and `clientAssetsFromManifest` in
 `@gyral/ssr/static`; the `renderOnFrame` spec field (bursty sources render once per frame).
 
 ## Build: the Vite preset compiles templates
@@ -300,8 +300,9 @@ dev-mode console banner.
 
 ## Server rendering
 
-Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime. `@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`,
-`formAction` and `@gyral/ssr/static`, and writes every template with core's `html`:
+Rendering is Gyral's own (`@gyral/core/server`): synchronous, no DOM shim, any runtime.
+`@gyral/ssr` keeps `renderPage`, `renderToString`, `renderToStream`, `page`, `formAction` and
+`@gyral/ssr/static`, and writes every template with core's `html`:
 
 ```ts
 import { html } from '@gyral/core';
@@ -350,14 +351,14 @@ export function home(): Response {
 
 ## Size and budgets
 
-Gzip, production builds with the preset (`pnpm size`; "initial" is the entry chunk and its
-static imports, what a page loads before any `import()`):
+KiB gzip, production builds with the preset, measured at the 0.3.0 release (`pnpm size`;
+"initial" is the entry chunk and its static imports, what a page loads before any `import()`):
 
-| Bundle                   | 0.2.0 | 0.3: initial | 0.3: all chunks |
-| ------------------------ | ----- | ------------ | --------------- |
-| hello-world              | 12.2  | 8.9          | 11.3            |
-| isomorphic (SSR)         | 17.3  | 13.0         | 15.6            |
-| no-js-first (SSR, forms) | 18.7  | 16.8         | 19.3            |
+| Bundle                   | 0.2.0 | 0.3.0: initial | 0.3.0: all chunks |
+| ------------------------ | ----- | -------------- | ----------------- |
+| hello-world              | 12.2  | 8.9            | 11.2              |
+| isomorphic (SSR)         | 17.3  | 12.9           | 15.3              |
+| no-js-first (SSR, forms) | 18.7  | 16.6           | 19.0              |
 
 Features load with the API that uses them (`each`, `raw`, hooks, `command()`, stores, prop
 builders), so small apps shed the most. If you keep a size budget, budget the initial chunk;
