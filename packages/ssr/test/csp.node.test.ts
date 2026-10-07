@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { css, define, html } from '@gyral/core';
+import { registryVersion } from '@gyral/core/server';
 import { contentSecurityPolicy, renderPage, renderToString } from '../src/index.js';
 
 define<{ readonly n: number }, never>('csp-styled', {
@@ -89,6 +90,46 @@ describe('renderPage({ csp: options }) builds the header at render time', () => 
     const next = page();
     expect(next).not.toBe(first);
     expect(next.startsWith(first)).toBe(true); // one more hash
+  });
+});
+
+describe('the registry version the cache keys on (gyral-g1r.23)', () => {
+  it('changes with every registration, light components included, and not on a repeat', () => {
+    const before = registryVersion();
+    define<{ readonly n: number }, never>('csp-light', {
+      shadow: false,
+      init: () => ({ n: 0 }),
+      intent: {},
+      update: {},
+      view: () => html`<p>light</p>`,
+    });
+    const afterLight = registryVersion();
+    expect(afterLight).toBeGreaterThan(before);
+    styled('csp-versioned', 'rgb(20, 21, 22)');
+    const afterStyled = registryVersion();
+    expect(afterStyled).toBeGreaterThan(afterLight);
+    styled('csp-versioned', 'rgb(23, 24, 25)'); // same tag: the first definition is kept
+    expect(registryVersion()).toBe(afterStyled);
+  });
+
+  it('rebuilds the cached header after any registration, and keeps hashes in sync', async () => {
+    const options = {};
+    const header = () =>
+      renderPage({ title: 't', body: html`<p>x</p>`, csp: options }).headers.get(
+        'content-security-policy',
+      ) ?? '';
+    const first = header();
+    define<{ readonly n: number }, never>('csp-light-2', {
+      shadow: false,
+      init: () => ({ n: 0 }),
+      intent: {},
+      update: {},
+      view: () => html`<p>light</p>`,
+    });
+    expect(header()).toBe(first); // rebuilt: a light component adds no <style>, so no hash
+    styled('csp-versioned-2', 'rgb(26, 27, 28)');
+    const out = await renderToString(html`<csp-versioned-2></csp-versioned-2>`);
+    expect(header()).toContain(sha(styleOf(out)));
   });
 });
 

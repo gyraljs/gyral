@@ -4,7 +4,7 @@
 // 'unsafe-inline'. Hashes are synchronous and cached per text (core's styleHashSync), so
 // `renderPage({ csp: options })` builds the header at render time, when the page's components
 // are registered; `contentSecurityPolicy()` builds it ahead of time.
-import { componentStyles, styleHashSync } from '@gyral/core/server';
+import { componentStyles, registryVersion, styleHashSync } from '@gyral/core/server';
 import { styleList, styleSafe } from './page.js';
 
 /** CSP directives by name: a source list, as one string or a list of sources. */
@@ -55,19 +55,21 @@ export function contentSecurityPolicy(options: CspOptions = {}): Promise<string>
   return Promise.resolve(build(options.directives ?? {}, options.styles, componentStyles()));
 }
 
-const cache = new WeakMap<CspOptions, { components: number; styles: unknown; header: string }>();
+const cache = new WeakMap<CspOptions, { version: number; styles: unknown; header: string }>();
 
 /**
  * `renderPage({ csp: options })`: the header built at render time, cached per options object
- * until another component registers. The page's `styles` are hashed unless `options` has its own.
+ * until the server registry changes (any registration, so any component CSS: core's
+ * `registryVersion()`) or the page styles do. The page's `styles` are hashed unless `options`
+ * has its own.
  */
 export function policyAtRender(options: CspOptions, pageStyles: PageStyles): string {
-  const components = componentStyles();
+  const version = registryVersion();
   const styles = options.styles ?? pageStyles;
   const known = cache.get(options);
-  if (known?.components === components.size && known.styles === styles) return known.header;
-  const header = build(options.directives ?? {}, styles, components);
-  cache.set(options, { components: components.size, styles, header });
+  if (known?.version === version && known.styles === styles) return known.header;
+  const header = build(options.directives ?? {}, styles, componentStyles());
+  cache.set(options, { version, styles, header });
   return header;
 }
 

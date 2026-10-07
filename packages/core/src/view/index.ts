@@ -43,6 +43,7 @@ export {
   serverComponent,
   serverComponents,
   serverProvider,
+  serverRegistryVersion,
   type ServerComponent,
   type ServerProvider,
   type ServerRenderInput,

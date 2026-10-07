@@ -4,7 +4,12 @@
 // `<gyral-stores>` provider.
 import { registerRecordedSpecs } from './server-component.js';
 import { storesProvider } from './stores-provider.js';
-import { DEV, registerServerProvider, type ChildValue } from './view/index.js';
+import {
+  DEV,
+  registerServerProvider,
+  serverRegistryVersion,
+  type ChildValue,
+} from './view/index.js';
 import {
   componentStyles as styles,
   render as renderChunks,
@@ -62,4 +67,14 @@ export function styleHashes(): Promise<readonly string[]> {
 export function componentStyles(): ReadonlyMap<string, string> {
   prepare();
   return styles();
+}
+
+/**
+ * A number that changes whenever a component registers with the server renderer (recorded
+ * specs registered first), so its CSS, and the `<style>` hashes a CSP lists, may have changed.
+ * Caches built from `componentStyles()` key on it.
+ */
+export function registryVersion(): number {
+  prepare();
+  return serverRegistryVersion();
 }

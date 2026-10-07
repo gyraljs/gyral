@@ -25,6 +25,7 @@ styleHashes(): Promise<readonly string[]>; // 'sha256-…' for every registered 
 styleHash(text: string): Promise<string>; // the same hash for any <style> text (Phase 4)
 styleHashSync(text: string): string; // the same, synchronously (2026-10-06)
 componentStyles(): ReadonlyMap<string, string>; // tag → <style> text of registered components
+registryVersion(): number; // changes on every registration (0.3.1, gyral-g1r.23)
 development: boolean; // core resolved with the `development` condition (`dev`'s default)
 StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope (Phase 4)
 ```
@@ -209,8 +210,11 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
 - `csp` takes `contentSecurityPolicy()`'s options. The header is the given directives, and
   `style-src` = the given one (default `'self'`) plus the hashes of every registered shadow
   component's `<style>` and of each `page({ styles })` entry (as written, `</style` escaped);
-  `styles` defaults to the page's own. It is cached per options object until another
-  component registers.
+  `styles` defaults to the page's own. It is cached per options object until the server
+  registry changes: the cache keys on `registryVersion()`, bumped by every registration (so
+  every change to the set of component CSS), and on the page `styles` (by identity). Until
+  0.3.1 it keyed on the number of styled components, which a registration could leave
+  unchanged in principle (gyral-g1r.23).
 - Hashing is synchronous for this (`styleHashSync`, a small SHA-256 in JavaScript,
   `view/server/sha256.ts`, checked against `node:crypto`): WebCrypto's `digest` is
   asynchronous and `renderPage` returns its `Response` synchronously. Hashes are cached per
