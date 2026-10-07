@@ -62,7 +62,7 @@ export const Counter = define<State, Msg>('my-counter', {
    components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
    still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
-   `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
+   `defineHook`, `defineDisposableHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
    config: `vite build` then compiles templates and checks their rules; add
    `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor.
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
@@ -119,7 +119,7 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
-- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `dispose`, `labelledBy`), widgets with a lifecycle, `focus`
+- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `defineDisposableHook`, `labelledBy`), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores

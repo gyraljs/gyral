@@ -2,11 +2,11 @@
 // queue of client calls. A hook position (attr-parts.ts, kind HOOK) queues itself when its
 // arguments change (shallow `Object.is` per argument, hook-part.ts, which also holds
 // `defineHook`); `render` runs the queued `client` calls after the commit, in document order.
-// An optional `dispose` runs when the element leaves its render root (Gyral removed it: its
-// part cleared, its instance replaced, its row removed), when the position stops holding the
-// hook, or when the host disconnects; not on moves. That machinery (dispose.ts) registers
-// itself in `disposal` when the first hook with `dispose` commits, and only apps that call
-// `defineHook` bundle it (core's own hooks use `defineBasicHook`): other apps pay one empty
+// A hook from `defineDisposableHook` also has `dispose`, which runs when the element leaves its
+// render root (Gyral removed it: its part cleared, its instance replaced, its row removed), when
+// the position stops holding the hook, or when the host disconnects; not on moves. That
+// machinery (dispose.ts) registers itself in `disposal` when the first such hook commits, and
+// only apps that call `defineDisposableHook` bundle it (gyral-c5d.2): other apps pay one empty
 // check per render and per disconnect.
 
 const HOOK: unique symbol = Symbol('gyral.hook');
@@ -21,12 +21,16 @@ export interface HookSpec<A extends readonly unknown[]> {
   server?(args: A): HookAttributes;
   /** Runs after the commit when `args` changed; `prev` is undefined the first time. */
   client(el: Element, args: A, prev: A | undefined): void;
+}
+
+/** A hook with a teardown (`defineDisposableHook`, view/02 "Widgets with a lifecycle"). */
+export interface DisposableHookSpec<A extends readonly unknown[]> extends HookSpec<A> {
   /**
    * Teardown, with the last arguments `client` got: runs when Gyral removes the element, when
    * the position stops holding this hook, or when the host disconnects (not on `moveBefore`
    * moves). After a host reconnects, `client` runs again with `prev` undefined.
    */
-  dispose?(el: Element, args: A): void;
+  dispose(el: Element, args: A): void;
 }
 
 /** What a hook returns in a template: `<input ${invalid(errors)}>`. */
@@ -42,9 +46,9 @@ export interface HookPart {
   spec: HookSpec<readonly unknown[]> | null;
   args: readonly unknown[] | undefined;
   prev: readonly unknown[] | undefined;
-  /** dispose.ts: the tracked hook with `dispose`, its last arguments, and whether a disconnect
+  /** dispose.ts: the tracked disposable hook, its last arguments, and whether a disconnect
    * disposed it (`client` runs again after the next render). */
-  kept?: HookSpec<readonly unknown[]> | undefined;
+  kept?: DisposableHookSpec<readonly unknown[]> | undefined;
   keptArgs?: readonly unknown[] | undefined;
   off?: boolean | undefined;
 }
@@ -71,7 +75,7 @@ export function sameArgs(a: readonly unknown[], b: readonly unknown[] | undefine
 }
 
 /**
- * Hook disposal (dispose.ts), set when the first hook with `dispose` commits: `disposal(root)`
+ * Hook disposal (dispose.ts), set when the first disposable hook commits: `disposal(root)`
  * after a render of `root` commits (before its client calls), `disposal(root, true)` when the
  * host owning `root` disconnects (true when hooks wait to run `client` again after the next
  * render). A plain variable, not an object, to keep apps without it small.
@@ -83,7 +87,7 @@ export function useDisposal(run: (root: Node, disconnect?: boolean) => boolean):
   disposal = run;
 }
 
-/** The host owning `root` disconnected (element.ts): disposes its hooks that have `dispose`. */
+/** The host owning `root` disconnected (element.ts): disposes its disposable hooks. */
 export const suspendHooks = (root: Node | undefined): boolean | undefined =>
   disposal?.(root as Node, true);
 
@@ -99,7 +103,7 @@ export const hookMark = (): number => queue.length;
 
 /** Runs the `client` calls queued since `mark`, in document order, after `root` committed. */
 export function runHooks(mark: number, root: Node): void {
-  disposal?.(root); // hooks whose element left `root` dispose first (dispose.ts)
+  disposal?.(root); // disposable hooks whose element left `root` dispose first (dispose.ts)
   try {
     for (let i = mark; i < queue.length; i++) {
       const part = queue[i] as HookPart;

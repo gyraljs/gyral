@@ -9,7 +9,7 @@ import {
   command,
   define,
   defineDriver,
-  defineHook,
+  defineDisposableHook,
   html,
   nothing,
   provideDrivers,
@@ -225,7 +225,7 @@ describe('settled() is bounded', () => {
 // read back through subscription(): close → render → dispose → batched notification → re-arm
 // in a microtask → message → render. settled() after the click sees the end of that chain.
 const mounted = signalLike(0, { batched: true });
-const widget = defineHook<[]>({
+const widget = defineDisposableHook<[]>({
   client: (_el, _args, prev) => {
     if (prev === undefined) mounted.set(mounted.get() + 1);
   },

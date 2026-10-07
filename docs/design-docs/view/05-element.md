@@ -137,6 +137,11 @@ doesn't bundle the code (static imports from the API's module; nothing runs at l
 | `stores`   | `defineStore()`                   | the store binding and store scopes (ADR 0013)              |
 | `props`    | the prop builders (`prop.string`) | attribute parsing, validation, defaults, required warnings |
 
+The view layer does the same with values that carry their own commit code (02, 03): `each`,
+`raw`, `defineHook` (argument comparison, the client queue) and `defineDisposableHook` (disposal
+tracking, view/render/dispose.ts, gyral-c5d.2). A teardown is a function of its own rather than
+an option of `defineHook`, so apps whose hooks need none don't bundle the tracking.
+
 Marker drivers carry their own `local` handler (focus, `emit`, store `send`), so their code
 comes with the function that builds the command. A host starts its interpreter with its
 first command after connecting, not on connect. Each slot is filled before it can be needed:

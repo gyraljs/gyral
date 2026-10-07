@@ -168,8 +168,8 @@ A hook is a small behaviour attached to the element it sits on, written in the s
 ships `invalid(errors)` (forms.md) and `labelledBy(id, fallback?)`. Write your own with
 `defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
 (`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
-server-rendered start tag; the optional `dispose(el, args)` tears down (below). A hook acts only
-on its own element.
+server-rendered start tag. A hook that must tear down is defined with `defineDisposableHook`
+instead, which adds `dispose(el, args)` (below). A hook acts only on its own element.
 
 ```ts
 import { defineHook, define, html } from '@gyral/core';
@@ -201,7 +201,7 @@ export const Steps = define<State, Msg>('my-steps', {
 });
 ```
 
-## Widgets with a lifecycle: their own element, or a hook with `dispose`
+## Widgets with a lifecycle: their own element, or a disposable hook
 
 Anything with setup and teardown (a Three.js or WebGL stage, a chart or map library, an
 observer, a connection) belongs in **its own custom element**: one input property, its own
@@ -262,19 +262,21 @@ The widget reports back with events: dispatch `OUTPUT_EVENT` with a tagged `deta
 parent parses it like a child component's output (composition.md). It can be a Gyral component
 itself (`prop.value` input, `outputs<Out>()`) when it has a model of its own.
 
-For a **small imperative behaviour** on an element of the view, a hook's optional
-`dispose(el, args)` is the lighter option. It runs when Gyral removes the element (its part
-cleared, its template replaced, its row removed), when the position stops holding the hook,
-and when the host disconnects; never on moves (`moveBefore`, list reorders). After a host
-reconnects, `client` runs again with `prev` undefined.
+For a **small imperative behaviour** on an element of the view, a hook with a teardown is the
+lighter option: `defineDisposableHook` takes `dispose(el, args)` next to `client`. It runs when
+Gyral removes the element (its part cleared, its template replaced, its row removed), when the
+position stops holding the hook, and when the host disconnects; never on moves (`moveBefore`,
+list reorders). After a host reconnects, `client` runs again with `prev` undefined. `defineHook`
+takes no `dispose` (a type error, and a development error), so apps without teardowns don't
+bundle the tracking.
 
 ```ts
-import { defineHook } from '@gyral/core';
+import { defineDisposableHook } from '@gyral/core';
 
 const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
 /** Highlights the element for a moment whenever `value` changes. */
-export const flash = defineHook<[value: unknown]>({
+export const flash = defineDisposableHook<[value: unknown]>({
   client: (el, _args, prev) => {
     if (prev === undefined) return; // not on first render
     el.classList.add('flash');

@@ -197,8 +197,9 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - `client(el, args, prev)` runs after the instance's parts have committed, when `args` differ
   from the previous call (shallow `Object.is` per argument). `prev` is `undefined` on the first
   call. During hydration it runs once with the hydrated args (07).
-- `dispose(el, args)` (optional, 0.3.1, gyral-c5d.2) is the teardown, with the last arguments
-  `client` got. See "Widgets with a lifecycle" below.
+- `dispose(el, args)` (0.3.1, gyral-c5d.2) is the teardown, with the last arguments `client`
+  got, for hooks defined with `defineDisposableHook` (`defineHook` takes none: a development
+  error). See "Widgets with a lifecycle" below.
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
   a hook that only listens needs no `dispose`.
 - Core ships `invalid` and `labelledBy` as hooks.
@@ -216,14 +217,14 @@ input, `outputs<Out>()` for its events), and so does a plain `HTMLElement` subcl
 work is all imperative.
 
 For **small imperative behaviours** on an element of the view (scrolling it into view,
-observing its size, a third-party enhancer on one input), a hook with `dispose` is the
-lighter option:
+observing its size, a third-party enhancer on one input), a hook with a teardown,
+`defineDisposableHook`, is the lighter option:
 
 ```ts
 const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
 /** Highlights the element for a moment whenever `value` changes. */
-export const flash = defineHook<[value: unknown]>({
+export const flash = defineDisposableHook<[value: unknown]>({
   client: (el, _args, prev) => {
     if (prev === undefined) return; // not on first render
     el.classList.add('flash');
@@ -250,18 +251,17 @@ export const flash = defineHook<[value: unknown]>({
 - **Reconnect:** after a host disconnects and reconnects (a plain move without `moveBefore`, or
   re-inserting it later), the host renders, and each hook disposed by the disconnect runs
   `client` again with `prev` undefined, with its current arguments.
-- **How:** a hook with `dispose` is tracked per render root from its commit, with the spec and
+- **How:** a disposable hook is tracked per render root from its commit, with the spec and
   arguments to dispose (`render/dispose.ts`). After each render of a root commits, every
   tracked hook whose element is no longer inside the root (`root.contains`), or whose position
   holds something else, is disposed. Moves keep elements inside the root, so nothing else is
   needed to tell a move from a removal.
-- **Cost (measured 2026-10-07, gzip):** the tracking comes with `defineHook` (05 "Features
-  register themselves") and runs only once a hook with `dispose` has committed. Core's own
-  hooks (`invalid`, `labelledBy`) are built with an internal `defineBasicHook` without it, so
-  apps that only use them don't bundle it. Every app: about 20 B (a check per render and per
-  disconnect). Apps that call `defineHook`: about 0.25 KiB more (the `autocomplete-search`
-  example and the `view` line; their budgets were raised by that much, as for the frame lane,
-  04). Hooks without `dispose` pay no run-time cost.
+- **Cost (measured 2026-10-07, gzip):** the tracking comes with `defineDisposableHook` (05
+  "Features register themselves"), a function of its own rather than an option of
+  `defineHook` (owner decision, gyral-c5d.2 option B): an app that calls only `defineHook` (or
+  only uses `invalid`/`labelledBy`) doesn't bundle it. Every app: about 20 B (a check per render
+  and per disconnect). Apps that call `defineDisposableHook`: about 0.25 KiB more, which runs
+  only once such a hook has committed. Hooks without `dispose` pay no run-time cost.
 - Tested in `core/test/view/render-hooks-dispose.test.ts`.
 
 ## `raw(html)`
@@ -275,7 +275,8 @@ export const flash = defineHook<[value: unknown]>({
   every change re-parses it.
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`
   don't bundle it. Hook results do the same (`defineHook`, render/hook-part.ts): argument
-  comparison and queueing come with the first hook an app defines.
+  comparison and queueing come with the first hook an app defines, and disposal tracking with
+  the first `defineDisposableHook` (render/dispose.ts).
 
 ## `nothing`
 
@@ -286,8 +287,9 @@ removes the attribute (also in a multi-attribute).
 
 - Parts commit in document order. On first render an instance's parts commit **before** the
   instance is inserted, so a child component connects with its props already set.
-- After commit, hooks whose element left the root (or whose position changed) are disposed,
-  then hooks run `client` (in document order), then the scheduler's post-render work (04).
+- After commit, disposable hooks whose element left the root (or whose position changed) are
+  disposed, then hooks run `client` (in document order), then the scheduler's post-render work
+  (04).
 
 ## Native primitives
 

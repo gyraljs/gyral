@@ -33,9 +33,11 @@ export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
-export { defineBasicHook, defineHook } from './render/hook-part.js';
+export { defineHook } from './render/hook-part.js';
+export { defineDisposableHook } from './render/dispose.js';
 export {
   suspendHooks,
+  type DisposableHookSpec,
   type HookAttributes,
   type HookResult,
   type HookSpec,

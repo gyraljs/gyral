@@ -5,7 +5,15 @@
 // runs again with `prev` undefined (gyral-c5d.2).
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, settled } from '../../src/index.js';
-import { defineHook, each, html, hydrate, nothing, render } from '../../src/view/index.js';
+import {
+  defineDisposableHook,
+  defineHook,
+  each,
+  html,
+  hydrate,
+  nothing,
+  render,
+} from '../../src/view/index.js';
 import { mount } from './render-helpers.js';
 
 type Call = readonly [what: string, name: string, args: unknown, prev?: unknown];
@@ -13,7 +21,7 @@ type Call = readonly [what: string, name: string, args: unknown, prev?: unknown]
 /** A hook that logs `client` and `dispose` calls, with the element's id or tag name. */
 function logged(log: Call[]) {
   const name = (el: Element) => el.id || el.localName;
-  return defineHook<[n: number]>({
+  return defineDisposableHook<[n: number]>({
     client: (el, args, prev) => log.push(['client', name(el), args, prev]),
     dispose: (el, args) => log.push(['dispose', name(el), args, el.isConnected]),
   });
@@ -154,6 +162,12 @@ describe('dispose: removal paths', () => {
     render(html`<p>${html`<i ${plain()}></i>`}</p>`, el);
     render(html`<p>${nothing}</p>`, el);
     expect(calls).toEqual(['client']);
+  });
+
+  it('is defineDisposableHook only: defineHook rejects a dispose in development', () => {
+    const spec = { client: () => undefined, dispose: () => undefined };
+    // @ts-expect-error -- defineHook's spec has no dispose (gyral-c5d.2)
+    expect(() => defineHook(spec)).toThrow(/defineDisposableHook/);
   });
 });
 
