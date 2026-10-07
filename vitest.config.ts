@@ -28,10 +28,7 @@ export default defineConfig({
         // behaviour that differs between builds is covered (view/07-hydration.md "Testing"):
         // every package's and example's hydration tests.
         ...gyralVitePreset(),
-        resolve: {
-          ...gyralVitePreset().resolve,
-          conditions: ['module', 'browser', 'production'],
-        },
+        resolve: { conditions: ['module', 'browser', 'production'] },
         test: {
           name: 'browser-prod',
           include: [

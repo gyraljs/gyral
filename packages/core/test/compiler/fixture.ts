@@ -71,7 +71,7 @@ export async function buildApp(
       ...preset,
       ...(options.conditions === undefined
         ? {}
-        : { resolve: { ...preset.resolve, conditions: [...options.conditions] } }),
+        : { resolve: { conditions: [...options.conditions] } }),
       build: {
         write: false,
         minify: false,

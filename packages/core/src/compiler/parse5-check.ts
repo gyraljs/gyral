@@ -34,7 +34,7 @@ const isParse5 = (value: unknown): value is Parse5 =>
   typeof (value as { parseFragment?: unknown }).parseFragment === 'function';
 
 /**
- * Loads parse5 (`specifier`) as resolved from @gyral/core, else from the app's `root`;
+ * Loads parse5 (`specifier`) as resolved from `@gyral/core`, else from the app's `root`;
  * undefined when neither has it. `require` (Node loads ES modules with it too) rather than
  * `import()`: when core runs from source, this module is loaded by a Vite module runner that
  * is closed by the time the build starts.

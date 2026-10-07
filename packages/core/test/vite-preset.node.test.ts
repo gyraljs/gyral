@@ -40,7 +40,7 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
 
   it('pre-bundles nothing by default, and extra modules without duplicates', () => {
     expect(gyralVitePreset().optimizeDeps.include).toEqual([]);
-    expect(gyralVitePreset().resolve.dedupe).toEqual([]);
+    expect(gyralVitePreset()).not.toHaveProperty('resolve'); // nothing to dedupe since Lit left
     const include = gyralVitePreset({ optimize: ['a', 'b', 'a'] }).optimizeDeps.include;
     expect(include).toEqual(['a', 'b']);
   });

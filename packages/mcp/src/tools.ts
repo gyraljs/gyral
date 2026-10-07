@@ -9,7 +9,7 @@ import { scaffold, validTag } from './scaffold.js';
 import type { Corpus } from './types.js';
 
 export interface ToolOptions {
-  /** Where check_snippet resolves TypeScript and @gyral/* (the agent's project). */
+  /** Where check_snippet resolves TypeScript and `@gyral/*` (the agent's project). */
   readonly projectDir: string;
 }
 

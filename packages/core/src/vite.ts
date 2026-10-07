@@ -189,7 +189,6 @@ export interface GyralViteOptions {
 
 export interface GyralViteConfig {
   readonly plugins: Plugin[];
-  readonly resolve: { readonly dedupe: string[] };
   readonly optimizeDeps: { readonly include: string[] };
 }
 
@@ -203,7 +202,6 @@ export interface GyralViteConfig {
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
     plugins: [gyralTemplateCompiler(options.compiler), gyralDevServer()],
-    resolve: { dedupe: [] },
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };
 }
