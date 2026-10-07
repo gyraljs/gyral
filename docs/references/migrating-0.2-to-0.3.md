@@ -19,6 +19,12 @@ The 0.2 snippets below are `text` blocks; every 0.3 snippet typechecks against t
   `@gyral/core` has no runtime dependencies at all.
 - Keep Lit only if the app has its own Lit elements: any custom element still works next to
   Gyral components, but Gyral no longer installs or dedupes Lit for you.
+- In a mixed app, a parent that isn't a Gyral component (a Lit element, page script, another
+  library) hears a Gyral child's outputs as `gyral-output` events: listen for `OUTPUT_EVENT`
+  (exported from `@gyral/core` since 0.3.1) on the child or an ancestor in the same tree, and
+  read the output from `event.detail` (`OutputEvent<OutputsOf<typeof Child>>` types it). The
+  event bubbles but isn't composed. A non-Gyral child talks to a Gyral parent by dispatching
+  `OUTPUT_EVENT` with a tagged `detail` and `bubbles: true` (ADR 0010).
 - Optional build-time peers of `@gyral/core`: `vite` ^8 (preset and compiler), `parse5`
   (an extra markup check in `vite build`) and `eslint` 9 or 10 (the plugin).
 

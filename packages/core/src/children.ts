@@ -17,10 +17,37 @@ export const EMIT = {
 /**
  * A command that sends `output` to the parent component. The parent receives it as an
  * intent on the child element: `<my-child data-intent=${i.Picked}>` + `child(MyChild, …)`.
+ * `outputs<Out>()` gives the same function typed by the component's output union.
  */
 export function emit(output: Tagged & Readonly<Record<string, unknown>>): Command<never> {
   return { driver: EMIT, input: output, onSuccess: () => undefined };
 }
+
+/**
+ * `emit`, typed by a component's output union (the 4th `define` type parameter), so an
+ * output of the wrong shape fails to compile. A module-level constant, like `intents<Msg>()`:
+ *
+ *   type Out = { readonly _tag: 'Picked'; readonly id: number };
+ *   const emit = outputs<Out>();
+ *   // in update: Pick: (s, m) => [s, [emit({ _tag: 'Picked', id: m.id })]]
+ *
+ * Costs nothing at run time: it returns `emit` itself.
+ */
+// A type-only argument, like intents<Msg>(): the caller names the union the result accepts.
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+export function outputs<O extends Tagged>(): (output: O) => Command<never> {
+  // Sound: emit only forwards the output; the stricter parameter type is the point.
+  return emit as unknown as (output: O) => Command<never>;
+}
+
+/**
+ * The `gyral-output` event a child dispatches on its host for each output (ADR 0010): `detail`
+ * is the output. Bubbles, not composed. A non-Gyral parent listens for `OUTPUT_EVENT`.
+ */
+export type OutputEvent<O extends Tagged = Tagged> = CustomEvent<O>;
+
+/** The output union of a `define()` class: `OutputsOf<typeof Item>`. */
+export type OutputsOf<C> = C extends { readonly outputs?: infer O } ? Exclude<O, undefined> : never;
 
 /**
  * Sends an output to the parent component. A microtask keeps outputs in order and out of the

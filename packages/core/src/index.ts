@@ -10,16 +10,16 @@ export type {
   Next,
   RetryPolicy,
 } from './command.js';
-export { child, emit } from './children.js';
+export { child, emit, outputs } from './children.js';
 export { focus } from './focus.js';
 export type { FocusOptions } from './focus.js';
 export { invokersSupported } from './invokers.js';
 export type { CommandInfo } from './invokers.js';
 export { ISLAND_ATTRIBUTE } from './islands.js';
 export type { HydrateStrategy } from './islands.js';
-export type { ChildSource, OutputSource } from './children.js';
+export type { ChildSource, OutputEvent, OutputSource, OutputsOf } from './children.js';
 export { define } from './define.js';
-export { intents } from './intent.js';
+export { intents, OUTPUT_EVENT } from './intent.js';
 export { settled } from './settled.js';
 export { changed, defineStore, send } from './store.js';
 export type {

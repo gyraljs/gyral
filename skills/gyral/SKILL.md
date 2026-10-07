@@ -95,8 +95,8 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Comes from the parent → a prop (`props` + `ctx.props`; copy into state via `PropsChanged`).
 - Several components read and change it (cart, session) → a store (`defineStore`, `stores`,
   `ctx.read(store)`, `send(store, msg)`).
-- A child must tell its parent something → an output (`emit()` in the child, `child()` intent
-  in the parent).
+- A child must tell its parent something → an output (`const emit = outputs<Out>()` in the
+  child, `child()` intent in the parent; plain DOM listens for `OUTPUT_EVENT`).
 
 **Which concurrency for a command?** (per lane = `key`, default the driver name)
 

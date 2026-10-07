@@ -3,7 +3,8 @@
 `define<S, M, P, O>(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
 subclass), registers it under `tag`, and returns the class. Type parameters: `S` state, `M`
 message union, `P` props (default `object`; inferred from the `prop.*` builders when you pass
-no type arguments), `O` outputs a child emits to its parent (default `never`). Rendering goes
+no type arguments), `O` outputs a child emits to its parent (default `never`; emit them with
+`const emit = outputs<O>()`, composition.md). Rendering goes
 through one global scheduler: reducers run at once, the DOM updates in a microtask; tests
 `await settled()`.
 

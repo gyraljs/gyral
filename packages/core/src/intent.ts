@@ -3,7 +3,7 @@ import { hold } from './scheduler.js';
 import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
 import type { Markup } from './view/index.js';
 
-/** Event a child component dispatches on its host to send an output up (ADR 0010). */
+/** Event a child component dispatches on its host to send an output up (ADR 0010); public. */
 export const OUTPUT_EVENT = 'gyral-output';
 
 /** Default triggers (`defaultTrigger`): every component root listens for these. */

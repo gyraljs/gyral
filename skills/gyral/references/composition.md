@@ -52,16 +52,19 @@ export const UserCard = define<State, Msg, Props>('my-user-card', {
 ## Child components: outputs up with `emit`, `child()` in the parent
 
 The child declares an output union `O` (4th type parameter) and returns `emit(output)` as a
-command. The parent puts `data-intent` on the child element and parses outputs with
+command. Build that `emit` with `outputs<O>()` (a module-level constant, like `intents<Msg>()`):
+it is core's `emit`, typed by the union, so an output of the wrong shape fails to compile. The
+parent puts `data-intent` on the child element and parses outputs with
 `child(ChildClass, (output, el) => msg)`; `el` is the typed child element (read its props).
 
 ```ts
 import * as v from 'valibot';
-import { child, define, each, emit, html, intents, prop } from '@gyral/core';
+import { child, define, each, html, intents, outputs, prop } from '@gyral/core';
 
 // Child: owns its own state; reports removal up.
 type ItemOut = { readonly _tag: 'Removed' };
 type ItemMsg = { readonly _tag: 'Remove' };
+const emit = outputs<ItemOut>(); // emit({ _tag: 'Remvoed' }) would not compile
 const ItemData = v.object({ id: v.number(), label: v.string() });
 interface ItemProps {
   readonly item: v.InferOutput<typeof ItemData>;
@@ -111,6 +114,36 @@ export const List = define<ListState, ListMsg>('my-list', {
 
 For a component that contains itself (a folder tree) or is defined later, pass a function:
 `child(() => Folder, …)` and annotate the constant as `GyralElementClass<S, M, P, O>`.
+
+### Outputs to a parent that isn't Gyral
+
+An output is a `gyral-output` `CustomEvent` (`OUTPUT_EVENT`) dispatched on the child's host in a
+microtask; `detail` is the output. It bubbles but isn't composed, so it stays in the tree the
+child sits in. Plain DOM code, or a component from another library, listens for it on the child
+or an ancestor in that tree:
+
+```ts
+import { define, html, OUTPUT_EVENT, outputs, type OutputEvent, type OutputsOf } from '@gyral/core';
+
+type RatingOut = { readonly _tag: 'Rated'; readonly stars: number };
+const emit = outputs<RatingOut>();
+
+export const Rating = define<object, { readonly _tag: 'Rate' }, object, RatingOut>('my-rating', {
+  init: () => ({}),
+  intent: { Rate: () => ({ _tag: 'Rate' }) },
+  update: { Rate: (s) => [s, [emit({ _tag: 'Rated', stars: 5 })]] },
+  view: (_s, i) => html`<button type="button" data-intent=${i.Rate}>★★★★★</button>`,
+});
+
+// Page script (or another library's component): listen on the child or an ancestor.
+document.querySelector('#reviews')?.addEventListener(OUTPUT_EVENT, (event) => {
+  const { detail } = event as OutputEvent<OutputsOf<typeof Rating>>;
+  console.log(`${String(detail.stars)} stars from`, event.target); // the <my-rating>
+});
+```
+
+The other direction works too: any custom element talks to a Gyral parent by dispatching
+`new CustomEvent(OUTPUT_EVENT, { detail: { _tag: 'Picked', … }, bubbles: true })` on itself.
 
 Keep a child's own UI state inside the child; the parent owns only what it must coordinate.
 Don't reach into a child's state from the parent; ask with props, listen with outputs.

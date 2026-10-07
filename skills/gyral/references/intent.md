@@ -129,6 +129,7 @@ them out of `intent`. They still need a reducer in `update`.
 
 ## Children's outputs
 
-A parent listens to a child component with `child(ChildClass, (output, el) => msg)`; see
-composition.md. Forms use `form(schema, toMsg)` and single controls `field(schema, toMsg)`; see
+A parent listens to a child component with `child(ChildClass, (output, el) => msg)`; the child
+emits with `outputs<Out>()`'s typed `emit`. Code that isn't a Gyral component listens for
+`OUTPUT_EVENT` (`gyral-output`, `detail` is the output); see composition.md. Forms use `form(schema, toMsg)` and single controls `field(schema, toMsg)`; see
 forms.md.
