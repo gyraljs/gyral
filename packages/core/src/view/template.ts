@@ -1,10 +1,12 @@
-// Template results and the `html` tag (view/01-templates.md "Authoring", "Template results").
-// A result is a template source (the call site's strings, or a compiled template object) plus
-// this call's values, recognised by a module-private symbol so data from JSON can never pass
-// for one. `templateOf` turns the source into the template object: compiled results carry it,
-// runtime results are normalized once per strings array through `#prepare` (prepare.ts).
+// Template results and the `html` and `svg` tags (view/01-templates.md "Authoring", "Template
+// results", "svg templates"). A result is a template source (the call site's strings, or a
+// template object) plus this call's values, recognised by a module-private symbol so data from
+// JSON can never pass for one. `templateOf` turns the source into the template object: compiled
+// and svg results carry it, html results are normalized once per strings array through
+// `#prepare` (prepare.ts).
 import { prepare } from '#prepare';
 import type { TemplateObject } from './normalize/types.js';
+import { svgTemplate } from './template-element.js';
 
 const SOURCE: unique symbol = Symbol('gyral.template');
 
@@ -19,8 +21,23 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): Templ
   return { [SOURCE]: strings, values };
 }
 
+/**
+ * The SVG fragment tag: `` svg`<path d=${s.d} />` ``. Its top level is SVG content, so it
+ * renders only inside an `<svg>` (or another SVG element) of an html template
+ * (view/01-templates.md "svg templates"). A whole `<svg>` graphic is written with html.
+ */
+export function svg(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult {
+  return compiledSvg(prepare(strings, true), values);
+}
+
 /** Internal: what the template compiler (`@gyral/core/vite`) rewrites `html` calls into. */
 export function compiled(template: TemplateObject, values: readonly unknown[]): TemplateResult {
+  return { [SOURCE]: template, values };
+}
+
+/** Internal: what the template compiler rewrites `svg` calls into. */
+export function compiledSvg(template: TemplateObject, values: readonly unknown[]): TemplateResult {
+  svgTemplate(template);
   return { [SOURCE]: template, values };
 }
 

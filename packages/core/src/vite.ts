@@ -107,7 +107,8 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
       return ready().buildStart.call(this, input);
     },
     transform: {
-      filter: { id: /\.[cm]?[jt]sx?$/, code: 'html' },
+      // Modules naming a template tag (html or svg); core's template module names both.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg/ },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },

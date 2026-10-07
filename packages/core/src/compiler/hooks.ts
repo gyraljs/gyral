@@ -3,11 +3,12 @@
 // `vite build` hook, so the preset stays loadable from any vite.config.ts:
 //   - `transform` (the shell is enforce: 'pre', so positions are the author's own source,
 //     TypeScript included, parsed by Rolldown's `this.parse`): rewrites each `html` call site
-//     of the configured sources into `compiled(<hoisted template object>, [values…])`,
-//     dependencies in node_modules included. Template rule violations, and references it
-//     can't follow, fail the build with a code frame.
-//   - `generateBundle`: fails when an uncompiled `html` survived in a chunk anyway (re-exports
-//     across modules, dynamic imports): the guarantee that the `#prepare` stub is never hit.
+//     of the configured sources into `compiled(<hoisted template object>, [values…])` (and
+//     each `svg` one into `compiledSvg(…)`), dependencies in node_modules included. Template
+//     rule violations, and references it can't follow, fail the build with a code frame.
+//   - `generateBundle`: fails when an uncompiled `html` or `svg` survived in a chunk anyway
+//     (re-exports across modules, dynamic imports): the guarantee that the `#prepare` stub is
+//     never hit.
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
@@ -37,7 +38,7 @@ export interface CompilerSettings {
 const VIEW = ['index', 'template'].flatMap((name) =>
   ['.ts', '.js'].map((ext) => fileURLToPath(new URL(`../view/${name}${ext}`, import.meta.url))),
 );
-/** template.ts's symbol description: the module defining `html`, in any copy of core. */
+/** template.ts's symbol description: the module defining `html` and `svg`, in any copy of core. */
 const DEFINES_HTML = /Symbol\(['"]gyral\.template['"]\)/;
 const SCRIPT = /\.[cm]?[jt]sx?$/;
 
@@ -68,7 +69,8 @@ function developmentBuild(config: {
 
 const CANT_FOLLOW =
   `This use of html can't be compiled: the template compiler rewrites only html\`…\` tagged ` +
-  `templates whose tag is the imported html itself (or ns.html for import * as ns). ` +
+  `templates whose tag is the imported html itself (or ns.html for import * as ns; the same ` +
+  `for svg). ` +
   `Aliasing it, passing it around or calling it as a function would reach the runtime ` +
   `template preparer, which builds made with the Gyral preset leave out. Write html\`…\` at ` +
   `the call site (view/01-templates.md "Compiled").`;
@@ -154,9 +156,9 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
       for (const r of reexports) {
         if (!(await isSource(r.specifier))) continue;
         this.warn(
-          `${where(r.node)}: re-exporting html. The template compiler only follows html ` +
-            `imported straight from ${r.specifier}: templates written with this re-export stay ` +
-            `uncompiled and fail the build. Import html from ${r.specifier} instead.`,
+          `${where(r.node)}: re-exporting html or svg. The template compiler only follows the ` +
+            `tags imported straight from ${r.specifier}: templates written with this re-export ` +
+            `stay uncompiled and fail the build. Import them from ${r.specifier} instead.`,
         );
       }
       const matched = [];
@@ -172,7 +174,7 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
       const { sites, leftovers } = findUses(program, matched);
       for (const l of leftovers) {
         if (l.exported)
-          this.warn(`${where(l.node)}: re-exporting html; its users stay uncompiled.`);
+          this.warn(`${where(l.node)}: re-exporting a template tag; its users stay uncompiled.`);
         else fail(l.node.start, l.node.end, CANT_FOLLOW);
       }
       if (sites.length === 0) return null;
@@ -201,13 +203,14 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
       for (const chunk of Object.values(bundle)) {
         if (chunk.type !== 'chunk') continue;
         for (const [id, module] of Object.entries(chunk.modules)) {
-          if (!state.definers.has(id) || !module.renderedExports.includes('html')) continue;
+          const tag = ['html', 'svg'].find((name) => module.renderedExports.includes(name));
+          if (!state.definers.has(id) || tag === undefined) continue;
           this.error(
-            `gyral: an uncompiled html template remains in ${chunk.fileName}: something uses ` +
-              `html from ${relative(root, id)} in a way the template compiler can't see (a ` +
+            `gyral: an uncompiled ${tag} template remains in ${chunk.fileName}: something uses ` +
+              `${tag} from ${relative(root, id)} in a way the template compiler can't see (a ` +
               `re-export, a dynamic import, or a module it doesn't process). With the ` +
               `gyral-compiled condition the runtime preparer is left out, so that template ` +
-              `would throw. Import html straight from '@gyral/core' where you write templates ` +
+              `would throw. Import ${tag} straight from '@gyral/core' where you write templates ` +
               `(view/01-templates.md "Compiled").`,
           );
         }

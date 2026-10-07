@@ -104,6 +104,14 @@ describe('whitespace (view/01 "Whitespace")', () => {
     ).toEqual(['<svg viewBox="0 0 10 10"><g><circle r="1"></circle><text>a b</text></g></svg>']);
   });
 
+  it('drops whitespace with a newline at the inside edges of <svg> (svg fragments in holes)', () => {
+    expect(
+      min(t`<p>a <svg viewBox="0 0 1 1">
+        ${'fragment'}
+      </svg> b</p>`),
+    ).toEqual(['<p>a <svg viewBox="0 0 1 1">', '</svg> b</p>']);
+  });
+
   it('keeps binding positions in nested templates', () => {
     const strings = t`
       <ul>

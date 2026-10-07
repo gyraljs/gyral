@@ -2,6 +2,7 @@
 // and 4): the client HTML (bound attributes removed, anchors added by view/02-bindings.md's
 // anchor rule), the server segments (types.ts), the part table with child-index paths, and the
 // shape of the DOM the browser must build (checked by prepare.ts).
+import { SVG_HTML_POINT } from './svg.js';
 import type { ElementNode, TreeNode } from './tree.js';
 import {
   ATTR_PART,
@@ -51,8 +52,8 @@ class Emitter {
     this.segments.push(segment);
   }
 
-  /** `parent`: the parent element's name; undefined at the template root. */
-  children(nodes: readonly TreeNode[], path: Path, parent?: string): Shape {
+  /** `parent`: the parent element; undefined at the template root. */
+  children(nodes: readonly TreeNode[], path: Path, parent?: ElementNode): Shape {
     const shape: ShapeNode[] = [];
     nodes.forEach((node, k) => {
       switch (node.type) {
@@ -89,10 +90,13 @@ class Emitter {
     k: number,
     path: Path,
     shape: ShapeNode[],
-    parent: string | undefined,
+    parent: ElementNode | undefined,
   ): void {
     const next = nodes[k + 1];
-    this.op(parent === undefined ? { k: 'child' } : { k: 'child', in: parent });
+    if (parent === undefined) this.op({ k: 'child' });
+    else if (parent.ns === 'svg' && !SVG_HTML_POINT.test(parent.name)) {
+      this.op({ k: 'child', in: parent.name, svg: true });
+    } else this.op({ k: 'child', in: parent.name });
     if (next === undefined) {
       this.parts.push([nodes.length === 1 ? CHILD_SOLE : CHILD_END, path]);
       return;
@@ -142,7 +146,7 @@ class Emitter {
     ) {
       this.out('\n');
     }
-    const shape = this.children(el.children, path, el.name);
+    const shape = this.children(el.children, path, el);
     if (el.props !== undefined) {
       this.html += `</${el.raw}>`;
       this.op({ k: 'close', tag: el.name });

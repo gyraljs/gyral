@@ -136,6 +136,44 @@ describe('gyral/template', () => {
     ],
   });
 
+  // svg templates (view/01 "svg templates"): the same engine, with the top level as SVG content.
+  const SVG = "import { svg } from '@gyral/core';\n";
+  const NESTED =
+    "import { html, svg as s } from '@gyral/core';\nexport const v = html`<svg>${s`<g><input></g>`}</svg>`;";
+  tester.run('gyral/template: svg templates', templateRule, {
+    valid: [
+      `${SVG}export const v = (s) => svg\`<path d=\${s.d} /><g class=\${s.c}>\${s.t}</g>\`;`,
+      `${SVG}export const v = (s) => svg\`<foreignObject><p>\${s.t}</p></foreignObject>\`;`,
+      'import * as g from \'@gyral/core\';\nexport const v = g.svg`<circle r="1" />`;',
+      // Not Gyral's svg.
+      "import { svg } from 'other-renderer';\nexport const v = svg`<div></div>`;",
+    ],
+    invalid: [
+      {
+        code: `${SVG}export const v = (x) => svg\`<g>\${x}</g><div>\${x}</div>\`;`,
+        errors: [
+          {
+            message: runtimeMessage(['<g>', '</g><div>', '</div>'], true),
+            ...spanOf(
+              `${SVG}export const v = (x) => svg\`<g>\${x}</g><div>\${x}</div>\`;`,
+              '<div>',
+            ),
+          },
+        ],
+      },
+      {
+        code: `${SVG}export const v = (x) => svg\`<use xlink:href=\${x} />\`;`,
+        errors: [{ message: runtimeMessage(['<use xlink:href=', ' />'], true) }],
+      },
+      {
+        code: NESTED,
+        errors: [
+          { message: runtimeMessage(['<g><input></g>'], true), ...spanOf(NESTED, '<input>') },
+        ],
+      },
+    ],
+  });
+
   tsTester.run('gyral/template: TypeScript', templateRule, {
     valid: ["import type { html } from '@gyral/core';\ndeclare const h: typeof html;\nh`<div/>`;"],
     invalid: [

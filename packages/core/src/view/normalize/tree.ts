@@ -2,7 +2,8 @@
 // tokens into the tree the HTML parser builds for valid markup (WHATWG "tree construction":
 // namespaces, void elements, raw text, the leading newline of <pre>/<listing>/<textarea>), so
 // part paths match the browser's DOM. Markup the parser would repair is an error instead of
-// being modelled (rule 7, repairs.ts), as are rules 3, 4, 6, 10, 12 and 13.
+// being modelled (rule 7, repairs.ts), as are rules 3, 4, 6, 10, 12 and 13. An svg template's
+// top level is SVG content, as if inside an <svg> (01 "svg templates", svg.ts).
 import { decodeRefs, unquote } from './entities.js';
 import {
   breaksOutOfForeign,
@@ -15,6 +16,7 @@ import {
 } from './repairs.js';
 import { formStateFix, msg, SVG_ONLY, VOID } from './rules.js';
 import type { Source } from './source.js';
+import { HTML_ONLY, namespacedAttr, SVG_HTML_POINT, svgAttr } from './svg.js';
 import type { AttrToken, ContentMode, Sink, StartTag } from './tokenizer.js';
 
 export interface ElementNode {
@@ -47,7 +49,7 @@ const LEADING_NEWLINE = new Set(['pre', 'listing', 'textarea']);
 const DOCUMENT = new Set(['html', 'head', 'body']);
 
 function integrationPoint(el: ElementNode): boolean {
-  if (el.ns === 'svg') return /^(foreignobject|desc|title)$/.test(el.name);
+  if (el.ns === 'svg') return SVG_HTML_POINT.test(el.name);
   return el.ns === 'math' && /^(mi|mo|mn|ms|mtext)$/.test(el.name);
 }
 
@@ -59,7 +61,11 @@ export class TreeBuilder implements Sink {
   /** The <pre>/<listing>/<textarea> whose first newline the parser drops, if just opened. */
   private fresh: ElementNode | undefined;
 
-  constructor(private readonly src: Source) {}
+  /** `svg`: an svg template, whose top level is SVG content (01 "svg templates"). */
+  constructor(
+    private readonly src: Source,
+    private readonly svg = false,
+  ) {}
 
   private get children(): TreeNode[] {
     return this.stack.at(-1)?.children ?? this.root;
@@ -94,6 +100,7 @@ export class TreeBuilder implements Sink {
 
   doctype(raw: string): void {
     this.fresh = undefined;
+    if (this.svg) this.src.fail(10, msg.htmlInSvg('!doctype', true));
     this.server = true;
     this.children.push({ type: 'doctype', raw });
   }
@@ -134,10 +141,21 @@ export class TreeBuilder implements Sink {
 
   private namespace(tag: StartTag): Ns {
     const parent = this.stack.at(-1);
-    if (parent === undefined || parent.ns === 'html' || integrationPoint(parent)) {
+    if (parent === undefined ? !this.svg : parent.ns === 'html' || integrationPoint(parent)) {
       return tag.name === 'svg' ? 'svg' : tag.name === 'math' ? 'math' : 'html';
     }
+    // An svg template's top level: SVG content, as inside the <svg> it renders in.
+    if (parent === undefined) {
+      const fontAttr = tag.attrs.some((a) => /^(color|face|size)$/i.test(a.name));
+      if (breaksOutOfForeign(tag.name, fontAttr) || HTML_ONLY.has(tag.name)) {
+        this.src.fail(10, msg.htmlInSvg(tag.raw, true));
+      }
+      return 'svg';
+    }
     if (parent.name === 'annotation-xml' && tag.name === 'svg') return 'svg';
+    if (parent.ns === 'svg' && HTML_ONLY.has(tag.name)) {
+      this.src.fail(10, msg.htmlInSvg(tag.raw, false));
+    }
     const fontAttr = tag.attrs.some((a) => /^(color|face|size)$/i.test(a.name));
     if (breaksOutOfForeign(tag.name, fontAttr)) {
       this.src.fail(
@@ -170,17 +188,28 @@ export class TreeBuilder implements Sink {
     if (repair !== undefined) this.src.fail(7, repair);
   }
 
-  /** Bound names lower-cased on HTML elements (not properties); rules 4, 7 (duplicates), 13. */
+  /**
+   * Bound names as the parser spells them (not properties): lower case on HTML elements, SVG's
+   * camelCase on SVG elements (svg.ts); rules 4, 7 (duplicates), 10 (namespaced), 13.
+   */
   private attributes(tag: StartTag, ns: Ns): AttrToken[] {
     const seen = new Set<string>();
     return tag.attrs.map((a) => {
-      const lower = ns === 'html' && a.kind !== 'prop' ? a.name.toLowerCase() : a.name;
+      const name =
+        a.kind === 'prop' || ns === 'math'
+          ? a.name
+          : ns === 'html'
+            ? a.name.toLowerCase()
+            : svgAttr(a.name);
       if (a.kind === 'prop' && ns === 'html') {
         const fix = formStateFix(tag.name, a.name);
         if (fix !== undefined) this.src.fail(4, msg.formState(tag.name, a.name, fix));
       }
+      if ((a.kind === 'attr' || a.kind === 'bool') && ns !== 'html' && namespacedAttr(a.name)) {
+        this.src.fail(10, msg.namespacedAttr(a.name));
+      }
       if (a.kind !== 'prop' && a.kind !== 'hook') {
-        const key = ns === 'html' ? lower : a.name;
+        const key = ns === 'math' ? a.name : a.name.toLowerCase();
         if (seen.has(key)) {
           this.src.fail(
             7,
@@ -194,9 +223,7 @@ export class TreeBuilder implements Sink {
       }
       if (a.kind === 'static') return a;
       const strings = a.strings?.map((s) => this.decode(s));
-      return strings === undefined
-        ? { kind: a.kind, name: lower }
-        : { kind: a.kind, name: lower, strings };
+      return strings === undefined ? { kind: a.kind, name } : { kind: a.kind, name, strings };
     });
   }
 

@@ -1,5 +1,5 @@
 // gyral/template: the template rules of view/09-template-rules.md, in the editor. Every html`…`
-// whose tag is imported from a template source goes through the normalizer's own check
+// (and svg`…`) whose tag is imported from a template source goes through the normalizer's own check
 // (view/normalize/check.ts), the one rule set the compiler and the development runtime use, so
 // the message is the same TemplateError message (minus the `near:`/`at` context, which the
 // editor's location replaces). Not checked here: rule 7's parse5 comparison (compiler only) and
@@ -13,7 +13,7 @@ import { cookedMap, errorSpan, type Quasi } from './locate.js';
 export const messageOf = (error: TemplateError): string => error.message.split('\n')[0] ?? '';
 
 const INVALID_ESCAPE =
-  'This html template has an invalid escape sequence, so it has no string value at runtime. ' +
+  'This template has an invalid escape sequence, so it has no string value at runtime. ' +
   'Fix the escape (write \\\\ for a backslash).';
 
 /** What this rule reads of a TemplateElement (ESTree's, or typescript-eslint's). */
@@ -50,7 +50,7 @@ export const templateRule: Rule.RuleModule = {
     type: 'problem',
     docs: {
       description:
-        'Template rules for html`…` (view/09-template-rules.md): the same checks and messages ' +
+        'Template rules for html`…` and svg`…` (view/09-template-rules.md): the same checks and messages ' +
         'as the template compiler and the development runtime.',
       recommended: true,
       url: 'https://github.com/gyraljs/gyral/blob/main/docs/design-docs/view/09-template-rules.md',
@@ -61,13 +61,15 @@ export const templateRule: Rule.RuleModule = {
   create(context) {
     return {
       TaggedTemplateExpression(node) {
-        if (!isGyral(context, node.tag as Rule.Node, 'html')) return;
+        const tag = node.tag as Rule.Node;
+        const svg = isGyral(context, tag, 'svg');
+        if (!svg && !isGyral(context, tag, 'html')) return;
         const parts = quasisOf(context, node.quasi);
         if (parts === undefined) {
           context.report({ node: node.quasi, messageId: 'escape' });
           return;
         }
-        const issue = checkTemplate(parts.cooked);
+        const issue = checkTemplate(parts.cooked, svg);
         if (issue === undefined) return;
         const span = errorSpan(parts.quasis, parts.cooked, issue.strings, issue.at, issue.from);
         const { sourceCode } = context;

@@ -88,3 +88,26 @@ export function badHook(value: unknown): never {
       `(${SPEC}/02-bindings.md "Element hooks").`,
   );
 }
+
+/**
+ * An svg template renders only in SVG content: an SVG element other than <foreignObject>,
+ * <desc> or <title>, whose content is HTML (01 "svg templates"). A detached fragment (an
+ * instance being built) isn't checked: its place is known only when it is inserted.
+ */
+export function checkSvgParent(parent: Node): void {
+  if (parent.nodeType === 11 && !('host' in parent)) return;
+  const el = parent as Element;
+  if (
+    el.namespaceURI === 'http://www.w3.org/2000/svg' &&
+    !/^(foreignObject|desc|title)$/.test(el.localName)
+  ) {
+    return;
+  }
+  const where = el.nodeType === 1 ? `<${el.localName}>` : 'a shadow root';
+  throw new Error(
+    `gyral: an svg template is rendered into ${where}, which isn't SVG content. svg\`…\` ` +
+      'fragments are SVG elements: render them inside an <svg> (or another SVG element, not ' +
+      '<foreignObject>) of an html template, html`<svg viewBox="…">${svg`…`}</svg>`, or write ' +
+      `the whole graphic with html (${SPEC}/01-templates.md "svg templates").`,
+  );
+}

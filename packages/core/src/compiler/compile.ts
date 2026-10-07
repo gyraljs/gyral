@@ -1,14 +1,15 @@
-// Compiles one module's `html` call sites (view/01-templates.md "Compiled"): each call site's
-// cooked strings go through the same normalizer as the runtime path (so ids match), parse5
-// double-checks rule 7, one module-level constant is hoisted per template object (without its
-// id in production client builds: the renderer compares those by identity), and the call
-// becomes `compiled(<const>, [values…])`. Line breaks inside a rewritten template are
-// kept, so every following line keeps its number; the source map covers columns.
+// Compiles one module's `html` and `svg` call sites (view/01-templates.md "Compiled"): each
+// call site's cooked strings go through the same normalizer as the runtime path (so ids match),
+// parse5 double-checks rule 7, one module-level constant is hoisted per template object
+// (without its id in production client builds: the renderer compares those by identity), and
+// the call becomes `compiled(<const>, [values…])`, or `compiledSvg(…)` for an svg template.
+// Line breaks inside a rewritten template are kept, so every following line keeps its number;
+// the source map covers columns.
 import { analyze, TemplateError, type TemplateObject } from '../view/index.js';
 import type { Node } from './ast.js';
 import { nodeAt, nodesAt } from './ast.js';
 import { checkWithParse5, type Parse5 } from './parse5-check.js';
-import type { HtmlImport } from './scan.js';
+import type { HtmlImport, Tag } from './scan.js';
 import { splice, type Edit, type Lines, type SourceMap } from './source.js';
 
 /** Where a source's `compiled` lives when its `html` module isn't the one to import it from. */
@@ -32,7 +33,11 @@ export interface CompileInput {
   /** Module id, and its path relative to the root (for messages). */
   readonly id: string;
   readonly file: string;
-  readonly sites: readonly { readonly node: Node; readonly binding: HtmlImport }[];
+  readonly sites: readonly {
+    readonly node: Node;
+    readonly binding: HtmlImport;
+    readonly tag: Tag;
+  }[];
   /** Server build: keep the server segments. */
   readonly ssr: boolean;
   /**
@@ -52,8 +57,14 @@ export interface CompileInput {
  * needs no decoding.
  */
 function emitted(template: TemplateObject, ssr: boolean, ids: boolean): object {
-  const { id, html, parts, server, segments } = template;
-  const client = { ...(ids ? { id } : {}), html, parts, ...(server === true ? { server } : {}) };
+  const { id, html, parts, server, svg, segments } = template;
+  const client = {
+    ...(ids ? { id } : {}),
+    html,
+    parts,
+    ...(server === true ? { server } : {}),
+    ...(svg === true ? { svg } : {}),
+  };
   return ssr ? { ...client, segments } : client;
 }
 
@@ -88,14 +99,14 @@ function siteEdits(code: string, node: Node, callee: string, name: string): Edit
 }
 
 /** The cooked strings of a tagged template (what the tag receives at runtime). */
-function cookedStrings(node: Node): string[] {
+function cookedStrings(node: Node, tag: Tag): string[] {
   return nodesAt(nodeAt(node, 'quasi') ?? node, 'quasis').map((q) => {
     const cooked = (q['value'] as { cooked?: unknown } | undefined)?.cooked;
     if (typeof cooked !== 'string') {
       throw new CompileError(
         q.start,
         q.end,
-        'This html template has an invalid escape sequence, so it has no string value at ' +
+        `This ${tag} template has an invalid escape sequence, so it has no string value at ` +
           'runtime. Fix the escape (write \\\\ for a backslash).',
       );
     }
@@ -109,16 +120,18 @@ export function compileModule(input: CompileInput): { code: string; map: SourceM
   const { code } = lines;
   let prefix = '_gyral$';
   for (let n = 1; code.includes(prefix); n++) prefix = `_gyral${String(n)}$`;
+  /** `compiled from "entry"` → the import's local name, per tag function and entry. */
   const callees = new Map<string, string>();
+  const imports: string[] = [];
   const consts = new Map<string, string>();
   const decls: string[] = [];
   const edits: Edit[] = [];
-  for (const { node, binding } of sites) {
+  for (const { node, binding, tag } of sites) {
     const { line, column } = lines.position(node.start);
     const loc = `${input.file}:${String(line)}:${String(column + 1)}`;
     let analysis;
     try {
-      analysis = analyze(cookedStrings(node), loc);
+      analysis = analyze(cookedStrings(node, tag), loc, tag === 'svg');
     } catch (error) {
       if (error instanceof TemplateError)
         throw new CompileError(node.start, node.end, error.message);
@@ -146,16 +159,16 @@ export function compileModule(input: CompileInput): { code: string; map: SourceM
       decls.push(`const ${name} = ${JSON.stringify(emitted(template, input.ssr, input.ids))};`);
     }
     const entry = COMPILED_ENTRIES[binding.specifier] ?? binding.specifier;
-    let callee = callees.get(entry);
+    const exported = tag === 'svg' ? 'compiledSvg' : 'compiled';
+    const from = `${exported} from ${JSON.stringify(entry)}`;
+    let callee = callees.get(from);
     if (callee === undefined) {
-      callee = `${prefix}compiled${callees.size === 0 ? '' : String(callees.size)}`;
-      callees.set(entry, callee);
+      callee = `${prefix}${exported}${callees.size === 0 ? '' : String(callees.size)}`;
+      callees.set(from, callee);
+      imports.push(`import { ${exported} as ${callee} } from ${JSON.stringify(entry)};`);
     }
     edits.push(...siteEdits(code, node, callee, name));
   }
-  const imports = [...callees].map(
-    ([entry, local]) => `import { compiled as ${local} } from ${JSON.stringify(entry)};`,
-  );
   // Prepended to the first line (after a hashbang), so no line moves.
   const at = code.startsWith('#!') ? code.indexOf('\n') + 1 : 0;
   edits.unshift({ start: at, end: at, text: [...imports, ...decls].join('') });

@@ -86,11 +86,14 @@ class Tracker implements Sink {
   }
 }
 
-/** The template's first rule violation, or undefined when `normalize` would accept it. */
-export function checkTemplate(strings: readonly string[]): TemplateIssue | undefined {
+/**
+ * The template's first rule violation, or undefined when `normalize` would accept it. `svg`: an
+ * svg template's strings (`` svg`…` ``).
+ */
+export function checkTemplate(strings: readonly string[], svg = false): TemplateIssue | undefined {
   const normalized = minifyStrings(strings);
   const src = new Source(normalized, undefined);
-  const tracker = new Tracker(src, new TreeBuilder(src));
+  const tracker = new Tracker(src, new TreeBuilder(src, svg));
   try {
     tokenize(src, tracker);
   } catch (error) {
