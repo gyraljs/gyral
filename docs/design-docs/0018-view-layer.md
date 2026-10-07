@@ -254,6 +254,52 @@ slots. `svg` is back, on Gyral's terms (view/01 "svg templates"):
   +13 B gzip, `view` −4 B). An app toggling one `<path>` with `svg` instead of a
   `display=${…}` attribute: +272 B minified, +85 B gzip, its extra template object included.
 
+### 0.3.1 size work (gyral-c5d.2, gyral-c5d.11–.15, 2026-10-07): measured
+
+Prompted by sabacc.starwars.run's bundle (c5d.10): optional machinery that apps reach through
+data rather than an API call, and text, still shipped to apps that never used it. Each change
+keeps behaviour for apps that don't opt in:
+
+1. **`defineDisposableHook`** (c5d.2, view/02): a hook's teardown is a function of its own, so
+   the disposal tracking ships only with it, not with every `defineHook`.
+2. **Client-only builds** (c5d.11, view/07 "Client-only builds"): the preset's
+   `clientOnly: true` leaves out the hydration loader and its chunk, the invoker-command
+   fallback unless a module may use command intents, and with them Vite's preload helper.
+3. **Spec-field features registered by the build** (c5d.12, view/05 "Features register
+   themselves"): view transitions, the frame lane and custom states are bundled only when a
+   module names `viewTransition`, `renderOnFrame` or `states`; the runtime path keeps all three.
+4. **Production diagnostics as codes** (c5d.13): `Gyral G0010 <args…> <docs URL>`; the texts
+   live in one table (`view/messages.ts`) that development bundles and
+   `docs/references/errors.md` is generated from.
+5. **No property path for props in production** (c5d.14, view/05 "When props are validated"),
+   and `prop.value(check)` checks that are plain references are dropped from production client
+   builds.
+6. **`@gyral/time/delay`** (c5d.15, ADR 0006): delay and debounce over a delay-only driver.
+
+`pnpm size`, KiB gzip, all chunks / initial (`(clientOnly)`: the same app built with
+`clientOnly: true`):
+
+| Bundle                   | 0.3.0         | before (063416a) | 0.3.1           |
+| ------------------------ | ------------- | ---------------- | --------------- |
+| hello-world              | 11.22 / 8.86  | 11.27 / 8.90     | 10.81 / 8.42    |
+| hello-world (clientOnly) | —             | —                | **7.35 / 7.35** |
+| counter                  | 11.14 / 8.78  | 11.19 / 8.81     | 10.72 / 8.34    |
+| counter (clientOnly)     | —             | —                | 7.27 / 7.27     |
+| isomorphic (SSR)         | 15.35 / 12.87 | 15.41 / 12.95    | 14.86 / 12.36   |
+| autocomplete-search      | 17.27 / 14.92 | 17.56 / 15.19    | 16.66 / 14.29   |
+| no-js-first (SSR, forms) | 19.04 / 16.60 | 19.11 / 16.65    | 18.27 / 15.83   |
+| view line                | 6.90          | 7.13             | 6.87            |
+
+Per change, on hello-world (all chunks / initial, bytes): disposable hooks 0 (autocomplete-search
+−257 / −250, view −244), spec-field features −282 / −289, codes −173 / −184, property path −33
+/ −30; client-only −3,538 / −1,092 on top (no hydration chunk, no preload helper); the
+delay-only examples −153 to −172 with `@gyral/time/delay`. Every example shrank; the budgets
+raised during 0.3.1 are restored and all are measured + 0.1 KiB again.
+
+Against the targets: the smallest app, ≤ 8 KiB, **is met by client-only builds** (7.35; stretch
+6 is 1.35 KiB away) and missed by 0.4 KiB otherwise (8.42 initial, which includes the hydration
+loader and the preload helper a server-rendered page needs).
+
 ## Migration (decision K)
 
 The plan, as carried out:
