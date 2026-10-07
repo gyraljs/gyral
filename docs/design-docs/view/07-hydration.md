@@ -72,14 +72,33 @@ untouched):
   would cost every client-only app its text, and dev servers and tests show it).
 - **The invoker-command fallback** (ADR 0003 tier 3, 05 "Intent events") stays reachable only
   when the build may need it: `#invoker-fallback` resolves to a slot that `use-invokers.ts`
-  fills, and the preset's client-only plugin adds that module to the build when any module,
-  dependencies included, may make a root listen for `command`: a static
-  `data-intent-on="command"`, a bound `data-intent-on` (it listens for every intent event), a
-  quoted `"command"` (`events: ['command']`, a `setAttribute`), or a `raw()` call (its markup is
-  read at run time). The scan reads the authored source (the plugin runs before the template
-  compiler) and over-approximates; a module that never names any of these can't make a root
-  listen for `command`. Development (the `development` condition) always keeps the fallback.
-  The mechanism is the build-time detection of 05 "Features register themselves".
+  fills, and the preset's client-only plugin adds that module to the build when a module that
+  can affect Gyral components (the app's own source, and installed packages that reach a
+  `@gyral/*` package through their dependencies: 05 "Features register themselves") may make
+  a root listen for `command`. In its AST (comments never count), that is:
+  - a template or string whose markup has `data-intent-on="command"` (quoted or not, the
+    attribute's name in any case) or a bound `data-intent-on` (it listens for every intent
+    event);
+  - a string that is exactly `"command"` (`events: ['command']`, a `setAttribute`);
+  - Gyral's `raw` (its markup is read at run time, so it may hold `data-intent-on`): a
+    referenced import of `raw` (any alias) from `@gyral/core` (or a specifier that resolves
+    into core: an alias, a path), a namespace import of core read other than as
+    `ns.<other export>`, a re-export of its `raw` or `export *` from it, or a dynamic
+    `import()` of it. A module that re-exports core's `raw` counts itself, so `raw` imported
+    through a re-exporting module (the app's own, a design system's) is seen there. A function
+    of another package that happens to be called `raw`, or a dynamic `import()` of another
+    Gyral package (`@gyral/devtools`), doesn't count.
+
+  `data-intent-on` values only reach a root through Gyral templates and `raw()`, so a package
+  that reaches no Gyral package can't make a root listen for `command` (markup it produces
+  goes through a `raw()` call in a scanned module). The scan reads the authored source (the
+  plugin runs before the template compiler) and over-approximates. Development (the
+  `development` condition) always keeps the fallback. The mechanism is the build-time
+  detection of 05 "Features register themselves". Before 0.3.1 shipped, the scan read every
+  module's raw text: in sabacc a function named `raw` in effect and the word "states" in
+  effect's and three's comments kept the fallback, Vite's preload helper and custom states
+  (873 B gzip per page).
+
 - Apps without the option are unchanged (the loader moved behind a conditional import, about
   10-20 B gzip in every app).
 

@@ -77,8 +77,11 @@ export default defineConfig({
   `gyralVitePreset({ clientOnly: true })` adds `gyral:client-only`, which leaves the hydration
   code out of the browser bundle (about 1 KiB gzip with Vite's preload helper; hello-world: 8.9
   → 7.9 KiB) and keeps the invoker-command fallback only when a module may use `command`
-  intents. Server-rendered markup met anyway renders fresh, replacing the server's (development
-  warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
+  intents (`data-intent-on="command"`, a bound `data-intent-on`, `events: ['command']`, or
+  Gyral's `raw()`). Only your own source and installed packages that depend on a `@gyral/*`
+  package (directly or through their dependencies) are scanned, comments excluded; other
+  dependencies never keep it. Server-rendered markup met anyway renders fresh, replacing the
+  server's (development warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
   tests match the build (view/07-hydration.md "Client-only builds"). `gyralClientOnly()` is the
   plugin alone.
 
@@ -94,6 +97,12 @@ and Vitest keep the runtime template path. In a build it:
   and on any `html` it can't follow: an alias (`const h = html`), a call (`html(strings)`), or a
   re-export whose templates would stay uncompiled. Import `html` from `@gyral/core` where you
   write templates.
+- bundles view transitions, the frame lane and custom states only when a module names
+  `viewTransition`, `renderOnFrame` or `states` in code (0.3.1; comments don't count). It
+  reads your own source and installed packages that depend on a `@gyral/*` package, directly
+  or through their dependencies; a library that writes spec fields for your components must
+  list `@gyral/core` (a peer dependency is enough), or the feature degrades as on a browser
+  without it (view/05-element.md "Features register themselves").
 - checks rule 7 again with [parse5](https://github.com/inikulin/parse5) when it is installed
   (`pnpm add -D parse5`, an optional peer dependency; build time only). Without it, the build
   prints a one-time notice and keeps the normalizer's own check.

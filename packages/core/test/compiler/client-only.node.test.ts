@@ -111,4 +111,117 @@ describe('client-only builds', () => {
     );
     expect(await dynamicImports(files, true)).toEqual([]);
   });
+
+  it('ignore command markup in comments', async () => {
+    const files = component(button, `// data-intent-on="command", events: ['command']`);
+    expect(await dynamicImports(files, true)).toEqual([]);
+  });
+});
+
+/** A package in the fixture's node_modules: a function named raw, command strings and markup. */
+const pkg = (name: string, deps: Record<string, string> = {}): Record<string, string> => ({
+  [`node_modules/${name}/package.json`]: JSON.stringify({
+    name,
+    type: 'module',
+    exports: './index.js',
+    dependencies: deps,
+  }),
+  [`node_modules/${name}/index.js`]: `
+    export function raw(i) { return i; }
+    export const parse = (i, options) => raw(i, options);
+    export const events = ['command'];
+    export const markup = '<p data-intent-on="command"></p>';
+  `,
+});
+
+/** The component's app, importing `names` from `from`. */
+const withImport = (names: string, from: string, use: string): Record<string, string> => ({
+  'main.ts': `import { ${names} } from ${JSON.stringify(from)};\nexport const used = ${use};\n${
+    component(button)['main.ts'] ?? ''
+  }`,
+});
+
+describe('client-only builds: which modules may need the invoker fallback', () => {
+  const shim = [expect.stringMatching(/invokers-shim/)];
+
+  it('skip installed packages that reach no Gyral package, whatever they call raw', async () => {
+    const files = { ...pkg('plain'), ...withImport('parse, events, markup', 'plain', 'parse') };
+    expect(await dynamicImports(files, true)).toEqual([]);
+  });
+
+  it('scan installed packages that depend on a Gyral package', async () => {
+    const files = { ...pkg('ds', { '@gyral/core': '*' }), ...withImport('events', 'ds', 'events') };
+    expect(await dynamicImports(files, true)).toEqual(shim);
+  });
+
+  it("count raw only when it is Gyral's: a function of another package doesn't", async () => {
+    const files = { ...pkg('plain'), ...withImport('raw', 'plain', "raw('<p></p>')") };
+    expect(await dynamicImports(files, true)).toEqual([]);
+    const local = component(button);
+    local['main.ts'] = `const raw = (s: string) => s;\nexport const x = raw('a');\n${
+      local['main.ts'] ?? ''
+    }`;
+    expect(await dynamicImports(local, true)).toEqual([]);
+  });
+
+  it("keep the fallback for Gyral's raw from '@gyral/core', with command markup", async () => {
+    const files = withImport(
+      'raw',
+      '@gyral/core',
+      `raw('<button data-intent-on="command" commandfor="d" command="show-modal"></button>')`,
+    );
+    const built = await buildApp(files, { production: true, clientOnly: true, linkCore: true });
+    expect(built.chunks.flatMap((c) => c.dynamicImports)).toEqual(shim);
+  });
+
+  it('keep it for an aliased raw, a namespace read of raw, or a re-export', async () => {
+    expect(await dynamicImports(withImport('raw as trusted', VIEW, "trusted('')"), true)).toEqual(
+      shim,
+    );
+    const ns = component(button);
+    ns['main.ts'] =
+      `import * as view from ${JSON.stringify(VIEW)};\nexport const t = view.raw('');\n${
+        ns['main.ts'] ?? ''
+      }`;
+    expect(await dynamicImports(ns, true)).toEqual(shim);
+    const reexported = {
+      ...withImport('raw', './gyral.ts', "raw('')"),
+      'gyral.ts': `export { raw } from ${JSON.stringify(VIEW)};`,
+    };
+    expect(await dynamicImports(reexported, true)).toEqual(shim);
+  });
+
+  it('count raw re-exported by another Gyral package, not an import() of one', async () => {
+    const gyralPkg = (name: string, code: string): Record<string, string> => ({
+      [`node_modules/@gyral/${name}/package.json`]: JSON.stringify({
+        name: `@gyral/${name}`,
+        type: 'module',
+        exports: './index.js',
+        dependencies: { '@gyral/core': '*' },
+      }),
+      [`node_modules/@gyral/${name}/index.js`]: code,
+    });
+    // examples/shared/devtools.ts: a lazily loaded panel, which doesn't export raw.
+    const lazy = {
+      ...gyralPkg('panel', 'export const mount = () => 1;'),
+      'main.ts': `export const panel = () => import('@gyral/panel');\n${
+        component(button)['main.ts'] ?? ''
+      }`,
+    };
+    expect(await dynamicImports(lazy, true)).toEqual([expect.stringMatching(/panel/)]);
+    const reexporter = {
+      ...gyralPkg('kit', `export { raw } from ${JSON.stringify(VIEW)};`),
+      ...withImport('raw', '@gyral/kit', "raw('')"),
+    };
+    expect(await dynamicImports(reexporter, true)).toEqual(shim);
+  });
+
+  it('leave it out for a namespace import read only for other exports', async () => {
+    const ns = component(button);
+    ns['main.ts'] =
+      `import * as view from ${JSON.stringify(VIEW)};\nexport const n = view.nothing;\n${
+        ns['main.ts'] ?? ''
+      }`;
+    expect(await dynamicImports(ns, true)).toEqual([]);
+  });
 });

@@ -61,3 +61,87 @@ describe('spec-field features in compiled builds', () => {
     expect((await carried(files)).states).toBe(true);
   });
 });
+
+/**
+ * A package in the fixture's node_modules whose module names every spec field, in code, in
+ * strings and in comments. `deps`: its package.json dependencies.
+ */
+const pkg = (name: string, deps: Record<string, string> = {}): Record<string, string> => ({
+  [`node_modules/${name}/package.json`]: JSON.stringify({
+    name,
+    version: '1.0.0',
+    type: 'module',
+    exports: './index.js',
+    dependencies: deps,
+  }),
+  [`node_modules/${name}/index.js`]: `
+    // invalid object states; a viewTransition and renderOnFrame in a comment
+    export const options = { states: 1, viewTransition: true, renderOnFrame: ['Tick'] };
+    export const describe = () => 'record states';
+  `,
+});
+
+/** The app's component spreads `options` from `name` into nothing it renders, but imports it. */
+const appUsing = (name: string, files: Record<string, string>): Record<string, string> => {
+  const app = appWith('', files);
+  app['main.ts'] =
+    `import { options } from '${name}';\nexport const used = options;\n${app['main.ts'] ?? ''}`;
+  return app;
+};
+
+describe('spec-field features: which modules are scanned', () => {
+  it('skip installed packages that reach no Gyral package (effect, three)', async () => {
+    expect(await carried(appUsing('plain', pkg('plain')))).toEqual({
+      transitions: false,
+      frame: false,
+      states: false,
+    });
+  });
+
+  it('scan installed packages that depend or peer-depend on a Gyral package', async () => {
+    const all = { transitions: true, frame: true, states: true };
+    expect(await carried(appUsing('ds', pkg('ds', { '@gyral/core': '*' })))).toEqual(all);
+    const peer = pkg('peer-ds');
+    peer['node_modules/peer-ds/package.json'] = JSON.stringify({
+      name: 'peer-ds',
+      type: 'module',
+      exports: './index.js',
+      peerDependencies: { '@gyral/core': '^0.3.0' },
+    });
+    expect(await carried(appUsing('peer-ds', peer))).toEqual(all);
+  });
+
+  it('scan installed packages that reach one through their own dependencies', async () => {
+    const files = {
+      ...pkg('widgets', { ds: '1.0.0' }),
+      'node_modules/ds/package.json': JSON.stringify({
+        name: 'ds',
+        dependencies: { '@gyral/core': '*', widgets: '1.0.0' }, // a cycle, too
+      }),
+    };
+    expect((await carried(appUsing('widgets', files))).states).toBe(true);
+  });
+
+  it("ignore the names in the app's comments and longer strings", async () => {
+    const files = appWith('', {
+      'notes.ts': `// states, viewTransition, renderOnFrame\nexport const note = 'the states of play';`,
+    });
+    files['main.ts'] =
+      `import { note } from './notes.ts';\nexport { note };\n${files['main.ts'] ?? ''}`;
+    expect(await carried(files)).toEqual({ transitions: false, frame: false, states: false });
+  });
+
+  it('ignore the word in an import path (gyral-shop: ../domain/us-states.js)', async () => {
+    const files = appWith('', {
+      'domain/us-states.ts': `export const US = ['AK', 'AL'];`,
+      'forms.ts': `import { US } from './domain/us-states.ts';
+export const lazy = () => import('./domain/us-states.ts');
+export { US as options } from './domain/us-states.ts';
+export const first = US[0];`,
+    });
+    files['main.ts'] = `import { first } from './forms.ts';
+export { first };
+${files['main.ts'] ?? ''}`;
+    expect((await carried(files)).states).toBe(false);
+  });
+});

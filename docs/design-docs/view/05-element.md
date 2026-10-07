@@ -153,18 +153,34 @@ no API call can register them: view transitions (`viewTransition`, 04), the fram
 (`renderOnFrame`, 04) and custom states (`states`, "ElementInternals" below). Core reaches them
 through the `#spec-features` import: by default (the runtime path, no build step)
 `spec-features.ts` carries all three; with the `gyral-compiled` condition (builds with the Vite
-preset) `spec-features-used.ts` is a set of empty slots. The template compiler scans every
-module the client build transforms, dependencies included (`compiler/features.ts`), and adds
+preset) `spec-features-used.ts` is a set of empty slots. The template compiler scans the
+client build's modules that can affect Gyral components (`compiler/features.ts`), and adds
 `import "virtual:gyral-use/<feature>"` at the end of each module that names a field: that
 side-effect module calls `register()` in core's `use-transitions.ts`, `use-frame-lane.ts` or
-`use-states.ts`, which fills the slot before the naming module runs (imports run first). The
-scan is a sound over-approximation on the source text (comments and other uses of the words
-count too, core's own modules don't): a field can only be set by writing its name, unless the
-name is built at run time (`{ ['sta' + 'tes']: f }`). Then the slot stays empty and the
-feature degrades as on a browser without it (ADR 0003 tier 1: no transition, the microtask
-lane, no custom states), and development builds warn at `define()`. Saves about 0.27 KiB gzip
-in apps that use none of the three. Client-only builds use the same mechanism for the
-invoker-command fallback (07 "Client-only builds").
+`use-states.ts`, which fills the slot before the naming module runs (imports run first).
+
+- **Which modules** (`compiler/scope.ts`): every module outside `node_modules` (the app's own
+  source, workspace and `link:` packages), and the modules of installed packages that are
+  Gyral packages (`@gyral/*`) or list one in `dependencies`, `peerDependencies` or
+  `optionalDependencies`, directly or through their own dependencies (a design system, a
+  library built on one). Any other package (effect, three, a date library) can't import
+  `define` or `html`, so it can't define a component or write a spec, and isn't read: its
+  comments and identifiers cost nothing. Core's own modules are skipped (they implement it).
+- **What counts** (`compiler/facts.ts`, on the module's AST from Rolldown's parser, before
+  other transforms): the field's name as an identifier anywhere in runtime code (a property
+  key, `spec.states = f`, `{ states }`, an exported binding a namespace import may spread),
+  or a string that is exactly the name (`Object.defineProperty(spec, 'states', …)`). Comments,
+  type-only code and longer strings ("binding states") don't count. A module that doesn't
+  parse is matched on its text.
+
+The scan over-approximates, so it is sound except for two gaps: a name built at run time
+(`{ ['sta' + 'tes']: f }`), and spec data written in an installed package that reaches no
+Gyral package (declare `@gyral/core` as a peer dependency of such a package). Then the slot
+stays empty and the feature degrades as on a browser without it (ADR 0003 tier 1: no
+transition, the microtask lane, no custom states), and development builds warn at `define()`.
+A false positive only bundles the feature. Saves about 0.27 KiB gzip in apps that use none of
+the three. Client-only builds use the same mechanism for the invoker-command fallback (07
+"Client-only builds").
 
 The view layer does the same with values that carry their own commit code (02, 03): `each`,
 `raw`, `defineHook` (argument comparison, the client queue) and `defineDisposableHook` (disposal

@@ -11,7 +11,7 @@
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
-import { nodeAt, type Node } from './ast.js';
+import { langOf, nodeAt, type Node } from './ast.js';
 import { findUses, htmlImports } from './scan.js';
 import { Lines, splice, type Edit } from './source.js';
 
@@ -29,9 +29,6 @@ export const VIEW = ['index', 'template'].flatMap((name) =>
 );
 
 const SCRIPT = /\.[cm]?[jt]sx?$/;
-
-const langOf = (id: string): 'js' | 'jsx' | 'ts' | 'tsx' =>
-  /\.[cm]?tsx$/.test(id) ? 'tsx' : /\.[cm]?ts$/.test(id) ? 'ts' : id.endsWith('x') ? 'jsx' : 'js';
 
 /** `sources`: as the compiler's (module specifiers whose `html` and `svg` are the view layer's tags). */
 export function createLocator(sources: readonly string[]): LocatorHooks {

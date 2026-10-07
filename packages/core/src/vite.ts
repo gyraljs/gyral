@@ -185,7 +185,10 @@ export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): P
   };
 }
 
-/** Gyral's packages: the dev server runs them through Vite, never Node (view/06). */
+/**
+ * Gyral's packages: the dev server runs them through Vite, never Node (view/06). The feature
+ * scan's scope (./compiler/scope.ts) uses the same pattern.
+ */
 export const GYRAL_PACKAGES = /^@gyral\//;
 
 type Manifest = Partial<Record<'dependencies' | 'devDependencies' | 'peerDependencies', object>>;
@@ -251,7 +254,8 @@ export function gyralDevServer(): Plugin {
  * Client-only builds (view/07-hydration.md "Client-only builds", gyral-c5d.11), for apps no
  * server renders: the browser environment resolves core with the `gyral-client-only`
  * condition, so the bundle carries no hydration code (no seed reading, no hydration chunk and
- * its import()), and in `vite build` the invoker-command fallback only when a module may use
+ * its import()), and in `vite build` the invoker-command fallback only when a module that can
+ * affect Gyral components (the app's own, or a package that reaches a Gyral package) may use
  * command intents (./compiler/features.ts). With no other import(), Vite's preload helper goes
  * too. Server-rendered markup met anyway renders fresh (development warns). Dev servers and
  * test runs get the condition too, and always keep the invoker fallback.
@@ -281,10 +285,14 @@ export function gyralClientOnly(): Plugin {
       return hooks?.load(id) ?? null;
     },
     transform: {
-      filter: { id: /\.[cm]?[jt]sx?$/, code: /data-intent-on|command|raw/ },
-      handler(code, id) {
+      // features.ts FEATURE_HINTS.invokers: any import or export may reach `raw`.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /data-intent-on|command|raw|import|export/i },
+      async handler(code, id) {
         if (hooks === undefined || this.environment.config.consumer !== 'client') return null;
-        const imports = hooks.inject(code, id);
+        const imports = await hooks.inject(code, id, {
+          parse: (text, lang) => this.parse(text, { lang }),
+          resolve: (source, importer) => this.resolve(source, importer),
+        });
         // Appended after the last line: no code moves, so the incoming source map holds.
         return imports === '' ? null : { code: code + imports, map: null };
       },

@@ -3,6 +3,10 @@
 // names a binding pattern declares, and the names each scope declares, so a local variable
 // that shadows the imported `html` is never mistaken for it.
 
+/** The `lang` to parse a module with, from its id (`this.parse(code, { lang })`). */
+export const langOf = (id: string): 'js' | 'jsx' | 'ts' | 'tsx' =>
+  /\.[cm]?tsx$/.test(id) ? 'tsx' : /\.[cm]?ts$/.test(id) ? 'ts' : id.endsWith('x') ? 'jsx' : 'js';
+
 /** An ESTree node: `start`/`end` are UTF-16 offsets into the module's code. */
 export interface Node {
   readonly type: string;
@@ -47,9 +51,12 @@ const TS_VALUE = new Set([
   'TSExportAssignment',
 ]);
 
+/** TS declarations whose members are runtime values (`enum E { A = 'a' }`). */
+const TS_RUNTIME = new Set(['TSEnumDeclaration', 'TSEnumBody', 'TSEnumMember']);
+
 /** The child nodes of `node` that can contain runtime code, in source order. */
 export function children(node: Node): Node[] {
-  if (node.type.startsWith('TS')) {
+  if (node.type.startsWith('TS') && !TS_RUNTIME.has(node.type)) {
     if (TS_VALUE.has(node.type)) return nodesAt(node, 'expression');
     if (node.type === 'TSParameterProperty') return nodesAt(node, 'parameter');
     if (node.type === 'TSModuleDeclaration') return nodesAt(node, 'body');

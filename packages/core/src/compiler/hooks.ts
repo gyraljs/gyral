@@ -10,12 +10,13 @@
 //     (re-exports across modules, dynamic imports): the guarantee that the `#prepare` stub is
 //     never hit.
 //   - In client environments, `transform` also adds the registration of view transitions, the
-//     frame lane and custom states to every module that names their spec field, so the
-//     `gyral-compiled` condition can leave them out otherwise (features.ts, gyral-c5d.12);
-//     `resolveId` and `load` serve those registration modules.
+//     frame lane and custom states to every module that names their spec field, among the
+//     modules that can affect Gyral components (the app's own, and packages that reach a Gyral
+//     package), so the `gyral-compiled` condition can leave them out otherwise (features.ts,
+//     gyral-c5d.12); `resolveId` and `load` serve those registration modules.
 import { join, relative } from 'node:path';
 import type { Plugin } from 'vite';
-import type { Node } from './ast.js';
+import { langOf, type Node } from './ast.js';
 import { CompileError, compileModule } from './compile.js';
 import { createFeatures } from './features.js';
 import { stripPropSchemas } from './prop-schemas.js';
@@ -71,9 +72,6 @@ interface BuildState {
   readonly definers: Set<string>;
   readonly seen: Map<string, { readonly strings: string; readonly loc: string }>;
 }
-
-const langOf = (id: string): 'js' | 'jsx' | 'ts' | 'tsx' =>
-  /\.[cm]?tsx$/.test(id) ? 'tsx' : /\.[cm]?ts$/.test(id) ? 'ts' : id.endsWith('x') ? 'jsx' : 'js';
 
 /**
  * Whether an environment resolves core's `#view-dev` to its development module: the
@@ -246,7 +244,12 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
 
     async transform(code, id, opts) {
       const client = opts?.ssr !== true && this.environment.config.consumer === 'client';
-      const imports = client ? features.inject(code, id) : '';
+      const imports = client
+        ? await features.inject(code, id, {
+            parse: (text, lang) => this.parse(text, { lang }),
+            resolve: (source, importer) => this.resolve(source, importer),
+          })
+        : '';
       const compiled = NAMES_TAG.test(code) ? await compile.call(this, code, id, opts) : null;
       return appended(compiled, code, imports);
     },
