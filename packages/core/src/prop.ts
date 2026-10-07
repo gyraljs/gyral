@@ -8,7 +8,9 @@
 //   }
 //
 // A prop's type is inferred from its schema's output. The honesty rule (ADR 0007) holds by
-// construction: a prop without `required` or `default` includes `undefined`.
+// construction: a prop without `required` or `default` includes `undefined`. `prop.value` and
+// `prop.json` also take a plain type guard (`(u: unknown) => u is T`) instead of a schema.
+// Schemas and guards check; they don't decode: a property set keeps the object it was given.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { features } from './features.js';
 import { propFeature } from './props.js';
@@ -43,7 +45,17 @@ interface Common {
 }
 
 type Schema<O> = StandardSchemaV1<unknown, O>;
-type Out<S extends StandardSchemaV1> = StandardSchemaV1.InferOutput<S>;
+
+/** A plain type guard, accepted by `prop.value` and `prop.json` in place of a schema. */
+export type PropGuard<T> = (value: unknown) => value is T;
+
+/** What `prop.value` and `prop.json` accept: a Standard Schema or a type guard. */
+type Check = StandardSchemaV1 | PropGuard<unknown>;
+type Out<S extends Check> = S extends StandardSchemaV1
+  ? StandardSchemaV1.InferOutput<S>
+  : S extends (value: unknown) => value is infer T
+    ? T
+    : never;
 
 interface Required {
   readonly required: true;
@@ -66,11 +78,11 @@ interface Scalar<B> {
 }
 
 interface WithSchema {
-  <S extends StandardSchemaV1>(
+  <S extends Check>(
     schema: S,
     opts: Common & (Required | Defaulted<NoInfer<Out<S>>>),
   ): Prop<Out<S>>;
-  <S extends StandardSchemaV1>(schema: S, opts?: Common & Optional): Prop<Out<S> | undefined>;
+  <S extends Check>(schema: S, opts?: Common & Optional): Prop<Out<S> | undefined>;
 }
 
 interface Options {
@@ -80,13 +92,26 @@ interface Options {
   readonly default?: unknown;
 }
 
-function make(kind: PropKind, opts: Options = {}, schema?: StandardSchemaV1): Prop<unknown> {
+/** A type guard as a Standard Schema (a schema passes through): the guard's verdict, no copy. */
+function schemaOf(check: Check): StandardSchemaV1 {
+  if (typeof check !== 'function' || '~standard' in check) return check as StandardSchemaV1;
+  const name = check.name === '' ? 'its type guard' : `the type guard ${check.name}`;
+  return {
+    '~standard': {
+      version: 1,
+      vendor: 'gyral',
+      validate: (value) => (check(value) ? { value } : { issues: [{ message: `failed ${name}` }] }),
+    },
+  };
+}
+
+function make(kind: PropKind, opts: Options = {}, schema?: Check): Prop<unknown> {
   features.props = propFeature; // components can declare props now (features.ts)
   const value = opts.default !== undefined ? opts.default : kind === 'boolean' ? false : undefined;
   const base = {
     kind,
     attribute: kind === 'value' ? false : opts.attribute,
-    schema: schema ?? opts.schema,
+    schema: schema === undefined ? opts.schema : schemaOf(schema),
     required: opts.required === true,
   };
   return value === undefined ? base : { ...base, default: value };
@@ -102,14 +127,17 @@ export const prop: {
   readonly boolean: <O extends boolean = boolean>(
     opts?: Refined<O> & { readonly default?: NoInfer<O> },
   ) => Prop<O>;
-  /** Attribute parsed with `JSON.parse`, then the schema. */
+  /** Attribute parsed with `JSON.parse`, then the schema (or type guard). */
   readonly json: WithSchema;
-  /** Property only: no attribute. Validated in development. */
+  /**
+   * Property only: no attribute. Validated in development by the schema (or type guard), and
+   * the object set is kept as is (production skips the check).
+   */
   readonly value: WithSchema;
 } = {
   string: (opts?: Options) => make('string', opts),
   number: (opts?: Options) => make('number', opts),
   boolean: ((opts?: Options) => make('boolean', opts)) as <O extends boolean>() => Prop<O>,
-  json: (schema: StandardSchemaV1, opts?: Options) => make('json', opts, schema),
-  value: (schema: StandardSchemaV1, opts?: Options) => make('value', opts, schema),
+  json: (schema: Check, opts?: Options) => make('json', opts, schema),
+  value: (schema: Check, opts?: Options) => make('value', opts, schema),
 };

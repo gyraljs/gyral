@@ -73,12 +73,18 @@ export const Stepper = define<State, Msg, Props>('my-stepper', {
 | `prop.json(schema, opts?)`  | `JSON.parse`, then the schema       | kebab-case     |
 | `prop.value(schema, opts?)` | none: property only (`.items=${…}`) | none           |
 
+`prop.json` and `prop.value` also take a plain type guard instead of a schema:
+`prop.value(isSeat, { required: true })` with `const isSeat = (u: unknown): u is Seat => …`.
+
 Options: `schema` (refines `string`/`number`/`boolean`, e.g. `v.picklist([...])`),
 `attribute` (a name, or `false` for property only), `required`, `default`. Any Standard Schema
 library works (valibot, zod, …); schemas must be synchronous and should validate, not transform.
 
 - **Attributes are always validated** (they're external strings). Property sets and hydration
   seeds are validated in development only. An invalid value is logged and treated as missing.
+- **A property set keeps the object it was given** (`el.item === item`): development checks it
+  and stores the input, production skips the schema. So schemas for properties must check, not
+  decode (no `Date` parsing, defaults or key stripping there); a type guard is enough.
 - No reflection: props never write attributes. State that CSS needs goes through `states`.
 - Objects and arrays travel as properties: `prop.value(v.array(Item), { default: [] })` and
   `.items=${s.items}` in the parent.

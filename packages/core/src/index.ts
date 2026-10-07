@@ -65,7 +65,7 @@ export { runInit } from './init.js';
 export { invalid } from './hooks/invalid.js';
 export { findInScope, labelledBy } from './hooks/labelled-by.js';
 export { prop } from './prop.js';
-export type { Prop, PropKind, PropsOf } from './prop.js';
+export type { Prop, PropGuard, PropKind, PropsOf } from './prop.js';
 // Devtools event stream (ADR 0017): emitted in development builds only.
 export {
   DEVTOOLS_ENABLED as devtoolsEnabled,

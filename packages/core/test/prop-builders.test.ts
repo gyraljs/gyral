@@ -140,6 +140,68 @@ describe('prop builders', () => {
     }).toThrow(/asynchronous schema/);
   });
 
+  it('keeps the object a property set passes, even when the schema copies it (identity)', () => {
+    const Point = v.object({ x: v.number() });
+    const Plot = define('test-prop-identity', {
+      props: { at: prop.value(Point) },
+      intent: {},
+      update: {},
+      view: () => html`<p></p>`,
+    });
+    const el = new Plot();
+    const at = { x: 1 };
+    el.at = at;
+    expect(el.at).toBe(at); // the schema's output is a copy; the element keeps the input
+  });
+
+  it('takes a plain type guard in prop.value and prop.json (gyral-c5d.7)', async () => {
+    interface Seat {
+      readonly row: string;
+      readonly n: number;
+    }
+    const isSeat = (u: unknown): u is Seat =>
+      typeof u === 'object' &&
+      u !== null &&
+      typeof (u as Seat).row === 'string' &&
+      typeof (u as Seat).n === 'number';
+    const isNumbers = (u: unknown): u is readonly number[] =>
+      Array.isArray(u) && u.every((x) => typeof x === 'number');
+    const guarded = {
+      seat: prop.value(isSeat),
+      held: prop.value(isSeat, { required: true }),
+      picks: prop.json(isNumbers, { default: [] }),
+    };
+    expectTypeOf<PropsOf<typeof guarded>>().toEqualTypeOf<{
+      readonly seat: Seat | undefined;
+      readonly held: Seat;
+      readonly picks: readonly number[];
+    }>();
+    const Booth = define('test-prop-guard', {
+      props: guarded,
+      intent: {},
+      update: {},
+      view: (_s, _i, { props: p }) =>
+        html`<p>${p.seat?.row ?? '-'}${p.seat?.n ?? ''}|${p.picks.join(',')}</p>`,
+    });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const el = new Booth();
+    const seat = { row: 'B', n: 4 };
+    el.seat = seat;
+    el.held = seat;
+    el.setAttribute('picks', '[1,2]');
+    document.body.append(el);
+    await settled();
+    expect(el.seat).toBe(seat);
+    expect(text(el)).toBe('B4|1,2');
+    (el as unknown as { seat: unknown }).seat = { row: 3 };
+    el.setAttribute('picks', '["x"]');
+    await settled();
+    expect(text(el)).toBe('-|'); // both invalid: treated as missing (picks' default is [])
+    expect(errors).toHaveBeenCalledTimes(2);
+    expect(String(errors.mock.calls[0]?.[0])).toContain('failed the type guard isSeat');
+    expect(String(errors.mock.calls[1]?.[0])).toContain('the attribute picks');
+  });
+
   it('captures properties set before the element was defined (upgrade capture)', async () => {
     const el = document.createElement('test-prop-late') as HTMLElement & { label?: string };
     el.label = 'early';

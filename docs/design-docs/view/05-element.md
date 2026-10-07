@@ -38,6 +38,10 @@ define('shop-filter', {
 | `prop.json(schema, opts?)`  | `JSON.parse(v)`, then the schema       | kebab-case             |
 | `prop.value(schema, opts?)` | none: property only                    | none                   |
 
+`prop.json` and `prop.value` take a Standard Schema or, since 0.3.1 (gyral-c5d.7), a plain type
+guard `(u: unknown) => u is T`; the prop's type is the guard's `T`. A guard that returns false
+is reported like a schema issue (`failed the type guard isSeat`).
+
 Options: `schema` (refines `string`/`number`/`boolean`), `attribute` (a name, or `false` for
 property only), `required`, `default`. The honesty rule of ADR 0007 stays: a prop whose type
 excludes `undefined` must be `required` or have a `default`. Prop types are inferred from the
@@ -67,6 +71,13 @@ schema library.
   structurally from its input (plain arrays and objects compared by content, so schemas that
   copy are fine) warns, and the input is kept, because production doesn't run the schema on
   property sets.
+- **Identity:** a property set keeps the object it was given. Development validates it and
+  then stores the input, not the schema's output (a schema that copies, as most object schemas
+  do, changes nothing); production skips the schema. So `el.items === items` after
+  `el.items = items`, a parent can compare identities, and a schema that decodes (strings to
+  `Date`s, defaults filled in, unknown keys stripped) would do it only for attributes. Schemas
+  for properties should **check, not decode**; a type guard is the simplest check. Attributes
+  are the exception: their value is the parse's output (a string has no identity to keep).
 - No property-to-attribute reflection. State that CSS needs goes through custom states
   (`spec.states`).
 
