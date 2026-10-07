@@ -49,7 +49,8 @@ This file tells coding agents how the project works.
 - Render pages through `createApp(...).fetch(new Request(url))` and assert on status and HTML.
 - Test reducers without a DOM: `step(Component.spec, state, msg)`, `run(Component.spec, msgs)`
   from `@gyral/testing`.
-- For hydration in a browser, use `mountSsr(html)` and `await hydrated(page)`.
+- For hydration tests, use `mountSsr(html)` and `await hydrated(page)` from `@gyral/testing`.
+  They need a real browser (Vitest browser mode); this template's tests run in Node.
 
 ## Learn more
 

@@ -72,7 +72,7 @@ function asJson(response: Response): Response {
 
 /**
  * A request handler for a `<form method="post">` that works with JavaScript disabled, and
- * answers the JS path (`submitForm` in @gyral/http, `Accept: application/json`) with JSON:
+ * answers the JS path (`submitForm` in `@gyral/http`, `Accept: application/json`) with JSON:
  * valid → the handler's response, a redirect turned into `{ _tag: 'Redirected', location }`;
  * invalid → `422` with the `IntentRejected` (without `values`, so passwords aren't echoed).
  */

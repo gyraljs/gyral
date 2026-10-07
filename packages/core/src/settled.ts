@@ -2,7 +2,7 @@
 // quiet. Implemented on the global scheduler: no host is dirty, no flush is scheduled, no
 // view-transition update is pending, the post-render queue has run, and outputs sent to
 // parents have been delivered. It covers rendering only: driver work (HTTP, timers) is outside
-// it. Tests use it instead of the 0.2 `el.updateComplete`.
+// it. Tests await it before asserting on the DOM.
 import { isQuiet, whenQuiet } from './scheduler.js';
 
 /** Rounds of "wait for the next quiet flush" before settled() gives up: a cycle. */

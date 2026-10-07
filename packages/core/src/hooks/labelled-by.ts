@@ -42,8 +42,8 @@ function name(el: Element, id: string, fallback: string | undefined): boolean {
  *
  * Uses `ariaLabelledByElements` (ARIA element reflection) where the browser has it, so the name
  * stays in sync with the heading. Elsewhere it sets `aria-label` from `fallback`, or from the
- * target's text. It has no server half (as before): render a plain `aria-label` too (from a
- * `label` prop) for the page before scripts run; the reflected `aria-labelledby` wins over it.
+ * target's text. It has no server half: render a plain `aria-label` too (from a `label`
+ * prop) for the page before scripts run; the reflected `aria-labelledby` wins over it.
  */
 export const labelledBy = defineHook<[id: string, fallback?: string]>({
   client: (el, [id, fallback]) => {

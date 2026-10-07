@@ -10,7 +10,7 @@ const Repo = v.object({
   stargazers_count: v.number(),
 });
 
-/** Valibot implements Standard Schema, so @gyral/http can decode with it directly. */
+/** Valibot implements Standard Schema, so `@gyral/http` can decode with it directly. */
 const SearchResponse = v.object({ items: v.array(Repo) });
 
 export type Repo = v.InferOutput<typeof Repo>;

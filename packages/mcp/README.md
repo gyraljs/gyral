@@ -4,8 +4,8 @@ An [MCP](https://modelcontextprotocol.io) server that teaches coding agents
 [Gyral](https://gyral.dev): search the docs, look up exact API signatures, read working
 examples, scaffold components the Gyral way, and typecheck code before presenting it.
 
-It answers from a corpus bundled at build time (the gyral.dev docs, the public API of every
-`@gyral/*` entry point, the examples and the Gyral agent skill), so it works offline and
+It answers from a corpus bundled at build time (the gyral.dev docs, the public API of the
+`@gyral/*` packages, the examples and the Gyral agent skill), so it works offline and
 matches its own Gyral version.
 
 ## Install

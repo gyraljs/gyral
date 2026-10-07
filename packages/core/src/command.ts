@@ -65,7 +65,7 @@ export interface CommandHandlers<O, E, MS, MF = MS> {
 
 /**
  * What a reducer (or `init`) returns: new state, optionally with commands to run. Commands may
- * also answer with the framework message `IntentRejected` (e.g. `submitForm` in @gyral/http
+ * also answer with the framework message `IntentRejected` (e.g. `submitForm` in `@gyral/http`
  * when the server rejects a form), which goes to the optional `IntentRejected` reducer.
  */
 export type Next<S, M> = S | readonly [S, ReadonlyArray<Command<M | IntentRejected>>];

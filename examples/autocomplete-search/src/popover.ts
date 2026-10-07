@@ -32,7 +32,7 @@ export const popoverOpen = defineHook<[open: boolean]>({
     if (!el.hasAttribute('popover')) el.setAttribute('popover', 'manual');
     const shown = el.matches(':popover-open');
     // Hooks run after the commit, so the hidden attribute already changed in this render; a
-    // microtask keeps the order the directive had (show after layout sees it displayable).
+    // microtask defers the toggle until the element is displayable (show after layout sees it).
     queueMicrotask(() => {
       if (open && !shown && el.isConnected) el.showPopover();
       if (!open && shown) el.hidePopover();

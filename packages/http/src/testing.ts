@@ -28,7 +28,7 @@ export interface FakeHttp extends Driver<HttpRequest, unknown, HttpError> {
   readonly calls: readonly FakeHttpCall[];
   /** Every request so far. */
   readonly requests: readonly HttpRequest[];
-  /** Same as `requests`; matches `fakeDriver(…).inputs` from @gyral/testing. */
+  /** Same as `requests`; matches `fakeDriver(…).inputs` from `@gyral/testing`. */
   readonly inputs: readonly HttpRequest[];
   /** Errors thrown (or rejected) by the `respond` option, in order. */
   readonly responderErrors: readonly unknown[];

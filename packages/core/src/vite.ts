@@ -141,7 +141,7 @@ function installed(root: string, name: string): Manifest | undefined {
 
 /**
  * The app's direct dependencies that depend on a Gyral package (a design system, say). They
- * import @gyral/core, so they must share the copy the dev server runs.
+ * import `@gyral/core`, so they must share the copy the dev server runs.
  */
 export function gyralDependents(root: string): string[] {
   const app = manifest(join(root, 'package.json'));

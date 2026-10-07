@@ -3,7 +3,7 @@
 // request scope set by @gyral/ssr around each render step (server).
 import type { AnyStore, AnyStoreInstance } from './store.js';
 
-/** Page-level seed written by @gyral/ssr: `<script type="application/json" data-gyral-stores>`. */
+/** Page-level seed from `@gyral/ssr`: `<script type="application/json" data-gyral-stores>`. */
 export const STORE_SEED_ATTRIBUTE = 'data-gyral-stores';
 
 /** Provider element name. Set `.instances=${[cart.instance()]}`, or let it create its own. */
@@ -62,7 +62,7 @@ let serverScope: StoreRegistry | undefined;
 
 /**
  * Runs `fn` with `registry` as the server's store scope. Server renders are synchronous per
- * render step, so @gyral/ssr wraps every step: interleaved requests never see each other's
+ * render step, so `@gyral/ssr` wraps every step: interleaved requests never see each other's
  * stores, without AsyncLocalStorage (works on any runtime).
  */
 export function withStoreScope<T>(registry: StoreRegistry, fn: () => T): T {

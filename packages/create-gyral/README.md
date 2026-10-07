@@ -25,7 +25,7 @@ npm create gyral@latest my-app -- --yes   # basic template
 | `ssr`    | Pages rendered on the server, prerendered to static HTML and hydrated; production server |
 
 Options: `-t, --template <basic|ssr>`, `-y, --yes`, `-h, --help`, `-v, --version`. The target
-directory must be empty or not exist yet.
+directory must not exist yet or be empty (a `.git` folder is fine).
 
 The generated app depends on the `@gyral/*` release that matches this package's version.
 

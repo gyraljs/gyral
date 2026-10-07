@@ -17,9 +17,9 @@ type Msg = { readonly _tag: 'Changed'; readonly value: number };
  * A reusable, *controlled* slider: the parent owns the value and passes it down as a prop;
  * the slider only reports changes up. It needs no model state of its own (Cycle's version kept
  * a local `value$` seeded from `props.initial`; here the parent's state is the single source).
- * `value=` on an input is live form state (view/02-bindings.md): every render compares with the
- * input's current value, so a value the parent clamps or rejects is written back even if it
- * equals the last rendered prop.
+ * `value=` on an input is live form state (view/02-bindings.md "Live form state"): when the
+ * parent's value changes, the render writes it to the input unless the input already shows it.
+ * A render where the value is unchanged leaves the input as the user set it.
  */
 export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
   'gy-labeled-slider',

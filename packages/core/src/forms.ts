@@ -2,7 +2,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { FieldIssue, FormFields, IntentInput, IntentParser, IntentRejected } from './types.js';
 
-/** A form's schema, shared by the client component and (with @gyral/ssr) the server route. */
+/** A form's schema, shared by the client component and (with `@gyral/ssr`) the server route. */
 export interface FormDefinition<Schema extends StandardSchemaV1> {
   readonly _tag: 'FormDefinition';
   readonly schema: Schema;
@@ -84,7 +84,7 @@ export type FormResult<T> =
 
 /**
  * Validates submitted form data exactly as `form()` does. The no-JS server path
- * (`formAction` in @gyral/ssr) uses it, so both paths produce the same `IntentRejected`.
+ * (`formAction` in `@gyral/ssr`) uses it, so both paths produce the same `IntentRejected`.
  */
 export function validateForm<Schema extends StandardSchemaV1>(
   definition: FormDefinition<Schema> | Schema,
@@ -108,7 +108,7 @@ export function validateForm<Schema extends StandardSchemaV1>(
 /**
  * Intent parser for a `<form data-intent>` submission, validated by a schema. `toMsg` also
  * gets the raw `FormData`, for sending the submission to the server (`submitForm` in
- * @gyral/http) after it passed client-side validation.
+ * `@gyral/http`) after it passed client-side validation.
  */
 export function form<Schema extends StandardSchemaV1, M>(
   definition: FormDefinition<Schema> | Schema,
@@ -164,7 +164,7 @@ const isFields = (value: unknown): value is FormFields =>
 
 /**
  * A Standard Schema for `IntentRejected` as a server sends it (`formAction` answering JSON).
- * Used by `submitForm` in @gyral/http to recognise a 422 rejection; usable with any decoder.
+ * Used by `submitForm` in `@gyral/http` to recognise a 422 rejection; usable with any decoder.
  */
 export const intentRejectedSchema: StandardSchemaV1<unknown, IntentRejected> = {
   '~standard': {
@@ -198,7 +198,7 @@ export interface FormRedirected {
   readonly location: string;
 }
 
-/** The `location` of a `FormRedirected` answer (from `formAction` in @gyral/ssr), if it is one. */
+/** The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. */
 export function redirectedTo(body: unknown): string | undefined {
   return isRecord(body) && body['_tag'] === 'Redirected' && typeof body['location'] === 'string'
     ? body['location']
