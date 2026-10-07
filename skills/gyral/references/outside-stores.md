@@ -172,4 +172,7 @@ writes (`run: (text) => { socket.send(text); }`).
   then `await settled()`.
 - Or fake it: `fakeDriver('counter')` records the subscription; `emitNext(value)` pushes a
   value, and `calls[0].signal.aborted` shows it was released on disconnect or switch.
-- Disconnect is asynchronous: yield a tick before asserting that the source was released.
+- Disconnect releases the source synchronously (ADR 0006): right after `el.remove()`,
+  `calls[0].signal.aborted` is `true` and the driver's `abort` listeners have run, so assert
+  without yielding. Only cleanup the driver runs after an `await` needs one
+  (`await Promise.resolve()`).
