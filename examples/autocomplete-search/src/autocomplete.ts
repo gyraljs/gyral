@@ -1,5 +1,5 @@
 import { define, each, html, nothing, type Next } from '@gyral/core';
-import { debounce, delay } from '@gyral/time';
+import { debounce, delay } from '@gyral/time/delay';
 import { popoverOpen } from './popover.js';
 import { styles } from './styles.js';
 import { suggest } from './wikipedia.js';

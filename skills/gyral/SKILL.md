@@ -110,7 +110,8 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
-`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router`
+`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`; delays only:
+`@gyral/time/delay`). URLs → `@gyral/router`
 (`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. A store or feed
 Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
 (`references/outside-stores.md`). Anything else → `defineDriver()` + `command()`.

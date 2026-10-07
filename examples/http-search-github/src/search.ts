@@ -1,6 +1,6 @@
 import { css, define, each, html, nothing } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
-import { debounce } from '@gyral/time';
+import { debounce } from '@gyral/time/delay';
 import { searchRepos, type Repo } from './github.js';
 
 export type Results =

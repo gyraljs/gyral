@@ -22,7 +22,7 @@ const ENTRIES = [
   ['core', ['.', './server', './vite', './eslint']],
   ['http', ['.', './testing']],
   ['router', ['.']],
-  ['time', ['.']],
+  ['time', ['.', './delay']],
   ['ssr', ['.', './static']],
   ['testing', ['.', './arbitraries']],
   ['devtools', ['.']],

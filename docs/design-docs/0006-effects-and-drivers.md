@@ -197,6 +197,13 @@ Debounce is a delay under `switch`, not a separate mechanism. Nothing starts at 
 `animationFrames` falls back to a 16 ms timer where `requestAnimationFrame` is missing. Tests
 use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval`/rAF.
 
+**Delay-only apps (gyral-c5d.15, 0.3.1):** the driver is one `switch` over its inputs, so
+`delay` alone bundles `periodic` and `animationFrames` too. `@gyral/time/delay` exports `delay`
+and `debounce` with the same signatures and lanes over a delay-only driver (`delayTime`,
+`makeDelayTime()`), also named `time` and taking the same input, so substitution, `inputsFor`
+and virtual time work unchanged and either driver can stand in for the other. About 0.15 KiB
+gzip less (the delay-only examples, measured). The main entry is unchanged.
+
 ## Randomness as an effect (gyral-czi.10, 2026-10-04)
 
 Reducers request random numbers with a command instead of reading `Math.random()` in an

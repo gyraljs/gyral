@@ -1,32 +1,17 @@
-import { command, type Command, type Concurrency } from '@gyral/core';
-import { time, type Frame, type TimeInput, type TimeOutput } from './driver.js';
+// `@gyral/time`: delays, debounces, periodic ticks and animation frames as commands, run by one
+// `time` driver. Apps that only need delays and debounces import them from `@gyral/time/delay`
+// instead (delay.ts), whose driver leaves the periodic and frame code out (gyral-c5d.15).
+import type { Command } from '@gyral/core';
+import { time, type Frame } from './driver.js';
+import { timer, type Lane } from './timer.js';
 
 export { makeTime, time } from './driver.js';
 export type { Frame, TimeDriver, TimeInput, TimeOptions, TimeOutput } from './driver.js';
-
-/** Concurrency lane for a timer. Timers in different lanes run independently. */
-export interface Lane {
-  /** Lane name. Default: one shared lane per command kind (see each command). */
-  readonly key?: string;
-  readonly concurrency?: Concurrency;
-}
-
-function timer<M>(
-  input: TimeInput,
-  toMsg: (output: TimeOutput) => M | undefined,
-  lane: Lane,
-  defaults: Required<Lane>,
-): Command<M> {
-  return command<TimeInput, TimeOutput, unknown, M>(time, input, {
-    onSuccess: toMsg,
-    key: lane.key ?? defaults.key,
-    concurrency: lane.concurrency ?? defaults.concurrency,
-  });
-}
+export type { Lane } from './timer.js';
 
 /** Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`). */
 export function delay<M>(ms: number, msg: M, lane: Lane = {}): Command<M> {
-  return timer({ _tag: 'Delay', ms }, () => msg, lane, {
+  return timer(time, { _tag: 'Delay', ms }, () => msg, lane, {
     key: 'time:delay',
     concurrency: 'merge',
   });
@@ -50,6 +35,7 @@ export function periodic<M>(
   lane: Lane = {},
 ): Command<M> {
   return timer(
+    time,
     { _tag: 'Periodic', ms },
     (output) => (typeof output === 'number' ? toMsg(output) : undefined),
     lane,
@@ -63,6 +49,7 @@ export function animationFrames<M>(
   lane: Lane = {},
 ): Command<M> {
   return timer(
+    time,
     { _tag: 'Frames' },
     (output) => (typeof output === 'object' ? toMsg(output) : undefined),
     lane,

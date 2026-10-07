@@ -16,13 +16,18 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./delay": "./src/delay.ts"
   },
   "publishConfig": {
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./delay": {
+        "types": "./dist/delay.d.ts",
+        "default": "./dist/delay.js"
       }
     }
   },

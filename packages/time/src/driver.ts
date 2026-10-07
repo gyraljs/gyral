@@ -1,4 +1,5 @@
 import type { Driver, DriverContext } from '@gyral/core';
+import { abortError, wait } from './timer.js';
 
 /** One animation frame: the rAF timestamp and the time since the previous frame. */
 export interface Frame {
@@ -21,11 +22,6 @@ export interface TimeOptions {
   readonly name?: string;
 }
 
-const abortError = (signal: AbortSignal): Error => {
-  const reason: unknown = signal.reason;
-  return reason instanceof Error ? reason : new DOMException('Aborted', 'AbortError');
-};
-
 /**
  * Runs `start` until the command is aborted, then calls the cleanup `start` returned.
  * Settles only by rejecting on abort: a streaming command (ADR 0006).
@@ -41,26 +37,6 @@ function until(signal: AbortSignal, start: () => () => void): Promise<never> {
       'abort',
       () => {
         stop();
-        reject(abortError(signal));
-      },
-      { once: true },
-    );
-  });
-}
-
-function delay(ms: number, signal: AbortSignal): Promise<undefined> {
-  return new Promise<undefined>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(abortError(signal));
-      return;
-    }
-    const timer = setTimeout(() => {
-      resolve(undefined);
-    }, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
         reject(abortError(signal));
       },
       { once: true },
@@ -123,7 +99,7 @@ export function makeTime(options: TimeOptions = {}): TimeDriver {
     run: (input, ctx) => {
       switch (input._tag) {
         case 'Delay':
-          return delay(input.ms, ctx.signal);
+          return wait(input.ms, ctx.signal);
         case 'Periodic':
           return periodic(input.ms, ctx);
         case 'Frames':

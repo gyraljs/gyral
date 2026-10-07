@@ -1,5 +1,5 @@
 import { css, define, each, html, type Next } from '@gyral/core';
-import { delay } from '@gyral/time';
+import { delay } from '@gyral/time/delay';
 
 import { letterKeys } from './keyboard.js';
 

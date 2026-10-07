@@ -166,7 +166,9 @@ export const Shell = define<State, Msg>('my-shell', {
   `HttpStatusError` (with `status`, `body`, `detail`), `HttpNetworkError`, `HttpDecodeError`.
   App-wide headers: `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`.
 - **`@gyral/time`**: `delay(ms, msg)`, `debounce(ms, msg, key?)` (a `switch` delay),
-  `periodic(ms, toMsg)`, `animationFrames(toMsg)`.
+  `periodic(ms, toMsg)`, `animationFrames(toMsg)`. An app that only needs `delay` and
+  `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
+  `time`; about 0.15 KiB less).
 - **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace? })`,
   `back()`, `forward()`, `go(n)`, `setTitle(title)`, typed `routes({...})` tables with
   `match(url)` and `href(name, params)` (same table on server and client). Link clicks are
