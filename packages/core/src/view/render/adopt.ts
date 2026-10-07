@@ -101,6 +101,9 @@ function text(want: string): Text {
 
 function instance(result: TemplateResult, holder: ChildPart): Instance {
   const template = templateOf(result);
+  if (DEV && template.svg && !svgContent(parent)) {
+    fail(`an svg template inside SVG content (view/01-templates.md "svg templates")`, parent);
+  }
   const a = adoptionOf(template);
   // A development server's marker: checked when present (a production server writes none),
   // against the id when the template has one (production client objects don't, 01).
@@ -180,6 +183,14 @@ function node(t: Node, a: Adoption, inst: Instance, values: readonly unknown[]):
 }
 
 const WHITESPACE_ONLY = /^[\t\n\f\r ]*$/;
+
+/**
+ * Development: where an svg template may be (warn.ts `checkSvgParent`, checked here so the lazy
+ * chunk imports no development-only function: production bundles drop this).
+ */
+const svgContent = (el: Node): boolean =>
+  (el as Element).namespaceURI === 'http://www.w3.org/2000/svg' &&
+  !/^(foreignObject|desc|title)$/.test((el as Element).localName);
 
 function element(t: Element, a: Adoption, inst: Instance, values: readonly unknown[]): Element {
   const el = cur as Element | null;

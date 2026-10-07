@@ -5,16 +5,62 @@ and 6 (compiler).
 
 ## Authoring
 
-Views are written with one tag, `html`, imported from `@gyral/core`, on the server and in the
+Views are written with the `html` tag, imported from `@gyral/core`, on the server and in the
 browser alike:
 
 ```ts
 view: (s, i) => html`<button data-intent=${i.Increment}>Count: ${s.count}</button>`;
 ```
 
-There is no `svg` tag. Inline `<svg>` markup inside `html` is parsed by the HTML parser as SVG
-(foreign content), so icons and charts keep working. A template whose top level is SVG-only
-content (`<g>`, `<path>` without an `<svg>` around them) is an error (09).
+Inline `<svg>` markup inside `html` is parsed by the HTML parser as SVG (foreign content), so
+icons and charts are written with `html`. An SVG fragment that is a template of its own (a
+`<path>` or `<g>` shown conditionally or per list item inside an `<svg>`) uses the second tag,
+`svg` (below). An `html` template whose top level is SVG-only content (`<g>`, `<path>` without
+an `<svg>` around them) is an error that points to `svg` (09, rule 10).
+
+### svg templates (0.3.1, gyral-c5d.8)
+
+Dropped in 0.3.0 (ADR 0018), back in 0.3.1 for a real need: sabacc.starwars.run's card faces
+render small SVG fragments (suit marks, name lines) as their own templates, and without `svg`
+they had to inline every variant in one `<svg>` and hide the unused ones with
+`display="none"`.
+
+```ts
+import { html, nothing, svg } from '@gyral/core';
+
+const mark = (suit: string) => svg`<path class=${suit} d="M0 0h4v4z" />`;
+view: (s) =>
+  html`<svg viewBox="0 0 10 14">
+    ${s.suit === undefined ? nothing : mark(s.suit)}
+    <text x="1" y="13">${s.name}</text>
+  </svg>`;
+```
+
+- An `svg` template's top level is **SVG content**, as if it stood inside an `<svg>`: its
+  elements are SVG elements, self-closing tags (`<path />`) are allowed, and element and
+  attribute names keep SVG's camelCase (`clipPath`, `linearGradient`, `viewBox`). It is
+  normalized with the same rules (09), except rule 10's `html` half: instead, HTML at its top
+  level (`<div>`, `<p>`, `<button>`, a doctype) is a rule 10 error that points to `html` and
+  `<foreignObject>`. HTML inside `<foreignObject>` follows the HTML rules as usual.
+- It renders **only inside SVG content**: a child hole of an SVG element other than
+  `<foreignObject>`, `<desc>` and `<title>` (whose content is HTML), in an `html` or `svg`
+  template, or an `each` row or array item there. Anywhere else (an HTML element, a
+  component's root) the parser would not create SVG elements from the server's markup, so it
+  is a development error, on the client and on the server (development checks only;
+  production writes it as is). A whole graphic, `<svg>` included, is an `html` template.
+- `<foreignObject>` holds HTML: `html` templates go in its holes, not `svg` ones.
+- The template object carries `svg: true`, and the template id is computed with that flag (the
+  same strings make a different DOM as `html`). The normalizer takes it as an argument
+  (`analyze(strings, loc, svg)`); the server writes the HTML as is inside the parent's `<svg>`
+  (06); the client parses it inside an `<svg>` and keeps that element's children (below).
+- **Native primitive:** the HTML parser's own foreign-content rules (WHATWG HTML, "parsing
+  main inside foreign content"), reached by parsing inside an `<svg>` element. No
+  `createElementNS` builder: the browser creates the nodes with their namespace, adjusted
+  names and namespaced static attributes (`xlink:href="#a"`).
+- **Only apps that use it pay:** `svg` results prepare their own `<template>` element
+  (`svgTemplate` in template-element.ts, about 0.2 KB minified with `compiledSvg`), so
+  `templateElement` is unchanged and apps without `svg` templates carry none of it (every
+  example's bundle size is unchanged, ±a few bytes of module order).
 
 ## Template results
 
@@ -55,8 +101,10 @@ Carried over from ADR 0016's addendum (it is Gyral's own design), plus the head-
 (2026-10-06, found on gyral.dev's page shells):
 
 - Whitespace-only text that contains a newline is removed when it sits next to a template edge,
-  a block-level tag, or the inside edge of `<button>`/`<select>`. Between two inline neighbours
-  (phrasing elements, custom elements, holes, comments) it collapses to one space.
+  a block-level tag, or the inside edge of `<button>`/`<select>`/`<svg>` (`<svg>` since 0.3.1:
+  SVG content renders no text outside its text elements, so a fragment's hole on its own line
+  inside an `<svg>` gets no text nodes or anchor around it). Between two inline neighbours (phrasing elements, custom elements,
+  holes, comments) it collapses to one space.
 - Head-only tags count as block-level edges: `<head>`, `<meta>`, `<link>`, `<base>` and
   `<title>` are never rendered, so never inline. Inside `<head>` (until `</head>` or `<body>`),
   whitespace-only text is always removed, newline or not, also between two holes.
@@ -102,6 +150,7 @@ interface TemplateObject {
   readonly html: string; // normalized template HTML, bound attributes removed
   readonly parts: readonly PartSpec[]; // compact tuples, below; see 02 for kinds
   readonly server?: true; // only when it has document-level tags (<!doctype>, <html>, …)
+  readonly svg?: true; // only for svg templates ("svg templates")
   readonly segments?: readonly Segment[]; // the server's writing plan (06); not in client builds
   readonly loc?: string; // file:line:column of the call site, when known (below)
 }
@@ -138,7 +187,8 @@ production ones never do.
 `segments` (Phase 1, extended in Phase 4) is the template HTML split at its holes: static
 strings and one op per hole, plus `open`/`openEnd`/`close` around custom elements (their static
 attributes decoded, for props). A child op carries `in`, its parent element's local name
-(absent at the template root), so the server can check text in table structure (06).
+(absent at the template root), so the server can check text in table structure (06), and
+`svg: true` when that parent is SVG content, where svg templates may render (0.3.1).
 
 A `server` template (a page shell) may only be rendered by `@gyral/core/server`. Rendering one
 in the browser is an error.
@@ -158,8 +208,11 @@ in the browser is an error.
     ("Template ids"). It is already compact (above): nothing decodes it at runtime.
   - Call sites are found by scope-aware analysis of each module (TypeScript included, before
     it is compiled away): `` html`…` `` or `` ns.html`…` `` where `html` is imported from
-    `@gyral/core`. Any other use (an alias, a call, a destructured namespace) is a build error
-    with a code frame.
+    `@gyral/core`, and the same for `svg`. Any other use (an alias, a call, a destructured
+    namespace) is a build error with a code frame.
+  - An `svg` call site becomes `compiledSvg(template, values)` (same entry point, flagged
+    object). A package listed in `compiler.sources` that re-exports `svg` must export
+    `compiledSvg` too, as it exports `compiled` for `html`.
   - Template rule errors fail the build with the rule's message and a code frame at the call
     site; two different templates with one id fail it too.
 - The compiler builds paths from its own token stream. That is safe because markup the HTML
@@ -171,8 +224,9 @@ in the browser is an error.
   to a stub. The runtime preparer is then absent from the bundle.
 - **Guarantee:** the build fails if any uncompiled `html` call remains in the client output, so
   the stub is never reached in production. Besides the per-module errors above, the compiler
-  checks the bundle: if the `html` export of core's template module survives tree-shaking
-  (reached through a re-export or a dynamic import it can't follow), the build fails.
+  checks the bundle: if the `html` or `svg` export of core's template module survives
+  tree-shaking (reached through a re-export or a dynamic import it can't follow), the build
+  fails.
 - SSR builds keep externalized dependencies out of the bundle; Node runs those with the
   runtime normalizer (no condition applies outside the bundler), which yields the same ids.
 - The dev server uses the runtime path, where the development checks live. The compiler can run
@@ -206,13 +260,15 @@ know their call site in development, so a `TemplateError` (`at src/cart.ts:12:5`
   root), line and column, which Vite's transformed modules no longer have (TypeScript stripping
   reprints the code). No line moves; `html.at` exists only in development, so the `??` keeps the
   rewrite harmless anywhere else. Templates in `node_modules` and uses it can't follow (an
-  aliased `html`) are left alone.
-- **Elsewhere** (no build step, other bundlers' dev servers, Node): the first `html` call of a
-  call site reads it from `new Error().stack` (V8, SpiderMonkey and JavaScriptCore frame
+  aliased `html`) are left alone. `svg` call sites get the same rewrite with `svg.at`.
+- **Elsewhere** (no build step, other bundlers' dev servers, Node): the first `html` (or `svg`)
+  call of a call site reads it from `new Error().stack` (V8, SpiderMonkey and JavaScriptCore frame
   formats; scheme, host, query and Vite's `/@fs` dropped). Exact for code the browser runs as
   written; shifted for code a tool transformed without keeping lines.
-- **Production pays nothing:** every step is behind `if (DEV)` (`#view-dev`), `html.at` is
-  attached only in development, and `pnpm size` is unchanged. Compiled templates carry no `loc`
+- **svg templates** are prepared on their first call (above), after the location is recorded,
+  so their rule 10 errors and their hydration mismatches name the `svg` call site too.
+- **Production pays nothing:** every step is behind `if (DEV)` (`#view-dev`), `html.at` and
+  `svg.at` are attached only in development, and `pnpm size` is unchanged. Compiled templates carry no `loc`
   in any build (development builds made with `vite build --mode development` included; the
   compiler could add it, but no workflow needs it: the dev server uses the runtime path).
 - Tested in `core/test/view/source-location.test.ts` (both messages name this test file's
@@ -224,7 +280,10 @@ structurally (07).
 
 ## Instantiation
 
-- Each template object gets one `<template>` element, created on first use.
+- Each template object gets one `<template>` element, created on first use. An svg template's
+  is created when its first result is made: `innerHTML = '<svg>' + html + '</svg>'`, then the
+  `<svg>`'s children replace it in the content, so every node is in the SVG namespace (the
+  development runtime then checks the parse as for `html`, rule 7).
 - A template with one root node and no root-level holes clones only that node. Instances are
   created with `document.importNode(template.content, true)`, not
   `template.content.cloneNode(true)`: nested custom elements are created in the document and

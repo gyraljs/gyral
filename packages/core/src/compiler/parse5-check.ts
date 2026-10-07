@@ -1,7 +1,8 @@
 // Rule 7 at build time with parse5 (view/09-template-rules.md "How rule 7 is checked"): a
 // spec-compliant HTML parser parses each template's HTML as <template> content, exactly like
 // the runtime path's `<template>.innerHTML`, and its tree is compared with the shape the
-// normalizer computed paths for (view/normalize/shape.ts, shared with the browser check).
+// normalizer computed paths for (view/normalize/shape.ts, shared with the browser check). An
+// svg template is parsed inside an <svg>, as the browser path does (template-element.ts).
 //
 // parse5 is an optional peer dependency of @gyral/core, loaded at build time by the compiler
 // only: it never reaches browser or server bundles. Without it the build still runs
@@ -69,10 +70,13 @@ export function checkWithParse5(
   // Page shells (document-level tags) are written by the server and never parsed as a
   // fragment; fragment parsing would drop their <html>/<head>/<body> tags.
   if (template.server) return undefined;
-  const problem = shapeMismatch(
-    shape,
-    toShape(parse5.parseFragment(template.html).childNodes ?? []),
-  );
+  let nodes = parse5.parseFragment(
+    template.svg ? `<svg>${template.html}</svg>` : template.html,
+  ).childNodes;
+  // An svg template: the <svg>'s children, plus anything the parser moved out of it.
+  if (template.svg && nodes !== undefined)
+    nodes = [...(nodes[0]?.childNodes ?? []), ...nodes.slice(1)];
+  const problem = shapeMismatch(shape, toShape(nodes ?? []));
   return problem === undefined
     ? undefined
     : repairError(template, 'The HTML parser (parse5)', problem);

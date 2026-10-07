@@ -61,9 +61,10 @@ export default defineConfig({
   `gyral:dev-server`. If your config has plugins of its own, list them all, or the spread is
   overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
 - **`gyral:template-locations`** (dev server and Vitest only, 0.3.1): tells the development
-  runtime where each `html` template was written, so template rule errors and hydration
-  mismatches name your file, line and column (view/01-templates.md "Source locations"). It
-  rewrites each call site to `(html.at?.("src/x.ts:12:5") ?? html)`…`` and moves no line.
+  runtime where each `html` and `svg` template was written, so template rule errors and
+  hydration mismatches name your file, line and column (view/01-templates.md "Source
+  locations"). It rewrites each call site to `(html.at?.("src/x.ts:12:5") ?? html)`…`` (`svg`
+  the same way) and moves no line.
 - **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
   (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
   Vite instead of Node, so it renders development output and they all share one `@gyral/core`.
@@ -78,9 +79,9 @@ export default defineConfig({
 The preset's plugin runs in `vite build` only (view/01-templates.md "Compiled"); the dev server
 and Vitest keep the runtime template path. In a build it:
 
-- rewrites every `html` template imported from `@gyral/core`, dependencies in `node_modules`
-  included, into a precompiled template object, and adds the `gyral-compiled` resolve condition
-  so the runtime template preparer leaves the bundle;
+- rewrites every `html` (and `svg`) template imported from `@gyral/core`, dependencies in
+  `node_modules` included, into a precompiled template object, and adds the `gyral-compiled`
+  resolve condition so the runtime template preparer leaves the bundle;
 - fails the build, with a code frame, on a template rule violation (view/09-template-rules.md)
   and on any `html` it can't follow: an alias (`const h = html`), a call (`html(strings)`), or a
   re-export whose templates would stay uncompiled. Import `html` from `@gyral/core` where you
@@ -91,7 +92,8 @@ and Vitest keep the runtime template path. In a build it:
 
 Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
 `compiler: { sources: ['@gyral/core', 'my-design-system'] }` also compiles templates whose
-`html` comes from a package that re-exports it (that package must also export `compiled`).
+`html` comes from a package that re-exports it (that package must also export `compiled`, and
+`compiledSvg` if it re-exports `svg`).
 `gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
 
 ## ESLint: `@gyral/core/eslint`
@@ -197,11 +199,12 @@ module lazily).
 
 ## Removed in 0.3.0
 
-`svg` templates, `classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,
+`classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,
 `liveBoolean`, `textarea()`, `directive`/`ElementDirective` and 0.2's Lit re-exports are gone
 (ADR 0018; every change, with before/after code, in
 [migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md)). Use `each(items, key, row, pick?)` for
 keyed lists, plain bindings for form state (`value=${v}`, `?checked=${v}`,
 `<textarea>${v}</textarea>`; written only when the model's value changes, so other renders keep
 the user's edits), class and style strings, `defineHook` for element behaviours, and plain
-interpolation in `css`. Inline `<svg>` inside `html` works.
+interpolation in `css`. Inline `<svg>` inside `html` works; `svg` templates (SVG fragments
+rendered inside an `<svg>`) came back in 0.3.1 (view/01-templates.md "svg templates").

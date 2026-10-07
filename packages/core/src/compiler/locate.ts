@@ -4,9 +4,10 @@
 // `gyral:template-locations` plugin (serve only, enforce: 'pre', loaded lazily like the
 // compiler) rewrites each html`…` call site of the configured sources into
 //   (html.at?.("src/app.ts:12:5") ?? html)`…`
-// and the development runtime records that position for the template (view/loc.ts). Nothing
-// else changes and no line moves. Uses the compiler can't follow (an aliased html) stay as
-// they are: the runtime falls back to the stack trace there.
+// (svg`…` call sites the same way, with svg.at) and the development runtime records that
+// position for the template (view/loc.ts). Nothing else changes and no line moves. Uses the
+// compiler can't follow (an aliased html) stay as they are: the runtime falls back to the stack
+// trace there.
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
@@ -32,7 +33,7 @@ const SCRIPT = /\.[cm]?[jt]sx?$/;
 const langOf = (id: string): 'js' | 'jsx' | 'ts' | 'tsx' =>
   /\.[cm]?tsx$/.test(id) ? 'tsx' : /\.[cm]?ts$/.test(id) ? 'ts' : id.endsWith('x') ? 'jsx' : 'js';
 
-/** `sources`: as the compiler's (module specifiers whose `html` is the view layer's tag). */
+/** `sources`: as the compiler's (module specifiers whose `html` and `svg` are the view layer's tags). */
 export function createLocator(sources: readonly string[]): LocatorHooks {
   let root = '';
   /** Resolved ids of the sources, per environment (resolution may differ between them). */

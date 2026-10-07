@@ -7,14 +7,25 @@ import { badChild, badKey, warnTrue } from '../render/warn.js';
 import { isTemplateResult, templateOf, type TemplateResult } from '../template.js';
 import { escapeText, onlyWhitespace } from './escape.js';
 import { Markup, PLAIN, type Frame, type Opening } from './tags.js';
-import { checkPromise, fosterError, textContent, truthy } from './values.js';
+import { checkPromise, fosterError, svgPlacementError, textContent, truthy } from './values.js';
 
 export type { Deferred, Item } from './tags.js';
 
 /** Parents in which the parser moves non-whitespace text out (foster parenting). */
 const TABLE = new Set(['table', 'tbody', 'thead', 'tfoot', 'tr']);
 
-const tableTag = (parent: string): string | undefined => (TABLE.has(parent) ? parent : undefined);
+/**
+ * What a child hole's parent means for its value (the development checks): a table tag (text
+ * would be foster-parented), SVG content (where svg templates may render), or nothing.
+ */
+type Ctx = string | undefined;
+const SVG: Ctx = '#svg';
+
+const isTable = (ctx: Ctx): ctx is string => ctx !== undefined && TABLE.has(ctx);
+
+/** A child op's context: its parent's, or the enclosing one at the template root. */
+const ctxOf = (s: { readonly in?: string; readonly svg?: true }, outer: Ctx): Ctx =>
+  s.svg ? SVG : s.in === undefined ? outer : s.in;
 
 /** Warning key for values outside any template (the render root, a component's view). */
 export const ROOT: object = {};
@@ -23,20 +34,20 @@ export class Writer extends Markup {
   /** Writing a page shell's holes (a `server` template): never hydrated, so no anchors (06). */
   private shell = false;
 
-  /** A child value (02 "Child values"). `table`: the parent, when it is table structure. */
-  child(v: unknown, table: string | undefined, at: object): void {
+  /** A child value (02 "Child values"). `ctx`: what its parent is (`Ctx`). */
+  child(v: unknown, ctx: Ctx, at: object): void {
     switch (typeof v) {
       case 'string':
         if (v === '') return;
-        if (table !== undefined && this.dev && !onlyWhitespace(v)) fosterError(v, table);
+        if (this.dev && isTable(ctx) && !onlyWhitespace(v)) fosterError(v, ctx);
         this.buf += escapeText(v);
         return;
       case 'number':
-        if (table !== undefined && this.dev) fosterError(String(v), table);
+        if (this.dev && isTable(ctx)) fosterError(String(v), ctx);
         this.buf += String(v);
         return;
       case 'object':
-        if (v !== null) this.object(v, table, at);
+        if (v !== null) this.object(v, ctx, at);
         return;
       case 'boolean':
         if (v && this.dev) warnTrue(at);
@@ -48,17 +59,17 @@ export class Writer extends Markup {
     }
   }
 
-  private object(v: object, table: string | undefined, at: object): void {
+  private object(v: object, ctx: Ctx, at: object): void {
     if (isTemplateResult(v)) {
-      this.template(v, table);
+      this.template(v, ctx);
       return;
     }
     if (isList(v)) {
-      this.list(v, table, at);
+      this.list(v, ctx, at);
       return;
     }
     if (Array.isArray(v)) {
-      for (const item of v as readonly unknown[]) this.child(item, table, at);
+      for (const item of v as readonly unknown[]) this.child(item, ctx, at);
       return;
     }
     const raw = rawHtml(v);
@@ -72,7 +83,7 @@ export class Writer extends Markup {
   }
 
   /** `each(…)`: rows one after another, no markers (03). Keys are checked in development. */
-  private list(v: ListResult, table: string | undefined, at: object): void {
+  private list(v: ListResult, ctx: Ctx, at: object): void {
     const { items, key, row, pick } = v;
     const seen = this.dev ? new Set<unknown>() : undefined;
     for (let i = 0; i < items.length; i++) {
@@ -83,12 +94,12 @@ export class Writer extends Markup {
         if (dup || (typeof k !== 'string' && typeof k !== 'number')) badKey(k, i, dup);
         seen.add(k);
       }
-      this.child(row(item, pick === undefined ? undefined : pick(item)), table, at);
+      this.child(row(item, pick === undefined ? undefined : pick(item)), ctx, at);
     }
   }
 
   /** One template instance: its segments with this render's values. */
-  template(result: TemplateResult, table: string | undefined): void {
+  template(result: TemplateResult, ctx: Ctx): void {
     const template = templateOf(result);
     const segments = template.segments;
     if (segments === undefined) {
@@ -99,6 +110,8 @@ export class Writer extends Markup {
           '(docs/design-docs/view/01-templates.md "Compiled").',
       );
     }
+    // An svg template is SVG content: the parser creates SVG elements only inside SVG (01).
+    if (this.dev && template.svg && ctx !== SVG) svgPlacementError(ctx);
     // Development marker: hydration checks the id before each instance (07). Page shells are
     // never hydrated.
     if (this.dev && !template.server) this.buf += `<!--gyral:${template.id ?? ''}-->`;
@@ -115,7 +128,7 @@ export class Writer extends Markup {
       }
       switch (s.k) {
         case 'child':
-          this.child(values[at++], s.in === undefined ? table : tableTag(s.in), s);
+          this.child(values[at++], ctxOf(s, ctx), s);
           break;
         case 'text':
           this.buf += escapeText(textContent(values[at++], s, this.dev));

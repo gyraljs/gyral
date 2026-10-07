@@ -4,7 +4,7 @@
 // callback (a third-party widget's API) and don't warn.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { define, settled, type Stateless } from '../../src/index.js';
-import { html, render } from '../../src/view/index.js';
+import { html, render, svg } from '../../src/view/index.js';
 import { mount } from './render-helpers.js';
 
 const handler = (): void => undefined;
@@ -38,6 +38,15 @@ describe('a function in a property binding (development)', () => {
       /\.onclick=\$\{…\} on <button> got a function\. Views attach no closures: name an intent/,
     );
     expect(el.querySelector('button')?.onclick).toBe(other);
+  });
+
+  it('warns on an SVG element in an svg template too', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const el = mount();
+    render(html`<svg>${svg`<circle r="1" .onclick=${handler}></circle>`}</svg>`, el);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/\.onclick=\$\{…\} on <circle> got a function/);
+    expect(el.querySelector('circle')?.onclick).toBe(handler);
   });
 
   it('warns on a Gyral component: props are data', async () => {

@@ -64,8 +64,21 @@ export const msg = {
       : `The template ends inside a tag, so the parser would drop it. Close the tag with ">".`,
   // 10
   svgOnly: (tag: string): string =>
-    `<${tag}> is an SVG element outside an <svg>: there is no svg tag, and the HTML parser ` +
-    `creates SVG elements only inside <svg>. Wrap it: <svg viewBox="…"><${tag} …></${tag}></svg>.`,
+    `<${tag}> is an SVG element outside an <svg>: in an html template the parser creates SVG ` +
+    `elements only inside <svg>. For an SVG fragment of its own, write it with the svg tag ` +
+    `(import { svg } from '@gyral/core'): svg\`<${tag} …></${tag}>\`, rendered inside an <svg>. ` +
+    `Or wrap it: <svg viewBox="…"><${tag} …></${tag}></svg>.`,
+  htmlInSvg: (tag: string, top: boolean): string =>
+    (top
+      ? `<${tag}> is HTML, but this is an svg template: its top level is SVG content (it renders ` +
+        `inside an <svg>), where the parser `
+      : `<${tag}> is an HTML element inside SVG content, where the parser `) +
+    `would not create an HTML <${tag}>. Write HTML with html\`…\`, or put it inside ` +
+    `<foreignObject>.`,
+  namespacedAttr: (name: string): string =>
+    `${name}=${H} binds a namespaced attribute: the parser puts ${name} in its own namespace, ` +
+    `and a bound value can't be. Bind the plain attribute instead (SVG 2): href=${H} for ` +
+    `xlink:href, lang=${H} for xml:lang; write xmlns statically, if at all.`,
   // 11
   serverOnly: (): string => SERVER_ONLY,
   // 12

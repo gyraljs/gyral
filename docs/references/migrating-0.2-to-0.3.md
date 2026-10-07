@@ -40,7 +40,7 @@ Everything a view needs comes from `@gyral/core`:
 | `repeat`, `keyed`                                                | `each(items, key, row, pick?)`                            |
 | `live`, `liveBoolean`, `textarea()`, `textareaMarkup`            | plain bindings (see Form state)                           |
 | `classMap`, `styleMap`                                           | strings: `class=${…}`, `style="--w: ${w}px"`              |
-| `svg` templates                                                  | inline `<svg>` inside `html`                              |
+| `svg` templates                                                  | inline `<svg>` in `html`; `svg` is back in 0.3.1          |
 | `unsafeHTML` (from `lit/directives`)                             | `raw(markup)`: trusted markup only                        |
 | `directive`, `ElementDirective`                                  | `defineHook({ client, server? })` (see Hooks)             |
 | `serverHtml` (`@gyral/ssr`)                                      | `html` from `@gyral/core`                                 |

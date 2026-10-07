@@ -28,6 +28,7 @@ first-render error (09).
 | --------------------------------------- | ------------------------------------------------------------- |
 | `string`, `number`                      | A Text node (`String(v)`); updates set `.data` in place       |
 | template result                         | An instance; same template as before → its parts update       |
+| `svg` template result                   | The same, inside SVG content only (01 "svg templates")        |
 | `each(…)` (03), array of child values   | A list; arrays are positional (by index), `each` is keyed     |
 | `raw(html)`                             | Parsed markup (below)                                         |
 | `null`, `undefined`, `false`, `nothing` | Nothing                                                       |
@@ -77,6 +78,16 @@ so the server writes exactly the same ones (06), and hydration finds them where 
 
 No more `?? nothing`: `href=${s.url}` with an undefined URL simply leaves `href` out. For
 presence-only attributes use `?name`.
+
+**Attribute names** are written as the HTML parser spells them, so the client sets the same
+attribute the server's markup creates: lower case on HTML elements; on SVG elements (inline
+`<svg>` in `html`, and `svg` templates) lower case except SVG's camelCase attributes, which take
+their SVG spelling whatever the case written (`viewbox=${v}` and `viewBox=${v}` both bind
+`viewBox`; WHATWG HTML's "adjust SVG attributes" table, `normalize/svg.ts`). Namespaced
+attributes can't be bound: `xlink:href=${v}`, `xml:lang=${v}` and `xmlns…` are rule 10 errors
+(09) that point to the plain SVG 2 attribute (`href=${v}`, `lang=${v}`), since the parser puts
+them in their own namespace and `setAttribute` can't. Static ones (`xlink:href="#a"`) are fine:
+the parser handles them on both sides (0.3.1).
 
 **Multi** (`name="a ${x} b"`): pieces are joined with the static strings. `null`/`undefined`
 pieces become `''`; `nothing` in any piece removes the attribute.

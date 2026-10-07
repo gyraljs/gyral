@@ -5,11 +5,11 @@
 // error state) count as used; that is why the warning lives here and not in the runtime, which
 // sees only the templates rendered so far. A name counts as used when the module mentions it as
 // a property (`i.Name`, `intents.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal
-// `data-intent` value in an html template. A component is skipped when its intent names may be
-// used elsewhere: its view is not in the module (an imported function), the view hands its
-// intents to an imported function, the module exports an `intents()` constant, or a template
-// in the module calls (or passes on) a function imported from another module, which may render
-// `data-intent="Name"` itself (a shared table header, a row module).
+// `data-intent` value in an html or svg template. A component is skipped when its intent names
+// may be used elsewhere: its view is not in the module (an imported function), the view hands
+// its intents to an imported function, the module exports an `intents()` constant, or a
+// template in the module calls (or passes on) a function imported from another module, which
+// may render `data-intent="Name"` itself (a shared table header, a row module).
 import type { Rule, Scope } from 'eslint';
 import {
   findVariable,
@@ -70,14 +70,18 @@ function viewFunction(context: Rule.RuleContext, view: Node): Fn | undefined {
   return isFn(init) ? init : undefined;
 }
 
-/** Whether `node` sits in a hole of a Gyral html template. */
+/** Whether `tag` is Gyral's `html` or `svg` (an svg fragment can name intents too). */
+const isTemplateTag = (context: Rule.RuleContext, tag: Node): boolean =>
+  isGyral(context, tag, 'html') || isGyral(context, tag, 'svg');
+
+/** Whether `node` sits in a hole of a Gyral html or svg template. */
 function inTemplateHole(context: Rule.RuleContext, node: Node): boolean {
   for (let n: Node | null = node; n !== null; n = n.parent) {
     const parent = n.parent;
     if (parent?.type !== 'TemplateLiteral' || parent.parent.type !== 'TaggedTemplateExpression') {
       continue;
     }
-    if (isGyral(context, parent.parent.tag as Node, 'html')) return true;
+    if (isTemplateTag(context, parent.parent.tag as Node)) return true;
   }
   return false;
 }
@@ -154,7 +158,7 @@ export const unusedIntentRule: Rule.RuleModule = {
         }
       },
       TaggedTemplateExpression(node) {
-        if (!isGyral(context, node.tag as Node, 'html')) return;
+        if (!isTemplateTag(context, node.tag as Node)) return;
         const { quasis, expressions } = node.quasi;
         quasis.forEach((q, k) => {
           const text = q.value.cooked ?? '';

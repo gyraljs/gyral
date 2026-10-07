@@ -34,8 +34,9 @@ Compute derived values in plain helper functions of state.
   so does a refused edit (the reducer kept the state). To put a control back, change the model:
   clamp to a different value, or re-create the form with a key (`references/forms.md`).
 - Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
-  `style="--w: ${s.width}px"`. (`classMap`, `styleMap` and `svg` templates may return if a real
-  need appears; inline `<svg>` inside `html` works.)
+  `style="--w: ${s.width}px"`. (`classMap` and `styleMap` may return if a real need appears.)
+- Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
+  (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
   time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
 - `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
@@ -121,6 +122,45 @@ export const Todos = define<State, Msg>('my-todos', {
 Keys must be unique strings or numbers (duplicates are a development error). `pick` results
 are compared one level deep (`Object.is` per element or key), so returning a small object or
 tuple is fine.
+
+## SVG fragments: `svg`
+
+`svg` (from `@gyral/core`, since 0.3.1) is `html` for SVG fragments: its top level is SVG
+content, so `<path />`, `<g>`, `<text>`, `<clipPath>` are SVG elements, self-closing tags are
+fine and SVG's camelCase names stay. Render an `svg` result **only inside an `<svg>`** (or
+another SVG element other than `<foreignObject>`): a development error anywhere else. HTML at an
+`svg` template's top level is a template error; HTML goes in `<foreignObject>` as an `html`
+template. Bind `href=${…}`, not `xlink:href=${…}` (an error).
+
+```ts
+import { define, each, html, nothing, svg } from '@gyral/core';
+
+interface Card {
+  readonly id: number;
+  readonly suit: 'circle' | 'square' | undefined;
+  readonly name: string;
+}
+
+// Fragments are plain functions returning svg results; rows of `each` stay pure.
+const mark = (suit: 'circle' | 'square') =>
+  suit === 'circle'
+    ? svg`<circle cx="5" cy="5" r="3" />`
+    : svg`<rect x="2" y="2" width="6" height="6" />`;
+const face = (c: Card) => svg`<g transform="translate(${(c.id - 1) * 12} 0)">
+  ${c.suit === undefined ? nothing : mark(c.suit)}
+  <text x="1" y="13">${c.name}</text>
+</g>`;
+
+export const Hand = define<{ readonly cards: readonly Card[] }, never>('my-hand', {
+  init: () => ({ cards: [{ id: 1, suit: 'circle', name: 'Han' }] }),
+  intent: {},
+  update: {},
+  view: (s) =>
+    html`<svg viewBox="0 0 ${s.cards.length * 12} 14" role="img" aria-label="Hand">
+      ${each(s.cards, (c) => c.id, face)}
+    </svg>`,
+});
+```
 
 ## Element hooks
 

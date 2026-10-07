@@ -105,6 +105,14 @@ what comes next, because it has the template object and this render's values.
 | child hole: `raw()`          | its start anchor, then nodes up to the hole's reference node | records the range                                                                    |
 | nested Gyral host            | that element                                                 | records its parts on the host; walks a shadow host's light children only (above)     |
 
+**svg templates** (0.3.1, 01 "svg templates") are walked like any template: the template's
+content was parsed inside an `<svg>` and the server's markup inside the page's `<svg>`, so both
+sides have SVG elements with the parser's names, and the walk's local-name check compares
+`clipPath` with `clipPath` (case kept on both sides). Development markers before svg instances
+are checked and removed as usual. In development, an svg template whose DOM parent isn't SVG
+content is a mismatch ("expected an svg template inside SVG content"); production checks
+structure only, as everywhere.
+
 **Merged text.** The HTML parser joins adjacent text: `Hi ${name}!` arrives as one Text node
 `Hi Bob` before the anchor. The walk splits it with `splitText` at the known lengths (static
 `"Hi "`, then the value `"Bob"`). Lengths are known exactly: the parser decodes character

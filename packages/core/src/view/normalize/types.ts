@@ -62,7 +62,8 @@ export type PartSpec =
  * - `child`: the value per 02's child table. Anchors are already in the next static string.
  *   `in` is the parent element's local name (absent at the template root, where the parent is
  *   wherever the instance is written): the development check for text the parser would move
- *   out of table structure needs it.
+ *   out of table structure needs it. `svg` is set when the parent is SVG content (an SVG
+ *   element other than <foreignObject>, <desc>, <title>), where svg templates may render.
  * - `text`: the value as escaped text (`<textarea>`, `<title>` content).
  * - `attr`: ` name="escaped"`, or nothing for null/undefined/nothing. With `strings`, the
  *   pieces and `strings.length - 1` values are joined first (`nothing` in any piece: nothing).
@@ -81,7 +82,7 @@ export type PartSpec =
  */
 export type Segment =
   | string
-  | { readonly k: 'child'; readonly in?: string }
+  | { readonly k: 'child'; readonly in?: string; readonly svg?: true }
   | { readonly k: 'text' }
   | { readonly k: 'attr'; readonly name: string; readonly strings?: readonly string[] }
   | { readonly k: 'bool'; readonly name: string }
@@ -110,6 +111,11 @@ export interface TemplateObject {
    * server-only. Absent otherwise.
    */
   readonly server?: true;
+  /**
+   * `true` for an svg template (`` svg`…` ``, 01 "svg templates"): its HTML is SVG content,
+   * parsed inside an <svg>. Absent otherwise.
+   */
+  readonly svg?: true;
   /**
    * Server writing plan. Absent from client-compiled template objects (the compiler drops it),
    * so the client renderer never reads it; the runtime preparer and server builds keep it.

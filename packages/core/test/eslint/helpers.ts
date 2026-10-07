@@ -18,10 +18,13 @@ export const tsTester = new RuleTester({
   languageOptions: { parser: tseslint.parser, sourceType: 'module' },
 });
 
-/** The message the runtime throws for these strings, without the near/at context. */
-export function runtimeMessage(strings: readonly string[]): string {
+/**
+ * The message the runtime throws for these strings (an svg template's when `svg`), without the
+ * near/at context.
+ */
+export function runtimeMessage(strings: readonly string[], svg = false): string {
   try {
-    normalize(strings);
+    normalize(strings, undefined, svg);
   } catch (error) {
     if (error instanceof TemplateError) return error.message.split('\n')[0] ?? '';
     throw error;

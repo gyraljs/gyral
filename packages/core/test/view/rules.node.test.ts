@@ -158,7 +158,7 @@ describe('template errors (view/09)', () => {
   });
 
   it('rule 10: SVG-only elements outside <svg>', () => {
-    expectRule(t`<g>${0}</g>`, 10, '<g> is an SVG element outside an <svg>', 'Wrap it');
+    expectRule(t`<g>${0}</g>`, 10, '<g> is an SVG element outside an <svg>', 'svg`<g', 'wrap it');
     expectRule(t`<div><path d=${0}></path></div>`, 10, '<path>');
     expect(() => normalize(t`<svg><g><path d=${0}></path></g></svg>`)).not.toThrow();
   });

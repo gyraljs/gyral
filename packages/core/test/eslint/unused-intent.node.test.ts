@@ -48,6 +48,15 @@ describe('gyral/unused-intent', () => {
         "import { header } from './table.js';\n",
       ),
       component('(s, i) => html`<p data-intent=${i.Save}></p>`', 'export const i2 = intents();\n'),
+      // svg fragments name intents too: a static value, and an imported function in a hole.
+      component(
+        '(s, i) => html`<svg data-intent=${i.Save}>${svg`<g data-intent="Load"></g>`}</svg>`',
+        "import { svg } from '@gyral/core';\n",
+      ),
+      component(
+        '(s, i) => html`<svg data-intent=${i.Save}>${svg`<g>${pips(3)}</g>`}</svg>`',
+        "import { svg } from '@gyral/core';\nimport { pips } from './pips.js';\n",
+      ),
       // Not Gyral's define.
       "import { define } from 'elsewhere';\ndefine('x', { intent: { A: () => 1 }, view: () => 1 });",
     ],

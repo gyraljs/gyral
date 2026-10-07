@@ -1,4 +1,4 @@
-// Which identifiers are Gyral's `html` and `each` (@gyral/core/eslint). Like the template
+// Which identifiers are Gyral's `html`, `svg` and `each` (@gyral/core/eslint). Like the template
 // compiler (compiler/scan.ts), a binding counts only when it is imported from a template
 // source: `import { html } from '@gyral/core'` (any local name) or `import * as g` used as
 // `g.html`. ESLint's scope analysis resolves the name, so shadowing is handled. Core's own code

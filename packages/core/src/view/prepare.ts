@@ -17,13 +17,16 @@ const prepared = new WeakMap<readonly string[], TemplateObject>();
 let lastSource: readonly string[] | undefined;
 let lastTemplate: TemplateObject | undefined;
 
-/** The template object of a call site's strings, normalized (with development checks) once. */
-export function prepare(strings: readonly string[]): TemplateObject {
+/**
+ * The template object of a call site's strings, normalized (with development checks) once.
+ * `svg`: the call site is an svg template (template.ts `svg`), whose first call prepares it.
+ */
+export function prepare(strings: readonly string[], svg?: boolean): TemplateObject {
   if (strings === lastSource) return lastTemplate as TemplateObject;
   let template = prepared.get(strings);
   if (template === undefined) {
     // Development: the call site (loc.ts), so rule errors and hydration mismatches name it.
-    const analysis = analyze(strings, DEV ? locOf(strings) : undefined);
+    const analysis = analyze(strings, DEV ? locOf(strings) : undefined, svg);
     template = analysis.template;
     recordTemplateId(analysis.template.id, analysis.strings);
     shapes.set(template, analysis.shape);

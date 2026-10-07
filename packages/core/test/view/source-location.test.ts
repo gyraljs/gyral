@@ -4,18 +4,28 @@
 // serve`), the preset's `gyral:template-locations` transform gives exact positions; elsewhere
 // the runtime reads them from a stack trace.
 import { describe, expect, it } from 'vitest';
-import { html, hydrate, HydrationMismatch, TemplateError } from '../../src/view/index.js';
+import { html, hydrate, HydrationMismatch, svg, TemplateError } from '../../src/view/index.js';
 import { templateOf } from '../../src/view/template.js';
 import source from './source-location.test.ts?raw';
 import { mount } from './render-helpers.js';
 
 const FILE = 'packages/core/test/view/source-location.test.ts';
 
-/** `file:line:col` of the html`…` call on the line holding `marker` (in a comment). */
-function locOf(marker: string): string {
+/** `file:line:col` of the html`…` (or svg`…`) call on the line holding `marker` (in a comment). */
+function locOf(marker: string, tag = 'html'): string {
   const lines = source.split('\n');
-  const line = lines.findIndex((l) => l.includes(marker) && l.includes('html`'));
-  return `${FILE}:${String(line + 1)}:${String((lines[line] ?? '').indexOf('html`') + 1)}`;
+  const line = lines.findIndex((l) => l.includes(marker) && l.includes(`${tag}\``));
+  return `${FILE}:${String(line + 1)}:${String((lines[line] ?? '').indexOf(`${tag}\``) + 1)}`;
+}
+
+/** The error `fn` throws. */
+function thrown(fn: () => unknown): unknown {
+  try {
+    fn();
+  } catch (e) {
+    return e;
+  }
+  return undefined;
 }
 
 describe('source locations in development (view/01 "Source locations")', () => {
@@ -49,9 +59,20 @@ describe('source locations in development (view/01 "Source locations")', () => {
     }
   });
 
+  it("names an svg template's call site too (prepared on its first call)", () => {
+    // eslint-disable-next-line gyral/template -- the rule error under test
+    const error = thrown(() => svg`<div></div>`); // @loc:svg
+    expect(error).toBeInstanceOf(TemplateError);
+    expect((error as TemplateError).loc).toBe(locOf('@loc:svg', 'svg'));
+    expect((error as TemplateError).message).toContain(`\n  at ${locOf('@loc:svg', 'svg')}`);
+  });
+
   it('falls back to the stack trace where the transform cannot see the call', () => {
     const tag = html; // an alias: the transform leaves this call site alone
     const template = templateOf(tag`<p class="alias">${1}</p>`);
     expect(template.loc).toMatch(/source-location\.test\.ts:\d+:\d+$/);
+    const s = svg; // the same for svg (HTML at its top level: rule 10, ESLint can't see it)
+    const error = thrown(() => s`<p class="alias"></p>`);
+    expect((error as TemplateError).loc).toMatch(/source-location\.test\.ts:\d+:\d+$/);
   });
 });

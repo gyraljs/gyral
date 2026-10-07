@@ -17,10 +17,11 @@ import type { LocatorHooks } from './compiler/locate.js';
 
 export interface TemplateCompilerOptions {
   /**
-   * Module specifiers whose `html` export is the view layer's tag (default
+   * Module specifiers whose `html` (and `svg`) exports are the view layer's tags (default
    * `DEFAULT_TEMPLATE_SOURCES`). An import matches when its specifier is listed, or when it
    * resolves to the same module as a listed one; core's own view modules always match. A
-   * source other than '@gyral/core' must also export `compiled`.
+   * source other than '@gyral/core' must also export `compiled` (and `compiledSvg` when it
+   * exports `svg`).
    */
   readonly sources?: readonly string[];
   /**
@@ -114,7 +115,8 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
       return ready().buildStart.call(this, input);
     },
     transform: {
-      filter: { id: /\.[cm]?[jt]sx?$/, code: 'html' },
+      // Modules naming a template tag (html or svg); core's template module names both.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg/ },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },
@@ -127,9 +129,10 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
 
 /**
  * Development source locations (view/01-templates.md "Source locations"): in `vite serve` (the
- * dev server, Vitest) each html`…` call site of the template sources tells the runtime where it
- * was written, so template rule errors and hydration mismatches name `file:line:col`
- * (./compiler/locate.ts, loaded on the first hook). `vite build` compiles templates instead.
+ * dev server, Vitest) each html`…` and svg`…` call site of the template sources tells the
+ * runtime where it was written, so template rule errors and hydration mismatches name
+ * `file:line:col` (./compiler/locate.ts, loaded on the first hook). `vite build` compiles
+ * templates instead.
  */
 export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
   let hooks: LocatorHooks | undefined;
@@ -147,7 +150,8 @@ export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): P
       await hooks.configResolved.call(this, config);
     },
     transform: {
-      filter: { id: /\.[cm]?[jt]sx?$/, code: 'html' },
+      // Modules naming a template tag (html or svg), as the compiler's filter.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg/ },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },
