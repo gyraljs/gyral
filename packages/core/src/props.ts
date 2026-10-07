@@ -36,8 +36,13 @@ export function checkValue(tag: string, name: string, def: Prop<unknown>, value:
       issues: [`expected a ${def.kind}, got ${typeof value}`],
     };
   }
-  if (def.schema === undefined) return { ok: true, value };
-  const result = def.schema['~standard'].validate(value);
+  const schema = def.schema;
+  if (schema === undefined) return { ok: true, value };
+  // A type guard (prop.value/prop.json, gyral-c5d.7); ArkType-style callable schemas have ~standard.
+  if (!('~standard' in schema)) {
+    return schema(value) ? { ok: true, value } : { ok: false, issues: [`failed ${schema.name}`] };
+  }
+  const result = schema['~standard'].validate(value);
   if (result instanceof Promise) {
     throw new TypeError(
       `<${tag}> prop "${name}" has an asynchronous schema; it must be synchronous.`,

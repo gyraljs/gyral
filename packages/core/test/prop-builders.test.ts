@@ -198,7 +198,7 @@ describe('prop builders', () => {
     await settled();
     expect(text(el)).toBe('-|'); // both invalid: treated as missing (picks' default is [])
     expect(errors).toHaveBeenCalledTimes(2);
-    expect(String(errors.mock.calls[0]?.[0])).toContain('failed the type guard isSeat');
+    expect(String(errors.mock.calls[0]?.[0])).toContain('failed isSeat');
     expect(String(errors.mock.calls[1]?.[0])).toContain('the attribute picks');
   });
 

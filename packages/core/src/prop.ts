@@ -24,8 +24,11 @@ export interface Prop<T> {
   readonly kind: PropKind;
   /** The attribute name, `false` for property only, `undefined` for the kebab-case default. */
   readonly attribute: string | false | undefined;
-  /** Refines (string/number/boolean) or defines (json/value) the accepted values. */
-  readonly schema: StandardSchemaV1 | undefined;
+  /**
+   * Refines (string/number/boolean) or defines (json/value) the accepted values: a Standard
+   * Schema, or for json/value a type guard (props.ts `checkValue` tells them apart).
+   */
+  readonly schema: StandardSchemaV1 | PropGuard<unknown> | undefined;
   /** A missing value is a bug: warned once per instance at first render. */
   readonly required: boolean;
   /** Used whenever the element's value is missing (`boolean` props default to `false`). */
@@ -92,26 +95,13 @@ interface Options {
   readonly default?: unknown;
 }
 
-/** A type guard as a Standard Schema (a schema passes through): the guard's verdict, no copy. */
-function schemaOf(check: Check): StandardSchemaV1 {
-  if (typeof check !== 'function' || '~standard' in check) return check as StandardSchemaV1;
-  const name = check.name === '' ? 'its type guard' : `the type guard ${check.name}`;
-  return {
-    '~standard': {
-      version: 1,
-      vendor: 'gyral',
-      validate: (value) => (check(value) ? { value } : { issues: [{ message: `failed ${name}` }] }),
-    },
-  };
-}
-
 function make(kind: PropKind, opts: Options = {}, schema?: Check): Prop<unknown> {
   features.props = propFeature; // components can declare props now (features.ts)
   const value = opts.default !== undefined ? opts.default : kind === 'boolean' ? false : undefined;
   const base = {
     kind,
     attribute: kind === 'value' ? false : opts.attribute,
-    schema: schema === undefined ? opts.schema : schemaOf(schema),
+    schema: schema ?? opts.schema,
     required: opts.required === true,
   };
   return value === undefined ? base : { ...base, default: value };
