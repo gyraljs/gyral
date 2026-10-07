@@ -15,7 +15,7 @@
       "homepage": "https://gyral.dev",
       "repository": "https://github.com/gyraljs/gyral",
       "license": "MIT",
-      "keywords": ["gyral", "web-components", "lit", "mvi", "ssr"],
+      "keywords": ["gyral", "web-components", "custom-elements", "mvi", "ssr"],
       "category": "development",
       "skills": ["./gyral"]
     }
