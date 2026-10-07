@@ -2,7 +2,7 @@
   "name": "@gyral-examples/counter",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/counter example.",
+  "description": "Increment and decrement buttons updating a count: the smallest Model-View-Intent component.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

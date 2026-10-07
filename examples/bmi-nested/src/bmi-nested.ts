@@ -15,7 +15,7 @@ export const bmiOf = ({ weight, height }: State): number =>
 
 /**
  * The parent owns both values and derives the BMI. Each slider is the same child component;
- * the two `data-intent` names tell their outputs apart (Cycle needed `isolate()` for that).
+ * the two `data-intent` names tell their outputs apart, with no extra scoping step.
  */
 export const BmiNested = define<State, Msg>('gy-bmi-nested', {
   init: () => ({ weight: 70, height: 170 }),

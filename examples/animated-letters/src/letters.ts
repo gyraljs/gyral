@@ -3,8 +3,8 @@ import { delay } from '@gyral/time';
 
 import { letterKeys } from './keyboard.js';
 
-// Cycle's version ran a per-frame easing loop over every letter. Here the model only knows
-// which letters are present or leaving; CSS transitions do the growing and shrinking.
+// The model only knows which letters are present or leaving; CSS transitions do the growing
+// and shrinking, so there is no per-frame easing loop over the letters.
 
 /** How long a letter takes to grow in or shrink out. The model waits this long to drop it. */
 export const TRANSITION_MS = 600;

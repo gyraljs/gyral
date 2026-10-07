@@ -1,7 +1,7 @@
 # AGENTS.md — Gyral
 
 Gyral is a web framework: Model-View-Intent components compiled to custom elements with
-Gyral's own view layer, built on current web-platform standards. Inspired by Cycle.js. This file is a **map**;
+Gyral's own view layer, built on current web-platform standards. This file is a **map**;
 details live in the linked docs, which are the system of record.
 
 ## Start every session
@@ -37,7 +37,7 @@ First run needs `pnpm exec playwright install chromium`.
 | [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                                        |
 | `packages/core`                                                                                  | `define()`, intents, MVI runtime, view layer (`src/view/`); `/server`, `/vite`, `/eslint` entries |
 | `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                                    |
-| `examples/*`                                                                                     | Ports of the Cycle.js examples; the acceptance suite                                              |
+| `examples/*`                                                                                     | The acceptance suite                                                                              |
 | `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                                                   |
 | [docs/design-docs/](docs/design-docs/index.md)                                                   | Decisions and beliefs (ADRs)                                                                      |
 | [docs/references/consumer-setup.md](docs/references/consumer-setup.md)                           | How apps install Gyral: packages, Vite preset, template compiler                                  |

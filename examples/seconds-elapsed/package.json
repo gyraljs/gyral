@@ -2,7 +2,7 @@
   "name": "@gyral-examples/seconds-elapsed",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/jsx-seconds-elapsed and intermediate/tsx-seconds-elapsed examples.",
+  "description": "A seconds counter driven by a periodic command from @gyral/time.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

@@ -1,6 +1,6 @@
 # @gyral/core
 
-Model-View-Intent web components on the web platform, with their own view layer. _Inspired by [Cycle.js](https://cycle.js.org)._ Intent parses platform events into typed messages, the model is a set of pure reducers, and the view is a pure template that names intents. Side effects are commands: data that drivers run at the edges.
+Model-View-Intent web components on the web platform, with their own view layer. Intent parses platform events into typed messages, the model is a set of pure reducers, and the view is a pure template that names intents. Side effects are commands: data that drivers run at the edges.
 
 ## Install
 

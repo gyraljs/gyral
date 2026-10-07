@@ -2,7 +2,7 @@
   "name": "@gyral-examples/animation",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js intermediate/animation example.",
+  "description": "A button that sends a box along a path as a CSS keyframe animation, while the model only counts runs.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

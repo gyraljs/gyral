@@ -2,7 +2,7 @@
   "name": "@gyral-examples/bmi",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/bmi-naive and intermediate/bmi-typescript examples.",
+  "description": "Weight and height sliders, parsed and bounded by a schema, with the BMI derived from state.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

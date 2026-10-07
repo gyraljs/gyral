@@ -2,7 +2,7 @@
   "name": "@gyral-examples/bmi-nested",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/bmi-nested example (and intermediate/bmi-typescript).",
+  "description": "The BMI calculator built from one reusable, controlled slider component used twice by a parent that owns the values.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

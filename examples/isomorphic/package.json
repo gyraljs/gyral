@@ -2,7 +2,7 @@
   "name": "@gyral-examples/isomorphic",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/isomorphic example: server-rendered with Declarative Shadow DOM, hydrated on the client.",
+  "description": "A small multi-page site server-rendered with Declarative Shadow DOM and hydrated on the client, with routing on both sides.",
   "scripts": {
     "dev": "tsx server/dev.ts",
     "build": "vite build && tsx server/prerender.ts",

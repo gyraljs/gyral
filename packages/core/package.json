@@ -1,7 +1,7 @@
 {
   "name": "@gyral/core",
   "version": "0.3.0",
-  "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer. Inspired by Cycle.js.",
+  "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer.",
   "license": "MIT",
   "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/core#readme",

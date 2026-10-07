@@ -6,9 +6,9 @@ const isEditable = (target: EventTarget | undefined): boolean =>
   (target instanceof HTMLElement && target.isContentEditable);
 
 /**
- * Streams letter keys (A–Z) pressed anywhere in the document, like Cycle's
- * `fromEvent(document, 'keydown')` source. A streaming driver (ADR 0006): it emits until the
- * component disconnects. Keys typed into form fields and shortcuts with modifiers are ignored.
+ * Streams letter keys (A–Z) pressed anywhere in the document, from `keydown` on `document`.
+ * A streaming driver (ADR 0006): it emits until the component disconnects. Keys typed into
+ * form fields and shortcuts with modifiers are ignored.
  */
 export const keyboard = defineDriver<undefined, string>({
   name: 'keyboard',

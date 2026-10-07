@@ -2,7 +2,7 @@
   "name": "@gyral-examples/nested-folders",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/nested-folders example.",
+  "description": "Recursive folders: each folder is a custom element that adds child folders and removes itself through its parent.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

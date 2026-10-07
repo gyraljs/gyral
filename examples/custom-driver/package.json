@@ -2,7 +2,7 @@
   "name": "@gyral-examples/custom-driver",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/custom-driver example: a canvas chart driver.",
+  "description": "A custom driver that owns a canvas bar chart of clicks per second and talks to the component only through commands.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

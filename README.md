@@ -7,10 +7,9 @@
 **Model-View-Intent web components on the modern web platform.**
 _Inspired by [Cycle.js](https://cycle.js.org)._
 
-Gyral keeps the core idea of Cycle.js (your app is a pure function, side effects happen at
-the edges as data, and data flows in one visible loop) and rebuilds it on today's platform:
-custom elements and Shadow DOM, its own small template layer, semantic HTML, modern CSS.
-No stream library to learn.
+Your app is a pure function, and side effects happen at the edges, as data. Gyral builds
+that loop on today's platform: custom elements and Shadow DOM, its own small template layer,
+semantic HTML, modern CSS. No stream library to learn.
 
 ```ts
 import { define, html } from '@gyral/core';

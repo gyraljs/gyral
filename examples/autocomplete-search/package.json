@@ -2,7 +2,7 @@
   "name": "@gyral-examples/autocomplete-search",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/autocomplete-search example.",
+  "description": "An accessible combobox that suggests Wikipedia articles as you type, with debounced, cancellable requests and keyboard navigation.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

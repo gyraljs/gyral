@@ -28,7 +28,7 @@ export type Msg =
   | { readonly _tag: 'Remove' }
   | { readonly _tag: 'Child'; readonly id: string; readonly out: FolderOutput };
 
-/** Stable pastel hue per id, replacing Cycle's `idToColor`. */
+/** Stable pastel hue per id, so a folder keeps its color across renders. */
 export function hueOf(id: string): number {
   let hue = 7;
   for (let n = 0; n < id.length; n += 1) hue = (hue * 31 + id.charCodeAt(n)) % 360;
@@ -37,8 +37,8 @@ export function hueOf(id: string): number {
 
 /**
  * A folder renders folders of its own kind: recursion through the custom-element tag.
- * Unlike Cycle's onionify version (one state tree, lenses per level), each folder owns the
- * list of its direct children; a child removes itself by emitting `Removed` up one level.
+ * Each folder owns the list of its direct children (no single state tree with lenses per
+ * level); a child removes itself by emitting `Removed` up one level.
  * Ids are paths (`1.2.1`), so making a new one is pure.
  */
 /** One child folder; its intent name comes through `pick`, so the row stays pure. */

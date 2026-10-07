@@ -2,7 +2,7 @@
   "name": "@gyral-examples/routing-view",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/routing-view example.",
+  "description": "Client-side routing with a typed route table, document titles and cross-fading view transitions between pages.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

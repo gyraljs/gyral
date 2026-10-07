@@ -2,7 +2,7 @@
   "name": "@gyral-examples/animated-letters",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js advanced/animated-letters example.",
+  "description": "Letters typed anywhere on the page grow in and shrink out with CSS transitions, fed by a streaming keyboard driver.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

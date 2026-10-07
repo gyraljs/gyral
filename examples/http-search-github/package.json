@@ -2,7 +2,7 @@
   "name": "@gyral-examples/http-search-github",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js intermediate/http-search-github example.",
+  "description": "Searches GitHub repositories as you type, with a 500 ms debounce and cancellation of stale requests.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

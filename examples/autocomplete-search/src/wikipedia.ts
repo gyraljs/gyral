@@ -5,7 +5,7 @@ import * as v from 'valibot';
 /** OpenSearch answers `[query, titles, descriptions, urls]`; only the titles are used. */
 const OpenSearch = v.looseTuple([v.string(), v.array(v.string())]);
 
-/** The original example's endpoint. `origin=*` enables anonymous CORS (Cycle used JSONP). */
+/** Wikipedia's OpenSearch endpoint. `origin=*` enables anonymous CORS, so no JSONP is needed. */
 export const suggestUrl = (query: string): string =>
   'https://en.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&limit=10&search=' +
   encodeURIComponent(query);

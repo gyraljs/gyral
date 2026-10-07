@@ -1,7 +1,6 @@
 // A custom driver (ADR 0006): a plain object that owns an imperative resource, here a
 // <canvas> outside any component, and talks to components only through commands.
-// The Cycle.js original wrapped Chart.js; this draws a bar chart with the 2D canvas API so the
-// example needs no charting dependency.
+// It draws a bar chart with the 2D canvas API, so the example needs no charting dependency.
 import { command, type Command, type Driver } from '@gyral/core';
 
 export interface ChartData {

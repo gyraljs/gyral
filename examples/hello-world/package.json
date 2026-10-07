@@ -2,7 +2,7 @@
   "name": "@gyral-examples/hello-world",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/hello-world example.",
+  "description": "A name field echoed into a greeting as you type.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

@@ -2,7 +2,7 @@
   "name": "@gyral-examples/http-random-user",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/http-random-user example.",
+  "description": "Fetches a random user over HTTP on each button press, with loading and error states.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

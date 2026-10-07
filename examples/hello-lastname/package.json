@@ -2,7 +2,7 @@
   "name": "@gyral-examples/hello-lastname",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js intermediate/hello-lastname example.",
+  "description": "First and last name fields with a greeting derived from state once both are valid.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

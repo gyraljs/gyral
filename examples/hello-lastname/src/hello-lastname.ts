@@ -9,12 +9,12 @@ export type Msg =
   | { readonly _tag: 'First'; readonly value: string }
   | { readonly _tag: 'Last'; readonly value: string };
 
-/** Minimum last-name length before a greeting is shown (from the Cycle.js original). */
+/** Minimum last-name length before a greeting is shown. */
 export const MIN_LAST = 3;
 
 /**
  * Derived from state, never stored: "LAST, First" once both parts are valid, else ''.
- * The Cycle.js original needed three streams (raw, valid, invalid) to express this.
+ * Raw, valid and invalid input are plain values in the model, so no extra state is needed.
  */
 export const fullName = ({ first, last }: State): string =>
   first.length > 0 && last.length >= MIN_LAST ? `${last.toUpperCase()}, ${first}` : '';

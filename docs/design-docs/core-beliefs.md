@@ -4,7 +4,7 @@
    popover, the Navigation and History APIs and modern CSS come first. Gyral adds only what
    the platform lacks: a pure, testable application loop.
 2. **Pure core, effects at the edges.** `update` and `view` are pure. Side effects are
-   described as data and carried out by drivers. This is the idea we inherit from Cycle.js.
+   described as data and carried out by drivers.
 3. **Parse at boundaries.** Events become typed messages in the intent layer. Network data is
    decoded by drivers. The model only sees valid data.
 4. **Thin layer, no walled garden.** Every Gyral component is a standard custom element that

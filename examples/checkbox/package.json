@@ -2,7 +2,7 @@
   "name": "@gyral-examples/checkbox",
   "private": true,
   "type": "module",
-  "description": "Port of the Cycle.js basic/checkbox example.",
+  "description": "A checkbox whose checked state is read from the change event and reflected in the text below it.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

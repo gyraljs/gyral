@@ -1,7 +1,7 @@
 import { css, define, each, html } from '@gyral/core';
 
-// Cycle's version tweened coordinates in JS on every frame. Here the model only counts runs;
-// the motion is a CSS animation the browser runs on its own (no per-frame state, no JS timer).
+// The model only counts runs; the motion is a CSS animation the browser runs on its own
+// (no per-frame state, no JS timer, no coordinates tweened in JS).
 
 /** A keyframe: time (0..1), position in units of the travel distance, easing to the next stop. */
 export interface Stop {

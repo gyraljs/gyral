@@ -8,7 +8,7 @@ import { suggestUrl } from '../src/wikipedia.js';
 
 const base: State = {
   query: 'cy',
-  suggestions: ['Cycle', 'Cyclone', 'Cypress'],
+  suggestions: ['Cyan', 'Cyclone', 'Cypress'],
   highlighted: undefined,
   open: true,
   status: 'idle',
@@ -95,10 +95,10 @@ describe('<gy-autocomplete>', () => {
   it('suggests titles as a listbox the combobox controls', async () => {
     const { input, list, type, answer, options } = await mount();
     await type('cy');
-    await answer('cy', ['Cycle', 'Cyclone']);
+    await answer('cy', ['Cyan', 'Cyclone']);
     expect(input.getAttribute('aria-expanded')).toBe('true');
     expect(list.hidden).toBe(false);
-    expect(options().map((o) => o.textContent.trim())).toEqual(['Cycle', 'Cyclone']);
+    expect(options().map((o) => o.textContent.trim())).toEqual(['Cyan', 'Cyclone']);
     await vi.waitFor(() => {
       expect(list.matches(':popover-open')).toBe(true); // Chromium takes the enhanced path
     });
@@ -107,14 +107,14 @@ describe('<gy-autocomplete>', () => {
   it('navigates with the arrow keys and picks with Enter', async () => {
     const { el, input, type, answer, key, options } = await mount();
     await type('cy');
-    await answer('cy', ['Cycle', 'Cyclone', 'Cypress']);
+    await answer('cy', ['Cyan', 'Cyclone', 'Cypress']);
     await key('ArrowUp');
     expect(input.getAttribute('aria-activedescendant')).toBe('option-2');
     expect(options()[2]?.getAttribute('aria-selected')).toBe('true');
     await key('ArrowDown');
     expect(input.getAttribute('aria-activedescendant')).toBe('option-0');
     await key('Enter');
-    expect(input.value).toBe('Cycle');
+    expect(input.value).toBe('Cyan');
     expect(input.getAttribute('aria-expanded')).toBe('false');
     expect(el.state.suggestions).toEqual([]);
   });
@@ -122,7 +122,7 @@ describe('<gy-autocomplete>', () => {
   it('closes on Escape and picks on click', async () => {
     const { input, list, type, answer, key, options } = await mount();
     await type('cy');
-    await answer('cy', ['Cycle', 'Cyclone']);
+    await answer('cy', ['Cyan', 'Cyclone']);
     await key('Escape');
     expect(list.hidden).toBe(true);
     await key('ArrowDown');
@@ -137,7 +137,7 @@ describe('<gy-autocomplete>', () => {
     await type('c');
     await type('cy');
     expect(http.calls[0]?.signal.aborted).toBe(true);
-    await answer('cy', ['Cycle']);
+    await answer('cy', ['Cyan']);
     expect(options()).toHaveLength(1);
   });
 
@@ -161,7 +161,7 @@ describe('<gy-autocomplete>', () => {
     const { el, input, type, answer } = await mount();
     input.focus();
     await type('cy');
-    await answer('cy', ['Cycle']);
+    await answer('cy', ['Cyan']);
     expect(el.state.open).toBe(true);
     input.blur();
     await vi.waitFor(() => {

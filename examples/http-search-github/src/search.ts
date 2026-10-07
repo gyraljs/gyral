@@ -39,7 +39,7 @@ export const GithubSearch = define<State, Msg>('gy-github-search', {
   update: {
     Typed: (s, m) => [
       { ...s, query: m.query },
-      // Each keystroke cancels the pending timer; replaces Cycle's Time.debounce(500).
+      // A 500 ms debounce: each keystroke cancels the pending timer.
       [debounce<Msg>(DEBOUNCE_MS, { _tag: 'Search', query: m.query })],
     ],
     Search: (s, m) => {

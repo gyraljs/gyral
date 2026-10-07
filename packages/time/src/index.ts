@@ -34,7 +34,7 @@ export function delay<M>(ms: number, msg: M, lane: Lane = {}): Command<M> {
 
 /**
  * Sends `msg` once `ms` pass without another `debounce` in the same lane: a delay under
- * `switch`, so each call cancels the pending one. Replaces Cycle's `Time.debounce`.
+ * `switch`, so each call cancels the pending one.
  */
 export function debounce<M>(ms: number, msg: M, key = 'time:debounce'): Command<M> {
   return delay(ms, msg, { key, concurrency: 'switch' });
