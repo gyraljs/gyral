@@ -16,7 +16,7 @@ import {
 import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
-import { requestTransition } from './scheduler.js';
+import { noteActivity, requestTransition } from './scheduler.js';
 import type { AnyStore } from './store.js';
 import type { ComponentSpec, Ctx, IntentRejected, Tagged } from './types.js';
 
@@ -115,6 +115,7 @@ export class HostModel<S, P> implements LocalHost {
   }
 
   dispatch(msg: Tagged, schedule = true): void {
+    noteActivity(); // settled() keeps waiting while messages arrive (04)
     const reducer = this.#reducers[msg._tag];
     if (reducer === undefined) {
       // Framework messages have optional reducers; props and stores stay readable as context.

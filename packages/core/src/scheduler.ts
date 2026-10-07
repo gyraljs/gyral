@@ -55,6 +55,16 @@ let transitionWanted = false;
 let deferred = 0;
 let quiet: { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } | null =
   null;
+/** Messages delivered and hosts marked so far; settled() restarts its quiet window on a change. */
+let activity = 0;
+
+/** A message reached a host or a store (04 "`settled()`": messages restart the quiet window). */
+export function noteActivity(): void {
+  activity += 1;
+}
+
+/** How much activity (messages, marks) the page has seen; only differences matter. */
+export const activityCount = (): number => activity;
 
 /**
  * True when no host is dirty (in either lane), no flush or transition update is pending and
@@ -91,6 +101,7 @@ function schedule(): void {
  * hidden pages, so a timer runs the frame's flush if no frame came first.
  */
 export function markDirty(task: HostTask, onFrame = false): void {
+  activity += 1;
   if (dirty.has(task)) return;
   if (onFrame) {
     framed.add(task);

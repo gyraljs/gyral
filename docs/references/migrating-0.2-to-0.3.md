@@ -282,7 +282,10 @@ children for their `<slot>`s.
 
 `await settled()` (from `@gyral/core`) waits until every component has rendered, view
 transitions and lazily loaded code included. It replaces `await el.updateComplete` and loops
-over several elements.
+over several elements. Since 0.3.1 it also waits until messages stop arriving (a store watched
+by a streaming driver, notifying or re-arming in microtasks), so drop any
+`await Promise.resolve()` loops before it; commands that never end don't block it, and timers
+are still yours to advance.
 
 ```ts
 import { settled } from '@gyral/core';

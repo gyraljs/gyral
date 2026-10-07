@@ -38,7 +38,7 @@ define<{ count: number }, Msg>('gy-counter', {
 template rules for the editor (`import gyral from '@gyral/core/eslint'`, then
 `gyral.configs.recommended` in your flat config). `@gyral/core/server` renders components to
 HTML on the server (`@gyral/ssr` builds pages on it). In tests, `await settled()` waits until
-every component has rendered.
+every component has rendered and messages have stopped arriving.
 
 ## Documentation
 

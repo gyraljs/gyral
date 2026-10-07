@@ -150,8 +150,10 @@ Test the model without a DOM (`step`, `run` and `initial` from `@gyral/testing`)
 a real browser with Vitest browser mode (the `vitest.config.ts` above), never jsdom. Swap
 drivers for fakes (`fakeDriver`, `fakeHttp` from `@gyral/http/testing`, `withDrivers`).
 `await settled()` (from `@gyral/core`) waits until every component has rendered, view
-transitions included (view/04-scheduler.md); it doesn't wait for drivers. It replaces 0.2's
-`el.updateComplete`.
+transitions included, and messages have stopped arriving (view/04-scheduler.md "`settled()`"):
+a stream or store notification already on its way in a microtask is waited for, while commands
+that never end (a store watch, a socket) don't block it. It never waits for timers or the
+network: answer fakes or advance `virtualTime` first. It replaces 0.2's `el.updateComplete`.
 
 ## Server rendering
 

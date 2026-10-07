@@ -11,6 +11,7 @@ import {
 } from './command.js';
 import { features, type LocalHost } from './features.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
+import { noteActivity } from './scheduler.js';
 import { bindStores } from './store-binding.js';
 import type { IntentRejected, Tagged } from './types.js';
 
@@ -195,6 +196,7 @@ function createInstance<S, M extends Tagged>(
     },
     drivers: {},
     send(msg) {
+      noteActivity(); // settled() keeps waiting while messages arrive (04)
       const reducer = reducers[msg._tag];
       if (reducer === undefined) {
         console.warn(`store "${store.name}" has no update for message "${msg._tag}".`);
