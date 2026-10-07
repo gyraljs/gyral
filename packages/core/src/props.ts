@@ -97,7 +97,8 @@ export function attributeValue(
 
 /**
  * A property set's (or seed's) value for prop `name`: validated in development only, where an
- * invalid value is missing and a schema that transforms warns (production keeps the input).
+ * invalid value is missing and a schema that transforms warns. Production keeps the input
+ * without calling this (propFeature, element.ts: gyral-c5d.14).
  */
 export function propertyValue(
   tag: string,
@@ -184,11 +185,15 @@ export function checkShadowed(tag: string, names: readonly string[]): void {
   console.warn(text);
 }
 
-/** What the element uses, registered by the prop builders (features.ts). */
+/**
+ * What the element uses, registered by the prop builders (features.ts). Property sets and seeds
+ * go through `propertyValue` in development only: production keeps the value as given, so the
+ * property path's schema and guard handling stay out of production bundles (gyral-c5d.14).
+ */
 export const propFeature = {
   attributeOf,
   attributeValue,
-  propertyValue,
+  propertyValue: DEV ? propertyValue : undefined,
   warnMissing,
   readProps,
   checkShadowed,

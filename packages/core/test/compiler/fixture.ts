@@ -1,6 +1,6 @@
 // Builds small fixture apps with the real `vite build` (programmatic API, write: false) and the
 // Gyral preset, for the template compiler's tests. Each app lives in its own temp directory.
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -31,6 +31,8 @@ export interface BuildOptions {
   readonly entry?: string;
   /** `gyralVitePreset({ clientOnly: true })` (view/07 "Client-only builds"). */
   readonly clientOnly?: boolean;
+  /** Link this workspace's core as `node_modules/@gyral/core`, so `'@gyral/core'` resolves. */
+  readonly linkCore?: boolean;
 }
 
 /** Core's main entry: fixtures that define components import it by absolute path. */
@@ -51,6 +53,10 @@ export async function buildApp(
   options: BuildOptions = {},
 ): Promise<Built> {
   const root = app(files);
+  if (options.linkCore === true) {
+    mkdirSync(join(root, 'node_modules/@gyral'), { recursive: true });
+    symlinkSync(resolve(import.meta.dirname, '../..'), join(root, 'node_modules/@gyral/core'));
+  }
   const logs: string[] = [];
   const log = (msg: string): void => {
     logs.push(msg);

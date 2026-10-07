@@ -46,6 +46,8 @@ export interface CompileInput {
    */
   readonly ids: boolean;
   readonly parse5: Parse5 | undefined;
+  /** Other edits to apply in the same pass (prop-schemas.ts); dropped inside a call site. */
+  readonly extra?: readonly Edit[];
   /** Template id → normalized strings and call site, for the whole build (collisions). */
   readonly seen: Map<string, { readonly strings: string; readonly loc: string }>;
 }
@@ -168,6 +170,9 @@ export function compileModule(input: CompileInput): { code: string; map: SourceM
       imports.push(`import { ${exported} as ${callee} } from ${JSON.stringify(entry)};`);
     }
     edits.push(...siteEdits(code, node, callee, name));
+  }
+  for (const e of input.extra ?? []) {
+    if (!sites.some(({ node }) => e.start < node.end && e.end > node.start)) edits.push(e);
   }
   // Prepended to the first line (after a hashbang), so no line moves.
   const at = code.startsWith('#!') ? code.indexOf('\n') + 1 : 0;

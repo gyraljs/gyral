@@ -17,7 +17,7 @@ import {
 } from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
-import type { PropFeature, PropTable } from './props.js';
+import type { PropFeature, PropTable, propertyValue } from './props.js';
 import {
   afterRender,
   markDirty,
@@ -43,6 +43,9 @@ export function elementClass<S, M extends Tagged, P>(
   const names = Object.keys(table);
   // Registered by the prop builders (features.ts): set whenever a component declares props.
   const props = features.props as PropFeature;
+  /** Property sets and seeds: checked in development, kept as given in production (05). */
+  const checked = (props: PropFeature): typeof propertyValue =>
+    props.propertyValue as typeof propertyValue;
   const attrs = new Map<string, string>();
   const light = isLight(spec);
   let sheets: CSSStyleSheet[] | undefined;
@@ -69,7 +72,7 @@ export function elementClass<S, M extends Tagged, P>(
             return this.#values[name];
           },
           set(this: Element, value: unknown) {
-            this.#write(name, props.propertyValue(tag, name, table[name], value));
+            this.#write(name, DEV ? checked(props)(tag, name, table[name], value) : value);
           },
         });
       }
@@ -182,7 +185,7 @@ export function elementClass<S, M extends Tagged, P>(
       for (const [name, value] of Object.entries(seed.props)) {
         const def = table[name];
         if (def === undefined || this.#values[name] !== undefined) continue;
-        this.#values[name] = props.propertyValue(tag, name, def, value, 'the seed');
+        this.#values[name] = DEV ? checked(props)(tag, name, def, value, 'the seed') : value;
       }
       this.#afterInit = this.#model.resume(seed);
       this.#serverRendered = true;

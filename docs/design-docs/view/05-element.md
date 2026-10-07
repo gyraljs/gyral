@@ -84,6 +84,17 @@ schema library.
   `Date`s, defaults filled in, unknown keys stripped) would do it only for attributes. Schemas
   for properties should **check, not decode**; a type guard is the simplest check. Attributes
   are the exception: their value is the parse's output (a string has no identity to keep).
+- **Production bundles (gyral-c5d.14, 0.3.1):** property sets and seeds don't go through the
+  prop machinery at all in production (the element keeps the value as given), so its property
+  path stays out of production bundles. The Vite preset also replaces the check of
+  `prop.value(check)` (a property-only prop, whose check can't run in production) with
+  `void 0` in production client builds when the check is a plain reference (`prop.value(Game)`,
+  `schemas.game`) or an inline function, so the check and whatever only it uses (a schema
+  module) tree-shake (`compiler/prop-schemas.ts`). A call (`prop.value(v.array(Item))`) is
+  kept: evaluating it could have effects, and the build never changes what runs. To drop such
+  a schema, declare it once (`const Items = v.array(Item)`) with a library whose builders are
+  marked side-effect free, and pass `prop.value(Items)`. `prop.json` keeps its check (attributes
+  are parsed through it), and so do development builds.
 - No property-to-attribute reflection. State that CSS needs goes through custom states
   (`spec.states`).
 

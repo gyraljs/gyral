@@ -139,7 +139,10 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
     transform: {
       // Modules naming a template tag (html or svg; core's template module names both), or a
       // spec field whose machinery the build adds only when named (view/05).
-      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg|viewTransition|renderOnFrame|states/ },
+      filter: {
+        id: /\.[cm]?[jt]sx?$/,
+        code: /html|svg|viewTransition|renderOnFrame|states|\.value\s*\(/,
+      },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },

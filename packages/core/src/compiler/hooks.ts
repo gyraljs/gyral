@@ -18,10 +18,11 @@ import type { Plugin } from 'vite';
 import type { Node } from './ast.js';
 import { CompileError, compileModule } from './compile.js';
 import { createFeatures } from './features.js';
+import { stripPropSchemas } from './prop-schemas.js';
 import { loadParse5, type Parse5 } from './parse5-check.js';
 import { VIEW } from './locate.js';
 import { findUses, htmlImports } from './scan.js';
-import { Lines, type SourceMap } from './source.js';
+import { Lines, splice, type SourceMap } from './source.js';
 
 type Fn<H> = H extends { handler: infer F } ? F : H;
 type HookFn<K extends keyof Plugin> = Fn<NonNullable<Plugin[K]>>;
@@ -56,8 +57,10 @@ const appended = (result: Transformed, code: string, imports: string): Transform
       ? { code: code + imports, map: null }
       : { ...result, code: result.code + imports };
 
-/** Modules naming a template tag: only those can need compiling. */
-const NAMES_TAG = /html|svg/;
+/** Modules naming a template tag, or calling `.value(`: only those can need compiling. */
+const NAMES_TAG = /html|svg|\.value\s*\(/;
+/** A `prop.value(…)` call may be in the module (prop-schemas.ts). */
+const PROP_VALUE = /\.value\s*\(/;
 
 /** template.ts's symbol description: the module defining `html` and `svg`, in any copy of core. */
 const DEFINES_HTML = /Symbol\(['"]gyral\.template['"]\)/;
@@ -152,15 +155,22 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
     } catch {
       return null; // not ours to report: the bundler fails on it with a better message
     }
+    const lines = new Lines(code);
+    const file = relative(root, id);
+    // Production client builds: property-only prop checks can't run (prop-schemas.ts).
+    const client = opts?.ssr !== true && env.config.consumer === 'client';
+    const extra =
+      client && !developmentBuild(env.config) && PROP_VALUE.test(code)
+        ? stripPropSchemas(program, code)
+        : [];
+    const unchanged = (): Transformed => (extra.length === 0 ? null : splice(lines, extra, id));
     const { imports, reexports } = htmlImports(program);
-    if (imports.length === 0 && reexports.length === 0) return null;
+    if (imports.length === 0 && reexports.length === 0) return unchanged();
     const isSource = async (specifier: string): Promise<boolean> => {
       if (sources.includes(specifier)) return true;
       const resolved = await this.resolve(specifier, id);
       return resolved !== null && state.sourceIds.has(resolved.id);
     };
-    const lines = new Lines(code);
-    const file = relative(root, id);
     const where = (node: Node): string => `${file}:${String(lines.position(node.start).line)}`;
     for (const r of reexports) {
       if (!(await isSource(r.specifier))) continue;
@@ -172,7 +182,7 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
     }
     const matched = [];
     for (const binding of imports) if (await isSource(binding.specifier)) matched.push(binding);
-    if (matched.length === 0) return null;
+    if (matched.length === 0) return unchanged();
     const fail = (start: number, end: number, message: string): never =>
       this.error({
         message,
@@ -186,7 +196,7 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
         this.warn(`${where(l.node)}: re-exporting a template tag; its users stay uncompiled.`);
       else fail(l.node.start, l.node.end, CANT_FOLLOW);
     }
-    if (sites.length === 0) return null;
+    if (sites.length === 0) return unchanged();
     const ssr = opts?.ssr === true || env.config.consumer === 'server';
     try {
       return compileModule({
@@ -197,6 +207,7 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
         ssr,
         ids: ssr || developmentBuild(env.config),
         parse5: loadOnce(),
+        extra,
         seen: state.seen,
       });
     } catch (error) {

@@ -114,9 +114,15 @@ interface FormArgs {
   readonly checked: string;
 }
 
+/**
+ * The attendees prop's check. Declared once and passed by name, so production builds, which never
+ * check property sets, drop it (view/05-element.md "When props are validated").
+ */
+const Attendees = v.array(v.object({ name: v.string(), guests: v.number() }));
+
 export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
   props: {
-    attendees: prop.value(v.array(v.object({ name: v.string(), guests: v.number() })), {
+    attendees: prop.value(Attendees, {
       default: [],
     }),
     joined: prop.string(),
