@@ -2,7 +2,7 @@
 
 Status: **accepted** (2026-10-04)
 
-> **Amended by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): the fallback tiers below come from it, and shared state is stores (ADR 0013), not a signals polyfill.
+> **Amended by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): the fallback tiers below come from it, and shared state is stores (ADR 0013), not a signals polyfill.
 
 ## Decision
 

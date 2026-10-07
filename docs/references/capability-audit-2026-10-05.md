@@ -7,8 +7,8 @@ ADRs and the gyral.dev docs (`gyral.dev/content/docs`). Every gap below is track
 > **Superseded in part by [ADR 0018](../design-docs/0018-view-layer.md)** (0.3.0): Gyral now
 > renders with its own view layer. The Lit-related items below ("Coming from Lit", the
 > `@lit/localize`, `@lit/context` and `@lit/task` spikes, the lit-html list leak,
-> `ElementDirective`) describe 0.2.x and no longer apply; gyral-1zd.12 is re-scoped to an i18n
-> design of Gyral's own.
+> `ElementDirective`) describe 0.2.x and no longer apply, and `defineStoresProvider` is no
+> longer exported; gyral-1zd.12 is re-scoped to an i18n design of Gyral's own.
 
 ## Already covered well
 

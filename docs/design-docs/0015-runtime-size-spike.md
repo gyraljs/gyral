@@ -6,7 +6,7 @@ same day by measurements. Proposed 2026-10-04. Beads: gyral-ob0 (bundle size), g
 (Effect 4 evaluation), gyral-czi.9 (Effect adds ~40 kB), gyral-das, gyral-qh4, gyral-pr7,
 gyral-sug.
 
-> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): the `lit-html` 3.3.0 pin ends when Lit is removed. Lit-specific text below describes 0.2.x.
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): the `lit-html` 3.3.0 pin ended when Lit was removed. Lit-specific text below describes 0.2.x.
 
 ## Question
 

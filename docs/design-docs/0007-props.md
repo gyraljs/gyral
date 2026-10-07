@@ -2,7 +2,7 @@
 
 Status: **accepted** (2026-10-04)
 
-> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): props are declared with the `prop.*` builders over Standard Schema ([view/05-element.md](view/05-element.md)); `PropDeclaration`, Lit's `willUpdate` and reactive accessors are gone. `PropsChanged` and props as context stay. Lit-specific text below describes 0.2.x.
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): props are declared with the `prop.*` builders over Standard Schema ([view/05-element.md](view/05-element.md)); `PropDeclaration`, Lit's `willUpdate` and reactive accessors are gone. `PropsChanged` and props as context stay. Lit-specific text below describes 0.2.x.
 
 ## Context
 

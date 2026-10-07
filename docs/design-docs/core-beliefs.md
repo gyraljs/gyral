@@ -18,5 +18,5 @@
 8. **The repo is the system of record.** If a decision is not in `docs/` or beads, it does
    not exist for the next agent session.
 9. **Test in a real browser.** Vitest browser mode with Chromium; no jsdom.
-10. **Measure, then budget.** Bundle size and performance get budgets once v0.1 can be
-    measured (bead: bundle-size spike), not before.
+10. **Measure, then budget.** Bundle size and performance get budgets only from measurements
+    (ADR 0015). `pnpm check` enforces the size budgets in `scripts/size-budget.json` (ADR 0018).

@@ -3,7 +3,7 @@
 Status: **accepted** (2026-10-04). Bead: gyral-czi.5. Replaces Cycle's `isolate()` and
 `@cycle/state` `makeCollection`.
 
-> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): `each()` replaces `repeat`/`keyed`; `live`, `classMap`, `styleMap`, `unsafeCSS` and `ElementDirective` are gone (element hooks replace directives). Lit-specific text below describes 0.2.x.
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): `each()` replaces `repeat`/`keyed`; `live`, `classMap`, `styleMap`, `unsafeCSS` and `ElementDirective` are gone (element hooks replace directives). Lit-specific text below describes 0.2.x.
 
 ## Decision
 

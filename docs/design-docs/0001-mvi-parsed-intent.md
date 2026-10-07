@@ -2,7 +2,7 @@
 
 Status: **accepted** (2026-10-04)
 
-> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, lands in 0.3.0): the view is a Gyral `html` template, not a Lit template. Lit-specific text below describes 0.2.x.
+> **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): the view is a Gyral `html` template, not a Lit template. Lit-specific text below describes 0.2.x.
 
 ## Context
 
