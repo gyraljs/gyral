@@ -165,8 +165,8 @@ export const Hand = define<{ readonly cards: readonly Card[] }, never>('my-hand'
 ## Element hooks
 
 A hook is a small behaviour attached to the element it sits on, written in the start tag. Core
-ships `invalid(errors)` (forms.md), `labelledBy(id, fallback?)` and `capturePointer()`
-(press-and-release intents, intent.md). Write your own with
+ships `invalid(errors)` (forms.md), `labelledBy(id, fallback?)`, `capturePointer()`
+(press-and-release intents, intent.md) and `cssVars(vars)` (below). Write your own with
 `defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
 (`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
 server-rendered start tag. A hook that must tear down is defined with `defineDisposableHook`
@@ -201,6 +201,40 @@ export const Steps = define<State, Msg>('my-steps', {
   `,
 });
 ```
+
+### Custom properties under a CSP: `cssVars`
+
+`cssVars({ '--name': value })` sets custom properties on its element through the CSSOM
+(`style.setProperty`), which a Content-Security-Policy without `'unsafe-inline'` in
+`style-src` allows; a `style` attribute isn't. It touches only the properties it names: other
+inline styles stay, and a property that is dropped or set to `null`/`undefined`/`false` is
+removed.
+
+```ts
+import { css, cssVars, define, html, prop, type Stateless } from '@gyral/core';
+
+/** `<my-progress value="0.3">`: a bar filled to `value` (0 to 1). */
+export const Progress = define<Stateless, never, { readonly value: number }>('my-progress', {
+  props: { value: prop.number({ default: 0 }) },
+  init: () => ({}),
+  intent: {},
+  update: {},
+  // The stylesheet's default is what the server-rendered page shows.
+  styles: css`
+    .bar {
+      inline-size: calc(var(--progress, 0) * 100%);
+      block-size: 0.5rem;
+      background: currentColor;
+    }
+  `,
+  view: (_s, _i, { props }) =>
+    html`<div class="bar" ${cssVars({ '--progress': props.value })}></div>`,
+});
+```
+
+Hooks run in the browser only, so server-rendered markup has no inline style: give every
+property a default in the stylesheet (`var(--progress, 0)`), which the page shows until the
+component hydrates.
 
 ## Widgets with a lifecycle: their own element, or a disposable hook
 

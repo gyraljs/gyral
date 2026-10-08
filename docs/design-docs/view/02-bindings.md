@@ -203,7 +203,14 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
   a hook that only listens needs no `dispose`.
 - Core ships `invalid`, `labelledBy` and `capturePointer` (0.3.1, gyral-dyn.13: pointer
-  capture on `pointerdown` for press-and-release intents, 05 "Press and release") as hooks.
+  capture on `pointerdown` for press-and-release intents, 05 "Press and release") as hooks,
+  and `cssVars` (0.3.1, gyral-dyn.19): `cssVars({ '--x': v })` sets the named custom
+  properties with `style.setProperty` and removes the ones dropped since the last call
+  (`removeProperty`), leaving other inline styles alone. CSSOM writes are allowed by a
+  `style-src` without `'unsafe-inline'`, where a `style` attribute is blocked. It is
+  client-only (no `server` half: the server can't write a style attribute under such a
+  policy), so stylesheets give each property a default (`var(--x, 0)`). Like every built-in
+  hook it is its own module: apps that don't import it don't bundle it.
 
 ### Widgets with a lifecycle
 
