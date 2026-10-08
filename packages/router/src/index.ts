@@ -1,5 +1,7 @@
-import { command, type Command } from '@gyral/core';
+import { command, type Command, type Head } from '@gyral/core';
 import { router, type AfterNavigation, type RouteLocation, type RouterInput } from './driver.js';
+import { applyHead } from './internal/head.js';
+import { headSlot } from './internal/head-slot.js';
 
 export { makeRouter, router } from './driver.js';
 export type {
@@ -43,14 +45,17 @@ export function go(delta: number): Command<never> {
 }
 
 /**
- * Sets the document title (the memory history records it instead). Compute the title with a
- * pure function of state, and call the same function in the server's document template, so
- * server and client titles come from one source:
+ * Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed
+ * element (description, robots, canonical, meta, links, JSON-LD). Managed elements the new head
+ * doesn't name are removed; unchanged ones are not written; content from `page({ extraHead })`
+ * is never touched. The memory history records it instead. Build the head with one pure
+ * function and pass the same function's result to the server's `page()`:
  *
- *   Routed: (s, m) => [next, [setTitle(pageTitle(m.location.pathname))]]
+ *   Routed: (s, m) => [next, [setHead(pageHead(site.match(m.location.href), origin))]]
  */
-export function setTitle(title: string): Command<never> {
-  return fireAndForget({ _tag: 'Title', title });
+export function setHead(head: Head): Command<never> {
+  headSlot.apply ??= applyHead;
+  return fireAndForget({ _tag: 'Head', head });
 }
 
 export const back = (): Command<never> => go(-1);

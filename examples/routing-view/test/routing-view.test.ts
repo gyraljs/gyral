@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { settled } from '@gyral/core';
 import { step } from '@gyral/testing';
 import { makeRouter, type RouterDriver } from '@gyral/router';
-import { app, pageTitle, RoutingView } from '../src/app.js';
+import { app, pageHead, RoutingView } from '../src/app.js';
 
 let driver: RouterDriver | undefined;
 
@@ -64,9 +64,15 @@ describe('routing-view', () => {
     expect(state.route?.name).toBe('contacts');
   });
 
-  it('derives the document title from the route', () => {
-    expect(pageTitle(app.match('https://x.test/about'))).toBe('About — Gyral routing');
-    expect(pageTitle(undefined)).toBe('Page not found — Gyral routing');
+  it('derives the document head from the route', () => {
+    expect(pageHead(app.match('https://x.test/about/'), 'https://x.test')).toEqual({
+      title: 'About — Gyral routing',
+      canonical: 'https://x.test/about',
+    });
+    expect(pageHead(undefined, 'https://x.test')).toEqual({
+      title: 'Page not found — Gyral routing',
+      robots: 'noindex',
+    });
   });
 
   it('renders the initial route and marks its link as current', async () => {
@@ -85,7 +91,7 @@ describe('routing-view', () => {
     await settled();
     expect(new URL(router.snapshot().href).pathname).toBe('/contacts');
     await vi.waitFor(() => {
-      expect(router.snapshot().title).toBe('Contacts — Gyral routing');
+      expect(router.snapshot().head?.title).toBe('Contacts — Gyral routing');
     });
     expect($('h1')?.textContent).toBe('Contact me');
     expect(link('Contacts').getAttribute('aria-current')).toBe('page');

@@ -4,7 +4,7 @@ import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
 import '../src/app.js'; // registers <gy-iso-app> so the server can render it
 import '../src/contact.js'; // and <gy-iso-contact>, rendered inside it on /about
-import { pageTitle, site } from '../src/routes.js';
+import { pageHead, site } from '../src/routes.js';
 
 export interface AppOptions {
   /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
@@ -39,9 +39,8 @@ export function createApp(options: AppOptions): Hono {
     const { pathname } = new URL(c.req.url);
     return renderPage(
       {
-        title: pageTitle(pathname),
-        description: 'A Gyral app rendered on the server and hydrated in the browser.',
-        head: baseStyles,
+        ...pageHead(pathname),
+        extraHead: baseStyles,
         body: html`<gy-iso-app path=${pathname}></gy-iso-app>`,
         scripts: [options.clientEntry],
         modulepreload: options.modulepreload ?? [],

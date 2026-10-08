@@ -1,6 +1,7 @@
-import type { Driver } from '@gyral/core';
+import type { Driver, Head } from '@gyral/core';
 import { capturedUrl, linkCapture } from './links.js';
 import { createMemorySource, type MemoryOptions } from './memory.js';
+import { headSlot } from './internal/head-slot.js';
 import { rendered } from './internal/rendered.js';
 import type { HistoryPath } from './internal/history.js';
 import type { AfterNavigation, RouterSnapshot, Source } from './source.js';
@@ -18,7 +19,7 @@ export type RouterInput =
       readonly replace: boolean;
     } & Partial<AfterNavigation>)
   | { readonly _tag: 'Traverse'; readonly delta: number }
-  | { readonly _tag: 'Title'; readonly title: string }
+  | { readonly _tag: 'Head'; readonly head: Head }
   | { readonly _tag: 'Listen' };
 
 export interface RouterOptions extends MemoryOptions {
@@ -49,7 +50,7 @@ export interface RouterOptions extends MemoryOptions {
 }
 
 export interface RouterDriver extends Driver<RouterInput, RouteLocation | undefined> {
-  /** The current URL and title as this router sees them. */
+  /** The current URL and last head as this router sees them. */
   readonly snapshot: () => RouterSnapshot;
   /** Removes document listeners and ends running `listen` commands. */
   readonly dispose: () => void;
@@ -88,6 +89,7 @@ function createBrowserSource(options: RouterOptions): Source {
   // Navigation API: the `info` of each navigation this router started, so only those (and
   // same-document traversals) are intercepted, with that navigation's scroll/focus choice.
   const started = new WeakMap<object, AfterNavigation>();
+  let head: Head | undefined;
   // History API path (ADR 0003 tier 3): loaded only without the Navigation API.
   const history: Promise<HistoryPath> | undefined =
     nav === undefined
@@ -153,14 +155,11 @@ function createBrowserSource(options: RouterOptions): Source {
     traverse: (delta) => {
       win.history.go(delta);
     },
-    setTitle: (title) => {
-      win.document.title = title;
+    setHead: (next) => {
+      head = next;
+      headSlot.apply?.(win.document, next);
     },
-    snapshot: () => ({
-      href: win.location.href,
-      title: win.document.title,
-      length: win.history.length,
-    }),
+    snapshot: () => ({ href: win.location.href, head, length: win.history.length }),
     dispose: () => {
       void history?.then((path) => {
         path.dispose();
@@ -190,8 +189,8 @@ export function makeRouter(options: RouterOptions = {}): RouterDriver {
         case 'Traverse':
           use().traverse(input.delta);
           return undefined;
-        case 'Title':
-          use().setTitle(input.title);
+        case 'Head':
+          use().setHead(input.head);
           return undefined;
       }
     },

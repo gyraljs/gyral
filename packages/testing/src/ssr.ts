@@ -1,13 +1,19 @@
 // Browser tests for server-rendered pages (gyral-czi.22): put real server output into the
 // document the way a page load would, then import components so they hydrate in place.
 // Server output usually comes from golden fixtures written by Node route tests.
-import { ISLAND_ATTRIBUTE, resetDocumentStores, settled } from '@gyral/core';
+import { HEAD_ATTRIBUTE, ISLAND_ATTRIBUTE, resetDocumentStores, settled } from '@gyral/core';
 
 export interface MountSsrOptions {
   /** Restore the page-level store seed (`data-gyral-stores`). Default `true`. */
   readonly stores?: boolean;
   /** Copy `<meta name=…>` elements from the head (e.g. a CSRF token). Default `true`. */
   readonly metas?: boolean;
+  /**
+   * Copy the managed head (ADR 0019: elements marked `data-gyral-head`) right after the
+   * document's `<title>`, as the server wrote it, so a test can check that the client's first
+   * `setHead()` adopts it without writing. Default `true`.
+   */
+  readonly head?: boolean;
 }
 
 export interface MountedSsr {
@@ -57,7 +63,8 @@ const between = (html: string, tag: string): string =>
  * importing component modules so elements upgrade and hydrate like on a real page load.
  * - Only `<head>` styles are applied: `<style>` inside Declarative Shadow DOM belongs to its
  *   shadow root and must not leak into the page.
- * - The store seed and named `<meta>`s are restored, as the browser would see them.
+ * - The store seed, named `<meta>`s and the managed head are restored, as the browser would
+ *   see them.
  */
 export function mountSsr(html: string, options: MountSsrOptions = {}): MountedSsr {
   const isDocument = /<body[\s>]/.test(html);
@@ -85,7 +92,7 @@ export function mountSsr(html: string, options: MountSsrOptions = {}): MountedSs
     }
   }
   if (options.metas !== false) {
-    for (const m of head.matchAll(/<meta name="([^"]+)" content="([^"]*)"/g)) {
+    for (const m of head.matchAll(/<meta name="([^"]+)" content="([^"]*)"(?! data-gyral-head)/g)) {
       const meta = document.createElement('meta');
       meta.name = m[1] ?? '';
       meta.content = m[2] ?? '';
@@ -93,6 +100,15 @@ export function mountSsr(html: string, options: MountSsrOptions = {}): MountedSs
     }
   }
   document.head.append(...added);
+  if (options.head !== false) {
+    const parsed = document.createElement('template');
+    parsed.innerHTML = head;
+    const managed = [...parsed.content.querySelectorAll(`[${HEAD_ATTRIBUTE}]`)];
+    const title = document.head.querySelector('title');
+    if (title === null) document.head.prepend(...managed);
+    else title.after(...managed);
+    added.push(...managed);
+  }
 
   const watch = watchProblems();
   const root = document.createElement('div');

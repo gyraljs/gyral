@@ -7,7 +7,7 @@ import {
   makeRouter,
   navigate,
   routes,
-  setTitle,
+  setHead,
   type RouteLocation,
   type RouteMatch,
   type RouterDriver,
@@ -36,7 +36,10 @@ const App = define<State, Msg>('test-memory-app', {
   update: {
     Routed: (s, m) => {
       const route = app.match(m.location.href);
-      return [{ route, seen: [...s.seen, m.location.pathname] }, [setTitle(titleOf(route))]];
+      return [
+        { route, seen: [...s.seen, m.location.pathname] },
+        [setHead({ title: titleOf(route) })],
+      ];
     },
     Go: (s, m) => [s, [navigate(m.url, { replace: m.replace ?? false })]],
     Back: (s) => [s, [back()]],
@@ -106,13 +109,13 @@ describe('memory history', () => {
     expect(location.href).toBe(original);
   });
 
-  it('records titles set by setTitle() without changing document.title', async () => {
+  it('records the head set by setHead() without changing the document', async () => {
     await vi.waitFor(() => {
-      expect(driver.snapshot().title).toBe('User 1');
+      expect(driver.snapshot().head?.title).toBe('User 1');
     });
     el.send({ _tag: 'Go', url: '/' });
     await vi.waitFor(() => {
-      expect(driver.snapshot().title).toBe('Home');
+      expect(driver.snapshot().head).toEqual({ title: 'Home' });
     });
     expect(document.title).toBe(originalTitle);
   });
@@ -200,19 +203,20 @@ describe('link capture is opt-in (ADR 0009 addendum)', () => {
   });
 });
 
-describe('setTitle() with the browser history', () => {
+describe('setHead() with the browser history', () => {
   it('sets document.title', async () => {
     const before = document.title;
     const driver = makeRouter({ captureLinks: false, navigationApi: false });
+    setHead({ title: 'Hello' }); // fills the head slot, as an app's first setHead() does
     await driver.run(
-      { _tag: 'Title', title: 'Hello' },
+      { _tag: 'Head', head: { title: 'Hello' } },
       {
         signal: new AbortController().signal,
         emit: () => undefined,
       },
     );
     expect(document.title).toBe('Hello');
-    expect(driver.snapshot().title).toBe('Hello');
+    expect(driver.snapshot().head?.title).toBe('Hello');
     document.title = before;
     driver.dispose();
   });

@@ -1,10 +1,10 @@
-import { css, define, html, nothing } from '@gyral/core';
+import { css, define, html, nothing, type Head } from '@gyral/core';
 import {
   back,
   listen,
   makeRouter,
   routes,
-  setTitle,
+  setHead,
   type RouteLocation,
   type RouteMatch,
 } from '@gyral/router';
@@ -50,9 +50,16 @@ const pages: Readonly<Record<Name, Page>> = {
 
 const order: readonly Name[] = ['home', 'about', 'contacts'];
 
-/** The document title for a route: one pure function, so a server could reuse it. */
-export const pageTitle = (route: Route | undefined): string =>
-  `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`;
+/**
+ * The document head for a route: one pure function, so a server could reuse it (ADR 0019).
+ * An unknown route is `noindex`; a known one names its canonical URL.
+ */
+export const pageHead = (route: Route | undefined, origin: string): Head => ({
+  title: `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`,
+  ...(route === undefined
+    ? { robots: 'noindex' }
+    : { canonical: new URL(route.path, origin).href }),
+});
 
 export const RoutingView = define<State, Msg>('gy-routing-view', {
   // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
@@ -68,7 +75,8 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
   update: {
     Routed: (_s, { location }) => {
       const route = app.match(location.href);
-      return [{ location, route }, [setTitle(pageTitle(route))]];
+      // A client-only app: the page's own origin is the canonical one.
+      return [{ location, route }, [setHead(pageHead(route, new URL(location.href).origin))]];
     },
     Back: (s) => [s, [back()]],
   },

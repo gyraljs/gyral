@@ -59,7 +59,7 @@ describe('hydration', () => {
     expect(location.pathname).toBe('/');
     expect($('h1')?.textContent).toBe('The homepage');
     expect($('a[aria-current="page"]')?.getAttribute('href')).toBe('/');
-    // Same pageTitle() the server used for <title>.
+    // Same pageHead() the server used for its head.
     expect(document.title).toBe('The homepage — Gyral isomorphic');
   });
 });

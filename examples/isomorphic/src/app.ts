@@ -1,6 +1,6 @@
 import { css, define, html, prop } from '@gyral/core';
-import { listen, makeRouter, setTitle, type RouteLocation } from '@gyral/router';
-import { pageTitle, site, titles } from './routes.js';
+import { listen, makeRouter, setHead, type RouteLocation } from '@gyral/router';
+import { pageHead, site, titles } from './routes.js';
 
 export interface Props {
   /** The request path, set by the server. On the client the router takes over. */
@@ -53,8 +53,9 @@ export const App = define<State, Msg, Props>('gy-iso-app', {
   ],
   intent: {},
   update: {
-    // pageTitle() also renders the server's <title>: one source for both (ADR 0009).
-    Routed: (_s, m) => [{ path: m.location.pathname }, [setTitle(pageTitle(m.location.pathname))]],
+    // pageHead() also renders the server's head: one source for both (ADR 0019). The first
+    // Routed after hydration finds the server's head already matching and writes nothing.
+    Routed: (_s, m) => [{ path: m.location.pathname }, [setHead(pageHead(m.location.pathname))]],
   },
   view: (s) => html`
     <header>${menu(s.path)}</header>

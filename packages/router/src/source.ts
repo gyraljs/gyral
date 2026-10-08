@@ -1,3 +1,4 @@
+import type { Head } from '@gyral/core';
 import type { RouteLocation } from './stream.js';
 
 /** What the browser history does once a navigation's render has committed (ADR 0009). */
@@ -17,15 +18,16 @@ export interface Source {
     after?: Partial<AfterNavigation>,
   ): RouteLocation | Promise<RouteLocation> | undefined;
   traverse(delta: number): void;
-  setTitle(title: string): void;
+  setHead(head: Head): void;
   snapshot(): RouterSnapshot;
   dispose(): void;
 }
 
-/** The router's current URL and title, for tests and server-side assertions. */
+/** The router's current URL and last head, for tests and server-side assertions. */
 export interface RouterSnapshot {
   readonly href: string;
-  readonly title: string;
+  /** The last `setHead()` head, if any (the browser applies it to the document too). */
+  readonly head: Head | undefined;
   /** Number of history entries (memory history; `history.length` in a browser). */
   readonly length: number;
 }
