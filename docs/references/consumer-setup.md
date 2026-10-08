@@ -230,6 +230,11 @@ carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStre
   styles only for custom properties with a fallback in the stylesheet, or allow known values
   by hash (`style-src-attr 'unsafe-hashes' 'sha256-…'`). Details:
   [view/08-styles.md](../design-docs/view/08-styles.md) "Style attributes under a strict CSP".
+- **Trusted Types:** the browser parses template HTML and `raw()` markup through one policy
+  named `gyral`, so `require-trusted-types-for 'script'` works in client-only and
+  server-rendered apps alike. If the policy also names the allowed policies, add `gyral`:
+  `require-trusted-types-for 'script'; trusted-types gyral`. Details:
+  [view/01-templates.md](../design-docs/view/01-templates.md) "Instantiation".
 
 Hydration is built into core (view/07-hydration.md): a server-rendered component resumes its
 state from its `data-gyral-seed` and adopts the server's DOM in place; there is no hydration
