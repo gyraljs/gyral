@@ -1,6 +1,9 @@
 # ADR 0021 — Built-in view transitions for items that move between lists
 
-Status: **proposed, blocked by the spike** (2026-10-08), for **0.3.1**. Bead: gyral-dyn.18. Builds on the ADR 0001
+Status: **rejected** (2026-10-08). The spike (below) showed that `view-transition-name` inside a
+shadow root is never captured by a document transition in Chromium, Firefox or WebKit, and Gyral
+components are shadow DOM by default. Moving items between lists stays a FLIP recipe, which works
+inside shadow DOM. Revisit when scoped view transitions ship in all engines. Bead: gyral-dyn.18. Builds on the ADR 0001
 addendum "View Transitions" (gyral-czi.12), view/04-scheduler.md "View transitions",
 view/03-lists.md and ADR 0003.
 
