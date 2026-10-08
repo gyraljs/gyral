@@ -172,11 +172,47 @@ attribute (`data-intent-keydown=${i.Cancel}`, above).
 
 **Typing a parser.** Each key in `intent` must produce its own variant (`Qty` produces
 `{ _tag: 'Qty'; … }`), so don't annotate a parser with the whole union: `(): Msg => …` widens
-it, and TypeScript reports a long error ending in "`IntentParser<Msg>` is not assignable to
-`IntentParser<{ _tag: 'Qty'; … }>`". Inside the spec, leave the return type off: the key types
+it, and TypeScript reports a long error ending in "`IntentParser<Msg, …>` is not assignable to
+`IntentParser<{ _tag: 'Qty'; … }, …>`". Inside the spec, leave the return type off: the key types
 it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
 type (`Extract<Msg, { _tag: 'Qty' }> | undefined`). The same holds for `child()`, `form()` and
 `field()` mappers.
+
+## Props and stores in a parser: `(input, ctx)`
+
+A parser's second argument is the read-only context reducers get: `props` as they are when the
+event fires, and `read(store)` for the stores in `spec.stores` (0.3.1). Parsers that don't need
+it take one parameter. Use it when the decision must happen during the event, such as whether
+to call `preventDefault()`, which an async reducer is too late for:
+
+```ts
+import { define, html, prop } from '@gyral/core';
+
+interface Props {
+  /** The keys this pad takes over, separated by spaces. */
+  readonly keys: string;
+}
+type Msg = { readonly _tag: 'Key'; readonly key: string };
+
+export const KeyPad = define<{ readonly last: string }, Msg, Props>('my-key-pad', {
+  props: { keys: prop.string({ default: 'ArrowLeft ArrowRight' }) },
+  init: () => ({ last: '' }),
+  intent: {
+    // Keys this instance doesn't own keep their default (scrolling, tabbing).
+    Key: ({ key, event }, { props }) => {
+      if (key === undefined || !props.keys.split(' ').includes(key)) return undefined;
+      event.preventDefault();
+      return { _tag: 'Key', key };
+    },
+  },
+  update: { Key: (_s, m) => ({ last: m.key }) },
+  view: (s, i) => html`<div tabindex="0" data-intent-keydown=${i.Key}>${s.last}</div>`,
+});
+```
+
+Keep parsers pure apart from `preventDefault()`: read, don't write. `form()`, `field()` and
+`child()` return one-parameter parsers, so a parser can still call one directly
+(`field(schema, toMsg)(input)`).
 
 ## One intent, many elements
 
@@ -269,7 +305,7 @@ export const GameSetup = define<Setup, Msg>('my-game-setup', {
 
 Give each its own message only when the reducers really differ. A name that isn't a tag fails
 to compile with "Object literal may only specify known properties, and 'Level' does not exist
-in type 'Intents<Msg>'" (plus "Binding element 'value' implicitly has an 'any' type" for its
+in type 'Intents<Msg, object>'" (with props, their type instead of `object`; plus "Binding element 'value' implicitly has an 'any' type" for its
 parameters), and in the view with "Property 'Level' does not exist on type
 'IntentNames<Msg>'": add the variant to `Msg`, or use the tag the controls share.
 

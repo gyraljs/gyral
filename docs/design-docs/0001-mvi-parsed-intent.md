@@ -77,6 +77,16 @@ share one intent and say which they are through `name` (game-platform feedback i
 skill's intent.md "Several controls, one message"). Details: view/05-element.md "Press and
 release".
 
+**Update (gyral-dyn.15 and gyral-dyn.17, 2026-10-08, 0.3.1; decided by the user):** an element
+may name an intent per event type, `data-intent-<event>=${i.Msg}`, which comes before its plain
+`data-intent` for that event (view/05-element.md "Per-event intents"). Parsers receive the
+read-only `Ctx` reducers get as a second argument, `(input, ctx)`: props as they are when the
+event fires (read from the element, not from the last render) and `read(store)`, so a parser
+can decide synchronously, from props, whether to `preventDefault()` (a card table reading which
+keys it owns). Parsers stay pure apart from `preventDefault()`. `IntentParser<M, P>` types it;
+one-parameter parsers still fit, and `form()`/`field()`/`child()` return one-parameter
+parsers so existing direct calls still compile.
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the
