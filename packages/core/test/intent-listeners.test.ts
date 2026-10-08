@@ -136,4 +136,11 @@ describe('intent listeners (gyral-g1r.20)', () => {
     ]);
     expect(eventsOf(template)).toEqual(['pointerdown', 'pointerup', 'keydown', 'keyup']);
   });
+
+  it('ignores whitespace at the ends of a list: no listener for an empty name', () => {
+    const template = normalize([
+      '<a data-intent-on=" pointerdown pointerup "></a><b data-intent-on="  "></b>',
+    ]);
+    expect(eventsOf(template)).toEqual(['pointerdown', 'pointerup']);
+  });
 });

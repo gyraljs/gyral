@@ -36,8 +36,8 @@ export const INTENT_EVENTS: readonly string[] = [
  * `data-intent-on` (its value is the event, or a quoted list of them separated by spaces).
  */
 const INTENT_ATTR = /\sdata-intent-([\w-]+)=(["']?)(.*?)\2[\s/>]/gi;
-// Whitespace at the ends gives an empty name, which no event has.
-const eventList = (value: string): string[] => value.split(/\s+/);
+// Names separated by any whitespace; none empty, so no listener for "".
+const eventList = (value: string): string[] => value.match(/\S+/g) ?? [];
 const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
 
 /**
