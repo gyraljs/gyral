@@ -137,10 +137,10 @@ anyone calls `dispose()`. `dispose()` still removes everything at once.
 
 ## Addendum: canonical paths, empty segments (gyral-dyn.3, 2026-10-08)
 
-A game-platform team on Gyral found that a page answers at `/games/x` and `/games/x/` alike
+An app on Gyral found that a page answers at `/products/x` and `/products/x/` alike
 (one trailing slash is ignored, by design) while `match()` returned only `{ name, params }`, so
 each app hand-wrote a `pathOf(page)` to redirect to one URL. And the fallback matcher dropped
-empty segments, so `/games//x` matched `/games/:id` there but not under URLPattern, against
+empty segments, so `/products//x` matched `/products/:id` there but not under URLPattern, against
 "both matchers behave identically".
 
 - **`match()` returns `path`**, the canonical path: `href(name, params)`. It differs from the

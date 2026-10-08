@@ -128,7 +128,7 @@ served as `text/css`).
 ## Addendum: Node adapter (gyral-dyn.6, 2026-10-08)
 
 Everything `@gyral/ssr` returns is a web `Response`, so Node apps needed Hono's
-`@hono/node-server` or their own glue (Joystyk wrote 78 lines). `@gyral/ssr/node` exports
+`@hono/node-server` or their own glue (one app's was 78 lines). `@gyral/ssr/node` exports
 `toNodeListener(fetch, { origin?, onError? })`, a `node:http` request listener. Node-only, on
 its own subpath like `/static`; the main entry stays runtime-neutral.
 

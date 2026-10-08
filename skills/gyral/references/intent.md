@@ -30,65 +30,89 @@ When each event on an element means something different, name an intent per even
 (0.3.1): `data-intent-pointerdown=${i.Grab} data-intent-keydown=${i.Key}`. For an event of type
 T, an element's `data-intent-T` comes first; its plain `data-intent` (with `data-intent-on` or
 its default trigger) handles the other events. Lookup still starts at the element that was hit
-and goes outward: the nearest element with an intent for that event wins. A card table, where
-one card element handles the pointer, the keyboard and focus without wrapper elements:
+and goes outward: the nearest element with an intent for that event wins. A sortable list, where
+one item handles the pointer (drag), the keyboard (move) and focus without wrapper elements:
 
 ```ts
 import { define, each, html, intents } from '@gyral/core';
 
-interface Card {
+interface Task {
   readonly id: string;
-  readonly face: string;
+  readonly title: string;
 }
 interface State {
-  readonly cards: readonly Card[];
-  readonly held: string | undefined;
+  readonly tasks: readonly Task[];
+  readonly dragging: string | undefined;
   readonly focused: string | undefined;
 }
 type Msg =
   | { readonly _tag: 'Grab'; readonly id: string }
   | { readonly _tag: 'Drop'; readonly id: string }
-  | { readonly _tag: 'Flip'; readonly id: string }
+  | { readonly _tag: 'Move'; readonly id: string; readonly by: -1 | 1 }
   | { readonly _tag: 'Focus'; readonly id: string };
 
 const i = intents<Msg>();
 
-const CardRow = (c: Card) =>
+const TaskRow = (t: Task) =>
   html`<li
     tabindex="0"
-    data-id=${c.id}
+    data-id=${t.id}
     data-intent-pointerdown=${i.Grab}
     data-intent-pointerup=${i.Drop}
-    data-intent-keydown=${i.Flip}
+    data-intent-keydown=${i.Move}
     data-intent-focusin=${i.Focus}
   >
-    ${c.face}
+    ${t.title}
   </li>`;
 
 const idOf = (el: Element): string => el.getAttribute('data-id') ?? '';
 
-export const Table = define<State, Msg>('my-card-table', {
-  init: () => ({ cards: [{ id: 'a', face: 'A♠' }], held: undefined, focused: undefined }),
+/** Moves the task `id` to the place `to(from)` gives (clamped). */
+const moved = (tasks: readonly Task[], id: string, to: (from: number) => number) => {
+  const from = tasks.findIndex((t) => t.id === id);
+  const task = tasks[from];
+  if (task === undefined) return tasks;
+  const rest = tasks.filter((t) => t !== task);
+  const at = Math.max(0, Math.min(rest.length, to(from)));
+  return [...rest.slice(0, at), task, ...rest.slice(at)];
+};
+
+export const Sortable = define<State, Msg>('my-sortable', {
+  init: () => ({
+    tasks: [
+      { id: 'a', title: 'Write the brief' },
+      { id: 'b', title: 'Review designs' },
+    ],
+    dragging: undefined,
+    focused: undefined,
+  }),
   intent: {
     Grab: ({ target }) => ({ _tag: 'Grab', id: idOf(target) }),
+    // Released over another item: the dragged one moves there.
     Drop: ({ target }) => ({ _tag: 'Drop', id: idOf(target) }),
-    // Space or Enter flips the focused card; other keys keep their default.
-    Flip: ({ target, key, event }) => {
-      if (key !== ' ' && key !== 'Enter') return undefined;
+    // Alt+ArrowUp/Down moves the focused item; other keys keep their default.
+    Move: ({ target, key, event }) => {
+      const by = key === 'ArrowUp' ? -1 : key === 'ArrowDown' ? 1 : 0;
+      if (by === 0 || !(event as KeyboardEvent).altKey) return undefined;
       event.preventDefault();
-      return { _tag: 'Flip', id: idOf(target) };
+      return { _tag: 'Move', id: idOf(target), by };
     },
     Focus: ({ target }) => ({ _tag: 'Focus', id: idOf(target) }),
   },
   update: {
-    Grab: (s, m) => ({ ...s, held: m.id }),
-    Drop: (s) => ({ ...s, held: undefined }),
-    Flip: (s) => s,
+    Grab: (s, m) => ({ ...s, dragging: m.id }),
+    Drop: (s, m) => {
+      const onto = s.tasks.findIndex((t) => t.id === m.id);
+      return s.dragging === undefined
+        ? s
+        : { ...s, dragging: undefined, tasks: moved(s.tasks, s.dragging, () => onto) };
+    },
+    Move: (s, m) => ({ ...s, tasks: moved(s.tasks, m.id, (from) => from + m.by) }),
     Focus: (s, m) => ({ ...s, focused: m.id }),
   },
   view: (s) =>
-    html`<ul aria-label="Table">
-      ${each(s.cards, (c) => c.id, CardRow)}
+    html`<ul aria-label="Tasks">
+      ${each(s.tasks, (t) => t.id, TaskRow)}
     </ul>`,
 });
 ```
@@ -189,24 +213,50 @@ to call `preventDefault()`, which an async reducer is too late for:
 import { define, html, prop } from '@gyral/core';
 
 interface Props {
-  /** The keys this pad takes over, separated by spaces. */
-  readonly keys: string;
+  /** `vertical` lists take ArrowUp/ArrowDown; `horizontal` ones ArrowLeft/ArrowRight. */
+  readonly orientation: string;
 }
-type Msg = { readonly _tag: 'Key'; readonly key: string };
+type Msg = { readonly _tag: 'Step'; readonly by: -1 | 1 };
 
-export const KeyPad = define<{ readonly last: string }, Msg, Props>('my-key-pad', {
-  props: { keys: prop.string({ default: 'ArrowLeft ArrowRight' }) },
-  init: () => ({ last: '' }),
+const OPTIONS = ['Inbox', 'Drafts', 'Sent'] as const;
+const KEYS: Readonly<Record<string, readonly [string, string]>> = {
+  vertical: ['ArrowUp', 'ArrowDown'],
+  horizontal: ['ArrowLeft', 'ArrowRight'],
+};
+
+export const Folders = define<{ readonly active: number }, Msg, Props>('my-folders', {
+  props: { orientation: prop.string({ default: 'vertical' }) },
+  init: () => ({ active: 0 }),
   intent: {
-    // Keys this instance doesn't own keep their default (scrolling, tabbing).
-    Key: ({ key, event }, { props }) => {
-      if (key === undefined || !props.keys.split(' ').includes(key)) return undefined;
+    // Only the arrow keys this orientation owns are taken over; the others keep scrolling.
+    Step: ({ key, event }, { props }) => {
+      const [back, next] = KEYS[props.orientation] ?? KEYS.vertical ?? ['', ''];
+      const by = key === back ? -1 : key === next ? 1 : 0;
+      if (by === 0) return undefined;
       event.preventDefault();
-      return { _tag: 'Key', key };
+      return { _tag: 'Step', by };
     },
   },
-  update: { Key: (_s, m) => ({ last: m.key }) },
-  view: (s, i) => html`<div tabindex="0" data-intent-keydown=${i.Key}>${s.last}</div>`,
+  update: {
+    Step: (s, m) => ({ active: (s.active + m.by + OPTIONS.length) % OPTIONS.length }),
+  },
+  view: (s, i, { props }) => html`
+    <ul
+      role="listbox"
+      tabindex="0"
+      aria-label="Folders"
+      aria-orientation=${props.orientation}
+      aria-activedescendant=${`folder-${String(s.active)}`}
+      data-intent-keydown=${i.Step}
+    >
+      ${OPTIONS.map(
+        (name, n) =>
+          html`<li id=${`folder-${String(n)}`} role="option" aria-selected=${n === s.active}>
+            ${name}
+          </li>`,
+      )}
+    </ul>
+  `,
 });
 ```
 
@@ -254,49 +304,50 @@ export const SizePicker = define<State, Msg>('my-size-picker', {
 
 ## Several controls, one message
 
-Intent names are message tags: `data-intent=${i.Level}` needs a `Level` variant in `Msg`, and
-`intent: { Level: … }` must produce it. Controls that all change one thing don't need a
-message each. Give them the same intent and tell them apart by their `name`:
+Intent names are message tags: `data-intent=${i.Category}` needs a `Category` variant in
+`Msg`, and `intent: { Category: … }` must produce it. Controls that all change one thing don't
+need a message each. Give them the same intent and tell them apart by their `name`, as in a
+search filters panel:
 
 ```ts
 import { define, html } from '@gyral/core';
 
-interface Setup {
-  readonly level: string;
-  readonly pace: string;
+interface Filters {
+  readonly category: string;
+  readonly sort: string;
 }
-type Msg = { readonly _tag: 'Setup'; readonly field: keyof Setup; readonly value: string };
+type Msg = { readonly _tag: 'Filter'; readonly field: keyof Filters; readonly value: string };
 
-const FIELDS: readonly (keyof Setup)[] = ['level', 'pace'];
-const isField = (name: string): name is keyof Setup => FIELDS.some((f) => f === name);
+const FIELDS: readonly (keyof Filters)[] = ['category', 'sort'];
+const isField = (name: string): name is keyof Filters => FIELDS.some((f) => f === name);
 
-export const GameSetup = define<Setup, Msg>('my-game-setup', {
-  init: () => ({ level: 'easy', pace: 'normal' }),
+export const SearchFilters = define<Filters, Msg>('my-search-filters', {
+  init: () => ({ category: 'all', sort: 'relevance' }),
   intent: {
-    // One parser for every <select>: the name says which field changed.
-    Setup: ({ target, value }) => {
+    // One parser for every <select>: the name says which filter changed.
+    Filter: ({ target, value }) => {
       const name = target.getAttribute('name') ?? '';
       return isField(name) && value !== undefined
-        ? { _tag: 'Setup', field: name, value }
+        ? { _tag: 'Filter', field: name, value }
         : undefined;
     },
   },
   update: {
-    Setup: (s, m) => ({ ...s, [m.field]: m.value }),
+    Filter: (s, m) => ({ ...s, [m.field]: m.value }),
   },
   view: (s, i) => html`
     <label>
-      Level
-      <select name="level" data-intent=${i.Setup}>
-        <option value="easy" ?selected=${s.level === 'easy'}>Easy</option>
-        <option value="hard" ?selected=${s.level === 'hard'}>Hard</option>
+      Category
+      <select name="category" data-intent=${i.Filter}>
+        <option value="all" ?selected=${s.category === 'all'}>All</option>
+        <option value="books" ?selected=${s.category === 'books'}>Books</option>
       </select>
     </label>
     <label>
-      Pace
-      <select name="pace" data-intent=${i.Setup}>
-        <option value="normal" ?selected=${s.pace === 'normal'}>Normal</option>
-        <option value="fast" ?selected=${s.pace === 'fast'}>Fast</option>
+      Sort by
+      <select name="sort" data-intent=${i.Filter}>
+        <option value="relevance" ?selected=${s.sort === 'relevance'}>Relevance</option>
+        <option value="price" ?selected=${s.sort === 'price'}>Price</option>
       </select>
     </label>
   `,
@@ -304,78 +355,61 @@ export const GameSetup = define<Setup, Msg>('my-game-setup', {
 ```
 
 Give each its own message only when the reducers really differ. A name that isn't a tag fails
-to compile with "Object literal may only specify known properties, and 'Level' does not exist
+to compile with "Object literal may only specify known properties, and 'Category' does not exist
 in type 'Intents<Msg, object>'" (with props, their type instead of `object`; plus "Binding element 'value' implicitly has an 'any' type" for its
-parameters), and in the view with "Property 'Level' does not exist on type
+parameters), and in the view with "Property 'Category' does not exist on type
 'IntentNames<Msg>'": add the variant to `Msg`, or use the tag the controls share.
 
-## Press and release (hold to move)
+## Press and release (press and hold)
 
-A hold-to-move button needs the press and the release. List both in `data-intent-on` and read
-`event.type`: one intent, one message with a `down` flag. Add the `capturePointer()` hook so
-the release arrives even when the pointer leaves the button before it lets go (it calls
-`setPointerCapture` on `pointerdown`). `pointercancel` (the browser took the touch over for
-scrolling, say) is a release too. For the keyboard, a focusable element lists
-`keydown keyup`; the parser ignores auto-repeat:
+A push-to-talk button (or any press-and-hold control) needs the press and the release. List
+both in `data-intent-on` and read `event.type`: one intent, one message with a `down` flag. Add
+the `capturePointer()` hook so the release arrives even when the pointer leaves the button
+before it lets go (it calls `setPointerCapture` on `pointerdown`). `pointercancel` (the browser
+took the touch over for scrolling, say) is a release too. For the keyboard, the same button
+lists `keydown keyup` and holds while Space is down; the parser ignores auto-repeat:
 
 ```ts
 import { capturePointer, define, html } from '@gyral/core';
 
-type Dir = 'left' | 'right';
 interface State {
-  readonly held: Dir | undefined;
+  readonly talking: boolean;
 }
-type Msg = { readonly _tag: 'Hold'; readonly dir: Dir; readonly down: boolean };
+type Msg = { readonly _tag: 'Talk'; readonly down: boolean };
 
-const KEYS: Readonly<Record<string, Dir>> = { ArrowLeft: 'left', ArrowRight: 'right' };
+const PRESS = new Set(['pointerdown', 'keydown']);
 
-export const Pad = define<State, Msg>('my-pad', {
-  init: () => ({ held: undefined }),
+export const PushToTalk = define<State, Msg>('my-push-to-talk', {
+  init: () => ({ talking: false }),
   intent: {
-    Hold: ({ event, target, key }) => {
+    Talk: ({ event, key }) => {
       if (event instanceof KeyboardEvent) {
-        const dir = key === undefined ? undefined : KEYS[key];
-        if (dir === undefined || event.repeat) return undefined;
-        event.preventDefault(); // no scrolling while the arrow is held
-        return { _tag: 'Hold', dir, down: event.type === 'keydown' };
+        if (key !== ' ' || event.repeat) return undefined;
+        event.preventDefault(); // no page scroll, no click when Space comes up
       }
-      const dir = target.getAttribute('data-dir') === 'left' ? 'left' : 'right';
-      return { _tag: 'Hold', dir, down: event.type === 'pointerdown' };
+      return { _tag: 'Talk', down: PRESS.has(event.type) };
     },
   },
   update: {
-    // A release only clears the direction it belongs to.
-    Hold: (s, m) => ({ held: m.down ? m.dir : s.held === m.dir ? undefined : s.held }),
+    Talk: (_s, m) => ({ talking: m.down }),
   },
   view: (s, i) => html`
-    <div
-      role="group"
-      tabindex="0"
-      aria-label="Paddle"
-      data-intent=${i.Hold}
-      data-intent-on="keydown keyup"
+    <button
+      type="button"
+      aria-pressed=${String(s.talking)}
+      ${capturePointer()}
+      data-intent=${i.Talk}
+      data-intent-on="pointerdown pointerup pointercancel keydown keyup"
     >
-      ${(['left', 'right'] as const).map(
-        (dir) =>
-          html`<button
-            type="button"
-            data-dir=${dir}
-            aria-pressed=${String(s.held === dir)}
-            ${capturePointer()}
-            data-intent=${i.Hold}
-            data-intent-on="pointerdown pointerup pointercancel"
-          >
-            ${dir}
-          </button>`,
-      )}
-    </div>
+      ${s.talking ? 'Talking…' : 'Hold to talk'}
+    </button>
   `,
 });
 ```
 
-- Pointer events bubble to the wrapper too, but the nearest element with `data-intent` whose
-  list names the event wins: the button for pointer events, the wrapper for keys.
-- Give the buttons `touch-action: none` in CSS so a held finger doesn't scroll or zoom, and
+In the app, the reducer would also start and stop the microphone with commands.
+
+- Give the button `touch-action: none` in CSS so a held finger doesn't scroll or zoom, and
   `user-select: none` so a long press doesn't select the label.
 - A button that may disappear mid-press (a re-render that drops it) never gets its
   `pointerup`. Also list `lostpointercapture` and treat it as a release, ignoring ones from
@@ -385,9 +419,8 @@ export const Pad = define<State, Msg>('my-pad', {
   firing. Intents on elements _inside_ an element that holds capture stop firing meanwhile:
   their events now target the capturer. Put `capturePointer()` on the element whose intent
   needs the release, not on a container of other interactive elements.
-- Pressing a key while the wrapper isn't focused does nothing; for keys anywhere on the page,
-  read them in a driver (`subscription()` over `keydown`/`keyup` on `window`,
-  outside-stores.md).
+- Keys reach the button only while it has focus; for a shortcut anywhere on the page, read keys
+  in a driver (`subscription()` over `keydown`/`keyup` on `window`, outside-stores.md).
 
 ## Messages without intents
 

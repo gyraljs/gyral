@@ -20,18 +20,17 @@ an `<svg>` around them) is an error that points to `svg` (09, rule 10).
 
 ### svg templates (0.3.1, gyral-c5d.8)
 
-Dropped in 0.3.0 (ADR 0018), back in 0.3.1 for a real need: sabacc.starwars.run's card faces
-render small SVG fragments (suit marks, name lines) as their own templates, and without `svg`
-they had to inline every variant in one `<svg>` and hide the unused ones with
-`display="none"`.
+Dropped in 0.3.0 (ADR 0018), back in 0.3.1 for a real need (sabacc.starwars.run): small SVG
+fragments (status marks, labels) rendered as their own templates. Without `svg`, every variant
+had to be inlined in one `<svg>`, the unused ones hidden with `display="none"`.
 
 ```ts
 import { html, nothing, svg } from '@gyral/core';
 
-const mark = (suit: string) => svg`<path class=${suit} d="M0 0h4v4z" />`;
+const mark = (status: string) => svg`<path class=${status} d="M0 0h4v4z" />`;
 view: (s) =>
   html`<svg viewBox="0 0 10 14">
-    ${s.suit === undefined ? nothing : mark(s.suit)}
+    ${s.status === undefined ? nothing : mark(s.status)}
     <text x="1" y="13">${s.name}</text>
   </svg>`;
 ```

@@ -1,8 +1,8 @@
 // Property-only prop schemas out of production client builds (gyral-c5d.14, view/05-element.md
 // "When props are validated"): `prop.value(check, opts)` declares a prop with no attribute, and
 // production never checks property sets (or seeds), so its schema or type guard can't run
-// there. Replacing a check that is a plain reference (`prop.value(Game)`, `schemas.game`) or an
-// inline function (`prop.value((u): u is Game => …)`) with `void 0` lets the bundler drop it and
+// there. Replacing a check that is a plain reference (`prop.value(Settings)`, `schemas.settings`) or an
+// inline function (`prop.value((u): u is Settings => …)`) with `void 0` lets the bundler drop it and
 // whatever only it used, e.g. a schema module (when the bundler can: Rolldown in Vite 8.3 keeps
 // side-effect-free schema builders in a lazy chunk once their library is in a chunk shared with
 // the entry; view/05 "When props are validated"). Calls (`prop.value(v.array(Item))`) stay: their
@@ -28,7 +28,7 @@ function droppable(node: Node | undefined): boolean {
     case 'FunctionExpression':
       return true;
     case 'MemberExpression': {
-      // `schemas.game`: a chain of plain names (no computed keys, no calls, no optional links).
+      // `schemas.settings`: a chain of plain names (no computed keys, no calls, no optional links).
       const object = nodeAt(node, 'object');
       return (
         node['computed'] !== true &&

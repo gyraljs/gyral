@@ -131,7 +131,7 @@ tuple is fine.
 
 ### Moving items between lists
 
-A card that moves from one `each` list to another is a new element in the second list, so the
+A task that moves from one kanban column (one `each` list) to another is a new element in the second list, so the
 browser can't animate it by itself. A FLIP hook can: it remembers where each key last was and,
 when its element appears somewhere else, plays the move with the Web Animations API. Give it
 the item's slot so it also runs when the item shifts inside its list:
@@ -160,30 +160,30 @@ export const flip = defineHook<[key: string, slot: number]>({
   },
 });
 
-interface Card {
+interface Task {
   readonly id: string;
   readonly label: string;
 }
 interface State {
-  readonly todo: readonly Card[];
-  readonly done: readonly Card[];
+  readonly todo: readonly Task[];
+  readonly done: readonly Task[];
 }
 type Msg = { readonly _tag: 'Move'; readonly id: string };
 
 const i = intents<Msg>();
 
-const CardRow = (c: Card, slot: number) =>
-  html`<li ${flip(c.id, slot)}>
-    <button type="button" value=${c.id} data-intent=${i.Move}>${c.label}</button>
+const TaskRow = (t: Task, slot: number) =>
+  html`<li ${flip(t.id, slot)}>
+    <button type="button" value=${t.id} data-intent=${i.Move}>${t.label}</button>
   </li>`;
 
-const column = (label: string, cards: readonly Card[]) =>
+const column = (label: string, tasks: readonly Task[]) =>
   html`<ul aria-label=${label}>
     ${each(
-      cards,
-      (c) => c.id,
-      CardRow,
-      (c) => cards.indexOf(c),
+      tasks,
+      (t) => t.id,
+      TaskRow,
+      (t) => tasks.indexOf(t),
     )}
   </ul>`;
 
@@ -198,26 +198,25 @@ export const Board = define<State, Msg>('my-board', {
   intent: { Move: ({ value }) => (value ? { _tag: 'Move', id: value } : undefined) },
   update: {
     Move: (s, { id }) => {
-      const card = [...s.todo, ...s.done].find((c) => c.id === id);
-      if (card === undefined) return s;
-      return s.todo.includes(card)
-        ? { todo: s.todo.filter((c) => c !== card), done: [...s.done, card] }
-        : { done: s.done.filter((c) => c !== card), todo: [...s.todo, card] };
+      const task = [...s.todo, ...s.done].find((t) => t.id === id);
+      if (task === undefined) return s;
+      return s.todo.includes(task)
+        ? { todo: s.todo.filter((t) => t !== task), done: [...s.done, task] }
+        : { done: s.done.filter((t) => t !== task), todo: [...s.todo, task] };
     },
   },
   view: (s) => html`${column('To do', s.todo)} ${column('Done', s.done)}`,
 });
 ```
 
-- The hook runs only when its arguments change: for a new element (the card in its new list)
-  and for cards whose slot changed. Cards that move because the layout changed around them
+- The hook runs only when its arguments change: for a new element (the task in its new column)
+  and for tasks whose slot changed. Tasks that move because the layout changed around them
   (a resize, a column that grew) aren't animated.
-- `seen` keeps keys of deleted items; clear it when a game or board resets.
+- `seen` keeps keys of deleted items; clear it when the board is reloaded.
 - The native way is a View Transition: `viewTransition` (components.md) runs a render inside
-  `document.startViewTransition`, and a card whose `view-transition-name` is the same before
-  and after (say `view-transition-name: var(--card)` in CSS, with
-  ``${cssVars({ '--card': `card-${c.id}` })}`` on the row) morphs from its old place to its new
-  one. Same-document View Transitions are only newly Baseline, so keep the hook as the
+  `document.startViewTransition`, and a task whose `view-transition-name` is the same before
+  and after (a style binding on the row, `style="view-transition-name: task-${t.id}"`)
+  morphs from its old place to its new one. Same-document View Transitions are only newly Baseline, so keep the hook as the
   fallback for now. A built-in for moves between lists is planned for 0.4.
 
 ## SVG fragments: `svg`
@@ -232,31 +231,34 @@ template. Bind `href=${…}`, not `xlink:href=${…}` (an error).
 ```ts
 import { define, each, html, nothing, svg } from '@gyral/core';
 
-interface Card {
+interface Service {
   readonly id: number;
-  readonly suit: 'circle' | 'square' | undefined;
+  readonly status: 'up' | 'down' | undefined;
   readonly name: string;
 }
 
 // Fragments are plain functions returning svg results; rows of `each` stay pure.
-const mark = (suit: 'circle' | 'square') =>
-  suit === 'circle'
+const mark = (status: 'up' | 'down') =>
+  status === 'up'
     ? svg`<circle cx="5" cy="5" r="3" />`
     : svg`<rect x="2" y="2" width="6" height="6" />`;
-const face = (c: Card) => svg`<g transform="translate(${(c.id - 1) * 12} 0)">
-  ${c.suit === undefined ? nothing : mark(c.suit)}
-  <text x="1" y="13">${c.name}</text>
+const tile = (service: Service) => svg`<g transform="translate(${(service.id - 1) * 12} 0)">
+  ${service.status === undefined ? nothing : mark(service.status)}
+  <text x="1" y="13">${service.name}</text>
 </g>`;
 
-export const Hand = define<{ readonly cards: readonly Card[] }, never>('my-hand', {
-  init: () => ({ cards: [{ id: 1, suit: 'circle', name: 'Han' }] }),
-  intent: {},
-  update: {},
-  view: (s) =>
-    html`<svg viewBox="0 0 ${s.cards.length * 12} 14" role="img" aria-label="Hand">
-      ${each(s.cards, (c) => c.id, face)}
-    </svg>`,
-});
+export const StatusStrip = define<{ readonly services: readonly Service[] }, never>(
+  'my-status-strip',
+  {
+    init: () => ({ services: [{ id: 1, status: 'up', name: 'API' }] }),
+    intent: {},
+    update: {},
+    view: (s) =>
+      html`<svg viewBox="0 0 ${s.services.length * 12} 14" role="img" aria-label="Service status">
+        ${each(s.services, (service) => service.id, tile)}
+      </svg>`,
+  },
+);
 ```
 
 ## Element hooks
@@ -365,7 +367,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Add' };
 
-export const Game = define<State, Msg>('my-game', {
+export const SceneEditor = define<State, Msg>('my-scene-editor', {
   init: () => ({ scene: { cubes: 1 } }),
   intent: { Add: () => ({ _tag: 'Add' }) },
   update: { Add: (s) => ({ scene: { cubes: s.scene.cubes + 1 } }) },

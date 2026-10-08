@@ -317,7 +317,7 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 Preloads are a server choice per response: `modulepreload: []` drops them and the page still
 hydrates (the chunk loads when the first seeded host connects, "Loading" above). A PWA whose
 service worker serves the modules hit Chromium warning that a module preloaded outside the
-worker went unused, so it was fetched twice (game-platform feedback item 9). A server can tell
+worker went unused, so it was fetched twice. A server can tell
 the navigations the worker handles by the `Service-Worker-Navigation-Preload` header (sent
 when the worker enables navigation preload) or a marker the worker adds, and leave the
 preloads out for those, with `Vary` on that header. The recipe is in the skill's ssr.md

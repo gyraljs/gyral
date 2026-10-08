@@ -88,8 +88,8 @@ schema library.
   prop machinery at all in production (the element keeps the value as given), so its property
   path stays out of production bundles. The Vite preset also replaces the check of
   `prop.value(check)` (a property-only prop, whose check can't run in production) with
-  `void 0` in production client builds when the check is a plain reference (`prop.value(Game)`,
-  `schemas.game`) or an inline function, so the check and whatever only it uses (a schema
+  `void 0` in production client builds when the check is a plain reference (`prop.value(Settings)`,
+  `schemas.settings`) or an inline function, so the check and whatever only it uses (a schema
   module) can tree-shake (`compiler/prop-schemas.ts`). The bundler decides: Rolldown (Vite
   8.3) keeps schema builders in a lazily loaded chunk once the schema library sits in a chunk
   shared with the entry, even builders marked `/* @__NO_SIDE_EFFECTS__ */` (seen in
@@ -224,8 +224,8 @@ triggers (`data-intent-on` or the default trigger); the first element with eithe
 The intent's name is that attribute's value (`IntentInput.name`). `data-intent-on` is reserved:
 it is the trigger list, never a per-event attribute.
 
-Why (game-platform feedback, card table): one element had several events with different
-meanings (pointerdown, pointerup, keydown, focusin), and one `data-intent` per element forced a
+Why: an element in a sortable list had several events with different meanings (pointerdown
+to grab, pointerup to drop, keydown to move, focusin), and one `data-intent` per element forced a
 stack of wrapper elements, or one message whose parser branched on `event.type`. The event
 list (below) stays for the one-message case. Decided by the user on 2026-10-08.
 
@@ -247,9 +247,9 @@ the event scan).
 `data-intent-on` takes a list of event types separated by whitespace. An element's intent
 fires for each type in the list (or for its default trigger when it has none), the root
 listens for every listed type (the static scan splits quoted lists), and the parser tells them
-apart with `input.event.type`. That makes hold-to-move one intent and one message
-(`Hold { down }`), where a game previously wrote `pointerdown`/`pointerup`/`pointercancel` and
-`keydown`/`keyup` listeners by hand (game-platform feedback item 13). The client-only scan
+apart with `input.event.type`. That makes a press-and-hold control (push to talk) one intent
+and one message (`Talk { down }`), where apps wrote `pointerdown`/`pointerup`/`pointercancel`
+and `keydown`/`keyup` listeners by hand. The client-only scan
 counts `command` anywhere in a quoted list (07 "Client-only builds").
 
 A release must arrive even when the pointer leaves the element first. That is pointer
@@ -260,7 +260,7 @@ hook only apps that use it bundle it, and the capture is visible in the markup. 
 itself costs about 25 B. Capture is not set for synthetic events (the pointer isn't active:
 the call throws and is ignored).
 
-Two consequences parsers must know (gyral-dyn.16, found by game-platform's card table):
+Two consequences parsers must know (gyral-dyn.16):
 
 - `input.target` is the intent element. `event.currentTarget` is the root Gyral delegates from
   (the shadow root, or the host for light-DOM components), and `event.target` is the hit

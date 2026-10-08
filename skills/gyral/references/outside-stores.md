@@ -75,28 +75,28 @@ export const Counter = define<{ readonly n: number }, Msg>('my-outside-counter',
 ## A store per page, provided by name
 
 When each page (or test) creates its own store, build commands with a default that explains
-what's missing, and provide the real driver above the components (sabacc.starwars.run's table
+what's missing, and provide the real driver above the components (sabacc.starwars.run
 does this):
 
 ```ts
 import { provideDrivers, subscription } from '@gyral/core';
 
-interface Table {
-  readonly moves: number;
+interface Draft {
+  readonly revision: number;
 }
-interface TableStore {
-  getState(): Table;
+interface DraftStore {
+  getState(): Draft;
   subscribe(listener: () => void): () => void;
 }
 
 /** Commands are built with this one; it fails with a clear error until a page provides one. */
-export const unboundTable = subscription<Table>('table', () => {
-  throw new Error('No table: call provideTable(element, store) on an ancestor.');
+export const unboundDraft = subscription<Draft>('draft', () => {
+  throw new Error('No draft: call provideDraft(element, store) on an ancestor.');
 });
 
-export const provideTable = (element: Element, store: TableStore): (() => void) =>
+export const provideDraft = (element: Element, store: DraftStore): (() => void) =>
   provideDrivers(element, {
-    table: subscription<Table>('table', (emit) => {
+    draft: subscription<Draft>('draft', (emit) => {
       emit(store.getState());
       return store.subscribe(() => {
         emit(store.getState());
@@ -107,59 +107,64 @@ export const provideTable = (element: Element, store: TableStore): (() => void) 
 
 ## One feed, several components
 
-A game shows its HUD in one place and its control pad in another, both fed by the same game
-loop. Keep one source and let each component subscribe to it: the source runs once, and each
-component's subscription is released when that component goes away.
+A mail app shows the unread count in a header badge and again in its sidebar, both fed by
+one live feed. Keep one source and let each component subscribe to it: the source runs once,
+and each component's subscription is released when that component goes away.
 
 ```ts
 import { command, define, html, subscription, type Command } from '@gyral/core';
 
-interface Game {
-  readonly score: number;
-  readonly paused: boolean;
+interface Mailbox {
+  readonly unread: number;
+  readonly folders: readonly { readonly name: string; readonly unread: number }[];
 }
-/** The game loop: one instance, whatever reads it. */
-interface Engine {
-  getState(): Game;
+/** The live feed (a WebSocket, server-sent events): one instance, whatever reads it. */
+interface Feed {
+  getState(): Mailbox;
   subscribe(listener: () => void): () => void;
 }
-declare const engine: Engine;
+declare const feed: Feed;
 
-/** One driver for every reader; each command subscribes once more to the same engine. */
-const game = subscription<Game>('game', (emit) => {
-  emit(engine.getState());
-  return engine.subscribe(() => {
-    emit(engine.getState());
+/** One driver for every reader; each command subscribes once more to the same feed. */
+const mailbox = subscription<Mailbox>('mailbox', (emit) => {
+  emit(feed.getState());
+  return feed.subscribe(() => {
+    emit(feed.getState());
   });
 });
 
-type Msg = { readonly _tag: 'Frame'; readonly game: Game };
-const watchGame = (): Command<Msg> =>
-  command(game, undefined, { onSuccess: (g): Msg => ({ _tag: 'Frame', game: g }) });
+type Msg = { readonly _tag: 'Updated'; readonly mailbox: Mailbox };
+const watchMailbox = (): Command<Msg> =>
+  command(mailbox, undefined, { onSuccess: (m): Msg => ({ _tag: 'Updated', mailbox: m }) });
 
-export const Hud = define<Game, Msg>('my-hud', {
-  init: () => [engine.getState(), [watchGame()]],
+export const UnreadBadge = define<Mailbox, Msg>('my-unread-badge', {
+  init: () => [feed.getState(), [watchMailbox()]],
   intent: {},
-  update: { Frame: (_s, m) => m.game },
-  view: (s) => html`<output>${s.score}</output>`,
+  update: { Updated: (_s, m) => m.mailbox },
+  view: (s) => html`<span class="badge" aria-label="Unread messages">${s.unread}</span>`,
 });
 
-export const ControlPad = define<Game, Msg>('my-control-pad', {
-  init: () => [engine.getState(), [watchGame()]],
+export const Sidebar = define<Mailbox, Msg>('my-sidebar', {
+  init: () => [feed.getState(), [watchMailbox()]],
   intent: {},
-  update: { Frame: (_s, m) => m.game },
-  view: (s) => html`<button type="button" ?disabled=${s.paused}>Fire</button>`,
+  update: { Updated: (_s, m) => m.mailbox },
+  view: (s) =>
+    html`<nav aria-label="Folders">
+      <ul>
+        ${s.folders.map((f) => html`<li>${f.name} <span>${f.unread}</span></li>`)}
+      </ul>
+    </nav>`,
 });
 ```
 
-- Both components name the driver `game`, so one `provideDrivers(ancestor, { game: … })` (or
-  `withDrivers(container, { game: fakeDriver('game') })` in a test) reaches both: provide it on
-  an element that contains them, such as the page or the test's container ("A store per page,
-  provided by name" above).
-- Each component can keep only what it shows (pick it in `onSuccess`). A feed that emits every
-  frame should list its message in `renderOnFrame` (components.md), so each component renders
-  at most once per frame.
-- When Gyral owns the state (reducers decide it, not an engine), use a `defineStore` store
+- Both components name the driver `mailbox`, so one `provideDrivers(ancestor, { mailbox: … })`
+  (or `withDrivers(container, { mailbox: fakeDriver('mailbox') })` in a test) reaches both:
+  provide it on an element that contains them, such as the page or the test's container ("A
+  store per page, provided by name" above).
+- Each component can keep only what it shows (pick it in `onSuccess`). A feed that emits many
+  times a second (prices) should list its message in `renderOnFrame` (components.md), so each
+  component renders at most once per frame.
+- When Gyral owns the state (reducers decide it, not a feed), use a `defineStore` store
   instead: both components list it in `stores` and read it with `ctx.read` (composition.md).
 - A source that must not be opened twice (one WebSocket for the page) opens on the first
   subscriber and closes after the last: keep the connection and a set of listeners in one
@@ -190,7 +195,7 @@ export const watchSignals = <T>(name: string, read: () => T) =>
     return () => watcher.unwatch(current);
   });
 
-// const table = watchSignals('table', () => ({ game: store.game.get(), log: store.log.get() }));
+// const cart = watchSignals('cart', () => ({ items: store.items.get(), total: store.total.get() }));
 ```
 
 `read` should return plain data (a snapshot object), not the signals themselves.
@@ -228,7 +233,7 @@ writes (`run: (text) => { socket.send(text); }`).
 ## Testing
 
 - Use the real source: create the store in the test and provide it by name
-  (`withDrivers(container, { table: … })` from `@gyral/testing`, or `el.drivers`), change it,
+  (`withDrivers(container, { draft: … })` from `@gyral/testing`, or `el.drivers`), change it,
   then `await settled()`.
 - Or fake it: `fakeDriver('counter')` records the subscription; `emitNext(value)` pushes a
   value, and `calls[0].signal.aborted` shows it was released on disconnect or switch.

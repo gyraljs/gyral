@@ -73,7 +73,7 @@ general-purpose features. The priorities, in order: correctness, speed, bundle s
    `updateComplete`, `requestUpdate`. The `many`, `themes` and `view-transitions` examples go
    with `styleMap`. `svg` templates, `classMap` and `styleMap` may return if a real feature need
    appears; inline `<svg>` inside `html` keeps working. **`svg` returned in 0.3.1** for a real
-   need: sabacc.starwars.run's card faces (below, "svg templates return").
+   need: sabacc.starwars.run's SVG fragments (below, "svg templates return").
 
 ### The design (each point has a spec)
 
@@ -232,7 +232,7 @@ benchmark repo's `gyral-next` branch; calibration spread 3.3%, no drift flag).
 
 ### svg templates return (gyral-c5d.8, 0.3.1)
 
-The need: sabacc.starwars.run's card faces render small SVG fragments (suit marks, name lines)
+The need: sabacc.starwars.run renders small SVG fragments (marks, labels)
 as templates of their own, ``${cond ? svg`<path …/>` : nothing}`` inside an `<svg>` of an `html`
 template. Rule 10 rejected them in `html` (the HTML parser would make HTML elements of a
 top-level `<path>`), so the team inlined every variant in one `<svg>` with `display="none"`

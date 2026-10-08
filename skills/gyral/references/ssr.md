@@ -74,7 +74,7 @@ anywhere in a view is an error: load data first.
 
 ### One URL per page: redirect to the canonical path
 
-The router ignores one trailing slash, so `/games/x/` matches the same route as `/games/x`.
+The router ignores one trailing slash, so `/products/x/` matches the same route as `/products/x`.
 `match()` returns the canonical `path` (`href(name, params)`); redirect when the request's
 pathname differs, so search engines and caches see one URL per page:
 
@@ -83,7 +83,7 @@ import { html } from '@gyral/core';
 import { routes } from '@gyral/router';
 import { renderPage } from '@gyral/ssr';
 
-export const site = routes({ home: '/', game: '/games/:id' });
+export const site = routes({ home: '/', product: '/products/:id' });
 
 export function handle(request: Request): Response {
   const url = new URL(request.url);
@@ -91,7 +91,7 @@ export function handle(request: Request): Response {
   if (m === undefined) return new Response('Not found', { status: 404 });
   if (m.path !== url.pathname) return Response.redirect(new URL(m.path + url.search, url), 301);
   return renderPage({
-    title: m.name === 'game' ? `Game ${m.params.id}` : 'Home',
+    title: m.name === 'product' ? `Product ${m.params.id}` : 'Home',
     lang: 'en',
     body: html`<my-app path=${m.path}></my-app>`,
     scripts: ['/src/entry-client.ts'],
