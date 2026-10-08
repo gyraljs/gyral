@@ -8,6 +8,7 @@
 // unchanged model never touches the control. Constructors only record nodes; hydration
 // (view/07-hydration.md) builds the same parts over server DOM and adopts this render's values
 // as committed (adopt-attr.ts), so edits made before scripts ran stay by the same rule.
+// `style` is written through the CSSOM, never `setAttribute`, so a strict CSP allows it.
 import { DEV } from '#view-dev';
 import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
@@ -121,7 +122,7 @@ export class AttrPart implements Part {
         if (absent(v)) el.removeAttribute(this.name);
         else {
           if (DEV && isObject(v)) warnValue(this, v, `the attribute ${this.name}`);
-          el.setAttribute(this.name, typeof v === 'string' ? v : text(v));
+          this.write(typeof v === 'string' ? v : text(v));
         }
         return;
       case MULTI:
@@ -184,7 +185,20 @@ export class AttrPart implements Part {
     }
   }
 
-  /** MULTI: pieces joined with the static strings; `nothing` in any piece removes. */
+  /**
+   * Writes the attribute; `style` through the CSSOM (`.style.cssText`), which a strict CSP
+   * (`style-src` without `'unsafe-inline'`) allows where `setAttribute('style', …)` is blocked.
+   * HTML, SVG and MathML elements all have `.style`.
+   */
+  write(s: string): void {
+    if (this.name === 'style') (this.el as Element & ElementCSSInlineStyle).style.cssText = s;
+    else this.el.setAttribute(this.name, s);
+  }
+
+  /**
+   * MULTI: pieces joined with the static strings; `nothing` in any piece removes. With no
+   * pieces it is a static `style` attribute (01 "Normalization"): written once, at creation.
+   */
   private multi(values: readonly unknown[]): void {
     const pieces = this.pieces as unknown[];
     let changed = false;
@@ -195,12 +209,12 @@ export class AttrPart implements Part {
         changed = true;
       }
     }
-    if (!changed) return;
+    if (!changed && this.value !== UNSET) return;
     const joined = this.join(pieces);
     if (joined === this.value) return;
     this.value = joined;
     if (joined === null) this.el.removeAttribute(this.name);
-    else this.el.setAttribute(this.name, joined);
+    else this.write(joined);
   }
 
   /** The joined value of `pieces`, or null when one is `nothing`. */

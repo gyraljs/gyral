@@ -240,6 +240,9 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
   `<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
   constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is
   a test (`core/test/view/server-csp.test.ts`).
+- A strict `style-src` blocks the server's `style` attributes; hydration then writes them
+  through the CSSOM (0.3.1, 08 "Style attributes under a strict CSP"). Opt-in hashing of them
+  is planned for 0.4 (gyral-dyn.10).
 
 ## Conformance (Phase 4)
 

@@ -17,7 +17,10 @@ export const CHILD_SOLE = 1;
 export const CHILD_BEFORE = 2;
 /** `[ATTR_PART, path, name]`: `name=${v}`. */
 export const ATTR_PART = 3;
-/** `[MULTI_PART, path, name, strings]`: `name="a ${x} b"`. */
+/**
+ * `[MULTI_PART, path, name, strings]`: `name="a ${x} b"`; with one string and no values, a
+ * static `style` attribute the client applies through the CSSOM (01 "Normalization").
+ */
 export const MULTI_PART = 4;
 /** `[BOOL_PART, path, name]`: `?name=${v}`. */
 export const BOOL_PART = 5;
@@ -78,7 +81,8 @@ export type PartSpec =
  * - `close`: write `</tag>`. Everything between `openEnd` and `close` is the element's children.
  *
  * Joining the strings with every op written empty (`open` as `html`, `openEnd` as `>`, `close`
- * as `</tag>`) gives exactly the template's `html`.
+ * as `</tag>`) gives exactly the template's `html`, plus its static `style` attributes, which
+ * the client's `html` leaves to the part table.
  */
 export type Segment =
   | string
@@ -103,7 +107,10 @@ export interface TemplateObject {
    * production client (01 "Template ids"): there the renderer compares templates by identity.
    */
   readonly id?: string;
-  /** Normalized template HTML for the client: bound attributes removed, anchors added. */
+  /**
+   * Normalized template HTML for the client: bound attributes and static `style` attributes
+   * (zero-hole multi-attribute parts) removed, anchors added.
+   */
   readonly html: string;
   readonly parts: readonly PartSpec[];
   /**

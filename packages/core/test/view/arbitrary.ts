@@ -8,6 +8,9 @@ const H = '\u0000';
 const ws = fc.constantFrom('', ' ', '\n', '\n  ', '  ', '\n    \n  ', '\t');
 const text = fc.constantFrom('a', 'Hello', 'x  y', 'a &amp; b', '1 < 2', 'é');
 
+/** A static style: the client applies it through the CSSOM, so its HTML leaves it out (01). */
+export const STATIC_STYLE = ' style="color: red"';
+
 /** Attributes with distinct names (a template may not repeat one). */
 const attrs = fc
   .subarray([
@@ -22,6 +25,7 @@ const attrs = fc
     ` data-n="${H}${H}"`,
     ` ${H}`,
     ` aria-label='q ${H}'`,
+    STATIC_STYLE,
   ])
   .chain((list) => fc.shuffledSubarray(list, { minLength: list.length }))
   .map((list) => list.join(''));

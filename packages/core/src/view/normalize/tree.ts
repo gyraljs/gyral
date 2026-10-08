@@ -190,10 +190,13 @@ export class TreeBuilder implements Sink {
 
   /**
    * Bound names as the parser spells them (not properties): lower case on HTML elements, SVG's
-   * camelCase on SVG elements (svg.ts); rules 4, 7 (duplicates), 10 (namespaced), 13.
+   * camelCase on SVG elements (svg.ts); rules 4, 7 (duplicates), 10 (namespaced), 13. A
+   * static `style` gets its decoded value (`css`): the client applies it as a part (emit.ts).
    */
   private attributes(tag: StartTag, ns: Ns): AttrToken[] {
     const seen = new Set<string>();
+    // A nested <template>'s content is out of the parts' reach: its static styles stay.
+    const reach = !this.inTemplate();
     return tag.attrs.map((a) => {
       const name =
         a.kind === 'prop' || ns === 'math'
@@ -221,7 +224,10 @@ export class TreeBuilder implements Sink {
         }
         seen.add(key);
       }
-      if (a.kind === 'static') return a;
+      if (a.kind === 'static') {
+        if (!reach || a.name.toLowerCase() !== 'style') return a;
+        return { ...a, css: a.value === null ? '' : this.decode(unquote(a.value)) };
+      }
       const strings = a.strings?.map((s) => this.decode(s));
       return strings === undefined ? { kind: a.kind, name } : { kind: a.kind, name, strings };
     });

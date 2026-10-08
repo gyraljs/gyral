@@ -190,6 +190,12 @@ until the first change; since 2026-10-06 that is simply the rule for every rende
 from the model (the user can't set it; a click clears it). `?open` is kept too: the user may
 toggle a `<details>` before scripts run.
 
+**Style attributes** (0.3.1, gyral-dyn.5) are adopted like any attribute, then one write may
+follow: an element whose adopted `style` value has no inline declarations had its attribute
+blocked by a strict CSP, so the walk writes the value through the CSSOM (08 "Style attributes
+under a strict CSP"). The development check runs first, and skips a `style` attribute without
+declarations (Firefox empties a blocked one).
+
 ### The walk's algorithm (Phase 5)
 
 `view/render/adopt.ts`, with per-template data in `adopt-plan.ts`:

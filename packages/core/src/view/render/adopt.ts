@@ -2,10 +2,11 @@
 // structure (its parsed content) and the server DOM together, and builds the same parts the
 // client renderer would, with this render's values as committed values. It writes nothing,
 // except splitting merged text at known lengths (`splitText`), creating the empty Text node of
-// an `''` value, joining text the parser split, and removing development markers. Nested
-// templates, lists (rows one after another, no markers), arrays and `raw()` are walked in
-// turn. Nested Gyral hosts: a shadow host's light children are the parent's content (slotted)
-// and are walked; its shadow root never is; a light host (`data-gyral-light`) is opaque.
+// an `''` value, joining text the parser split, removing development markers, and writing a
+// `style` attribute a strict CSP blocked through the CSSOM. Nested templates, lists (rows one
+// after another, no markers), arrays and `raw()` are walked in turn. Nested Gyral hosts: a
+// shadow host's light children are the parent's content (slotted) and are walked; its shadow
+// root never is; a light host (`data-gyral-light`) is opaque.
 // Development checks every node, text and bound attribute, and the `<!--gyral:ID-->` markers
 // when present; production checks node types, local names and text lengths.
 import { DEV } from '#view-dev';
@@ -203,6 +204,13 @@ function element(t: Element, a: Adoption, inst: Instance, values: readonly unkno
     inst.parts[i] = part;
     adoptAttr(part, values);
     if (DEV) checkAttr(part, fail);
+    // A server-written style a strict CSP blocked has no declarations: write the adopted value
+    // through the CSSOM, which the CSP allows (08 "Style attributes under a strict CSP").
+    // After the development check, which compares the attribute as the server wrote it.
+    const v = part.value;
+    if (part.name === 'style' && typeof v === 'string' && !(el as HTMLElement).style.length) {
+      part.write(v);
+    }
     if (kind === TEXTAREA || kind === TITLE) whole = true; // the part owns the content
   }
   let holes = a.holes.has(t);

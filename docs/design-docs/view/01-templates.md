@@ -87,7 +87,16 @@ Steps, in order:
    and every child hole replaced by nothing, or by an anchor comment where the anchor rule
    needs one (02). The emitted HTML is also exactly what the server writes around values (06).
    A `server` template (a page shell) gets no anchors: it is never hydrated or rendered in the
-   browser.
+   browser. **One exception** (0.3.1, gyral-dyn.5): a static `style` attribute leaves the
+   client HTML and becomes a part-table entry, a multi-attribute whose only string is the
+   decoded value (`[MULTI_PART, path, 'style', ['color: red']]`, no values), which the client
+   applies through the CSSOM when it creates the instance (02 "Style attributes"). Firefox
+   blocks a `style` attribute in a `<template>`'s HTML under a strict CSP; the CSSOM write is
+   allowed. The server segments keep the attribute as written, so server output is unchanged
+   and hydration adopts it like any multi-attribute. Page shells and the content of a nested
+   `<template>` (which no part reaches) keep theirs. Only templates with a static style pay:
+   about a dozen bytes per attribute in the part table; the runtime handles the entry with the
+   multi-attribute code it already has.
 4. **Build the part table:** one entry per hole, in source order: kind, the path to its element
    (or to its parent element and position for child holes), the attribute name and static
    strings for attribute holes; a child hole's kind also says whether it is its parent's only

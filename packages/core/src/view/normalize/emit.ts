@@ -1,7 +1,7 @@
 // Emits the template object's markup from the normalizer's tree (view/01-templates.md steps 3
-// and 4): the client HTML (bound attributes removed, anchors added by view/02-bindings.md's
-// anchor rule), the server segments (types.ts), the part table with child-index paths, and the
-// shape of the DOM the browser must build (checked by prepare.ts).
+// and 4): the client HTML (bound attributes and static `style` attributes removed, anchors
+// added by view/02-bindings.md's anchor rule), the server segments (types.ts), the part table
+// with child-index paths, and the shape of the DOM the browser must build (prepare.ts).
 import { SVG_HTML_POINT } from './svg.js';
 import type { ElementNode, TreeNode } from './tree.js';
 import {
@@ -40,8 +40,13 @@ class Emitter {
 
   /** Static markup: appended to the HTML and to the last string segment. */
   out(text: string): void {
-    if (text === '') return;
     this.html += text;
+    this.serverOut(text);
+  }
+
+  /** Static markup only the server writes: appended to the last string segment. */
+  serverOut(text: string): void {
+    if (text === '') return;
     const last = this.segments.length - 1;
     const prev = this.segments[last];
     if (typeof prev === 'string') this.segments[last] = prev + text;
@@ -108,14 +113,22 @@ class Emitter {
   }
 
   private element(el: ElementNode, path: Path): ShapeNode {
+    // `open` is the server's start tag; `client` leaves a static style to a part (below).
     let open = `<${el.raw}`;
+    let client = open;
     for (const a of el.attrs) {
-      if (a.kind === 'static') open += a.value === null ? ` ${a.name}` : ` ${a.name}=${a.value}`;
+      if (a.kind !== 'static') continue;
+      const attr = a.value === null ? ` ${a.name}` : ` ${a.name}=${a.value}`;
+      open += attr;
+      // The CSSOM applies it under a strict CSP, where Firefox blocks the attribute in a
+      // <template>'s HTML: a multi-attribute with no holes (attr-parts.ts writes it once).
+      if (a.css !== undefined && !this.server)
+        this.parts.push([MULTI_PART, path, 'style', [a.css]]);
+      else client += attr;
     }
-    if (el.props !== undefined) {
-      this.html += open;
-      this.op({ k: 'open', tag: el.name, html: open, attrs: el.props });
-    } else this.out(open);
+    this.html += client;
+    if (el.props !== undefined) this.op({ k: 'open', tag: el.name, html: open, attrs: el.props });
+    else this.serverOut(open);
     for (const a of el.attrs) {
       if (a.kind === 'static') continue;
       if (a.kind === 'hook') {
