@@ -28,9 +28,12 @@ export {
 /** How a route is rendered. */
 export type RenderMode = 'ssg' | 'ssr' | 'csr';
 
-/** Anything with a fetch handler: a Hono app, or a plain function. */
-export interface FetchApp {
-  readonly fetch: (request: Request) => Response | Promise<Response>;
+/**
+ * Anything with a fetch handler: a Hono app, or a plain function. `env` is what the server
+ * passes along (`toNodeListener`'s `{ incoming, remoteAddress }`); a prerender passes none.
+ */
+export interface FetchApp<Env = unknown> {
+  readonly fetch: (request: Request, env?: Env) => Response | Promise<Response>;
 }
 
 export interface PrerenderOptions {
@@ -76,7 +79,7 @@ export async function prerender(options: PrerenderOptions): Promise<readonly Pre
   return pages;
 }
 
-export interface ProductionOptions {
+export interface ProductionOptions<Env = unknown> {
   /** Build output: `client/` (Vite, with `.vite/manifest.json`) and `static/` (prerendered). */
   readonly distDir: string;
   /** The client entry as named in the Vite manifest. Default `src/entry-client.ts`. */
@@ -101,7 +104,7 @@ export interface ProductionOptions {
    * `assets(modules)` instead: both lists plus those modules, their imports and their CSS
    * (`clientAssets`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
    */
-  readonly createApp: (options: AppAssets) => FetchApp;
+  readonly createApp: (options: AppAssets) => FetchApp<Env>;
 }
 
 /** The page-level parts of `ClientAssets`, named as `renderPage` takes them. */
@@ -125,8 +128,13 @@ export interface AppAssets extends PageAssets {
  *   (`assetHandler`);
  * - `GET`/`HEAD` of a prerendered path: the `static/` file, revalidated on every use;
  * - everything else (other GETs, POSTs): the request-time app, `no-cache` unless it set one.
+ *
+ * Its `fetch` passes the server's `env` (`toNodeListener`'s `{ incoming, remoteAddress }`) on to
+ * the app, so the app can read the client's address.
  */
-export async function productionServer(options: ProductionOptions): Promise<FetchApp> {
+export async function productionServer<Env = unknown>(
+  options: ProductionOptions<Env>,
+): Promise<FetchApp<Env>> {
   const clientDir = resolve(options.distDir, 'client');
   const staticDir =
     options.staticDir === false
@@ -161,7 +169,7 @@ export async function productionServer(options: ProductionOptions): Promise<Fetc
     preload: (modules) => assets(modules).modulepreload,
   });
   return {
-    fetch: async (request) => {
+    fetch: async (request, env) => {
       const asset = await serveAsset(request);
       if (asset !== undefined) return asset;
       const read = request.method === 'GET' || request.method === 'HEAD';
@@ -176,7 +184,7 @@ export async function productionServer(options: ProductionOptions): Promise<Fetc
           );
         }
       }
-      const response = await app.fetch(request);
+      const response = await app.fetch(request, env);
       if (response.headers.has('cache-control')) return response;
       const headers = new Headers(response.headers);
       headers.set('cache-control', cacheHeaders.dynamic['cache-control']);

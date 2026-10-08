@@ -147,9 +147,10 @@ reached a host or a store for 8 microtask turns in a row**.
   boundary (a `setTimeout`, `fetch`, a `message` event, IndexedDB) is outside it: tests drive
   time with `@gyral/testing`'s `virtualTime` (or answer fakes) and then `await settled()`.
   The frame lane is the exception that is waited for (a pending frame flush is scheduler work).
-- **Bounded.** More than 100 flushes or busy turns (turns in which messages arrived) without a
-  quiet window reject with an error naming the likely cycle (components or drivers feeding each
-  other messages), like the loop guard. A flush's loop-guard error rejects it too.
+- **Bounded.** More than 10,000 flushes or busy turns (turns in which messages arrived) without
+  a quiet window reject with an error naming the likely cause (a stream emitting without pause,
+  or components or drivers feeding each other messages), like the loop guard. A finite burst (a
+  progress stream, a few hundred values in a row) settles. A flush's loop-guard error rejects it too.
 - Code core loads lazily for rendering (the hydration code, 07 "Loading") counts as pending
   until the hosts waiting for it have started (`hold()` in the scheduler).
 - `@gyral/testing`'s `hydrated()` releases the document's islands (if asked), then awaits
@@ -164,8 +165,8 @@ reached a host or a store for 8 microtask turns in a row**.
 
 Until 0.3.1 `settled()` drained 4 microtask turns and looked at the scheduler only before and
 after: a message that arrived and rendered inside those turns was invisible, so a follow-up a
-few turns later was missed. sabacc.starwars.run (a Lit → Gyral 0.3 migration whose game state
-lives in a TC39-signals store Gyral doesn't own) added `for (let n = 0; n < 20; n++) await
+few turns later was missed. An app migrated from Lit to Gyral 0.3, whose state lives in a
+TC39-signals store Gyral doesn't own, added `for (let n = 0; n < 20; n++) await
 Promise.resolve()` before `settled()` as insurance. Their chain itself (a watcher that notifies
 synchronously, re-armed in a microtask) already settled with 4 turns; the same chain over a
 store that notifies in a microtask, where each move is answered by the next, did not

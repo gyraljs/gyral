@@ -36,7 +36,8 @@ Pages work before JavaScript loads.
    component. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
    components' `<style>` elements are allowed by hash, so `style-src` needs no
-   `'unsafe-inline'`: see "Content-Security-Policy" below.
+   `'unsafe-inline'`; Trusted Types need the `gyral` policy allowed: see
+   "Content-Security-Policy" below.
 7. **Light components own their children.** Don't write children inside a `shadow: false`
    component's tag (the server throws); pass data as props. Shadow components take children
    for their `<slot>`s.
@@ -135,6 +136,12 @@ values with `'style-src-attr': "'unsafe-hashes' 'sha256-…'"`.
 
 `@gyral/core/server` also exports `styleHashes()` (every registered shadow component's hash)
 and `componentStyles()` (tag → `<style>` text).
+
+**Trusted Types** (client-only apps too): the browser parses template HTML and `raw()` markup
+through one policy named `gyral`, created on first use. Under
+`'require-trusted-types-for': "'script'"`, allow it in `trusted-types` when you list policies
+(`'trusted-types': 'gyral'`, plus your own). The policy trusts its input as the app's own HTML,
+so `raw()` still never takes user input.
 
 ## Client entry
 
@@ -258,8 +265,10 @@ sends headers only; each `set-cookie` stays separate; a throwing handler is a 50
 
 The handler's second argument is `{ incoming, remoteAddress }` (the Node request and the
 client's IP address), for rate limits, logs and audits. A Hono app gets it as `c.env`, so
-`getConnInfo(c)` from `@hono/node-server/conninfo` works. Behind a proxy `remoteAddress` is the
-proxy: read `X-Forwarded-For` only when the request came from a proxy you run.
+`getConnInfo(c)` from `@hono/node-server/conninfo` works. `productionServer`'s `fetch` passes it
+on to the app `createApp` returns (`productionServer<NodeEnv>(…)` types it), so an app behind it
+sees the address too. Behind a proxy `remoteAddress` is the proxy: read `X-Forwarded-For` only
+when the request came from a proxy you run.
 
 ```ts
 import { createServer } from 'node:http';

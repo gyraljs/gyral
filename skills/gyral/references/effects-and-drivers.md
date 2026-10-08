@@ -219,9 +219,10 @@ export const Shell = define<State, Msg>('my-shell', {
 ### Scroll and focus after a navigation
 
 Once the new page has rendered (`settled()`), the browser router scrolls to the `#fragment`
-target or the top (push, replace), restores the position on back/forward, and resets focus to
-the first `[autofocus]` element or the page start: the same on the Navigation API and the
-History API. Fragment targets must be in the document (a light-DOM page, `shadow: false`).
+target or the top (push), restores the position on back/forward, and resets focus to the first
+`[autofocus]` element or the page start: the same on the Navigation API and the History API. A
+`replace` leaves scroll and focus alone unless you pass `scroll: true` / `focusReset: true`, so
+syncing the query with a search box never moves the page. Fragment targets must be in the document (a light-DOM page, `shadow: false`).
 Opt out per navigation (`navigate(url, { scroll: false })`) or per router
 (`makeRouter({ scroll: false, focusReset: false })`). For screen-reader and keyboard users,
 move focus to the new page's heading; the router then leaves focus alone:
@@ -295,10 +296,7 @@ export const Filters = define<State, Msg>('search-filters', {
     Routed: (_s, m) => fromSearch(m.location.search),
     Filter: (s, m) => {
       const next = { ...s, [m.field]: m.value };
-      return [
-        next,
-        [navigate(toSearch(next), { replace: true, scroll: false, focusReset: false })],
-      ];
+      return [next, [navigate(toSearch(next), { replace: true })]];
     },
   },
   view: (s, i) => html`

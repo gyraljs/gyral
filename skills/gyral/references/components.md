@@ -74,7 +74,7 @@ export const Stepper = define<State, Msg, Props>('my-stepper', {
 | `prop.value(schema, opts?)` | none: property only (`.items=${…}`) | none           |
 
 `prop.json` and `prop.value` also take a plain type guard instead of a schema:
-`prop.value(isSeat, { required: true })` with `const isSeat = (u: unknown): u is Seat => …`.
+`prop.value(isFilter, { required: true })` with `const isFilter = (u: unknown): u is Filter => …`.
 
 Options: `schema` (refines `string`/`number`/`boolean`, e.g. `v.picklist([...])`),
 `attribute` (a name, or `false` for property only), `required`, `default`, and `equals` for

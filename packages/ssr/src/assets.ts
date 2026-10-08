@@ -127,6 +127,11 @@ function memo(maxBytes: number) {
       return hit;
     },
     set(key: string, body: Uint8Array<ArrayBuffer>): void {
+      const old = files.get(key);
+      if (old !== undefined) {
+        files.delete(key);
+        bytes -= old.byteLength;
+      }
       if (body.byteLength > maxBytes) return;
       for (const [old, oldBody] of files) {
         if (bytes + body.byteLength <= maxBytes) break;
@@ -156,6 +161,20 @@ export function assetHandler(options: AssetHandlerOptions): AssetHandler {
   const setting = options.cache ?? true;
   const cache =
     setting === false ? undefined : memo(setting === true ? DEFAULT_CACHE_BYTES : setting.maxBytes);
+  // Concurrent misses of one file share one read (a deploy's first requests often arrive together).
+  const reading = new Map<string, Promise<Uint8Array<ArrayBuffer> | undefined>>();
+  const read = (file: string): Promise<Uint8Array<ArrayBuffer> | undefined> => {
+    let pending = reading.get(file);
+    if (pending === undefined) {
+      pending = readOrUndefined(file).then((body) => {
+        reading.delete(file);
+        if (body !== undefined) cache?.set(file, body);
+        return body;
+      });
+      reading.set(file, pending);
+    }
+    return pending;
+  };
   return async (request) => {
     const { pathname } = new URL(request.url);
     if (!pathname.startsWith(prefix)) return undefined;
@@ -174,12 +193,8 @@ export function assetHandler(options: AssetHandlerOptions): AssetHandler {
     }
     const file = resolve(root, ...parts);
     if (!file.startsWith(`${root}${sep}`)) return errorResponse(404, 'Not found');
-    let body = cache?.get(file);
-    if (body === undefined) {
-      body = await readOrUndefined(file);
-      if (body === undefined) return errorResponse(404, 'Not found');
-      cache?.set(file, body);
-    }
+    const body = cache?.get(file) ?? (await read(file));
+    if (body === undefined) return errorResponse(404, 'Not found');
     return fileResponse(request.method, body, contentType(file), cacheHeaders.immutable);
   };
 }

@@ -11,3 +11,5 @@ assets stay in memory (bounded at 64 MiB by default; option `cache`). New option
 (for example a volume that keeps older releases' files) and `staticDir` (`false` when nothing is
 prerendered, so page requests no longer look for a file first). The asset half is exported
 alone as `assetHandler({ dir, prefix, cache })` from `@gyral/ssr/static`.
+
+Behavior change: requests other than `GET`/`HEAD` under `/assets/` get 405 instead of reaching the app.

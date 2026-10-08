@@ -191,10 +191,10 @@ browser's scroll and focus reset ran at once, against the old DOM, before Gyral 
 has committed** (`settled()`, view/04-scheduler.md: the flush and its post-render queue, focus
 commands included).
 
-- **Navigation API:** the router intercepts its own navigations and same-document,
-  non-fragment traversals with `intercept({ handler: () => settled(), scroll, focusReset })`
+- **Navigation API:** the router intercepts its own navigations and same-document traversals
+  to another path or query with `intercept({ handler: () => settled(), scroll, focusReset })`
   (`'after-transition'`, or `'manual'` when turned off). The browser waits for the handler, then
-  resets focus, then scrolls to the fragment or the top (push, replace) or restores the entry's
+  resets focus, then scrolls to the fragment or the top (push) or restores the entry's
   position (back/forward).
 - **History API:** the same steps in `src/internal/history.ts`, after `settled()`:
   - **Focus:** the first `[autofocus]` element, else the body (through a momentary
@@ -202,7 +202,7 @@ commands included).
     starts at the top of the new page), unless something took focus during the navigation
     (a `focusin` while waiting): the Navigation API's "focus changed during the navigation"
     rule.
-  - **Scroll (push, replace):** `getElementById(decoded fragment).scrollIntoView()` (honours
+  - **Scroll (push; a replace only when asked):** `getElementById(decoded fragment).scrollIntoView()` (honours
     `scroll-margin` and `scroll-behavior`), else `scrollTo(0, 0)`. Only the document is
     searched, as by the browser: fragment targets belong in light-DOM pages (ADR 0014).
   - **Scroll (back/forward):** each entry this router creates carries a key in
@@ -213,6 +213,17 @@ commands included).
     their scroll. `history.scrollRestoration` stays `'auto'`, so a reload restores as usual.
   - A newer navigation cancels a pending one's steps. Fragment-only traversals are left to
     the browser.
+- **Replace leaves the page alone (gyral-dyn.30):** a `replace` is how an app keeps the query in
+  sync with a search box or filters, often on every keystroke, so by default it neither scrolls
+  nor resets focus; `navigate(url, { replace: true, scroll: true, focusReset: true })` opts in.
+  A push and back/forward follow the router's options.
+- **Same-page traversals are the browser's (gyral-dyn.30):** back/forward to an entry with the
+  same path and query (a fragment, or an entry an app pushed for a dialog) renders nothing new,
+  so neither path intercepts it or moves focus; the browser handles it as it would without
+  Gyral. Both paths agree.
+- **When the History API chunk can't load (gyral-dyn.30):** offline, or after a deploy removed
+  the old hashed chunk, a navigation becomes a full page load (`location.assign`, or
+  `location.replace` for a replace), so links never go dead.
 - **Turning it off:** `navigate(url, { scroll: false, focusReset: false })` per navigation, or
   `makeRouter({ scroll: false, focusReset: false })` for every navigation the router starts
   (captured links included) and for back/forward. The memory history ignores both.

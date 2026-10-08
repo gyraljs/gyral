@@ -44,7 +44,8 @@ define<{ count: number }, Msg>('gy-counter', {
 
 Using Gyral in your own app (packages, Vite preset, template compiler, server rendering):
 [docs/references/consumer-setup.md](docs/references/consumer-setup.md). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md).
+[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md). Behavior changes in
+0.3.1: [docs/references/migrating-0.3.0-to-0.3.1.md](docs/references/migrating-0.3.0-to-0.3.1.md).
 
 ## Using Gyral with AI coding agents
 

@@ -75,8 +75,7 @@ export const Counter = define<{ readonly n: number }, Msg>('my-outside-counter',
 ## A store per page, provided by name
 
 When each page (or test) creates its own store, build commands with a default that explains
-what's missing, and provide the real driver above the components (sabacc.starwars.run
-does this):
+what's missing, and provide the real driver above the components:
 
 ```ts
 import { provideDrivers, subscription } from '@gyral/core';
@@ -172,8 +171,7 @@ export const Sidebar = define<Mailbox, Msg>('my-sidebar', {
 
 ## TC39 signals (with `signal-polyfill`)
 
-After the `watch()` in sabacc.starwars.run's table driver (credited, with permission). A
-`Watcher`'s notification may not read signals, so it re-arms and reads in a microtask:
+A `Watcher`'s notification may not read signals, so it re-arms and reads in a microtask:
 
 ```text
 import { Signal } from 'signal-polyfill';

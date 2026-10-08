@@ -11,3 +11,5 @@ attribute names (bound or static, also in `raw()` markup). `data-intent-on` stay
 list. The client-only scan counts `data-intent-command`, and `gyral/unused-intent` counts
 per-event values as uses. `IntentInput.newState` is now read from any event that carries it
 (`toggle`, and `beforetoggle` too).
+
+Behavior change: an existing `data-intent-<x>` attribute (other than `data-intent-on`) is now read as the intent for event `x`; rename attributes that used that prefix for something else.

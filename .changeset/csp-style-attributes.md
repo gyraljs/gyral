@@ -13,3 +13,5 @@ still miss the first paint (use classes or custom properties with a stylesheet f
 allow known values with `'unsafe-hashes'`; see view/08-styles.md "Style attributes under a
 strict CSP"). A client-written `style` attribute now reads back as the CSSOM serializes it
 (`color: red;`). About 30 B gzip in the initial bundle, 30 B more in the hydration chunk.
+
+Behavior change: a `style` attribute the client wrote reads back as the CSSOM serializes it (`color: red;`), so tests comparing `getAttribute('style')` strings may need the serialized form.
