@@ -13,6 +13,8 @@ export type {
 export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
 export { child, emit, outputs } from './children.js';
+export { clipboard, copyText } from './clipboard.js';
+export type { ClipboardError, CopyTextHandlers } from './clipboard.js';
 export { focus } from './focus.js';
 export type { FocusOptions } from './focus.js';
 export { invokersSupported } from './invokers.js';

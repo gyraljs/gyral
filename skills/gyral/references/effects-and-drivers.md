@@ -175,6 +175,56 @@ export const Shell = define<State, Msg>('my-shell', {
   captured only with `makeRouter({ captureLinks: true })` given as the `router` driver of the
   component that owns the page.
 
+## Copying to the clipboard: `copyText()`
+
+Core's `copyText(text, { onSuccess?, onFailure? })` writes text with
+`navigator.clipboard.writeText`. Browsers allow that only in a secure context and during a user
+activation, so return it from the reducer of the click's message (with a synchronous parser it
+starts while the click is being handled):
+
+```ts
+import { copyText, define, html } from '@gyral/core';
+
+interface State {
+  readonly url: string;
+  readonly status: string;
+}
+type Msg =
+  | { readonly _tag: 'Copy' }
+  | { readonly _tag: 'Copied' }
+  | { readonly _tag: 'CopyFailed'; readonly reason: 'unavailable' | 'denied' | 'failed' };
+
+export const InviteLink = define<State, Msg>('my-invite-link', {
+  init: () => ({ url: 'https://example.com/room/42', status: '' }),
+  intent: { Copy: () => ({ _tag: 'Copy' }) },
+  update: {
+    Copy: (s) => [
+      s,
+      [
+        copyText(s.url, {
+          onSuccess: () => ({ _tag: 'Copied' }),
+          onFailure: (e) => ({ _tag: 'CopyFailed', reason: e.reason }),
+        }),
+      ],
+    ],
+    Copied: (s) => ({ ...s, status: 'Link copied' }),
+    CopyFailed: (s) => ({ ...s, status: 'Copy the link by hand' }),
+  },
+  view: (s, i) => html`
+    <input readonly value=${s.url} aria-label="Invite link" />
+    <button type="button" data-intent=${i.Copy}>Copy</button>
+    <output role="status">${s.status}</output>
+  `,
+});
+```
+
+- `ClipboardError.reason`: `unavailable` (no Clipboard API: http:// on a host other than
+  localhost), `denied` (no user activation, or a permission or permissions policy refused),
+  `failed` (anything else); `cause` is what the browser threw.
+- The driver is named `clipboard`: tests substitute it
+  (`el.drivers = { clipboard: fakeDriver('clipboard') }`) instead of touching the real
+  clipboard. Apps that don't use `copyText` don't bundle it.
+
 ## Substituting drivers (by name)
 
 Lookup order: the element's `drivers` property → the nearest `<gyral-drivers>` provider
