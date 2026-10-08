@@ -124,4 +124,48 @@ describe('per-event intents', () => {
     ]);
     expect([...eventsOf(template)].sort()).toEqual(['click', 'focusout', 'gyral-output', 'keyup']);
   });
+
+  it('reads every static per-event attribute when they sit next to each other', () => {
+    const adjacent = (html: string) => [...eventsOf(normalize([html]))].sort();
+    expect(adjacent('<b data-intent-pointerdown="Down" data-intent-pointerup="Up"></b>')).toEqual([
+      'pointerdown',
+      'pointerup',
+    ]);
+    expect(
+      adjacent('<b data-intent-on="click" data-intent-keydown=K data-intent-keyup=\'U\'>'),
+    ).toEqual(['click', 'keydown', 'keyup']);
+    expect(adjacent('<b data-intent-pointerdown=D data-intent-pointerup=U/>')).toEqual([
+      'pointerdown',
+      'pointerup',
+    ]);
+  });
+
+  it('adjacent static per-event attributes in raw() markup both fire', async () => {
+    const Adjacent = define<State, Msg>('test-per-event-adjacent', {
+      init: () => ({ cards: [], log: [] }),
+      intent: {
+        Grab: () => ({ _tag: 'Grab', id: 'raw' }),
+        Drop: () => ({ _tag: 'Drop', id: 'raw' }),
+      },
+      update: {
+        Grab: (s, m) => ({ ...s, log: [...s.log, `grab:${m.id}`] }),
+        Drop: (s, m) => ({ ...s, log: [...s.log, `drop:${m.id}`] }),
+        Pick: (s) => s,
+        Key: (s) => s,
+        Enter: (s) => s,
+        Raw: (s) => s,
+      },
+      view: () =>
+        html`${raw('<p data-intent-pointerdown="Grab" data-intent-pointerup="Drop">p</p>')}`,
+    });
+    const el = new Adjacent() as TableElement;
+    document.body.append(el);
+    await settled();
+    const p = el.shadowRoot?.querySelector('p');
+    if (p == null) throw new Error('p');
+    fire(p, new PointerEvent('pointerdown', init));
+    fire(p, new PointerEvent('pointerup', init));
+    await settled();
+    expect(el.state.log).toEqual(['grab:raw', 'drop:raw']);
+  });
 });

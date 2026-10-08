@@ -64,6 +64,10 @@ describe('gyral/unused-intent', () => {
       component(
         "(s, i) => html`<b data-intent-click=${i.Save} data-intent-focusin=${'Load'}></b>`",
       ),
+      // Two static per-event attributes side by side: both count.
+      component(
+        '(s, i) => html`<b data-intent-pointerdown="Save" data-intent-pointerup="Load"></b>`',
+      ),
       // Not Gyral's define.
       "import { define } from 'elsewhere';\ndefine('x', { intent: { A: () => 1 }, view: () => 1 });",
     ],
