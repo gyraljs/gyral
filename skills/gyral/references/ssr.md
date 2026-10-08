@@ -96,9 +96,15 @@ export function home(): Response {
 for the components registered when it is called: import them first (in development
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
-Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
-CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()` (every
-registered shadow component's hash) and `componentStyles()` (tag → `<style>` text).
+Hand-written `<style>` in `head` isn't covered: move that CSS into `styles` or a stylesheet.
+Inline `style="…"` attributes in server HTML aren't either: a strict `style-src` blocks them
+on first paint, and hydration then applies them through the CSSOM (client renders and updates
+are never blocked). Put declarations in stylesheets selected by classes or data attributes, and
+use inline styles only for custom properties the stylesheet has a fallback for; or allow known
+values with `'style-src-attr': "'unsafe-hashes' 'sha256-…'"`.
+
+`@gyral/core/server` also exports `styleHashes()` (every registered shadow component's hash)
+and `componentStyles()` (tag → `<style>` text).
 
 ## Client entry
 
