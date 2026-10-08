@@ -94,9 +94,16 @@ describe('renderOnServer', () => {
     expect(plain).toBe('<p class="plain">a template result</p>');
   });
 
-  it('names the exports when the one asked for is missing', async () => {
+  it('names the exports when the one asked for is missing, and rejects bad prop names', async () => {
     await expect(
       commands.renderOnServer({ module: './server-app/counter.ts', export: 'Nope' }),
     ).rejects.toThrow(/no export "Nope" \(exports: .*Counter/);
+    await expect(
+      commands.renderOnServer({
+        module: './server-app/counter.ts',
+        export: 'Counter',
+        props: { 'start="1"': 1 },
+      }),
+    ).rejects.toThrow(/"start="1"" is not a property name/);
   });
 });

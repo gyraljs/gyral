@@ -92,6 +92,9 @@ const isComponentClass = (value: unknown): value is { readonly tagName: string }
   'tagName' in value &&
   typeof value.tagName === 'string';
 
+// Names a `.prop=${…}` binding can carry (props become template text below).
+const PROPERTY_NAME = /^[A-Za-z_$][\w$]*$/;
+
 // One template per tag and prop names, like a template literal's call site.
 const hostTemplates = new Map<string, TemplateStringsArray>();
 
@@ -133,15 +136,13 @@ export const renderOnServer: BrowserCommand<[ServerRenderRequest], string> = asy
       ? resolve(dirname(importer), request.module)
       : request.module;
   const id = await resolveId(spec, importer);
-  // Core resolved from the module itself: the copy its components registered with.
-  const [module, coreExports, serverExports] = await Promise.all([
-    load(id),
-    resolveId('@gyral/core', id).then(load),
-    resolveId('@gyral/core/server', id).then(load),
-  ]);
-  // Sound: these are @gyral/core's own entry points.
-  const core = coreExports as unknown as CoreModule;
-  const server = serverExports as unknown as ServerModule;
+  const module = await load(id);
+  // Core resolved from the module itself: the copy its components registered with. Sound:
+  // these are @gyral/core's own entry points.
+  const core = async () =>
+    (await load(await resolveId('@gyral/core', id))) as unknown as CoreModule;
+  const server = async () =>
+    (await load(await resolveId('@gyral/core/server', id))) as unknown as ServerModule;
   const name = request.export ?? 'default';
   if (!(name in module)) {
     throw new Error(
@@ -153,7 +154,10 @@ export const renderOnServer: BrowserCommand<[ServerRenderRequest], string> = asy
   let result: unknown;
   if (isComponentClass(value)) {
     const names = Object.keys(props);
-    result = core.html(hostTemplate(value.tagName, names), ...names.map((n) => props[n]));
+    const bad = names.find((n) => !PROPERTY_NAME.test(n));
+    if (bad !== undefined) throw new Error(`renderOnServer: "${bad}" is not a property name`);
+    const { html } = await core();
+    result = html(hostTemplate(value.tagName, names), ...names.map((n) => props[n]));
   } else if (typeof value === 'function') {
     result = await (value as (props: unknown) => unknown)(props);
   } else {
@@ -161,5 +165,6 @@ export const renderOnServer: BrowserCommand<[ServerRenderRequest], string> = asy
   }
   if (typeof result === 'string') return result;
   if (isResponse(result)) return result.text();
-  return server.renderToString(result, request.dev === undefined ? {} : { dev: request.dev });
+  const { renderToString } = await server();
+  return renderToString(result, request.dev === undefined ? {} : { dev: request.dev });
 };
