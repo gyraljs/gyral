@@ -1,6 +1,7 @@
 # ADR 0020 — Hashing server-rendered `style` attributes for CSP (opt-in)
 
-Status: **proposed** (2026-10-08), for **0.3.1**. Bead: gyral-dyn.10. Builds on
+Status: **accepted** (2026-10-08; owner accepted every recommendation below), implemented in
+**0.3.1**. Bead: gyral-dyn.10. Builds on
 view/06-server.md "CSP", view/08-styles.md "Style attributes under a strict CSP" (0.3.1,
 gyral-dyn.5) and ADR 0003.
 
@@ -200,7 +201,9 @@ Size: 0 B in client bundles (server code only); about 70 lines of server code. T
 - **Conformance:** README property 1 (server equals client) with the collector on: the
   collector must not change the markup.
 
-## Open questions for the owner
+## Owner decisions (2026-10-08)
+
+All accepted as recommended: (1a) per-page collection only, (2a) `csp: { styleAttributes: 'hash' }`, (3a) warn above 32, cut above 128, (4a) serve-time pages only in 0.3.1, (5a) the `raw()` gap documented. The questions as asked:
 
 1. **Modes.** (a) Per-page collection only (recommended); (b) also a static-only mode that
    keeps chunked output and a cacheable header.

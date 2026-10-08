@@ -3,8 +3,13 @@
 // Rendering is `@gyral/core/server`'s; this package adds the page shell, chunked output with
 // the request's store scope (ADR 0013), static generation and form actions.
 import { StoreRegistry, withStoreScope, type ChildValue } from '@gyral/core';
-import { development, render, renderToString as renderString } from '@gyral/core/server';
-import { checkPolicy, policyAtRender } from './csp.js';
+import {
+  development,
+  render,
+  renderToString as renderString,
+  type StyleValues,
+} from '@gyral/core/server';
+import { checkPolicy, policyAtRender, policyWithAttributes } from './csp.js';
 import { page, type PageOptions, type RenderOptions } from './page.js';
 
 export { page, type PageOptions, type RenderOptions } from './page.js';
@@ -61,12 +66,28 @@ export function renderToStream(
  * and there is no async or suspense streaming. Status and headers are final before the first
  * byte. `csp` sets the `Content-Security-Policy`
  * header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
- * component registered by the time the page renders (and the page's `styles`).
+ * component registered by the time the page renders (and the page's `styles`). With
+ * `csp: { styleAttributes: 'hash' }` the page is rendered to a string first, so the header can
+ * list its `style` attribute values by hash (ADR 0020); a render error then throws here.
  */
 export function renderPage(options: PageOptions, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
   if (!headers.has('content-type')) headers.set('content-type', 'text/html; charset=utf-8');
   const { csp } = options;
+  if (
+    typeof csp === 'object' &&
+    csp.styleAttributes === 'hash' &&
+    !headers.has('content-security-policy')
+  ) {
+    const values: StyleValues = new Map();
+    const registry = new StoreRegistry(options.stores ?? []);
+    const dev = options.dev ?? development;
+    const body = withStoreScope(registry, () =>
+      renderString(page(options), { dev, styleAttributes: values }),
+    );
+    headers.set('content-security-policy', policyWithAttributes(csp, options.styles, values, dev));
+    return new Response(body, { ...init, headers });
+  }
   if (csp !== undefined && !headers.has('content-security-policy')) {
     const header = typeof csp === 'string' ? csp : policyAtRender(csp, options.styles);
     if (typeof csp === 'string' && (options.dev ?? development)) checkPolicy(csp);

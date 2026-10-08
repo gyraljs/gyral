@@ -24,6 +24,13 @@ export interface Deferred {
   readonly input: ServerRenderInput;
 }
 
+/**
+ * A render's `style` attribute values for a CSP (ADR 0020): each distinct value as the DOM sees
+ * it (decoded), mapped to where it was first written (the template's `loc` or id; `''` when
+ * neither is known).
+ */
+export type StyleValues = Map<string, string>;
+
 /** What a walk produces: markup, with deferred components in document order. */
 export type Item = string | Deferred;
 
@@ -48,14 +55,25 @@ export class Markup {
   protected buf = '';
   protected readonly items: Item[] = [];
 
+  /** The template being written, for `styles` (its `loc` or id). */
+  protected where = '';
+
   /**
    * `dev`: development markers and checks. `scope`: the nearest provider's scope, passed to
-   * components (undefined: the request's).
+   * components (undefined: the request's). `styles`: collects every `style` value written.
    */
   constructor(
     protected readonly dev: boolean,
     protected scope: unknown,
+    protected readonly styles?: StyleValues,
   ) {}
+
+  /** Records a `style` value the DOM will see (empty values declare nothing). */
+  protected style(value: string): void {
+    if (value !== '' && this.styles !== undefined && !this.styles.has(value)) {
+      this.styles.set(value, this.where);
+    }
+  }
 
   write(markup: string): void {
     this.buf += markup;
@@ -90,6 +108,7 @@ export class Markup {
 
   private valued(name: string, value: string, opening: Opening | undefined): void {
     this.buf += ` ${name}="${escapeAttr(value)}"`;
+    if (name === 'style') this.style(value);
     if (opening !== undefined) opening.attributes[name] = value;
   }
 

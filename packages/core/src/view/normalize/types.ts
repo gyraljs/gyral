@@ -128,6 +128,12 @@ export interface TemplateObject {
    * so the client renderer never reads it; the runtime preparer and server builds keep it.
    */
   readonly segments?: readonly Segment[];
+  /**
+   * Server only, like `segments`: the decoded values of the template's non-empty static
+   * `style` attributes, deduplicated, so a server render can collect every `style` value it
+   * writes for a CSP (ADR 0020) without parsing its string segments. Absent when there are none.
+   */
+  readonly staticStyles?: readonly string[];
   /** Development only: file:line:column of the call site. */
   readonly loc?: string;
 }

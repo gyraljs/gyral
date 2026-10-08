@@ -9,7 +9,7 @@ import { escapeText, onlyWhitespace } from './escape.js';
 import { Markup, PLAIN, type Frame, type Opening } from './tags.js';
 import { checkPromise, fosterError, svgPlacementError, textContent, truthy } from './values.js';
 
-export type { Deferred, Item } from './tags.js';
+export type { Deferred, Item, StyleValues } from './tags.js';
 
 /** Parents in which the parser moves non-whitespace text out (foster parenting). */
 const TABLE = new Set(['table', 'tbody', 'thead', 'tfoot', 'tr']);
@@ -117,7 +117,12 @@ export class Writer extends Markup {
     if (this.dev && !template.server) this.buf += `<!--gyral:${template.id ?? ''}-->`;
     const values = result.values;
     const outer = this.shell;
+    const outerWhere = this.where;
     this.shell = template.server === true;
+    if (this.styles !== undefined) {
+      this.where = template.loc ?? template.id ?? '';
+      for (const css of template.staticStyles ?? []) this.style(css);
+    }
     let at = 0;
     let opening: Opening | undefined;
     let frames: Frame[] | undefined;
@@ -160,5 +165,6 @@ export class Writer extends Markup {
       }
     }
     this.shell = outer;
+    this.where = outerWhere;
   }
 }

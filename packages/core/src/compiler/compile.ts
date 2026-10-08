@@ -59,7 +59,7 @@ export interface CompileInput {
  * needs no decoding.
  */
 function emitted(template: TemplateObject, ssr: boolean, ids: boolean): object {
-  const { id, html, parts, server, svg, segments } = template;
+  const { id, html, parts, server, svg, segments, staticStyles } = template;
   const client = {
     ...(ids ? { id } : {}),
     html,
@@ -67,7 +67,10 @@ function emitted(template: TemplateObject, ssr: boolean, ids: boolean): object {
     ...(server === true ? { server } : {}),
     ...(svg === true ? { svg } : {}),
   };
-  return ssr ? { ...client, segments } : client;
+  if (!ssr) return client;
+  return staticStyles === undefined
+    ? { ...client, segments }
+    : { ...client, segments, staticStyles };
 }
 
 const newlines = (text: string): string => '\n'.repeat(text.split('\n').length - 1);

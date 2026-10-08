@@ -227,8 +227,10 @@ carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStre
   and updates always apply. The server writes them into the HTML, where a strict `style-src`
   blocks them until the element hydrates (hydration writes them again through the CSSOM).
   For the first paint, select stylesheet rules with classes or data attributes, use inline
-  styles only for custom properties with a fallback in the stylesheet, or allow known values
-  by hash (`style-src-attr 'unsafe-hashes' 'sha256-…'`). Details:
+  styles only for custom properties with a fallback in the stylesheet, or let `renderPage`
+  hash the values the page wrote: `csp: { directives, styleAttributes: 'hash' }` adds
+  `style-src-attr 'unsafe-hashes' 'sha256-…'` per distinct value (the page is rendered to a
+  string first; at most `maxStyleHashes`, default 128). Details:
   [view/08-styles.md](../design-docs/view/08-styles.md) "Style attributes under a strict CSP".
 
 Hydration is built into core (view/07-hydration.md): a server-rendered component resumes its

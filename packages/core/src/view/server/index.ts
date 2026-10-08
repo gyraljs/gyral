@@ -6,7 +6,9 @@ import { serverComponents } from '../registry.js';
 import type { ChildValue } from '../render/values.js';
 import { expand, styleText } from './component.js';
 import { sha256 } from './sha256.js';
-import { ROOT, Writer, type Item } from './writer.js';
+import { ROOT, Writer, type Item, type StyleValues } from './writer.js';
+
+export type { StyleValues };
 
 export interface ServerRenderOptions {
   /**
@@ -15,6 +17,13 @@ export interface ServerRenderOptions {
    * export condition, as for the client), off otherwise.
    */
   readonly dev?: boolean;
+  /**
+   * Collects every `style` attribute value the render writes, decoded (as the DOM sees it),
+   * each mapped to where it was first written (template `loc` or id): static, bound,
+   * multi-part and element-hook values; not `raw()` markup. For hashing them into a CSP
+   * (ADR 0020). The markup is the same with or without it.
+   */
+  readonly styleAttributes?: StyleValues;
 }
 
 function push(stack: Item[], items: readonly Item[]): void {
@@ -28,13 +37,14 @@ function push(stack: Item[], items: readonly Item[]): void {
  */
 export function* render(value: ChildValue, options: ServerRenderOptions = {}): Iterable<string> {
   const dev = options.dev ?? DEV;
-  const root = new Writer(dev, undefined);
+  const styles = options.styleAttributes;
+  const root = new Writer(dev, undefined, styles);
   root.child(value, undefined, ROOT);
   const stack: Item[] = [];
   push(stack, root.done());
   for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
     if (typeof item === 'string') yield item;
-    else push(stack, expand(item, dev));
+    else push(stack, expand(item, dev, styles));
   }
 }
 

@@ -9,7 +9,10 @@ import { gyralVitePreset } from '../../src/vite.js';
 export default defineConfig({
   ...gyralVitePreset(),
   test: {
-    include: ['packages/core/test/view/{render-style,style-hydration,style-csp}.test.ts'],
+    include: [
+      'packages/core/test/view/{render-style,style-hydration,style-csp}.test.ts',
+      'packages/ssr/test/style-attribute-hashes.test.ts',
+    ],
     browser: {
       enabled: true,
       headless: true,
