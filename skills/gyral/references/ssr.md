@@ -43,8 +43,11 @@ Pages work before JavaScript loads.
 
 ## Request handler
 
-`renderPage(options, init?)` returns a streaming `Response` for a full document. It works with
-any framework that speaks `fetch` (Hono, Node adapters, Workers). Templates are core's `html`:
+`renderPage(options, init?)` returns a `Response` for a full document. Its body is chunked
+output of a synchronous render, pulled one component boundary at a time: load all data before
+calling it (nothing is awaited, there is no async or suspense streaming, and the head can't be
+sent while data loads). Status and headers are final before the first byte, so a 404 is a real 404. It works with any framework that speaks `fetch` (Hono, `@gyral/ssr/node`, Workers).
+Templates are core's `html`:
 
 ```ts
 import { html } from '@gyral/core';

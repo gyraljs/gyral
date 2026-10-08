@@ -41,7 +41,9 @@ StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope
   a form action first), so nothing in a template is awaited. A `Promise` value is an error.
 - **Chunked.** `render` yields at least at every component boundary. `@gyral/ssr`'s
   `renderToStream`/`renderPage` pull chunks into a `ReadableStream` and run each pull inside
-  the request's store scope, so ADR 0013's per-step isolation keeps working unchanged.
+  the request's store scope, so ADR 0013's per-step isolation keeps working unchanged. This is
+  pull-based output of a synchronous render, not async or suspense streaming: nothing waits
+  for data mid-page, so docs say "chunked", not "streaming" (gyral-dyn.7).
 - `@gyral/ssr` keeps the serving side: `page()` (which writes the page's store seed and global
   `<style>` elements itself), `renderToString`, `renderToStream`, `renderPage`,
   `contentSecurityPolicy`, static generation and production serving (`@gyral/ssr/static`) and
@@ -90,7 +92,7 @@ The server writes the template HTML (01), putting each value in at its hole:
   `textarea`/`title` content follows the client's flattening exactly (objects as `String(v)`,
   with the development warning).
 
-### How the walk streams (Phase 4)
+### How the walk is chunked (Phase 4)
 
 The walk is plain recursion over segments that appends to one string. When it meets a Gyral
 component it writes the start tag and its attributes, then **defers** the rest (seed, shadow
@@ -260,4 +262,4 @@ within one template.
 | Shadow roots in HTML  | `<template shadowrootmode="open">`  | widely (since 2026-08-20) |
 | Style hashes          | SHA-256 in JavaScript (synchronous) | any runtime               |
 | CSP for inline styles | `style-src 'sha256-…'`              | widely (CSP)              |
-| Streaming             | `ReadableStream` (in `@gyral/ssr`)  | server runtimes           |
+| Chunked output        | `ReadableStream` (in `@gyral/ssr`)  | server runtimes           |

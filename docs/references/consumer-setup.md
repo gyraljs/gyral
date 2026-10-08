@@ -13,7 +13,7 @@ pnpm add @gyral/core
 # Optional packages
 pnpm add @gyral/http @gyral/router @gyral/time
 pnpm add -D @gyral/testing
-# Server rendering: page shell, streaming, static generation (see "Server rendering" below)
+# Server rendering: page shell, chunked responses, static generation (see "Server rendering" below)
 pnpm add @gyral/ssr
 ```
 
@@ -184,7 +184,8 @@ network: answer fakes or advance `virtualTime` first. It replaces 0.2's `el.upda
 
 `@gyral/core/server` renders template results and components to HTML without a DOM
 (view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (no
-Node-only APIs). It is server-only: never import it from client code, so client bundles
+Node-only APIs). Chunked is not async streaming: data is loaded before the render starts, and
+`renderPage`'s body is that render pulled one component boundary at a time. It is server-only: never import it from client code, so client bundles
 carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
 `renderToString` (with per-request `stores`), `page()`, `renderPage({ csp })` and
 `contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and
@@ -220,7 +221,7 @@ pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on ev
 
 `productionServer({ distDir, createApp })` (`@gyral/ssr/static`) serves the Vite client build
 (`/assets/*`, immutable), prerendered pages and everything else through your `createApp`;
-`toNodeListener` (`@gyral/ssr/node`) mounts it on `node:http`, streaming each page with
+`toNodeListener` (`@gyral/ssr/node`) mounts it on `node:http`, writing each page's chunks with
 backpressure. Options: `assetsDir` (another directory for `/assets/*`, for example a volume
 that keeps older releases' files), `staticDir: false` when nothing is prerendered, `cache`.
 
