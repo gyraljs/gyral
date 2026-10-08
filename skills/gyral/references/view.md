@@ -469,6 +469,40 @@ export const Pager = define<State, Msg>('my-pager', {
 });
 ```
 
+**Focusing into a child component.** `focus()` looks inside this component's own root, so it
+can't reach an element in a child's shadow root. Give the child `shadow: { delegatesFocus: true }` and
+focus the child itself: its first focusable element gets focus (0.3.1).
+
+```ts
+import { define, focus, html } from '@gyral/core';
+
+// The child: focusing <my-name-field> focuses its input.
+export const NameField = define<object, never>('my-name-field', {
+  shadow: { delegatesFocus: true },
+  init: () => ({}),
+  intent: {},
+  update: {},
+  view: () => html`<label>Name <input name="name" /></label>`,
+});
+
+type Msg = { readonly _tag: 'Edit' };
+
+export const Profile = define<object, Msg>('my-profile', {
+  init: () => ({}),
+  intent: { Edit: () => ({ _tag: 'Edit' }) },
+  update: { Edit: (s) => [s, [focus('my-name-field')]] },
+  view: (_s, i) => html`
+    <button type="button" data-intent=${i.Edit}>Edit name</button>
+    <my-name-field></my-name-field>
+  `,
+});
+```
+
+**Keeping focus across renders.** Focus stays only while the focused node does. Render
+focusable rows with a keyed `each` (rows move instead of being recreated), and when the
+focused item is removed (a deleted row), return a `focus()` command for its neighbour or the
+list, or focus falls to the page body.
+
 ## Semantics and accessibility
 
 Use real elements: `<button type="button">` for actions, `<a href>` for navigation, `<form>`

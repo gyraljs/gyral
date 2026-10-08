@@ -38,6 +38,8 @@ export interface ServerComponent {
   readonly tag: string;
   /** `shadow: false` (ADR 0014): render as light-DOM children, not `<template shadowrootmode>`. */
   readonly light: boolean;
+  /** `shadow: { delegatesFocus: true }`: the declarative root gets `shadowrootdelegatesfocus`. */
+  readonly delegatesFocus?: boolean;
   /** CSS texts for the declarative shadow root's `<style>` (08). Empty for light components. */
   readonly styles: readonly string[];
   /** The island strategy (07): anything but `load` adds `defer-hydration` and `data-gyral-hydrate`. */

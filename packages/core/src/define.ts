@@ -7,14 +7,14 @@ import { markGyralHost } from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import { recordSpec } from './server-specs.js';
-import type { ComponentSpec, Tagged } from './types.js';
+import type { ComponentSpec, ShadowOption, Tagged } from './types.js';
 import { DEV, message } from './view/index.js';
 
 export type { GyralElement, GyralElementClass } from './element-types.js';
 
 interface SpecShape {
   readonly props?: object;
-  readonly shadow?: boolean;
+  readonly shadow?: ShadowOption;
   readonly styles?: unknown;
 }
 

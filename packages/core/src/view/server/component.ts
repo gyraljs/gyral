@@ -38,7 +38,8 @@ export function expand({ component, input }: Deferred, dev: boolean): Item[] {
     return w.done();
   }
   const css = styleText(component);
-  w.write(`<template shadowrootmode="open">${css === '' ? '' : `<style>${css}</style>`}`);
+  const focus = component.delegatesFocus === true ? ' shadowrootdelegatesfocus' : '';
+  w.write(`<template shadowrootmode="open"${focus}>${css === '' ? '' : `<style>${css}</style>`}`);
   w.child(view, undefined, ROOT);
   w.write('</template>');
   return w.done();

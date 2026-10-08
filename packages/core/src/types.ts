@@ -182,6 +182,14 @@ type InitField<S, M extends Tagged, P> = Stateless extends S
 
 export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitField<S, M, P>;
 
+/**
+ * `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
+ * `delegatesFocus: true`: focusing the host, or clicking a non-focusable part of it, focuses its
+ * first focusable element, and `:focus` matches the host while focus is inside; the server
+ * writes `shadowrootdelegatesfocus` on the declarative shadow root (view/05-element.md "Focus").
+ */
+export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
+
 interface SpecBody<S, M extends Tagged, P> {
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
@@ -200,8 +208,9 @@ interface SpecBody<S, M extends Tagged, P> {
    * `false` renders the view as the element's own light-DOM children (ADR 0014): document CSS
    * applies, and the server writes plain children instead of a `<template shadowrootmode>`.
    * For page-level components (listings, articles). No `<slot>`s and no `styles`. Default `true`.
+   * An object configures the shadow root (`{ delegatesFocus: true }`).
    */
-  readonly shadow?: boolean;
+  readonly shadow?: ShadowOption;
   /**
    * When a server-rendered instance hydrates (gyral-4k7.4): `load` (default), `idle`,
    * `visible` (scrolled into view) or `interaction` (first pointer/focus). Client-only

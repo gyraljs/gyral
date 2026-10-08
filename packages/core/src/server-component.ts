@@ -84,6 +84,7 @@ export function serverComponent<S, M extends Tagged, P>(
   return {
     tag,
     light: isLight(spec),
+    delegatesFocus: typeof spec.shadow === 'object' && spec.shadow.delegatesFocus === true,
     styles: isLight(spec) ? [] : styleTexts(spec.styles),
     hydrate: spec.hydrate ?? 'load',
     render(input): ServerRendering {

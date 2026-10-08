@@ -299,6 +299,25 @@ variant, or a name declared with `IntentName<…>` in the union, whose parser ma
 message and which has no reducer. Both appear in the view's `i` and in `intents<Msg>()`, so
 markup and rows name them the same way, and an unknown name fails to compile.
 
+## Focus (gyral-dyn.26, 0.3.1)
+
+`shadow: { delegatesFocus: true }` in the spec attaches the shadow root with that option, and
+the server writes `shadowrootdelegatesfocus` on the declarative shadow root, so a hydrated host
+has the same root. Focusing the host (`el.focus()`, a parent's `focus('my-field')` command, a
+click on a non-focusable part) focuses its first focusable element, and `:focus` matches the
+host while focus is inside it. `shadow` stays `true` by default and `false` for light DOM; the
+object form is a shadow root with options, spread into `attachShadow` before `mode: 'open'`,
+which costs a few bytes and no new spec key.
+
+Why: `focus()` commands query the component's own root, so a parent can't name an element
+inside a child's shadow root; delegation lets it name the child instead, with no new API.
+
+Focus also survives re-renders only as long as the focused node does. A node the view stops
+rendering takes focus with it (the browser moves focus to the body), so keep focusable rows in
+a keyed `each` (a row moves, it isn't recreated) and return a `focus()` command when the focused
+item really goes away (a deleted row: focus its neighbour or the list). Tests:
+`packages/core/test/delegates-focus.test.ts`, `test/view/server-components.node.test.ts`.
+
 ## `ElementInternals`
 
 Attached lazily and only once per element, through one internal accessor, when a feature needs
@@ -329,10 +348,11 @@ it: custom states today, form association later.
 
 ## Native primitives
 
-| Need                   | Primitive                                                    | Baseline                              |
-| ---------------------- | ------------------------------------------------------------ | ------------------------------------- |
-| Element                | autonomous custom elements, `observedAttributes`             | widely                                |
-| Root                   | `attachShadow`, declarative shadow roots (`this.shadowRoot`) | widely (DSD since 2026-08)            |
-| Moves without teardown | `connectedMoveCallback` with `moveBefore()`                  | not Baseline: harmless where missing  |
-| States                 | `attachInternals()`, `CustomStateSet`                        | widely; states newly (widely 2026-11) |
-| Props                  | Standard Schema (a spec, not a browser API)                  | —                                     |
+| Need                   | Primitive                                                      | Baseline                              |
+| ---------------------- | -------------------------------------------------------------- | ------------------------------------- |
+| Element                | autonomous custom elements, `observedAttributes`               | widely                                |
+| Root                   | `attachShadow`, declarative shadow roots (`this.shadowRoot`)   | widely (DSD since 2026-08)            |
+| Focus delegation       | `attachShadow({ delegatesFocus })`, `shadowrootdelegatesfocus` | widely (the attribute with DSD)       |
+| Moves without teardown | `connectedMoveCallback` with `moveBefore()`                    | not Baseline: harmless where missing  |
+| States                 | `attachInternals()`, `CustomStateSet`                          | widely; states newly (widely 2026-11) |
+| Props                  | Standard Schema (a spec, not a browser API)                    | —                                     |

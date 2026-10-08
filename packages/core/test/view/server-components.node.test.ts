@@ -63,6 +63,14 @@ define<{ readonly n: number }, never>('srv-island', {
   view: () => html`<i>later</i>`,
 });
 
+define<{ readonly n: number }, never>('srv-focus', {
+  shadow: { delegatesFocus: true },
+  init: () => ({ n: 0 }),
+  intent: {},
+  update: {},
+  view: () => html`<input aria-label="Name" />`,
+});
+
 const prod = (v: unknown) => renderToString(v as never, { dev: false });
 
 /** The seed attribute's JSON, decoded (single-quoted; only & and ' escaped). */
@@ -140,6 +148,13 @@ describe('components (06 "Components")', () => {
     expect(prod(html`<srv-island></srv-island>`)).toContain(
       `<srv-island data-gyral-seed='{"props":{}}' defer-hydration data-gyral-hydrate="visible">`,
     );
+  });
+
+  it('mark a focus-delegating shadow root with shadowrootdelegatesfocus (gyral-dyn.26)', () => {
+    expect(prod(html`<srv-focus></srv-focus>`)).toContain(
+      '<template shadowrootmode="open" shadowrootdelegatesfocus><input aria-label="Name">',
+    );
+    expect(prod(html`<srv-island></srv-island>`)).not.toContain('shadowrootdelegatesfocus');
   });
 
   it('write unregistered custom elements as plain elements', () => {

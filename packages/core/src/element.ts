@@ -207,7 +207,11 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #start(): void {
-      const root = light ? this : (this.shadowRoot ?? this.attachShadow({ mode: 'open' }));
+      // `shadow: { delegatesFocus }` (05 "Focus"); `true` and `undefined` spread nothing.
+      const root = light
+        ? this
+        : (this.shadowRoot ??
+          this.attachShadow({ ...(spec.shadow as object | undefined), mode: 'open' }));
       this.#root = root;
       this.#hydrating = this.#serverRendered && hydrationCode != null && root.hasChildNodes();
       sheets ??= light ? [] : sheetsFor(spec.styles);
