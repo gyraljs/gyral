@@ -105,6 +105,66 @@ export const provideTable = (element: Element, store: TableStore): (() => void) 
   });
 ```
 
+## One feed, several components
+
+A game shows its HUD in one place and its control pad in another, both fed by the same game
+loop. Keep one source and let each component subscribe to it: the source runs once, and each
+component's subscription is released when that component goes away.
+
+```ts
+import { command, define, html, subscription, type Command } from '@gyral/core';
+
+interface Game {
+  readonly score: number;
+  readonly paused: boolean;
+}
+/** The game loop: one instance, whatever reads it. */
+interface Engine {
+  getState(): Game;
+  subscribe(listener: () => void): () => void;
+}
+declare const engine: Engine;
+
+/** One driver for every reader; each command subscribes once more to the same engine. */
+const game = subscription<Game>('game', (emit) => {
+  emit(engine.getState());
+  return engine.subscribe(() => {
+    emit(engine.getState());
+  });
+});
+
+type Msg = { readonly _tag: 'Frame'; readonly game: Game };
+const watchGame = (): Command<Msg> =>
+  command(game, undefined, { onSuccess: (g): Msg => ({ _tag: 'Frame', game: g }) });
+
+export const Hud = define<Game, Msg>('my-hud', {
+  init: () => [engine.getState(), [watchGame()]],
+  intent: {},
+  update: { Frame: (_s, m) => m.game },
+  view: (s) => html`<output>${s.score}</output>`,
+});
+
+export const ControlPad = define<Game, Msg>('my-control-pad', {
+  init: () => [engine.getState(), [watchGame()]],
+  intent: {},
+  update: { Frame: (_s, m) => m.game },
+  view: (s) => html`<button type="button" ?disabled=${s.paused}>Fire</button>`,
+});
+```
+
+- Both components name the driver `game`, so one `provideDrivers(ancestor, { game: … })` (or
+  `withDrivers(container, { game: fakeDriver('game') })` in a test) reaches both: provide it on
+  an element that contains them, such as the page or the test's container ("A store per page,
+  provided by name" above).
+- Each component can keep only what it shows (pick it in `onSuccess`). A feed that emits every
+  frame should list its message in `renderOnFrame` (components.md), so each component renders
+  at most once per frame.
+- When Gyral owns the state (reducers decide it, not an engine), use a `defineStore` store
+  instead: both components list it in `stores` and read it with `ctx.read` (composition.md).
+- A source that must not be opened twice (one WebSocket for the page) opens on the first
+  subscriber and closes after the last: keep the connection and a set of listeners in one
+  module, and let `subscribe` add to the set and return the removal.
+
 ## TC39 signals (with `signal-polyfill`)
 
 After the `watch()` in sabacc.starwars.run's table driver (credited, with permission). A
