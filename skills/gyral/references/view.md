@@ -305,7 +305,9 @@ export const Steps = define<State, Msg>('my-steps', {
 
 Pass values to CSS through a style binding: `<div class="bar" style="--fill: ${s.done / s.total}">`
 with `inline-size: calc(var(--fill, 0) * 100%)` in the stylesheet. Style bindings are written
-through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'` (0.3.1).
+through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'` (0.3.1;
+in server-rendered markup the policy blocks the attribute until the component hydrates, so keep
+a stylesheet default such as `var(--fill, 0)`).
 For the rare element whose inline style a hook writes too, a hook can set only the properties it
 names:
 
