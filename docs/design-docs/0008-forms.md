@@ -188,3 +188,11 @@ The rejected value itself keeps its error: resubmitting it unchanged is still bl
 model's message. Element directives don't run on the server; server-rendered errors are applied
 on hydration (`packages/ssr/test/invalid-hydration.test.ts`, which also runs against production
 Lit).
+
+## Addendum: CSRF tokens are configured on the driver (ADR 0022, 0.3.1)
+
+`submitForm`'s `csrf: { meta }` is gone (the example in "the JS-path round trip" above shows
+0.3.0). A token from a `<meta>` is added by the http driver, configured once for the app:
+`provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
+`csrf: { token }` still sends a token the app already holds. Development builds warn once when a
+non-GET request goes out without the token while the page has a CSRF `<meta>`.

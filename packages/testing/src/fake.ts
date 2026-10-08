@@ -1,4 +1,4 @@
-import type { Concurrency, Driver, DriverContext, RetryPolicy } from '@gyral/core';
+import type { Concurrency, Driver, DriverContext } from '@gyral/core';
 
 /** One recorded `run` of a fake driver. */
 export interface FakeCall<I, O> {
@@ -30,7 +30,6 @@ export interface FakeOptions<I, O, E> {
   /** Answer calls immediately. Without it, calls wait for `resolveNext`/`rejectNext`. */
   readonly impl?: FakeRun<I, O>;
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
   readonly toError?: (cause: unknown) => E;
 }
 
@@ -107,7 +106,6 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
     name,
     run,
     ...(concurrency === undefined ? {} : { concurrency }),
-    ...(options.retry === undefined ? {} : { retry: options.retry }),
     ...(options.toError === undefined ? {} : { toError: options.toError }),
     calls,
     get inputs() {

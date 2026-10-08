@@ -3,7 +3,7 @@
 // `errorSchema`, status errors and JSON parsing all behave as in production. Wrong fake data
 // becomes an `HttpDecodeError` (the component's onFailure), never a crash in the view.
 // Lives here, not in @gyral/testing, because layer-1 packages may not import each other.
-import type { Concurrency, Driver, DriverContext, RetryPolicy } from '@gyral/core';
+import type { Concurrency, Driver, DriverContext } from '@gyral/core';
 import { makeHttpDriver, type HeaderSource, type HttpError, type HttpRequest } from './driver.js';
 
 /** What a fake server answers: a status (default 200) and a JSON body (omit for none). */
@@ -49,7 +49,6 @@ export interface FakeHttpOptions {
   readonly baseUrl?: string;
   readonly headers?: HeaderSource;
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
   /**
    * Called when the `respond` option throws or rejects. That is a bug in the test, not a
    * network failure, so by default it is rethrown as an uncaught error (Vitest fails the run).
@@ -151,7 +150,6 @@ export function fakeHttp(options: FakeHttpOptions = {}): FakeHttp {
     fetch: fetchFake,
     ...(options.headers === undefined ? {} : { headers: options.headers }),
     ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }),
-    ...(options.retry === undefined ? {} : { retry: options.retry }),
   });
 
   const waiting = (): MutableCall => {

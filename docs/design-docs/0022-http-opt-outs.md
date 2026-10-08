@@ -1,6 +1,6 @@
 # ADR 0022 — `@gyral/http` and retries: pay only for what the app uses
 
-Status: **proposed** (2026-10-08), for **0.3.1**. Bead: gyral-o4q (from the size investigation
+Status: **accepted** (2026-10-08; owner chose option D and the three recommendations below), shipped in **0.3.1**. Bead: gyral-o4q (from the size investigation
 gyral-c5d.10, cuts G6 and G7). Builds on ADR 0006 (commands, drivers, retry), ADR 0008
 (forms: `submitForm` and 422 `IntentRejected`) and view/05-element.md "Features register
 themselves".
@@ -42,7 +42,7 @@ CSRF also has **two ways to do one thing**: the per-request `csrf` field, and th
 | C. Detect the names at build time (0.3.1's spec-field scan) and fail closed for CSRF                         | Compatible, but adds three names to the scan, needs Gyral's own pass-throughs excluded, and has run-time-name gaps |
 | **D. One explicit way each: CSRF only through header sources, retry as a driver wrapper; error bodies stay** | **Recommended.** Each feature is reached by calling it, so tree-shaking does the rest; no scan, no gaps            |
 
-## Decision (recommended): option D
+## Decision: option D
 
 ### CSRF: configured once, on the driver
 
@@ -142,7 +142,12 @@ lowered to measured + 0.1 KiB.
 No browser features involved (`fetch`, `AbortSignal` and timers are widely available). The
 breaking changes are listed above; nothing else in `@gyral/http` changes.
 
-## Open questions for the owner
+## Owner decisions (2026-10-08)
+
+All three recommendations were accepted: (1a) CSRF only through driver header sources; (2a) the
+`retry(driver, policy)` wrapper; (3a) the development warning.
+
+## Open questions for the owner (as proposed)
 
 1. **CSRF API.** (a) Driver header sources only (recommended); (b) keep the per-request field
    too; (c) build-time detection, compatible (option C).

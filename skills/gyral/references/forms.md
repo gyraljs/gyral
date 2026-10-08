@@ -32,8 +32,11 @@ before submit; the schema adds what HTML can't express. Schemas may be async (a 
   field. Its server half writes `aria-invalid="true"` into the start tag, so don't write it
   twice.
 - Render the error text as plain markup, so the no-JS (server) render announces errors too.
-- `submitForm(url, formData, { onSuccess, onFailure, csrf? })` posts the valid submission; a
-  server 422 comes back as the same `IntentRejected`.
+- `submitForm(url, formData, { onSuccess, onFailure })` posts the valid submission; a server
+  422 comes back as the same `IntentRejected`. A CSRF token from a `<meta>` is added by the
+  http driver, configured once for the app:
+  `provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
+  `csrf: { token }` sends a token the app already holds.
 
 ```ts
 import { define, fieldErrors, form, html, invalid, type FormFields } from '@gyral/core';
@@ -73,7 +76,6 @@ export const Signup = define<State, Msg>('my-signup', {
         submitForm<Msg>('/signup', m.form, {
           onSuccess: () => ({ _tag: 'Done' }),
           onFailure: () => ({ _tag: 'Failed' }),
-          csrf: { meta: 'csrf-token' },
         }),
       ],
     ],

@@ -44,3 +44,18 @@ CHANGELOGs).
 | `ClientAssets` has a required `css` field.                                                                           | Code that builds `ClientAssets` by hand.          | Add `css: []`, or the hashed CSS files.                  |
 | Requests other than `GET`/`HEAD` under `/assets/` get 405 from `productionServer` instead of reaching the app.       | Apps that handled other methods under `/assets/`. | Move those routes elsewhere.                             |
 | `productionServer`'s `fetch` passes its second argument on to the app, and `FetchApp` takes an `Env` type parameter. | Typed wrappers around `FetchApp`.                 | Add the type argument, or leave the default (`unknown`). |
+
+## Retries and HTTP (`@gyral/core`, `@gyral/http`, `@gyral/testing`)
+
+Retries and CSRF tokens are reached by calling them, so apps that don't use them don't bundle
+them ([ADR 0022](../design-docs/0022-http-opt-outs.md)). Every item below is a type error, so
+the type checker finds each site.
+
+| Change                                                                                                                                                 | Who is affected                                  | Fix                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `Driver.retry` and `subscription(…, { retry })` are removed; the runtime runs a driver once.                                                           | Drivers and subscriptions with a `retry` policy. | Wrap the driver: `retry(driver, { times, delayMs, backoff })` from `@gyral/core`.                          |
+| `makeHttpDriver({ retry })` is removed.                                                                                                                | Apps that gave the http driver a retry policy.   | `retry(makeHttpDriver({ … }), policy)`.                                                                    |
+| `HttpRequest.csrf` (`request({ csrf: { meta } })`) is removed.                                                                                         | Requests that read a CSRF token from a `<meta>`. | Configure it once: `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`, given with `provideDrivers`. |
+| `submitForm(url, data, { csrf: { meta } })` is removed; `{ csrf: { token } }` stays.                                                                   | Forms that read a CSRF token from a `<meta>`.    | The same driver setting.                                                                                   |
+| The `retry` option of `fakeDriver` (`@gyral/testing`) and `fakeHttp` (`@gyral/http/testing`) is removed.                                               | Tests of retry behavior.                         | `retry(fakeDriver(…), policy)`; keep reading `calls` and `inputs` from the fake itself.                    |
+| Development builds warn once when a non-GET request goes out without a CSRF header while the page has a `<meta name="csrf-token">` (or `name="csrf"`). | Apps that post without the driver setting above. | Add the driver setting; the warning is gone in production builds.                                          |

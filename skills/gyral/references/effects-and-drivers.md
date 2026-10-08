@@ -36,8 +36,9 @@ export const save = <M>(key: string, value: string, onFailure: (reason: string) 
 ```
 
 `Driver<I, O, E>` fields: `name` (substitution key), `run(input, { signal, emit })` returning
-`O` or a `Promise<O>`, optional default `concurrency`, `retry`, and `toError` (turns a thrown
-value into the typed error `E` that `onFailure` receives). Without `onFailure`, failures are
+`O` or a `Promise<O>`, optional default `concurrency`, and `toError` (turns a thrown value into
+the typed error `E` that `onFailure` receives). A driver runs once per command; for retries,
+wrap it (below). Without `onFailure`, failures are
 logged and dropped. `onSuccess` returning `undefined` sends no message.
 
 ### Commands that answer nothing: `Command<never>`
@@ -66,7 +67,27 @@ export const afterSave = (): readonly Command<Msg>[] => [navigate('/items'), foc
 | `queue`           | one at a time, in order                  | ordered saves                |
 
 Set per command (`{ key: 'search', concurrency: 'switch' }`) or as the driver's default.
-`retry: { times, delayMs?, backoff?: 'fixed' | 'exponential' }` retries failures.
+
+## Retries: wrap the driver
+
+`retry(driver, { times, delayMs?, backoff?: 'fixed' | 'exponential' })` returns the same driver
+(same name, so substitution still works) with failures retried after the delay; an abort
+(switched away, disconnected) ends it at once and is never retried. Wrap where the driver is
+chosen: app setup, a component's `drivers`, or a test fake. Apps that never call `retry` don't
+bundle it.
+
+```ts
+import { provideDrivers, retry } from '@gyral/core';
+import { makeHttpDriver } from '@gyral/http';
+
+provideDrivers(document.body, {
+  http: retry(makeHttpDriver({ baseUrl: '/api' }), {
+    times: 2,
+    delayMs: 300,
+    backoff: 'exponential',
+  }),
+});
+```
 
 ## Streaming drivers
 
@@ -177,10 +198,12 @@ export const Shell = define<State, Msg>('my-shell', {
 ```
 
 - **`@gyral/http`**: `get(url, handlers)`, `request(req, handlers)` (method, headers, JSON or
-  form `body`, `schema` / `errorSchema` with any Standard Schema library, `csrf`),
+  form `body`, `schema` / `errorSchema` with any Standard Schema library),
   `submitForm(url, formData, options)` for forms (see forms.md). Errors are a typed union:
   `HttpStatusError` (with `status`, `body`, `detail`), `HttpNetworkError`, `HttpDecodeError`.
-  App-wide headers: `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`.
+  App-wide headers, and the one place a CSRF token from a `<meta>` is configured:
+  `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`. Development builds warn once when
+  a POST/PUT/PATCH/DELETE goes out without the token while the page has a CSRF `<meta>`.
 - **`@gyral/time`**: `delay(ms, msg)`, `debounce(ms, msg, key?)` (a `switch` delay),
   `periodic(ms, toMsg)`, `animationFrames(toMsg)`. An app that only needs `delay` and
   `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
