@@ -65,7 +65,7 @@ from Node in one of two ways.
 **On demand: `renderOnServer`** (Vitest browser mode). `@gyral/testing/vitest` is a Vitest
 [browser command](https://vitest.dev/api/browser/commands): it runs in Vitest's Node process,
 loads your module through the project's Vite server (same plugins and preset, development
-build of core) and renders it with `@gyral/core/server`. Install `vitest` 5 (an optional peer)
+build of core) and renders it with `@gyral/core/server`. Install `vitest` 4.1 or 5 (an optional peer)
 and register it:
 
 ```ts

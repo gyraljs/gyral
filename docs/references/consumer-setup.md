@@ -17,11 +17,11 @@ pnpm add -D @gyral/testing
 pnpm add @gyral/ssr
 ```
 
-| Package                                                     | Peer dependencies                                                                                                           |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional)                                                           |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                                                                                   |
-| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`), `vitest` ^5 (optional, only for `@gyral/testing/vitest`) |
+| Package                                                     | Peer dependencies                                                                                                                   |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional)                                                                   |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                                                                                           |
+| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`), `vitest` ^4.1 or ^5 (optional, only for `@gyral/testing/vitest`) |
 
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
 `defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.

@@ -176,7 +176,7 @@ The browser can't render that markup itself: there `define()` registers custom e
 of server specs, and client builds drop the server half of compiled templates. Get it from
 Node, one of two ways:
 
-1. **`renderOnServer`** (Vitest browser mode, from `@gyral/testing/vitest`; needs `vitest` 5): a
+1. **`renderOnServer`** (Vitest browser mode, from `@gyral/testing/vitest`; needs `vitest` 4.1 or 5): a
    Vitest browser command that runs in Vitest's Node process, loads a module through the
    project's Vite server (same preset, development build) and renders it with
    `@gyral/core/server`. Use it for component and page hydration tests: no files to sync,
