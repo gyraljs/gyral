@@ -34,10 +34,13 @@ export function trustedHTML(html: string): string {
 }
 
 function create(): Policy {
-  const factory = (globalThis as { trustedTypes?: PolicyFactory }).trustedTypes;
-  if (factory === undefined) return passThrough;
   try {
-    return factory.createPolicy('gyral', passThrough);
+    return (
+      (globalThis as { trustedTypes?: PolicyFactory }).trustedTypes?.createPolicy(
+        'gyral',
+        passThrough,
+      ) ?? passThrough
+    );
   } catch (error) {
     if (DEV) console.warn(message(72), error);
     return passThrough;

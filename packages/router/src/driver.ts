@@ -118,8 +118,7 @@ function createBrowserSource(options: RouterOptions): Source {
     }
     return history?.then((path) => {
       if (path === undefined) {
-        if (replace) win.location.replace(target.href);
-        else win.location.assign(target.href);
+        win.location[replace ? 'replace' : 'assign'](target.href);
         return undefined;
       }
       path.navigate(target, replace, what(asked, replace));
@@ -134,8 +133,8 @@ function createBrowserSource(options: RouterOptions): Source {
     // Ours: keep it same-document. A same-document traversal to another page: restore scroll
     // after the render. One to the same path and query (a fragment, or an entry pushed for a
     // dialog) renders nothing new and is left to the browser, as the History API path does.
-    const to = new URL(e.destination.url);
-    const samePage = to.pathname === win.location.pathname && to.search === win.location.search;
+    const page = (url: string): string | undefined => url.split('#')[0];
+    const samePage = page(e.destination.url) === page(win.location.href);
     const after = asked ?? (e.navigationType === 'traverse' && !samePage ? what() : undefined);
     if (after === undefined) return;
     e.intercept({
