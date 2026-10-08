@@ -40,6 +40,22 @@ export const save = <M>(key: string, value: string, onFailure: (reason: string) 
 value into the typed error `E` that `onFailure` receives). Without `onFailure`, failures are
 logged and dropped. `onSuccess` returning `undefined` sends no message.
 
+### Commands that answer nothing: `Command<never>`
+
+`focus()`, `emit()`, `navigate()` and `go()` (and your own fire-and-forget commands) return
+`Command<never>`: they produce no message, and `never` fits any message type, so they go in a
+reducer's command list or a helper typed `Command<Msg>` with no type argument:
+
+```ts
+import { focus, type Command } from '@gyral/core';
+import { navigate } from '@gyral/router';
+
+type Msg = { readonly _tag: 'Saved' } | { readonly _tag: 'Failed' };
+
+/** After a save: back to the list, with focus on its heading. No `<M>` needed. */
+export const afterSave = (): readonly Command<Msg>[] => [navigate('/items'), focus('h1')];
+```
+
 ## Concurrency (per lane: `key`, default the driver name)
 
 | Policy            | Behaviour                                | Use for                      |

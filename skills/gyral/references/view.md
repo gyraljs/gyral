@@ -125,6 +125,17 @@ export const Todos = define<State, Msg>('my-todos', {
 });
 ```
 
+### `.map` or `each`?
+
+- **`.map`** renders by position: fine for short lists whose items don't move (a few options, a
+  breadcrumb, table headers). Its rows may read anything in the view's scope, since every row
+  runs on every render. Keep them cheap: no sorting or filtering inside the row, compute that
+  once above the template.
+- **`each`** for lists that are long, change often, or reorder (results, inboxes, kanban
+  columns): keyed, so a moved item keeps its element (focus, input state, animations), and a row
+  re-renders only when its item or `pick` result changes. That second point is why `each` rows
+  must be pure; the ESLint rule `gyral/each-row-purity` checks `each` rows only.
+
 Keys must be unique strings or numbers (duplicates are a development error). `pick` results
 are compared one level deep (`Object.is` per element or key), so returning a small object or
 tuple is fine.

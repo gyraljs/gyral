@@ -134,7 +134,7 @@ export const Sortable = define<State, Msg>('my-sortable', {
 | `value`           | `value` of the input/select/textarea/button          |
 | `checked`         | for checkbox and radio                               |
 | `formData`        | for a `<form>` intent                                |
-| `detail`          | a child component's output                           |
+| `detail`          | any `CustomEvent`'s `detail` (a child's output)      |
 | `key`             | `KeyboardEvent.key` for `keydown`/`keyup`            |
 | `newState`        | `'open'`/`'closed'` for `toggle`                     |
 | `command`         | invoker command info for `command` intents           |
@@ -426,6 +426,50 @@ In the app, the reducer would also start and stop the microphone with commands.
 
 Messages that only come from commands (HTTP responses, timers, router) need no parser; leave
 them out of `intent`. They still need a reducer in `update`.
+
+## Events of other custom elements
+
+`detail` is set for every `CustomEvent`, so a third-party element (a map, a chart, a date
+picker) talks to a component the same way a Gyral child does. Name its event in the intent
+attribute and check `detail` in the parser, with a type guard or a Standard Schema:
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface Marker {
+  readonly id: string;
+  readonly lat: number;
+  readonly lng: number;
+}
+const isMarker = (u: unknown): u is Marker =>
+  typeof u === 'object' &&
+  u !== null &&
+  'id' in u &&
+  typeof u.id === 'string' &&
+  'lat' in u &&
+  typeof u.lat === 'number' &&
+  'lng' in u &&
+  typeof u.lng === 'number';
+
+type Msg = { readonly _tag: 'Select'; readonly marker: Marker };
+
+export const StoreFinder = define<{ readonly selected: string }, Msg>('my-store-finder', {
+  init: () => ({ selected: '' }),
+  intent: {
+    // <geo-map> dispatches `marker-select` with the marker as detail.
+    Select: ({ detail }) => (isMarker(detail) ? { _tag: 'Select', marker: detail } : undefined),
+  },
+  update: { Select: (_s, m) => ({ selected: m.marker.id }) },
+  view: (s, i) => html`
+    <geo-map data-intent-marker-select=${i.Select}></geo-map>
+    <p>${s.selected}</p>
+  `,
+});
+```
+
+The element's events must be `CustomEvent`s that bubble, or are dispatched on the element
+itself (the intent attribute sits on it). An event name with capitals can't be written in an
+attribute name: use `data-intent=${i.Select} data-intent-on="markerSelect"` for those.
 
 ## Children's outputs
 

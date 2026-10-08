@@ -23,7 +23,10 @@ export interface IntentInput {
   readonly checked: boolean | undefined;
   /** Submitted data (including the submitter button) when the intent is on a `<form>`. */
   readonly formData: FormData | undefined;
-  /** The output a child component emitted, when the intent is on a child element. */
+  /**
+   * `detail` of any `CustomEvent`: a Gyral child's output, or the event of another custom
+   * element (a map's `marker-select`). Unknown until the parser checks it (a guard, a schema).
+   */
   readonly detail: unknown;
   /** `KeyboardEvent.key` for `keydown`/`keyup` intents. */
   readonly key: string | undefined;
