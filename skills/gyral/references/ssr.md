@@ -179,6 +179,25 @@ A page whose route module is imported lazily passes `preload(['src/routes/produc
 imports (`clientAssets(manifest, entry, also)` underneath). `clientEntryFromManifest()` (the
 entry URL alone) still works.
 
+`productionServer` options: `assetsDir` (served at `/assets/`, default `dist/client/assets`),
+`staticDir` (prerendered pages, default `dist/static`; `false` when nothing is prerendered, so
+page requests skip the file lookup) and `cache` (keep assets in memory, default on, bounded).
+Assets answer `GET` and `HEAD` with immutable caching, `content-length` and `nosniff`; a
+malformed URL is a 400 and a miss a `no-store` 404 (a CDN must not cache it before the deploy
+lands). For a custom server, `assetHandler({ dir, prefix?, cache? })` is the same asset half
+alone: it returns `undefined` for paths outside the prefix.
+
+```ts
+import { assetHandler } from '@gyral/ssr/static';
+
+// A volume that keeps every release's hashed files, so old tabs still load their chunks.
+const assets = assetHandler({ dir: '/srv/assets' });
+
+export async function handle(request: Request): Promise<Response> {
+  return (await assets(request)) ?? new Response('Not found', { status: 404 });
+}
+```
+
 ## Islands: hydrate later
 
 `define(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered

@@ -63,3 +63,36 @@ Gyral's list rendering: 25 nodes per benchmark row against 9 for compiled framew
   `html` from `lit`.
 - **Verified:** unit tests on tricky templates, golden SSR fixtures regenerated, hydration of an
   indented page in dev and production Lit, 13 nodes per benchmark row.
+
+## Addendum: serving assets (gyral-dyn.1, 2026-10-08)
+
+Feedback from an app on a persistent-volume host found `/assets/*` serving fragile: a malformed
+escape (`/assets/%E0%A4%A`) threw `URIError` out of `fetch`, `HEAD` fell through to the app,
+images, `.wasm`, `.json` and `.mjs` were served as octet-stream, every request read the file
+again, a miss could be cached by a CDN, and every page request first tried a file in `static/`
+even for apps that prerender nothing. The asset half is now its own export:
+
+- **`assetHandler({ dir, prefix = '/assets/', cache = true })`** (`@gyral/ssr/static`) returns
+  `(request) => Promise<Response | undefined>`: `undefined` outside the prefix, so it composes
+  with any router. `GET` and `HEAD` (same headers, no body); other methods 405 with `allow`.
+  Hits carry `cache-control: public, max-age=31536000, immutable`, `content-type` by extension
+  (the files a Vite build emits: scripts, CSS, source maps, JSON, images, fonts, wasm, media),
+  `content-length` and `x-content-type-options: nosniff`.
+- **Refusals.** A malformed escape is a 400. After decoding, a path with an empty, `.` or `..`
+  segment, any segment starting with a dot (bookkeeping such as a volume's `.releases/`),
+  backslashes leading out or a NUL is a 404, and the resolved file must still be inside `dir`.
+- **Misses are `no-store`.** On hosts that keep every release's files, a file missing now may
+  arrive with the deploy in progress; a cached 404 would outlive it. Misses are also never
+  cached in memory.
+- **Memory cache.** Hashed files never change, so hits stay in memory, bounded by bytes
+  (default 64 MiB; `cache: { maxBytes }`), least recently served dropped first; `cache: false`
+  reads every request from disk. A file larger than the bound is served but not kept.
+- **`productionServer`** uses it, with `assetsDir` (default `<distDir>/client/assets`; point
+  it at the volume) and `cache`; `staticDir` (default `<distDir>/static`, or `false` for apps
+  with no `ssg` routes) for prerendered pages, which now answer `HEAD` too and carry
+  `content-length` and `nosniff`.
+- Not covered: range requests, precompressed files (`.br`/`.gz`) and `ETag`s; hashed URLs make
+  revalidation unnecessary. Put a CDN or reverse proxy in front for compression.
+
+Tests: `packages/ssr/test/assets.node.test.ts` (each bug above, types, traversal, cache bound,
+configurable directories).

@@ -35,6 +35,8 @@ import './app.js';
 
 `@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). Its `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts: [entry], modulepreload })` so server-rendered pages hydrate without extra round trips. A route whose module is imported lazily adds it with `clientAssets(manifest, entry, also)`, or `preload(modules)` from `productionServer`'s `createApp` options.
 
+`productionServer` serves `/assets/*` from `assetsDir` (default `dist/client/assets`) through `assetHandler`: `GET` and `HEAD`, immutable caching, a `content-type` per file type, `content-length`, `nosniff`, traversal and dot-path refusal, a 400 for malformed escapes and `no-store` 404s, so a CDN never keeps a miss. Files stay in memory (bounded; `cache: false` to read from disk). Apps with no prerendered pages pass `staticDir: false`. `assetHandler({ dir, prefix, cache })` also works alone, for example for a volume that keeps every release's hashed files so tabs opened before a deploy still load theirs.
+
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the

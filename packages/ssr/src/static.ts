@@ -6,7 +6,15 @@
 // - `ssr`: rendered per request;
 // - `csr`: not prerendered; the client renders it.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, extname, join, resolve, sep } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { assetHandler, cacheHeaders, fileResponse, readOrUndefined } from './assets.js';
+
+export {
+  assetHandler,
+  cacheHeaders,
+  type AssetHandler,
+  type AssetHandlerOptions,
+} from './assets.js';
 
 /** How a route is rendered. */
 export type RenderMode = 'ssg' | 'ssr' | 'csr';
@@ -179,6 +187,19 @@ export interface ProductionOptions {
   /** The client entry as named in the Vite manifest. Default `src/entry-client.ts`. */
   readonly entry?: string;
   /**
+   * The directory served at `/assets/`. Default `<distDir>/client/assets`; point it at a
+   * directory that keeps older releases' hashed files too, so tabs opened before a deploy keep
+   * loading their chunks.
+   */
+  readonly assetsDir?: string;
+  /**
+   * Prerendered pages. Default `<distDir>/static`; `false` when the app prerenders nothing, so
+   * page requests don't look for files first.
+   */
+  readonly staticDir?: string | false;
+  /** Keep served assets in memory (`assetHandler`'s `cache`). Default `true`. */
+  readonly cache?: boolean | { readonly maxBytes: number };
+  /**
    * Builds the request-time renderer (the same app the prerender step used). Pass
    * `modulepreload` on to `renderPage({ modulepreload })` so pages preload what the entry needs.
    * A page that imports modules lazily (a route's chunk) passes `preload(modules)` instead:
@@ -191,37 +212,29 @@ export interface ProductionOptions {
   }) => FetchApp;
 }
 
-const ASSET_TYPES: Readonly<Record<string, string>> = {
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.map': 'application/json',
-  '.svg': 'image/svg+xml',
-  '.woff2': 'font/woff2',
-};
-
-async function readOrUndefined(file: string): Promise<Uint8Array<ArrayBuffer> | undefined> {
-  try {
-    return new Uint8Array(await readFile(file));
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * A production request handler (framework-neutral: mount its `fetch` in Hono, Node, …):
- * - `GET /assets/*`: content-hashed client build output, cached immutable;
- * - `GET` of a prerendered path: the `static/` file, revalidated on every use;
+ * - `GET`/`HEAD /assets/*`: content-hashed client build output, cached immutable
+ *   (`assetHandler`);
+ * - `GET`/`HEAD` of a prerendered path: the `static/` file, revalidated on every use;
  * - everything else (other GETs, POSTs): the request-time app, `no-cache` unless it set one.
  */
 export async function productionServer(options: ProductionOptions): Promise<FetchApp> {
   const clientDir = resolve(options.distDir, 'client');
-  const staticDir = resolve(options.distDir, 'static');
+  const staticDir =
+    options.staticDir === false
+      ? undefined
+      : resolve(options.staticDir ?? join(options.distDir, 'static'));
   const manifestPath = join(clientDir, '.vite', 'manifest.json');
   const entry = options.entry ?? 'src/entry-client.ts';
   const manifest = await readManifest(manifestPath);
   entryChunk(manifest, entry, manifestPath);
   const assets = clientAssets(manifest, entry);
   const preloads = new Map<string, readonly string[]>();
+  const serveAsset = assetHandler({
+    dir: options.assetsDir ?? join(clientDir, 'assets'),
+    ...(options.cache === undefined ? {} : { cache: options.cache }),
+  });
   const app = options.createApp({
     clientEntry: assets.entry,
     modulepreload: assets.modulepreload,
@@ -237,22 +250,18 @@ export async function productionServer(options: ProductionOptions): Promise<Fetc
   });
   return {
     fetch: async (request) => {
-      const { pathname } = new URL(request.url);
-      if (request.method === 'GET' && pathname.startsWith('/assets/')) {
-        const file = resolve(clientDir, `.${decodeURIComponent(pathname)}`);
-        const body = file.startsWith(`${clientDir}${sep}`)
-          ? await readOrUndefined(file)
-          : undefined;
-        if (body === undefined) return new Response('Not found', { status: 404 });
-        const type = ASSET_TYPES[extname(file)] ?? 'application/octet-stream';
-        return new Response(body, { headers: { 'content-type': type, ...cacheHeaders.immutable } });
-      }
-      if (request.method === 'GET') {
-        const page = await readOrUndefined(staticFileFor(staticDir, pathname));
+      const asset = await serveAsset(request);
+      if (asset !== undefined) return asset;
+      const read = request.method === 'GET' || request.method === 'HEAD';
+      if (read && staticDir !== undefined) {
+        const page = await readOrUndefined(staticFileFor(staticDir, new URL(request.url).pathname));
         if (page !== undefined) {
-          return new Response(page, {
-            headers: { 'content-type': 'text/html; charset=utf-8', ...cacheHeaders.revalidate },
-          });
+          return fileResponse(
+            request.method,
+            page,
+            'text/html; charset=utf-8',
+            cacheHeaders.revalidate,
+          );
         }
       }
       const response = await app.fetch(request);
@@ -263,13 +272,3 @@ export async function productionServer(options: ProductionOptions): Promise<Fetc
     },
   };
 }
-
-/** Cache policy for production serving. */
-export const cacheHeaders = {
-  /** Content-hashed build assets never change: cache for a year. */
-  immutable: { 'cache-control': 'public, max-age=31536000, immutable' },
-  /** Prerendered pages may be rebuilt: always revalidate. */
-  revalidate: { 'cache-control': 'public, max-age=0, must-revalidate' },
-  /** Per-request pages may be personalized. */
-  dynamic: { 'cache-control': 'no-cache' },
-} as const;
