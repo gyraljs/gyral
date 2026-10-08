@@ -165,7 +165,8 @@ export const Hand = define<{ readonly cards: readonly Card[] }, never>('my-hand'
 ## Element hooks
 
 A hook is a small behaviour attached to the element it sits on, written in the start tag. Core
-ships `invalid(errors)` (forms.md) and `labelledBy(id, fallback?)`. Write your own with
+ships `invalid(errors)` (forms.md), `labelledBy(id, fallback?)` and `capturePointer()`
+(press-and-release intents, intent.md). Write your own with
 `defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
 (`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
 server-rendered start tag. A hook that must tear down is defined with `defineDisposableHook`

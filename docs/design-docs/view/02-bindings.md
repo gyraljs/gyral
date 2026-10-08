@@ -202,7 +202,8 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
   error). See "Widgets with a lifecycle" below.
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
   a hook that only listens needs no `dispose`.
-- Core ships `invalid` and `labelledBy` as hooks.
+- Core ships `invalid`, `labelledBy` and `capturePointer` (0.3.1, gyral-dyn.13: pointer
+  capture on `pointerdown` for press-and-release intents, 05 "Press and release") as hooks.
 
 ### Widgets with a lifecycle
 

@@ -20,6 +20,10 @@ Any other event type works too when written statically (`data-intent-on="pointer
 component listens for the events its templates name. Only a type that comes from a bound
 `data-intent-on=${…}` and isn't in the list above must be added to `spec.events`.
 
+`data-intent-on` takes a list separated by spaces (0.3.1): `data-intent-on="keydown keyup"`
+fires the intent for both, and the parser tells them apart with `event.type` (see "Press and
+release" below).
+
 ## `IntentInput`
 
 | Field             | Value                                                |
@@ -129,6 +133,138 @@ export const SizePicker = define<State, Msg>('my-size-picker', {
     )}`,
 });
 ```
+
+## Several controls, one message
+
+Intent names are message tags: `data-intent=${i.Level}` needs a `Level` variant in `Msg`, and
+`intent: { Level: … }` must produce it. Controls that all change one thing don't need a
+message each. Give them the same intent and tell them apart by their `name`:
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface Setup {
+  readonly level: string;
+  readonly pace: string;
+}
+type Msg = { readonly _tag: 'Setup'; readonly field: keyof Setup; readonly value: string };
+
+const FIELDS: readonly (keyof Setup)[] = ['level', 'pace'];
+const isField = (name: string): name is keyof Setup => FIELDS.some((f) => f === name);
+
+export const GameSetup = define<Setup, Msg>('my-game-setup', {
+  init: () => ({ level: 'easy', pace: 'normal' }),
+  intent: {
+    // One parser for every <select>: the name says which field changed.
+    Setup: ({ target, value }) => {
+      const name = target.getAttribute('name') ?? '';
+      return isField(name) && value !== undefined
+        ? { _tag: 'Setup', field: name, value }
+        : undefined;
+    },
+  },
+  update: {
+    Setup: (s, m) => ({ ...s, [m.field]: m.value }),
+  },
+  view: (s, i) => html`
+    <label>
+      Level
+      <select name="level" data-intent=${i.Setup}>
+        <option value="easy" ?selected=${s.level === 'easy'}>Easy</option>
+        <option value="hard" ?selected=${s.level === 'hard'}>Hard</option>
+      </select>
+    </label>
+    <label>
+      Pace
+      <select name="pace" data-intent=${i.Setup}>
+        <option value="normal" ?selected=${s.pace === 'normal'}>Normal</option>
+        <option value="fast" ?selected=${s.pace === 'fast'}>Fast</option>
+      </select>
+    </label>
+  `,
+});
+```
+
+Give each its own message only when the reducers really differ. A name that isn't a tag fails
+to compile with "Object literal may only specify known properties, and 'Level' does not exist
+in type 'Intents<Msg>'" (plus "Binding element 'value' implicitly has an 'any' type" for its
+parameters), and in the view with "Property 'Level' does not exist on type
+'IntentNames<Msg>'": add the variant to `Msg`, or use the tag the controls share.
+
+## Press and release (hold to move)
+
+A hold-to-move button needs the press and the release. List both in `data-intent-on` and read
+`event.type`: one intent, one message with a `down` flag. Add the `capturePointer()` hook so
+the release arrives even when the pointer leaves the button before it lets go (it calls
+`setPointerCapture` on `pointerdown`). `pointercancel` (the browser took the touch over for
+scrolling, say) is a release too. For the keyboard, a focusable element lists
+`keydown keyup`; the parser ignores auto-repeat:
+
+```ts
+import { capturePointer, define, html } from '@gyral/core';
+
+type Dir = 'left' | 'right';
+interface State {
+  readonly held: Dir | undefined;
+}
+type Msg = { readonly _tag: 'Hold'; readonly dir: Dir; readonly down: boolean };
+
+const KEYS: Readonly<Record<string, Dir>> = { ArrowLeft: 'left', ArrowRight: 'right' };
+
+export const Pad = define<State, Msg>('my-pad', {
+  init: () => ({ held: undefined }),
+  intent: {
+    Hold: ({ event, target, key }) => {
+      if (event instanceof KeyboardEvent) {
+        const dir = key === undefined ? undefined : KEYS[key];
+        if (dir === undefined || event.repeat) return undefined;
+        event.preventDefault(); // no scrolling while the arrow is held
+        return { _tag: 'Hold', dir, down: event.type === 'keydown' };
+      }
+      const dir = target.getAttribute('data-dir') === 'left' ? 'left' : 'right';
+      return { _tag: 'Hold', dir, down: event.type === 'pointerdown' };
+    },
+  },
+  update: {
+    // A release only clears the direction it belongs to.
+    Hold: (s, m) => ({ held: m.down ? m.dir : s.held === m.dir ? undefined : s.held }),
+  },
+  view: (s, i) => html`
+    <div
+      role="group"
+      tabindex="0"
+      aria-label="Paddle"
+      data-intent=${i.Hold}
+      data-intent-on="keydown keyup"
+    >
+      ${(['left', 'right'] as const).map(
+        (dir) =>
+          html`<button
+            type="button"
+            data-dir=${dir}
+            aria-pressed=${String(s.held === dir)}
+            ${capturePointer()}
+            data-intent=${i.Hold}
+            data-intent-on="pointerdown pointerup pointercancel"
+          >
+            ${dir}
+          </button>`,
+      )}
+    </div>
+  `,
+});
+```
+
+- Pointer events bubble to the wrapper too, but the nearest element with `data-intent` whose
+  list names the event wins: the button for pointer events, the wrapper for keys.
+- Give the buttons `touch-action: none` in CSS so a held finger doesn't scroll or zoom, and
+  `user-select: none` so a long press doesn't select the label.
+- A button that may disappear mid-press (a re-render that drops it) never gets its
+  `pointerup`. Also list `lostpointercapture` and treat it as a release, ignoring ones from
+  other elements (`event.target !== target`): the event bubbles.
+- Pressing a key while the wrapper isn't focused does nothing; for keys anywhere on the page,
+  read them in a driver (`subscription()` over `keydown`/`keyup` on `window`,
+  outside-stores.md).
 
 ## Messages without intents
 

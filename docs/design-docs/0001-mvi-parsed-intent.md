@@ -69,6 +69,14 @@ template binds `data-intent-on` dynamically). Any statically named event type no
 without `spec.events`; list a type there only when a bound `data-intent-on` produces it and it
 isn't one of the intent events above. Details: view/05-element.md "Intent events".
 
+**Update (gyral-dyn.13, 2026-10-08, 0.3.1):** `data-intent-on` takes a list of events
+(`"pointerdown pointerup pointercancel"`, `"keydown keyup"`), so press and release are one
+intent whose parser reads `event.type`; the `capturePointer()` hook keeps the pointer on the
+element until release. Intent names stay message tags: several controls that change one thing
+share one intent and say which they are through `name` (game-platform feedback item 12; the
+skill's intent.md "Several controls, one message"). Details: view/05-element.md "Press and
+release".
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the

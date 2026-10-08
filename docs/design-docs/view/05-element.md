@@ -215,6 +215,25 @@ Effect: 5 listeners per typical host instead of 12 (11 intent events plus the in
 click listener on every root); keyboard and focus events no longer run intent lookup in
 components that don't use them.
 
+## Press and release (gyral-dyn.13, 0.3.1)
+
+`data-intent-on` takes a list of event types separated by whitespace. An element's intent
+fires for each type in the list (or for its default trigger when it has none), the root
+listens for every listed type (the static scan splits quoted lists), and the parser tells them
+apart with `input.event.type`. That makes hold-to-move one intent and one message
+(`Hold { down }`), where a game previously wrote `pointerdown`/`pointerup`/`pointercancel` and
+`keydown`/`keyup` listeners by hand (game-platform feedback item 13). The client-only scan
+counts `command` anywhere in a quoted list (07 "Client-only builds").
+
+A release must arrive even when the pointer leaves the element first. That is pointer
+capture, provided by the `capturePointer()` element hook (02 "Element hooks"): it calls
+`setPointerCapture(pointerId)` on `pointerdown`. It is a hook rather than automatic for lists
+naming `pointerdown` and `pointerup` because built in it cost every app about 35 B gzip; as a
+hook only apps that use it bundle it, and the capture is visible in the markup. List support
+itself costs about 25 B. Capture is not set for synthetic events (the pointer isn't active:
+the call throws and is ignored). Tests: `packages/core/test/press-release.test.ts` (a real
+pointer released outside the button, `pointercancel`, `lostpointercapture`, key repeat).
+
 ## `ElementInternals`
 
 Attached lazily and only once per element, through one internal accessor, when a feature needs

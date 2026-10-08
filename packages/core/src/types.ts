@@ -96,7 +96,12 @@ export type IntentParser<M> = (input: IntentInput) => ParseResult<M> | Promise<P
 
 type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 
-/** Intent parsers keyed by the message tag they produce. Messages from drivers need none. */
+/**
+ * Intent parsers keyed by the message tag they produce. Messages from drivers need none. A key
+ * that isn't a tag fails with "'X' does not exist in type 'Intents<…>'": intent names are
+ * message tags, so several controls that change one thing share one intent and tell
+ * themselves apart by `name`.
+ */
 export type Intents<M extends Tagged> = {
   readonly [K in M['_tag']]?: IntentParser<Variant<M, K>>;
 };
