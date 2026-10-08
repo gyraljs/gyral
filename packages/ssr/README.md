@@ -37,6 +37,19 @@ import './app.js';
 
 `productionServer` serves `/assets/*` from `assetsDir` (default `dist/client/assets`) through `assetHandler`: `GET` and `HEAD`, immutable caching, a `content-type` per file type, `content-length`, `nosniff`, traversal and dot-path refusal, a 400 for malformed escapes and `no-store` 404s, so a CDN never keeps a miss. Files stay in memory (bounded; `cache: false` to read from disk). Apps with no prerendered pages pass `staticDir: false`. `assetHandler({ dir, prefix, cache })` also works alone, for example for a volume that keeps every release's hashed files so tabs opened before a deploy still load theirs.
 
+`@gyral/ssr/node` mounts any fetch handler on `node:http`: `createServer(toNodeListener(app.fetch, { origin }))`. Request bodies stream in, response bodies stream out with backpressure, a client that disconnects aborts `request.signal` and cancels the body, `HEAD` sends headers only and each `set-cookie` stays separate.
+
+```ts
+// server/prod.ts
+import { createServer } from 'node:http';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+import { createApp } from './app.js'; // ({ clientEntry, modulepreload, stylesheets }) => { fetch }
+
+const app = await productionServer({ distDir: 'dist', createApp });
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
+
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the

@@ -212,6 +212,41 @@ export async function handle(request: Request): Promise<Response> {
 }
 ```
 
+## Serving on Node (`@gyral/ssr/node`)
+
+`toNodeListener(fetch, { origin?, onError? })` mounts any fetch handler on `node:http`, so a
+Node server needs no Hono or adapter of its own. The `Request` carries the method, headers, a
+streamed body and a `signal` that aborts when the client disconnects; the `Response` body is
+written with backpressure (a slow client slows the render; one that leaves cancels it); `HEAD`
+sends headers only; each `set-cookie` stays separate; a throwing handler is a 500.
+
+```ts
+import { createServer } from 'node:http';
+import { join } from 'node:path';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+
+const app = await productionServer({
+  distDir: join(process.cwd(), 'dist'),
+  staticDir: false, // nothing prerendered: every page renders per request
+  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+    fetch: (_request: Request) =>
+      renderPage({
+        title: 'Home',
+        body: html`<my-home></my-home>`,
+        scripts: [clientEntry],
+        modulepreload,
+        stylesheets,
+      }),
+  }),
+});
+
+// origin: the public origin request URLs are built on (default: the Host header).
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
+
 ## Islands: hydrate later
 
 `define(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered

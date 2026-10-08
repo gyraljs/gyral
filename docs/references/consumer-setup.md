@@ -216,6 +216,41 @@ module lazily). CSS imported from the client entry (`import './app.css'`) is has
 listed as `css`: pass it as `renderPage({ stylesheets })` to link it (immutable, cached across
 pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on every page.
 
+### Serving a production build on Node
+
+`productionServer({ distDir, createApp })` (`@gyral/ssr/static`) serves the Vite client build
+(`/assets/*`, immutable), prerendered pages and everything else through your `createApp`;
+`toNodeListener` (`@gyral/ssr/node`) mounts it on `node:http`, streaming each page with
+backpressure. Options: `assetsDir` (another directory for `/assets/*`, for example a volume
+that keeps older releases' files), `staticDir: false` when nothing is prerendered, `cache`.
+
+```ts
+import { createServer } from 'node:http';
+import { join } from 'node:path';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+
+const app = await productionServer({
+  distDir: join(process.cwd(), 'dist'),
+  staticDir: false, // nothing prerendered: every page renders per request
+  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+    fetch: (_request: Request) =>
+      renderPage({
+        title: 'Home',
+        body: html`<my-home></my-home>`,
+        scripts: [clientEntry],
+        modulepreload,
+        stylesheets,
+      }),
+  }),
+});
+
+// origin: the public origin request URLs are built on (default: the Host header).
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
+
 ## Removed in 0.3.0
 
 `classMap`, `styleMap`, `unsafeCSS`, `repeat`, `keyed`, `live`,

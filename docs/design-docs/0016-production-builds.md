@@ -124,3 +124,35 @@ files and lists them in the manifest (`ManifestChunk.css`), which `clientAssets`
 Tests: `packages/ssr/test/stylesheets.node.test.ts` (ordering and dedupe on a manifest, the link
 markup, the `createApp` options, and a real Vite build whose entry and lazy module import CSS,
 served as `text/css`).
+
+## Addendum: Node adapter (gyral-dyn.6, 2026-10-08)
+
+Everything `@gyral/ssr` returns is a web `Response`, so Node apps needed Hono's
+`@hono/node-server` or their own glue (Joystyk wrote 78 lines). `@gyral/ssr/node` exports
+`toNodeListener(fetch, { origin?, onError? })`, a `node:http` request listener. Node-only, on
+its own subpath like `/static`; the main entry stays runtime-neutral.
+
+- **Request.** Method, headers (from `rawHeaders`, repeated headers kept, HTTP/2 pseudo-headers
+  skipped), and for methods other than `GET`/`HEAD` the body as a stream (`duplex: 'half'`).
+  The URL is the request target appended to `origin` (default: the scheme of the socket plus
+  the `Host` header). The target is never resolved against the origin, so `//evil.example/x`
+  stays a path; an absolute-form target keeps only its path and query. A target or `Host` that
+  makes no URL is a 400.
+- **Abort.** `request.signal` aborts when the response closes before it finished (the client
+  went away). The body being written is cancelled then, which ends `renderToStream`'s
+  iterator.
+- **Response.** Status, status text when set, headers; `set-cookie` from `getSetCookie()` as
+  separate headers (joined with `", "`, cookie dates would be ambiguous). `HEAD` and null bodies
+  end after the headers (a `HEAD` body is cancelled).
+- **Backpressure.** One `res.write` per chunk read; when Node's buffer is full the loop waits
+  for `drain` (or the abort), so a pull-based body such as `renderPage`'s is rendered only as
+  fast as the client reads. An explicit loop instead of `stream.pipeline`: a body that fails
+  must be told apart from a client that left, and `pipeline` destroys the response either way.
+- **Errors.** A throwing handler or failing body goes to `onError` (default `console.error`);
+  before the headers it is a `no-store` 500, after them the connection is destroyed so the
+  client never sees a truncated page as complete. Errors after the client left are ignored.
+
+Tests: `packages/ssr/test/node.node.test.ts`, on a real server: streamed request bodies, URL
+building (origin, `//` targets, absolute-form), a `renderPage` response, `HEAD`, separate
+cookies, a paused client holding the producer back and a disconnect cancelling it, 500s,
+mid-body failures, a bad `Host`.
