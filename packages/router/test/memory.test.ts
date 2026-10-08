@@ -68,7 +68,7 @@ describe('memory history', () => {
   });
 
   it('starts at the initial URL without touching the real location', () => {
-    expect(el.state.route).toEqual({ name: 'user', params: { id: '1' } });
+    expect(el.state.route).toEqual({ name: 'user', params: { id: '1' }, path: '/users/1' });
     expect(location.href).toBe(original);
     expect(driver.snapshot().href).toBe('http://localhost/users/1');
   });

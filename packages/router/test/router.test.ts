@@ -95,7 +95,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('navigates by command and delivers the new route', async () => {
     el.send({ _tag: 'Go', url: '/users/7' });
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' }, path: '/users/7' });
     });
     expect(location.pathname).toBe('/users/7');
   });
@@ -127,7 +127,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('captures same-origin link clicks inside shadow roots', async () => {
     link('in').click();
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' }, path: '/users/9' });
     });
     expect(captured).toEqual([true]);
   });

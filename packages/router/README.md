@@ -15,7 +15,7 @@ import { navigate, routes } from '@gyral/router';
 
 export const site = routes({ home: '/', product: '/products/:id' });
 
-site.match('/products/42'); // { name: 'product', params: { id: '42' } }
+site.match('/products/42/'); // { name: 'product', params: { id: '42' }, path: '/products/42' }
 
 // In an update: [state, [navigate('/products/42')]]
 ```

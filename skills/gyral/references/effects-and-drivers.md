@@ -171,7 +171,9 @@ export const Shell = define<State, Msg>('my-shell', {
   `time`; about 0.15 KiB less).
 - **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace? })`,
   `back()`, `forward()`, `go(n)`, `setTitle(title)`, typed `routes({...})` tables with
-  `match(url)` and `href(name, params)` (same table on server and client). Link clicks are
+  `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect
+  to: ssr.md "One URL per page") and `href(name, params)` (same table on server and client).
+  Patterns are literal and `:param` segments only; empty segments (`/a//b`) never match. Link clicks are
   captured only with `makeRouter({ captureLinks: true })` given as the `router` driver of the
   component that owns the page.
 

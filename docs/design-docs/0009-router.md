@@ -8,14 +8,15 @@ Status: **accepted** (2026-10-04). Bead: gyral-ud5.2. Builds on ADR 0003 and ADR
 
 ```ts
 const app = routes({ home: '/', user: '/users/:id' });
-app.match('/users/7'); // { name: 'user', params: { id: '7' } } | undefined (typed by name)
+app.match('/users/7'); // { name: 'user', params: { id: '7' }, path: '/users/7' } | undefined
 app.href('user', { id: 'a b' }); // '/users/a%20b'
 ```
 
 - Matching never touches `window`, so the same table serves SSR (gyral-4k7).
 - Patterns are **literal segments and `:param` only**. `routes()` rejects URLPattern-only
-  syntax (`*`, `?`, groups, regex) so both matchers behave identically. Trailing slashes are
-  ignored; params are percent-decoded; first match in table order wins.
+  syntax (`*`, `?`, groups, regex) so both matchers behave identically. One trailing slash is
+  ignored (the match's `path` is the canonical spelling, see "Canonical paths" below); params
+  are percent-decoded; first match in table order wins.
 - URLPattern is used when present (it is not Baseline widely available); otherwise a small
   segment matcher. Tests run the same table through both.
 
@@ -132,3 +133,47 @@ anyone calls `dispose()`. `dispose()` still removes everything at once.
 - **Migration:** apps that relied on a router capturing clicks before any component listened
   must start a `listen()` stream first (every routing component already does). Tests that
   created routers without disposing them no longer leak.
+
+## Addendum: canonical paths, empty segments (gyral-dyn.3, 2026-10-08)
+
+A game-platform team on Gyral found that a page answers at `/games/x` and `/games/x/` alike
+(one trailing slash is ignored, by design) while `match()` returned only `{ name, params }`, so
+each app hand-wrote a `pathOf(page)` to redirect to one URL. And the fallback matcher dropped
+empty segments, so `/games//x` matched `/games/:id` there but not under URLPattern, against
+"both matchers behave identically".
+
+- **`match()` returns `path`**, the canonical path: `href(name, params)`. It differs from the
+  URL's pathname when the URL had a trailing slash, lowercase percent-escapes
+  (`j%c3%bcrgen` → `j%C3%BCrgen`) or characters `href()` encodes (`a@b` → `a%40b`). It is a
+  fixed point: `match(m.path)` gives the same match. No separate `canonical(url)` helper: the
+  redirect is three lines and keeps the app's choice of status and query handling.
+
+  ```ts
+  // In the server's request handler, before rendering:
+  const m = site.match(url);
+  if (m !== undefined && m.path !== url.pathname) {
+    return Response.redirect(new URL(m.path + url.search, url), 301);
+  }
+  ```
+
+  A client that wants the address bar canonical too answers `Routed` with
+  `navigate(m.path + location.search + location.hash, { replace: true })` when they differ.
+
+- **Empty segments never match.** The fallback splits on every `/` (an empty segment is a
+  segment) and rejects an empty param value, as URLPattern does: `/users//7`, `//users/7` and
+  `/users//` match no route in either matcher. Only one trailing slash is dropped before
+  matching (`//` matches `/`, and its `path` is `/`).
+- **A string starting with `/` is a path.** `match('//users/7')` used to parse `users` as a
+  host; servers that pass `url.pathname` now match what the browser asked for.
+- **Patterns the matchers would read differently are rejected**: empty, `.` or `..` segments
+  (also as `%2e`), a `:` inside a segment (`/v:id`; URLPattern reads a param there), a param
+  name that isn't an identifier (`:post-id` is the param `post` then the literal `-id` to
+  URLPattern), a param named twice, and `#`. Literal segments are stored as a URL spells them
+  (`/café` → `/caf%C3%A9`, as URLPattern canonicalizes them), so `href()` and `path` emit the
+  encoded form.
+- **Tested** by `test/agreement.ts`: one table through both matchers over ~56,000 generated
+  paths (up to three segments from a pool with empty, dot, encoded and case-variant segments,
+  each with five endings), in Chromium and in Node 24, whose URLPattern implementations differ;
+  every match's `path` must match again to the same result.
+- **Cost:** about 0.1 KiB gzip in apps that route (routing-view and isomorphic budgets raised
+  by that much, `scripts/size-budget.json`).

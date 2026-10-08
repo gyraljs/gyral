@@ -69,6 +69,33 @@ too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
 
+### One URL per page: redirect to the canonical path
+
+The router ignores one trailing slash, so `/games/x/` matches the same route as `/games/x`.
+`match()` returns the canonical `path` (`href(name, params)`); redirect when the request's
+pathname differs, so search engines and caches see one URL per page:
+
+```ts
+import { html } from '@gyral/core';
+import { routes } from '@gyral/router';
+import { renderPage } from '@gyral/ssr';
+
+export const site = routes({ home: '/', game: '/games/:id' });
+
+export function handle(request: Request): Response {
+  const url = new URL(request.url);
+  const m = site.match(url);
+  if (m === undefined) return new Response('Not found', { status: 404 });
+  if (m.path !== url.pathname) return Response.redirect(new URL(m.path + url.search, url), 301);
+  return renderPage({
+    title: m.name === 'game' ? `Game ${m.params.id}` : 'Home',
+    lang: 'en',
+    body: html`<my-app path=${m.path}></my-app>`,
+    scripts: ['/src/entry-client.ts'],
+  });
+}
+```
+
 ## Content-Security-Policy
 
 Pass `csp: { directives }` to `renderPage`: it sets a `Content-Security-Policy` header whose
