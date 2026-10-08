@@ -159,29 +159,92 @@ it('loads the user when clicked', async () => {
 - Dispatch input events as the browser does: set `input.value`, then
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 
-## SSR tests
+## SSR tests (hydration)
 
-`hydrated(page, { releaseIslands? })` releases islands if asked, then awaits `settled()`; it
-fails on console errors and warnings (a hydration mismatch is one) and on elements that never
-upgraded. Run SSR tests against production builds of core too: mismatches are reported
-differently there (a warning and a fresh render instead of an error).
+A hydration test mounts real server markup (`mountSsr(html)`), imports the component modules so
+they upgrade and hydrate in place, then `await hydrated(page)`. `hydrated` releases islands if
+asked (`{ releaseIslands: true }`), then awaits `settled()`; it fails on console errors and
+warnings (a hydration mismatch is one) and on elements that never upgraded.
+
+The browser can't render that markup itself: there `define()` registers custom elements instead
+of server specs, and client builds drop the server half of compiled templates. Get it from
+Node, one of two ways:
+
+1. **`renderOnServer`** (Vitest browser mode, from `@gyral/testing/vitest`; needs `vitest` 5): a
+   Vitest browser command that runs in Vitest's Node process, loads a module through the
+   project's Vite server (same preset, development build) and renders it with
+   `@gyral/core/server`. Use it for component and page hydration tests: no files to sync,
+   props per test.
+2. **Golden fixture:** a Node test (`*.node.test.ts`) calls the real server and writes the
+   HTML with `toMatchFileSnapshot('./fixtures/page.ssr.html')`; the browser test imports it with
+   `?raw`. Use it when the markup needs the whole server stack (routing, data loading, page
+   shell, a built server), when markup changes should be reviewed in diffs, or outside Vitest
+   browser mode. Regenerate with `vitest -u`.
+
+Register the command (spread the preset into each Vitest project as usual):
 
 ```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
+import { gyralVitePreset } from '@gyral/core/vite';
+import { renderOnServer } from '@gyral/testing/vitest';
+
+export default defineConfig({
+  ...gyralVitePreset(),
+  test: {
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright(),
+      instances: [{ browser: 'chromium' }],
+      commands: { renderOnServer },
+    },
+  },
+});
+```
+
+```text
+// test/counter-hydration.test.ts (browser); src/counter.ts exports `Counter` (define()).
 import { expect, it } from 'vitest';
+import { commands } from 'vitest/browser';
+import { settled } from '@gyral/core';
 import { hydrated, mountSsr } from '@gyral/testing';
 
-it('hydrates the server page in place with no console problems', async () => {
-  const response = await fetch('/'); // or call your app's fetch handler directly
-  const page = mountSsr(await response.text());
-  const before = page.root.querySelector('my-home');
+it('hydrates the server markup in place and stays interactive', async () => {
+  const page = mountSsr(
+    await commands.renderOnServer({
+      module: '../src/counter.ts', // relative to the test file
+      export: 'Counter',
+      props: { start: 3 },
+    }),
+  );
+  const host = page.root.querySelector('my-counter');
+  const button = host?.shadowRoot?.querySelector('button');
+  await import('../src/counter.js'); // after mounting, as on a page load
   await hydrated(page);
-  expect(page.root.querySelector('my-home')).toBe(before); // same node: no re-render
-  expect(page.problems).toEqual([]);
+  expect(host?.shadowRoot?.querySelector('button')).toBe(button); // adopted, not re-rendered
+  button?.click();
+  await settled();
+  expect(host?.shadowRoot?.querySelector('output')?.textContent).toBe('4');
   page.unmount();
 });
 ```
 
-`mountSsr(html)` parses a server document (Declarative Shadow DOM included) into the test page;
-`hydrated(page)` waits until every component has hydrated and fails on undefined elements.
-Server-only tests (status codes, markup, `formAction`) run in Node by calling the app's `fetch`
-handler with a `Request`.
+- `export` (default `'default'`): a `define()` class (rendered with `props` as properties), a
+  function of `props` returning (or resolving to) a template result, an HTML string or a
+  `Response` (`renderPage(…)` from `@gyral/ssr`, an app's `fetch`: whole pages with store seeds),
+  or a template result. `props` must be JSON. `dev: false` renders production markup.
+- Server modules stay loaded between calls (like a dev server): pass per-test data as props.
+- Types come with `@gyral/testing/vitest`; when the tsconfig doesn't include
+  `vitest.config.ts`, add `import type {} from '@gyral/testing/vitest';` to the test.
+- Don't `fetch('/')` from a browser test for server markup: that reaches Vitest's own server,
+  not your app.
+- Run hydration tests against production builds of core too (a Vitest project with
+  `resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
+  re-renders that component instead of throwing.
+
+`mountSsr(html, { stores?, metas? })` parses a server document or fragment (Declarative Shadow
+DOM included) into the test page, restoring the store seed and named `<meta>`s. Server-only
+tests (status codes, markup, `formAction`) run in Node by calling the app's `fetch` handler with
+a `Request`.

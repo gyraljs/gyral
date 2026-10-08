@@ -17,11 +17,11 @@ pnpm add -D @gyral/testing
 pnpm add @gyral/ssr
 ```
 
-| Package                                                     | Peer dependencies                                                 |
-| ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional) |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                         |
-| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`) |
+| Package                                                     | Peer dependencies                                                                                                           |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional)                                                           |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                                                                                   |
+| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`), `vitest` ^5 (optional, only for `@gyral/testing/vitest`) |
 
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
 `defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.
@@ -179,6 +179,27 @@ transitions included, and messages have stopped arriving (view/04-scheduler.md "
 a stream or store notification already on its way in a microtask is waited for, while commands
 that never end (a store watch, a socket) don't block it. It never waits for timers or the
 network: answer fakes or advance `virtualTime` first. It replaces 0.2's `el.updateComplete`.
+
+**Hydration tests** mount real server markup in the browser (`mountSsr(html)` from
+`@gyral/testing`), import the component modules, then `await hydrated(page)`, which fails on a
+mismatch, on console errors or warnings and on elements that never upgraded. A browser test
+can't render that markup itself, so it comes from Node:
+
+- **`renderOnServer`** from `@gyral/testing/vitest` (needs `vitest` 5), a Vitest browser
+  command: add `commands: { renderOnServer }` to `test.browser` above, then in a test call
+  `commands.renderOnServer({ module: '../src/counter.ts', export: 'Counter', props })`
+  (`commands` from `vitest/browser`) and pass the HTML to `mountSsr`. It renders in Vitest's Node
+  process through the project's Vite server and `@gyral/core/server`. Best for components and
+  pages one module can render, with props per test and no files to keep in sync.
+- **A golden fixture:** a Node test calls your real server and writes the HTML with
+  `toMatchFileSnapshot('./fixtures/page.ssr.html')`; the browser test imports it with `?raw`.
+  Best when the markup needs the whole server stack (routing, data loading, a built server),
+  when markup changes should show up in review, or outside Vitest browser mode.
+
+Details and a full example: the `@gyral/testing` README. Run hydration tests against
+production builds of core too (a second browser project with
+`resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
+re-renders instead of throwing.
 
 ## Server rendering
 
