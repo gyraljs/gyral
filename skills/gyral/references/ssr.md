@@ -142,15 +142,17 @@ import { clientAssetsFromManifest, prerender, productionServer } from '@gyral/ss
 interface AppOptions {
   readonly clientEntry: string;
   readonly modulepreload?: readonly string[];
+  readonly stylesheets?: readonly string[];
 }
 
-const createApp = ({ clientEntry, modulepreload = [] }: AppOptions) => ({
+const createApp = ({ clientEntry, modulepreload = [], stylesheets = [] }: AppOptions) => ({
   fetch: (_request: Request) =>
     renderPage({
       title: 'Home',
       body: html`<my-home></my-home>`,
       scripts: [clientEntry],
       modulepreload, // <link rel="modulepreload"> for the entry's imports and the hydration chunk
+      stylesheets, // <link rel="stylesheet"> for the hashed CSS the client entry imports
     }),
 });
 
@@ -161,7 +163,11 @@ const assets = await clientAssetsFromManifest(
   'src/entry-client.ts',
 );
 await prerender({
-  app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
+  app: createApp({
+    clientEntry: assets.entry,
+    modulepreload: assets.modulepreload,
+    stylesheets: assets.css,
+  }),
   paths: ['/'],
   outDir: join(dist, 'static'),
 });
@@ -171,13 +177,21 @@ export const server = await productionServer({ distDir: dist, createApp });
 ```
 
 `prerender` fails the build on any non-200 page. Mount `server.fetch` in your HTTP server.
-`productionServer` passes `{ clientEntry, modulepreload }` to `createApp`. Hydration code loads
-lazily (only pages with server-rendered components need it); passing `modulepreload` on to
-`renderPage` lets the browser fetch it together with the entry instead of a round trip later.
-A page whose route module is imported lazily passes `preload(['src/routes/product.ts'])`
-(also given to `createApp`) as `modulepreload` instead: the same list plus that module and its
-imports (`clientAssets(manifest, entry, also)` underneath). `clientEntryFromManifest()` (the
-entry URL alone) still works.
+`productionServer` passes `{ clientEntry, modulepreload, stylesheets }` to `createApp`.
+Hydration code loads lazily (only pages with server-rendered components need it); passing
+`modulepreload` on to `renderPage` lets the browser fetch it together with the entry instead of
+a round trip later. A page whose route module is imported lazily spreads
+`assets(['src/routes/product.ts'])` (also given to `createApp`) into `renderPage` instead:
+`{ modulepreload, stylesheets }` with that module, its imports and its CSS added
+(`clientAssets(manifest, entry, also)` underneath; `preload(modules)` is the `modulepreload`
+half alone). `clientEntryFromManifest()` (the entry URL alone) still works.
+
+**Hashed stylesheets.** Import the app's global CSS from the client entry
+(`import './app.css';`), so Vite bundles it into a content-hashed file listed in the manifest;
+`clientAssets(...).css` (`stylesheets` in `createApp`) lists those files, and
+`renderPage({ stylesheets })` links them before any inline `styles`. They are served immutable
+from `/assets/`, cached across pages, and `style-src 'self'` allows them without hashes. Use
+`styles` (inline, hashed for CSP) only for small critical CSS.
 
 `productionServer` options: `assetsDir` (served at `/assets/`, default `dist/client/assets`),
 `staticDir` (prerendered pages, default `dist/static`; `false` when nothing is prerendered, so

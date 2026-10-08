@@ -96,3 +96,31 @@ even for apps that prerender nothing. The asset half is now its own export:
 
 Tests: `packages/ssr/test/assets.node.test.ts` (each bug above, types, traversal, cache bound,
 configurable directories).
+
+## Addendum: hashed stylesheets (gyral-dyn.2, 2026-10-08)
+
+`page({ styles })` inlines the app's global CSS into every page, which costs bytes per page and
+can't be cached. Vite already bundles CSS imported from the client entry into content-hashed
+files and lists them in the manifest (`ManifestChunk.css`), which `clientAssets` ignored.
+
+- **`ClientAssets.css`**: the CSS files of the chunks `clientAssets` walks: the entry, its
+  static imports and the `also` modules with theirs (the hydration chunk has none). Each
+  chunk's files come after its imports' files, the order the modules evaluate in and the order
+  Vite itself links them in HTML builds, so the cascade matches the dev server's. Each file
+  once.
+- **`page({ stylesheets })`** writes `<link rel="stylesheet" href>` per URL in the head, before
+  the inline `styles`, so small inline overrides still win on equal specificity.
+- **`productionServer`** hands `createApp` `stylesheets` beside `modulepreload`, and a new
+  `assets(modules)` returning `{ modulepreload, stylesheets }` with those modules added (cached
+  per list), named so it spreads into `renderPage`. `preload(modules)` keeps its type (a URL
+  list for `modulepreload`) and equals `assets(modules).modulepreload`: changing its result to
+  carry CSS would break 0.3.0 apps that pass it straight to `modulepreload`.
+- **CSP:** linked files are same-origin, so `style-src 'self'` (the default
+  `contentSecurityPolicy()` writes) allows them without hashes.
+- **The app's part:** import the CSS from the client entry (`import './app.css'`), so it is in
+  the client build. CSS only a lazily loaded module imports is linked only when that module is
+  named in `also`/`assets(modules)`; otherwise Vite's preload helper loads it with the chunk.
+
+Tests: `packages/ssr/test/stylesheets.node.test.ts` (ordering and dedupe on a manifest, the link
+markup, the `createApp` options, and a real Vite build whose entry and lazy module import CSS,
+served as `text/css`).

@@ -52,7 +52,10 @@ The walk, the mismatch messages and islands live in one internal module
   chunk once the first seeded host connects. No bytes change; client-only pages, which aren't
   rendered by `page()`, still never fetch the chunk. Checked by the isomorphic example's production
   test (`examples/isomorphic/test/prod.node.test.ts`) and
-  `packages/ssr/test/modulepreload.node.test.ts`.
+  `packages/ssr/test/modulepreload.node.test.ts`. The same walk collects the chunks' hashed CSS
+  as `css` for `page({ stylesheets })`, and `createApp` also gets `assets(modules)`, which
+  returns `{ modulepreload, stylesheets }` for a route (0.3.1, gyral-dyn.2; ADR 0016 "Hashed
+  stylesheets").
 
 ## Client-only builds (gyral-c5d.11, 0.3.1)
 

@@ -211,8 +211,10 @@ server-rendered component, so client-only pages never fetch it. For server-rende
 read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
 (`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser
 then fetches the hydration chunk together with the entry (`productionServer` hands
-`modulepreload` to your `createApp`, and `preload(modules)` for pages that import a route's
-module lazily).
+`modulepreload` to your `createApp`, and `assets(modules)` for pages that import a route's
+module lazily). CSS imported from the client entry (`import './app.css'`) is hashed by Vite and
+listed as `css`: pass it as `renderPage({ stylesheets })` to link it (immutable, cached across
+pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on every page.
 
 ## Removed in 0.3.0
 
