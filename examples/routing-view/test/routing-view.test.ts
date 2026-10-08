@@ -37,7 +37,11 @@ afterEach(() => {
 
 describe('routing-view', () => {
   it('matches the typed route table', () => {
-    expect(app.match('https://x.test/about')).toEqual({ name: 'about', params: {} });
+    expect(app.match('https://x.test/about')).toEqual({
+      name: 'about',
+      params: {},
+      path: '/about',
+    });
     expect(app.match('https://x.test/nope')).toBeUndefined();
   });
 

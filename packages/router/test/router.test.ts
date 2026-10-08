@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import {
   back,
@@ -55,6 +55,12 @@ const guard = (event: MouseEvent): void => {
   event.preventDefault();
 };
 
+// The History API path loads with import() on first use (ADR 0003 tier 3); load it before the
+// tests, so a slow first fetch doesn't count against each test's waits.
+beforeAll(async () => {
+  await import('../src/internal/history.js');
+});
+
 const modes: [string, boolean][] = [
   ['History API only (Navigation API forced off)', false],
   ['Navigation API', true],
@@ -95,7 +101,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('navigates by command and delivers the new route', async () => {
     el.send({ _tag: 'Go', url: '/users/7' });
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' }, path: '/users/7' });
     });
     expect(location.pathname).toBe('/users/7');
   });
@@ -127,7 +133,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('captures same-origin link clicks inside shadow roots', async () => {
     link('in').click();
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' }, path: '/users/9' });
     });
     expect(captured).toEqual([true]);
   });
