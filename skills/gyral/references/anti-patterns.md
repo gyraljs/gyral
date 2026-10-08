@@ -10,8 +10,8 @@
   reducers short and make the request shape testable.
 - **Carry the request key in response messages** (`{ _tag: 'Found', query, … }`) and ignore
   answers for a stale key.
-- **One route table** (`routes({...})`) shared by server and client; titles from one pure
-  function used by `setTitle` and the server's `<title>`.
+- **One route table** (`routes({...})`) shared by server and client; the head from one pure
+  `pageHead(…)` function passed to the server's `page()` and to `setHead()` on navigation.
 - **Widgets in shadow DOM with `styles`; pages in light DOM** with document CSS.
 - **Test the model first** (`step`/`run`), then one or two browser tests per component.
 

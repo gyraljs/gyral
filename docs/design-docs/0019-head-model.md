@@ -1,6 +1,6 @@
 # ADR 0019 — A head model shared by the page shell and the router
 
-Status: **proposed** (2026-10-08), for **0.3.1**. Bead: gyral-dyn.9. Builds on ADR 0009
+Status: **accepted** (2026-10-08), implemented in **0.3.1**. Bead: gyral-dyn.9. Builds on ADR 0009
 (router: the "document titles" and "canonical paths" addenda), ADR 0012 (SSR) and
 view/06-server.md.
 
@@ -61,7 +61,7 @@ keys and dedupe rules are what B's merge would need anyway.
 | A core marker driver (`head(…)`, like `focus()`)           | Works without the router, but then the memory history can't intercept it, and tests that route in memory would write the real document's head.                                                   |
 | A new `@gyral/head` package                                | Clean boundaries, but one more package to version for about 0.5 KiB of code.                                                                                                                     |
 
-## Decision (recommended)
+## Decision
 
 ### One data model, in core
 
@@ -148,7 +148,7 @@ update: {
 | `links`                 | `rel` plus every attribute except `href` | `alternate hreflang=fr` updates its `href` in place; later entries win                   |
 | `jsonLd`                | position (`ld:0`, `ld:1`, …)             | Text compared before writing                                                             |
 
-Refused in `meta`/`links` (development error, dropped in production): `charset`, `viewport`,
+Refused in `meta`/`links` (a development error; production doesn't check, to keep the applier small): `charset`, `viewport`,
 `http-equiv` (a CSP or refresh in `<meta>` is a server concern, not a per-navigation one) and
 the resource rels `stylesheet`, `preload` and `modulepreload` (removing one on navigation
 would unstyle the page or refetch modules; they belong to `page()`'s own options).
@@ -185,6 +185,11 @@ a `TrustedScript` even for a data block; see open question 5.
 | Apps without the router               | 0                                                      | Types only in core                                                                                                                      |
 | Server                                | no client cost; `page()` grows by the serializer       |                                                                                                                                         |
 | Page bytes                            | about 18 B per managed element (`data-gyral-head="…"`) | Compresses well; 6 managed elements ≈ 110 B before gzip                                                                                 |
+
+**Measured (implementation):** routing-view +0.85 KiB gzip all chunks (+0.7 initial),
+isomorphic +0.8 (+0.75), including each example's own `pageHead()`; every example that doesn't
+call `setHead` is unchanged to the byte. The estimate above was low: the normalizer, the
+applier and `scriptSafeJson` are new code with little to share with the rest of the bundle.
 
 ## Baseline and compatibility
 
@@ -237,16 +242,23 @@ amount (estimate +0.4 to +0.55 KiB all chunks, since both examples will call `se
 - **Size:** `pnpm size` for routing-view and isomorphic before and after; budgets raised only
   by what the measurement shows.
 
-## Open questions for the owner
+## Owner decisions (2026-10-08)
 
-1. **Where `setHead` lives.** (a) `@gyral/router`, memory history records it (recommended);
-   (b) a core marker driver, usable without the router.
-2. **Component-contributed heads.** (a) Not in 0.3.1, page-owned only (recommended);
-   (b) a `spec.head` field merged by depth, with buffered server output.
-3. **`canonical`.** (a) Absolute URLs only, development warns on a path (recommended);
-   (b) resolve paths against a new `origin` option.
-4. **JSON-LD under enforced Trusted Types.** (a) Skip client JSON-LD updates with a
-   development warning (recommended: crawlers read the server's); (b) accept a Trusted Types
-   policy option.
-5. **Marker.** (a) `data-gyral-head` per element (recommended); (b) one count `<meta>`,
-   fewer bytes but fragile when other code inserts into the head.
+The owner accepted every recommendation:
+
+1. **`setHead` lives in `@gyral/router`**, and the memory history records it
+   (`snapshot().head`).
+2. **The page owns the head** in 0.3.1; components don't contribute (option B stays possible
+   on top of A's keys and dedupe rules).
+3. **`canonical` is absolute**; development warns on a path.
+4. **JSON-LD under enforced Trusted Types:** the client skips the update (no empty element is
+   inserted, the server's block stays) and warns once; crawlers read the server's.
+5. **Marker:** `data-gyral-head="<key>"` on each managed element.
+
+Verified in the implementation's tests: a data block (`type="application/ld+json"`) causes no
+`securitypolicyviolation` under `script-src 'self'`, whether the server wrote it or the client
+set its text (a nonce-less classic script in the same document is refused, proving the policy
+is enforced); the first `Routed` after hydration writes nothing to `<head>`; a client
+navigation away and back leaves the server's managed head for that URL
+(`examples/isomorphic/test/head.test.ts`). `mountSsr` copies the managed head right after
+`<title>`, so app tests can check the same.

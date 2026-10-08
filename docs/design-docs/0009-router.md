@@ -86,9 +86,13 @@ resolved from their `href` **attribute** against the router's own location, not 
 `anchor.href`, so memory history captures in-app links even though the real page has another
 origin. The browser history uses the same rule (a `<base href>` element is not consulted).
 
-`driver.snapshot()` returns `{ href, title, length }` as the router sees them, for assertions.
+`driver.snapshot()` returns `{ href, head, length }` as the router sees them, for assertions
+(`title` until 0.3.1; ADR 0019).
 
 ## Addendum: document titles (gyral-ud5.6, 2026-10-04)
+
+**Superseded in 0.3.1 by ADR 0019:** `setTitle(title)` is replaced by `setHead(head)`, and
+the pure `pageTitle(…)` function generalizes to `pageHead(…)`. The reasoning below still holds.
 
 Decision: a **`setTitle(title)` command**, not a `title` field in the route table. Titles often
 depend on data (a product name), not only on the route, so they are computed by a pure
@@ -234,3 +238,18 @@ commands included).
   `settled()` (about 0.2 KiB, new to apps that didn't wait on the scheduler) and the intercept
   options in the entry chunk; the History API chunk (about 0.75 KiB gzip on its own) is fetched
   only by browsers without the Navigation API. Budgets raised by that much.
+
+## Addendum: the head model replaces titles (gyral-dyn.9, 2026-10-08)
+
+ADR 0019. `setHead(head)` replaces `setTitle(title)` (removed in 0.3.1): one command states the
+page's whole managed head (title, description, canonical, robots, meta, links, JSON-LD, `lang`,
+`dir`), computed by the same pure `pageHead(…)` the server passes to `page()`. The canonical
+link comes from `match().path` (the path the server redirects to) and a configured origin.
+
+- **Browser history:** `internal/head.ts` applies it keyed and minimally (managed elements are
+  marked `data-gyral-head`), right after `<title>`; managed elements the new head doesn't name
+  are removed, unmanaged head content is never touched. The applier is put in a slot by
+  `setHead()` itself, so router apps that never set a head don't bundle it.
+- **Memory history:** records the head in `snapshot().head`; the document is untouched.
+- **Router input:** `{ _tag: 'Head', head }` replaces `{ _tag: 'Title', title }`;
+  `RouterSnapshot.title` becomes `head` (the last head set, `undefined` before the first).

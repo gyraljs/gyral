@@ -235,7 +235,7 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
   when it is called. A string `csp` is set as is; in development `renderPage` warns, once per
   component, when a header that allows styles by hash (and not `'unsafe-inline'`) lacks the
   hash of a registered component.
-- `style` attributes and hand-written `<style>` elements in `head` are not covered.
+- `style` attributes and hand-written `<style>` elements in `extraHead` are not covered.
   Verified (Phase 4) with a real header in Chromium 153, Firefox 155 and WebKit 26.6: a hashed
   `<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
   constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is

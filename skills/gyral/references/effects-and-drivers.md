@@ -111,7 +111,7 @@ Redux-style store, a store provided per page, a WebSocket) and testing: outside-
 ```ts
 import { define, html } from '@gyral/core';
 import { request, type HttpError } from '@gyral/http';
-import { listen, navigate, routes, setTitle, type RouteLocation } from '@gyral/router';
+import { listen, navigate, routes, setHead, type RouteLocation } from '@gyral/router';
 import { delay, periodic } from '@gyral/time';
 
 export const site = routes({ home: '/', product: '/products/:id' });
@@ -145,7 +145,7 @@ export const Shell = define<State, Msg>('my-shell', {
   update: {
     Routed: (s, m) => [
       { ...s, path: m.location.pathname },
-      [setTitle(`Shop — ${m.location.pathname}`)],
+      [setHead({ title: `Shop — ${m.location.pathname}` })],
     ],
     Tick: (s, m) => ({ ...s, seconds: m.seconds }),
     Open: (s, m) => [s, [navigate(site.href('product', { id: m.id }))]],
@@ -186,7 +186,8 @@ export const Shell = define<State, Msg>('my-shell', {
   `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
   `time`; about 0.15 KiB less).
 - **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace?, scroll?, focusReset? })`,
-  `back()`, `forward()`, `go(n)`, `setTitle(title)`, typed `routes({...})` tables with
+  `back()`, `forward()`, `go(n)`, `setHead(head)` (the page's head: see ssr.md "One head
+  for server and client"), typed `routes({...})` tables with
   `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect
   to: ssr.md "One URL per page") and `href(name, params)` (same table on server and client).
   Patterns are literal and `:param` segments only; empty segments (`/a//b`) never match. Link clicks are

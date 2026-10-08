@@ -67,8 +67,8 @@ export function home(request: Request): Response {
 ```
 
 Also available: `page(options)` (the document template), `renderToString(value, { stores })`
-and `renderToStream(value, { stores })`. Head content (`head`) is written with core's `html`
-too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
+and `renderToStream(value, { stores })`. Head content the head model doesn't cover
+(`extraHead`) is written with core's `html` too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
 
@@ -99,6 +99,75 @@ export function handle(request: Request): Response {
 }
 ```
 
+### One head for server and client
+
+A page's head (title, description, canonical, robots, `meta`, `links`, JSON-LD, `lang`, `dir`)
+is one `Head` value (ADR 0019). Compute it with one pure function, give it to `page()` /
+`renderPage()` on the server, and return `setHead(…)` from the reducer that has the route and
+data, so a client navigation leaves the same head as a page load. `setHead` replaces the whole
+managed head: whatever the new head doesn't name (a `noindex`, last page's JSON-LD) is removed,
+unchanged elements aren't written (the first `Routed` after hydration writes nothing), and
+`extraHead` content is never touched. The page owns the head; components don't add to it.
+
+```ts
+import { define, html, type Head } from '@gyral/core';
+import { listen, routes, setHead, type RouteLocation, type RouteMatch } from '@gyral/router';
+import { renderPage } from '@gyral/ssr';
+
+export const site = routes({ home: '/', product: '/products/:id' });
+/** Configuration, never the request's Host header. */
+const ORIGIN = 'https://shop.example';
+
+export const pageHead = (m: RouteMatch<typeof site.table> | undefined): Head =>
+  m === undefined
+    ? { title: 'Not found — Shop', robots: 'noindex' }
+    : {
+        title: m.name === 'product' ? `Product ${m.params.id} — Shop` : 'Shop',
+        description: 'Everything for your kitchen.',
+        canonical: new URL(m.path, ORIGIN).href,
+        meta: [{ property: 'og:type', content: m.name === 'product' ? 'product' : 'website' }],
+        jsonLd:
+          m.name === 'product' ? [{ '@context': 'https://schema.org', '@type': 'Product' }] : [],
+      };
+
+// Server
+export function handle(request: Request): Response {
+  const m = site.match(new URL(request.url));
+  return renderPage(
+    {
+      ...pageHead(m),
+      extraHead: html`<link rel="icon" href="/favicon.svg" />`,
+      body: html`<my-shop></my-shop>`,
+      scripts: ['/src/entry-client.ts'],
+    },
+    { status: m === undefined ? 404 : 200 },
+  );
+}
+
+// Client
+type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
+export const Shop = define<{ readonly path: string }, Msg>('my-shop', {
+  init: () => [{ path: '/' }, [listen((location) => ({ _tag: 'Routed', location }))]],
+  intent: {},
+  update: {
+    Routed: (_s, { location }) => [
+      { path: location.pathname },
+      [setHead(pageHead(site.match(location.href)))],
+    ],
+  },
+  view: (s) => html`<p>${s.path}</p>`,
+});
+```
+
+- Later `meta`/`links` entries win over earlier ones with the same name or attributes, so
+  `meta: [...siteDefaults, ...pageMeta]` merges defaults. `charset`, `viewport`, `http-equiv`
+  and `stylesheet`/`preload`/`modulepreload`/`canonical` links are refused there: they belong
+  to `page()`'s own options (or `canonical`).
+- `canonical` must be absolute; development warns on a path.
+- JSON-LD needs no CSP allowance (a data block isn't script). Where Trusted Types are enforced,
+  the client skips JSON-LD updates (crawlers read the server's).
+- The memory history records the head in `snapshot().head` instead of touching the document.
+
 ## Content-Security-Policy
 
 Pass `csp: { directives }` to `renderPage`: it sets a `Content-Security-Policy` header whose
@@ -126,7 +195,7 @@ export function home(): Response {
 for the components registered when it is called: import them first (in development
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
-Hand-written `<style>` in `head` isn't covered: move that CSS into `styles` or a stylesheet.
+Hand-written `<style>` in `extraHead` isn't covered: move that CSS into `styles` or a stylesheet.
 Inline `style="…"` attributes in server HTML aren't either: a strict `style-src` blocks them
 on first paint, and hydration then applies them through the CSSOM (client renders and updates
 are never blocked). Put declarations in stylesheets selected by classes or data attributes, and
