@@ -17,3 +17,5 @@ that chunk can't load, navigations become full page loads. A `replace` leaves sc
 alone unless `navigate(url, { replace: true, scroll: true, focusReset: true })`, and back/forward
 to an entry with the same path and query is left to the browser on both paths. See ADR 0009
 "Scroll and focus".
+
+Behavior change: after a push, the browser router now scrolls to the fragment or the top and resets focus (opt out with `scroll: false` / `focusReset: false`, per call or in `makeRouter`); on the Navigation API path it intercepts same-document back/forward to another page; without the Navigation API the first navigation resolves a moment later. A replace leaves scroll and focus as they were.

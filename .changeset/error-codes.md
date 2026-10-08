@@ -9,3 +9,5 @@ from which `docs/references/errors.md` and `errors.json` are generated for the g
 page; `pnpm invariants` checks that codes are unique, that every production message names a code
 in the table with matching arguments, and that the docs are current. A hydration mismatch keeps
 its sentence in production and ends with its code and link. Apps ship 0.16–0.40 KiB gzip less.
+
+Behavior change: production builds print `Gyral G00NN …` codes instead of the message text; match on the code (or use a development build) if you assert on error text.

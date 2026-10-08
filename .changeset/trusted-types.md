@@ -7,5 +7,5 @@ Gyral works under Trusted Types. The browser parses template HTML (`html` and `s
 browser has `trustedTypes`, so a page whose Content Security Policy says
 `require-trusted-types-for 'script'` renders instead of throwing "This document requires
 'TrustedHTML' assignment". A policy that lists its allowed policies adds `gyral`:
-`trusted-types gyral`. Without Trusted Types nothing changes. Tested in Chromium, Firefox and
+`trusted-types gyral`; a page whose list leaves `gyral` out still renders (plain strings, as before, with a development warning, G0072) as long as Trusted Types aren't enforced. Without Trusted Types nothing changes. Tested in Chromium, Firefox and
 WebKit (view/01-templates.md "Instantiation").

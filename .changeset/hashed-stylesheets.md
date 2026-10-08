@@ -10,3 +10,5 @@ modules (each after its imports', each once), and `page()`/`renderPage()` take
 `{ modulepreload, stylesheets }` for a page that imports route modules lazily (spread it into
 `renderPage`); `preload(modules)` is unchanged. Import your global CSS from the client entry so
 Vite hashes it; `style-src 'self'` allows the linked files without hashes.
+
+Behavior change (types): `ClientAssets` has a required `css` field; code that builds one by hand adds `css: []`.

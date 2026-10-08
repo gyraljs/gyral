@@ -7,3 +7,5 @@
 Also: bound attribute names on SVG elements take the HTML parser's spelling (`viewbox=${v}` binds `viewBox`), bound namespaced attributes (`xlink:href=${v}`) are a template error pointing to SVG 2's `href`, HTML-only elements inside SVG content (`<button>` in `<svg>`) are a template error, and whitespace with a newline at the inside edges of `<svg>` is dropped like at a block edge.
 
 In development `svg` templates name their call site in template errors and hydration mismatches, as `html` ones do (the `gyral:template-locations` plugin rewrites `svg` call sites with `svg.at`); `gyral/unused-intent` counts intents named in `svg` templates, and the function-in-property-binding warning and `gyral/template`'s closure check cover them too.
+
+Behavior change: in `html` templates, HTML-only elements inside `<svg>` and bound namespaced attributes such as `xlink:href=${v}` (use `href`) are template errors, and whitespace with a newline at the inside edges of `<svg>` is dropped.
