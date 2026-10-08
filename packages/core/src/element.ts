@@ -289,16 +289,9 @@ export function elementClass<S, M extends Tagged, P>(
 
     #onEvent = (event: Event): void => {
       if (this.#root === undefined) return;
-      handleIntent(
-        event,
-        this.#root,
-        parsers,
-        tag,
-        () => this.#model.ctx(),
-        (msg) => {
-          if (msg !== undefined && this.isConnected) this.#model.dispatch(msg);
-        },
-      );
+      handleIntent(event, this.#root, parsers, tag, this.#model, (msg) => {
+        if (msg !== undefined && this.isConnected) this.#model.dispatch(msg);
+      });
     };
   }
   return Element;

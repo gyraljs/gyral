@@ -69,23 +69,22 @@ const isToggle = (el: Element): el is HTMLInputElement =>
 
 const CLICK_INPUT_TYPES = /^(button|submit|reset|image)$/;
 
-/** The event that fires an intent unless `data-intent-on` overrides it. */
+/**
+ * The event that fires an intent unless `data-intent-on` overrides it. Custom elements
+ * (autonomous: the name has a dash) talk to their parent via outputs.
+ */
 export function defaultTrigger(el: Element): string {
-  switch (el.localName) {
-    case 'form':
-      return 'submit';
-    case 'select':
-      return 'change';
-    case 'textarea':
-      return 'input';
-    case 'input': {
-      const type = (el as HTMLInputElement).type;
-      if (CLICK_INPUT_TYPES.test(type)) return 'click';
-      return type === 'checkbox' || type === 'radio' ? 'change' : 'input';
-    }
-  }
-  // Custom elements (autonomous: the name has a dash) talk to their parent via outputs.
-  return el.localName.includes('-') ? OUTPUT_EVENT : 'click';
+  const name = el.localName;
+  return name === 'form'
+    ? 'submit'
+    : name === 'select' || isToggle(el)
+      ? 'change'
+      : name === 'textarea' ||
+          (name === 'input' && !CLICK_INPUT_TYPES.test((el as HTMLInputElement).type))
+        ? 'input'
+        : name.includes('-')
+          ? OUTPUT_EVENT
+          : 'click';
 }
 
 /** The events that fire `el`'s intent: its `data-intent-on` list, or its default trigger. */
@@ -171,7 +170,8 @@ export function readIntent(event: Event, root: Node): IntentInput | undefined {
       checked: isToggle(target) ? target.checked : undefined,
       formData,
       detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
-      key: event instanceof KeyboardEvent ? event.key : undefined,
+      // Read structurally too: only keyboard events carry `key` to elements.
+      key: (event as { readonly key?: string }).key,
       // ToggleEvent (popover, <details>) is not Baseline widely available: read it structurally.
       newState: (event as { readonly newState?: 'open' | 'closed' }).newState,
       command: commandOf(event),
@@ -219,15 +219,15 @@ export function listenForIntents(
 }
 
 /**
- * Parses one event with its matching parser and delivers the message (sync or async). `ctx`
- * is called only when a parser runs, so the props it reads are those at event time.
+ * Parses one event with its matching parser and delivers the message (sync or async). The
+ * model's `ctx()` is built only when a parser runs, so its props are those at event time.
  */
 export function handleIntent<M>(
   event: Event,
   root: Node,
   parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
   tag: string,
-  ctx: () => Ctx<unknown>,
+  model: { ctx(): Ctx<unknown> },
   deliver: (msg: Tagged | undefined) => void,
 ): void {
   const input = readIntent(event, root);
@@ -237,7 +237,7 @@ export function handleIntent<M>(
     console.warn(message(11, tag, input.name));
     return;
   }
-  const result = parser(input, ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
+  const result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
   if (result instanceof Promise) {
     result.then(deliver, (error: unknown) => {
       console.error(message(12, tag, input.name), error);
