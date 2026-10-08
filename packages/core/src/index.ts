@@ -131,3 +131,7 @@ export type {
   Styles,
   TemplateResult,
 } from './view/index.js';
+
+// The head model (ADR 0019): shared by @gyral/ssr's page() and @gyral/router's setHead().
+export { HEAD_ATTRIBUTE, headEntries } from './head.js';
+export type { Head, HeadEntry, HeadLink, HeadMeta, JsonValue } from './head.js';
