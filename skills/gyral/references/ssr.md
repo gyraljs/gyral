@@ -256,6 +256,26 @@ streamed body and a `signal` that aborts when the client disconnects; the `Respo
 written with backpressure (a slow client slows the render; one that leaves cancels it); `HEAD`
 sends headers only; each `set-cookie` stays separate; a throwing handler is a 500.
 
+The handler's second argument is `{ incoming, remoteAddress }` (the Node request and the
+client's IP address), for rate limits, logs and audits. A Hono app gets it as `c.env`, so
+`getConnInfo(c)` from `@hono/node-server/conninfo` works. Behind a proxy `remoteAddress` is the
+proxy: read `X-Forwarded-For` only when the request came from a proxy you run.
+
+```ts
+import { createServer } from 'node:http';
+import { toNodeListener } from '@gyral/ssr/node';
+
+const hits = new Map<string, number>();
+createServer(
+  toNodeListener((_request, { remoteAddress }) => {
+    const client = remoteAddress ?? 'unknown';
+    const count = (hits.get(client) ?? 0) + 1;
+    hits.set(client, count);
+    return count > 100 ? new Response('Slow down', { status: 429 }) : new Response('ok');
+  }),
+).listen(3000);
+```
+
 ```ts
 import { createServer } from 'node:http';
 import { join } from 'node:path';

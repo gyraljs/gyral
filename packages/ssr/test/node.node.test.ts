@@ -2,6 +2,8 @@
 import { createServer, request as httpRequest, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
+import { getConnInfo } from '@hono/node-server/conninfo';
+import { Hono } from 'hono';
 import { html } from '@gyral/core';
 import { renderPage } from '../src/index.js';
 import { toNodeListener, type FetchHandler, type NodeListenerOptions } from '../src/node.js';
@@ -224,5 +226,38 @@ describe('toNodeListener (gyral-dyn.6)', () => {
       req.end();
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('passes { incoming, remoteAddress } as the second argument (gyral-dyn.29)', async () => {
+    const base = await serve((_request, env) =>
+      Response.json({
+        remoteAddress: env.remoteAddress,
+        // What getConnInfo from @hono/node-server/conninfo reads: env.incoming.socket.
+        hono: env.incoming.socket.remoteAddress,
+        port: env.incoming.socket.remotePort,
+        sameRequest: env.incoming.url === '/who',
+      }),
+    );
+    const { body } = await raw(base, '/who');
+    const seen = JSON.parse(body) as Record<string, unknown>;
+    expect(seen.remoteAddress).toBe('127.0.0.1');
+    expect(seen.hono).toBe('127.0.0.1');
+    expect(typeof seen.port).toBe('number');
+    expect(seen.sameRequest).toBe(true);
+  });
+
+  it("works with Hono's getConnInfo unchanged", async () => {
+    const app = new Hono().get('/who', (c) => c.json(getConnInfo(c).remote));
+    const base = await serve(app.fetch);
+    const remote = JSON.parse((await raw(base, '/who')).body) as Record<string, unknown>;
+    expect(remote.address).toBe('127.0.0.1');
+    expect(remote.addressType).toBe('IPv4');
+    expect(typeof remote.port).toBe('number');
+  });
+
+  it('still takes handlers that read only the request', async () => {
+    const handler = (request: Request): Response => new Response(new URL(request.url).pathname);
+    const base = await serve(handler);
+    expect((await raw(base, '/only-request')).body).toBe('/only-request');
   });
 });

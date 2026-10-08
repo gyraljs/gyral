@@ -5,8 +5,26 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 
-/** A fetch handler: `productionServer(…).fetch`, a Hono app's `fetch`, or a plain function. */
-export type FetchHandler = (request: Request) => Response | Promise<Response>;
+/**
+ * What `toNodeListener` passes as the handler's second argument (gyral-dyn.29): the Node request
+ * and the client's address. `{ incoming }` is the shape Hono's Node adapter uses, so
+ * `getConnInfo` from `@hono/node-server/conninfo` works unchanged.
+ */
+export interface NodeEnv {
+  /** The Node request, for anything `Request` doesn't carry (socket, TLS details). */
+  readonly incoming: IncomingMessage;
+  /**
+   * The peer's IP address (`req.socket.remoteAddress`), or `undefined` once the socket is gone.
+   * Behind a proxy this is the proxy: read `X-Forwarded-For` only when the proxy is known.
+   */
+  readonly remoteAddress: string | undefined;
+}
+
+/**
+ * A fetch handler: `productionServer(…).fetch`, a Hono app's `fetch`, or a plain function. Under
+ * `toNodeListener` it also receives a {@link NodeEnv}; handlers that don't need it ignore it.
+ */
+export type FetchHandler = (request: Request, env: NodeEnv) => Response | Promise<Response>;
 
 export interface NodeListenerOptions {
   /**
@@ -122,7 +140,8 @@ const fail = (res: ServerResponse, status: number, text: string): void => {
  * - the `Response` body is piped with backpressure (a slow client pauses the stream, so a
  *   `renderPage` body renders as fast as it is read) and cancelled on disconnect;
  * - `HEAD` sends the headers only; each `set-cookie` stays its own header;
- * - an unparsable request target is a 400; a throwing handler a 500 (`onError` sees it).
+ * - an unparsable request target is a 400; a throwing handler a 500 (`onError` sees it);
+ * - the handler's second argument is a {@link NodeEnv}: `{ incoming, remoteAddress }`.
  */
 export function toNodeListener(
   fetch: FetchHandler,
@@ -147,7 +166,10 @@ export function toNodeListener(
     }
     void (async () => {
       try {
-        const response = await fetch(sent);
+        const response = await fetch(sent, {
+          incoming: req,
+          remoteAddress: req.socket.remoteAddress,
+        });
         writeHead(res, response);
         if (req.method === 'HEAD' || response.body === null) {
           await response.body?.cancel();

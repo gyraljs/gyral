@@ -39,7 +39,7 @@ import './app.js';
 
 `productionServer` serves `/assets/*` from `assetsDir` (default `dist/client/assets`) through `assetHandler`: `GET` and `HEAD`, immutable caching, a `content-type` per file type, `content-length`, `nosniff`, traversal and dot-path refusal, a 400 for malformed escapes and `no-store` 404s, so a CDN never keeps a miss. Files stay in memory (bounded; `cache: false` to read from disk). Apps with no prerendered pages pass `staticDir: false`. `assetHandler({ dir, prefix, cache })` also works alone, for example for a volume that keeps every release's hashed files so tabs opened before a deploy still load theirs.
 
-`@gyral/ssr/node` mounts any fetch handler on `node:http`: `createServer(toNodeListener(app.fetch, { origin }))`. Request bodies stream in, response bodies stream out with backpressure, a client that disconnects aborts `request.signal` and cancels the body, `HEAD` sends headers only and each `set-cookie` stays separate.
+`@gyral/ssr/node` mounts any fetch handler on `node:http`: `createServer(toNodeListener(app.fetch, { origin }))`. Request bodies stream in, response bodies stream out with backpressure, a client that disconnects aborts `request.signal` and cancels the body, `HEAD` sends headers only and each `set-cookie` stays separate. The handler also receives `{ incoming, remoteAddress }` (the Node request and the client's address; Hono's `getConnInfo` reads it as `c.env`).
 
 ```ts
 // server/prod.ts

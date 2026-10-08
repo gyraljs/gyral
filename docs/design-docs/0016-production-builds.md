@@ -151,8 +151,14 @@ its own subpath like `/static`; the main entry stays runtime-neutral.
 - **Errors.** A throwing handler or failing body goes to `onError` (default `console.error`);
   before the headers it is a `no-store` 500, after them the connection is destroyed so the
   client never sees a truncated page as complete. Errors after the client left are ignored.
+- **Connection info** (gyral-dyn.29). The handler's second argument is
+  `{ incoming, remoteAddress }`: the Node request and `req.socket.remoteAddress`, for apps
+  that rate-limit, log or audit by client. `incoming` is the shape Hono's Node adapter uses, so
+  `getConnInfo` from `@hono/node-server/conninfo` works on a Hono app mounted this way. Behind a
+  proxy the address is the proxy's; `X-Forwarded-For` is trusted only from a known proxy, which
+  the app decides, not the adapter.
 
 Tests: `packages/ssr/test/node.node.test.ts`, on a real server: streamed request bodies, URL
 building (origin, `//` targets, absolute-form), a `renderPage` response, `HEAD`, separate
 cookies, a paused client holding the producer back and a disconnect cancelling it, 500s,
-mid-body failures, a bad `Host`.
+mid-body failures, a bad `Host`, the connection info argument.
