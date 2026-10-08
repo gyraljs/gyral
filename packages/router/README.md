@@ -18,7 +18,13 @@ export const site = routes({ home: '/', product: '/products/:id' });
 site.match('/products/42/'); // { name: 'product', params: { id: '42' }, path: '/products/42' }
 
 // In an update: [state, [navigate('/products/42')]]
+// Filters in the URL, without a new history entry or moving scroll and focus:
+// [state, [navigate('?q=shoes&sort=price', { replace: true, scroll: false, focusReset: false })]]
 ```
+
+After a navigation renders, the router scrolls to the `#fragment` target or the top, restores
+the position on back and forward, and resets focus; pass `scroll: false` / `focusReset: false`
+to `navigate` or `makeRouter` to manage them yourself.
 
 ## Documentation
 

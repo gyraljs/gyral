@@ -229,6 +229,65 @@ export const App = define<State, Msg>('my-app', {
 });
 ```
 
+### Updating the query without moving the page
+
+Filters, a search box or an open dialog often belong in the URL (`?q=shoes&sort=price`) so a
+reload or a shared link restores them, but changing them must not scroll or move focus. Use
+`navigate` with `replace` (no new history entry per keystroke), `scroll: false` and
+`focusReset: false`. The router still sees the change, so `listen` delivers the new location
+and state derived from `location.search` stays in step with the address bar; no extra driver
+is needed:
+
+```ts
+import { define, html } from '@gyral/core';
+import { listen, navigate, type RouteLocation } from '@gyral/router';
+
+interface State {
+  readonly q: string;
+  readonly sort: string;
+}
+type Msg =
+  | { readonly _tag: 'Routed'; readonly location: RouteLocation }
+  | { readonly _tag: 'Filter'; readonly field: keyof State; readonly value: string };
+
+const fromSearch = (search: string): State => {
+  const params = new URLSearchParams(search);
+  return { q: params.get('q') ?? '', sort: params.get('sort') ?? 'relevance' };
+};
+
+const toSearch = (s: State): string =>
+  `?${new URLSearchParams({ q: s.q, sort: s.sort }).toString()}`;
+
+export const Filters = define<State, Msg>('search-filters', {
+  // listen() delivers the current location first, so the query is read in one place.
+  init: () => [fromSearch(''), [listen((location): Msg => ({ _tag: 'Routed', location }))]],
+  intent: {
+    Filter: (input) => ({
+      _tag: 'Filter',
+      field: input.target.getAttribute('name') === 'sort' ? 'sort' : 'q',
+      value: input.value ?? '',
+    }),
+  },
+  update: {
+    Routed: (_s, m) => fromSearch(m.location.search),
+    Filter: (s, m) => {
+      const next = { ...s, [m.field]: m.value };
+      return [
+        next,
+        [navigate(toSearch(next), { replace: true, scroll: false, focusReset: false })],
+      ];
+    },
+  },
+  view: (s, i) => html`
+    <input type="search" name="q" value=${s.q} data-intent=${i.Filter} data-intent-on="input" />
+    <select name="sort" data-intent=${i.Filter}>
+      <option value="relevance" ?selected=${s.sort === 'relevance'}>Relevance</option>
+      <option value="price" ?selected=${s.sort === 'price'}>Price</option>
+    </select>
+  `,
+});
+```
+
 ## Recipe: copying to the clipboard
 
 A driver over `navigator.clipboard.writeText`, with a typed error:
