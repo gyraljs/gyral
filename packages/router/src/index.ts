@@ -1,8 +1,9 @@
 import { command, type Command } from '@gyral/core';
-import { router, type RouteLocation, type RouterInput } from './driver.js';
+import { router, type AfterNavigation, type RouteLocation, type RouterInput } from './driver.js';
 
 export { makeRouter, router } from './driver.js';
 export type {
+  AfterNavigation,
   RouteLocation,
   RouterDriver,
   RouterInput,
@@ -20,12 +21,20 @@ type Output = RouteLocation | undefined;
 const fireAndForget = (input: RouterInput): Command<never> =>
   command<RouterInput, Output, unknown, never>(router, input, { onSuccess: () => undefined });
 
-/** Navigates in-app (pushes a history entry, or replaces the current one). */
-export function navigate(
-  url: string,
-  options: { readonly replace?: boolean } = {},
-): Command<never> {
-  return fireAndForget({ _tag: 'Navigate', url, replace: options.replace ?? false });
+/** Options of `navigate()`. */
+export interface NavigateOptions extends Partial<AfterNavigation> {
+  /** Replace the current history entry instead of pushing one. Default `false`. */
+  readonly replace?: boolean;
+}
+
+/**
+ * Navigates in-app (pushes a history entry, or replaces the current one). In the browser, once
+ * the new page has rendered, the router scrolls to the `#fragment` target or the top and resets
+ * focus, as the browser does for a page load (ADR 0009 "Scroll and focus"); `scroll: false` or
+ * `focusReset: false` leaves that to the app for this navigation.
+ */
+export function navigate(url: string, options: NavigateOptions = {}): Command<never> {
+  return fireAndForget({ _tag: 'Navigate', url, ...options, replace: options.replace ?? false });
 }
 
 /** Moves through history by `delta` entries (`-1` is back). */

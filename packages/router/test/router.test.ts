@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import {
   back,
@@ -54,6 +54,12 @@ const guard = (event: MouseEvent): void => {
   captured.push(event.defaultPrevented);
   event.preventDefault();
 };
+
+// The History API path loads with import() on first use (ADR 0003 tier 3); load it before the
+// tests, so a slow first fetch doesn't count against each test's waits.
+beforeAll(async () => {
+  await import('../src/internal/history.js');
+});
 
 const modes: [string, boolean][] = [
   ['History API only (Navigation API forced off)', false],

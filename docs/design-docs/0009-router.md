@@ -25,12 +25,13 @@ app.href('user', { id: 'a b' }); // '/users/a%20b'
 `navigate(url, { replace })`, `back()`, `forward()`, `go(delta)` return commands for the
 `router` driver (a plain object; substitute with `el.drivers = { router: makeRouter({...}) }`).
 
-| Concern           | Baseline (History API)                    | Enhancement (Navigation API, feature-detected)                                                                   |
-| ----------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Navigate          | `pushState` / `replaceState`, then notify | `navigation.navigate()` with a private `info` token; only those navigations are intercepted (kept same-document) |
-| Back/forward      | `history.go()` → `popstate`               | `history.go()` → `currententrychange`                                                                            |
-| URL change signal | `popstate` + our own pushes               | `currententrychange`                                                                                             |
-| Link clicks       | captured on `document` (both modes)       | same                                                                                                             |
+| Concern           | Baseline (History API)                                                                                  | Enhancement (Navigation API, feature-detected)                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Navigate          | `pushState` / `replaceState`, then notify                                                               | `navigation.navigate()` with a private `info` token; only those navigations are intercepted (kept same-document)      |
+| Back/forward      | `history.go()` → `popstate`                                                                             | `history.go()` → `currententrychange`                                                                                 |
+| URL change signal | `popstate` + our own pushes                                                                             | `currententrychange`                                                                                                  |
+| Link clicks       | captured on `document` (both modes)                                                                     | same                                                                                                                  |
+| Scroll and focus  | after `settled()`: `#fragment` target or top, `[autofocus]` or body; back/forward restore (lazy module) | `intercept({ handler: settled, scroll, focusReset: 'after-transition' })`: the browser does the same after the render |
 
 Link capture skips: already-prevented clicks, modified or non-primary clicks, `target`
 other than `_self`, `download`, `rel="external"`, other origins and same-page hash links.
@@ -177,3 +178,59 @@ empty segments, so `/games//x` matched `/games/:id` there but not under URLPatte
   every match's `path` must match again to the same result.
 - **Cost:** about 0.1 KiB gzip in apps that route (routing-view and isomorphic budgets raised
   by that much, `scripts/size-budget.json`).
+
+## Addendum: scroll and focus after a navigation (gyral-dyn.4, 2026-10-08)
+
+The History API path pushed and notified with no scroll or focus handling: a link clicked at
+the bottom of a long page left the new page scrolled to the bottom, and focus stayed on a link
+that no longer existed. The Navigation API path called `intercept()` with no handler, so the
+browser's scroll and focus reset ran at once, against the old DOM, before Gyral re-rendered: a
+`#fragment` that only the new page renders was missed.
+
+**Decision: both paths do what the browser does for a page load, after the navigation's render
+has committed** (`settled()`, view/04-scheduler.md: the flush and its post-render queue, focus
+commands included).
+
+- **Navigation API:** the router intercepts its own navigations and same-document,
+  non-fragment traversals with `intercept({ handler: () => settled(), scroll, focusReset })`
+  (`'after-transition'`, or `'manual'` when turned off). The browser waits for the handler, then
+  resets focus, then scrolls to the fragment or the top (push, replace) or restores the entry's
+  position (back/forward).
+- **History API:** the same steps in `src/internal/history.ts`, after `settled()`:
+  - **Focus:** the first `[autofocus]` element, else the body (through a momentary
+    `tabindex="-1"`, which also moves the sequential focus starting point, so the next Tab
+    starts at the top of the new page), unless something took focus during the navigation
+    (a `focusin` while waiting): the Navigation API's "focus changed during the navigation"
+    rule.
+  - **Scroll (push, replace):** `getElementById(decoded fragment).scrollIntoView()` (honours
+    `scroll-margin` and `scroll-behavior`), else `scrollTo(0, 0)`. Only the document is
+    searched, as by the browser: fragment targets belong in light-DOM pages (ADR 0014).
+  - **Scroll (back/forward):** each entry this router creates carries a key in
+    `history.state` (`'gyral:entry'`); the position an entry was left at is recorded by key
+    (on push, and on `popstate` from the last `scroll` event, which arrives after `popstate`) and
+    restored after the render. Positions live in memory: after a reload, the other entries
+    belong to the earlier document, so traversing to them loads them and the browser restores
+    their scroll. `history.scrollRestoration` stays `'auto'`, so a reload restores as usual.
+  - A newer navigation cancels a pending one's steps. Fragment-only traversals are left to
+    the browser.
+- **Turning it off:** `navigate(url, { scroll: false, focusReset: false })` per navigation, or
+  `makeRouter({ scroll: false, focusReset: false })` for every navigation the router starts
+  (captured links included) and for back/forward. The memory history ignores both.
+- **Recommended focus target:** the new page's main heading. Answer the route change with
+  `focus('main h1')` (core's focus command, which runs in the post-render queue; give the
+  heading `tabindex="-1"`). It runs before `settled()` resolves, so neither path resets focus
+  over it. Skip it for the first `Routed` (`location.seq === 0`, the page load), and when the
+  heading only appears after data loads, focus it from the message that brings the data (the
+  router has reset focus to the body by then).
+- **Tier 3 (ADR 0003):** the History API path, scroll and focus included, is loaded with
+  `import()` only where `navigation` is missing; a navigation there waits for that module
+  (resolves a moment later on first use). Removal date 2028-07-13, with the Navigation API
+  fallback itself. The Navigation API path costs `settled()` and the intercept options.
+- **Tested** in Chromium on both paths (`navigationApi: false` forces the History API):
+  `test/scroll-focus.test.ts` covers top after push, a fragment only the new page renders,
+  `scroll: false`, back and forward restoring positions, the focus reset, a `focus('h1')`
+  command winning, `focusReset: false` and router-wide defaults.
+- **Cost:** routing-view +0.8 KiB gzip all chunks (+0.3 initial), isomorphic +0.9 (+0.4):
+  `settled()` (about 0.2 KiB, new to apps that didn't wait on the scheduler) and the intercept
+  options in the entry chunk; the History API chunk (about 0.75 KiB gzip on its own) is fetched
+  only by browsers without the Navigation API. Budgets raised by that much.

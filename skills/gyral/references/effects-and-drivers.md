@@ -169,13 +169,49 @@ export const Shell = define<State, Msg>('my-shell', {
   `periodic(ms, toMsg)`, `animationFrames(toMsg)`. An app that only needs `delay` and
   `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
   `time`; about 0.15 KiB less).
-- **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace? })`,
+- **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace?, scroll?, focusReset? })`,
   `back()`, `forward()`, `go(n)`, `setTitle(title)`, typed `routes({...})` tables with
   `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect
   to: ssr.md "One URL per page") and `href(name, params)` (same table on server and client).
   Patterns are literal and `:param` segments only; empty segments (`/a//b`) never match. Link clicks are
   captured only with `makeRouter({ captureLinks: true })` given as the `router` driver of the
   component that owns the page.
+
+### Scroll and focus after a navigation
+
+Once the new page has rendered (`settled()`), the browser router scrolls to the `#fragment`
+target or the top (push, replace), restores the position on back/forward, and resets focus to
+the first `[autofocus]` element or the page start: the same on the Navigation API and the
+History API. Fragment targets must be in the document (a light-DOM page, `shadow: false`).
+Opt out per navigation (`navigate(url, { scroll: false })`) or per router
+(`makeRouter({ scroll: false, focusReset: false })`). For screen-reader and keyboard users,
+move focus to the new page's heading; the router then leaves focus alone:
+
+```ts
+import { define, focus, html } from '@gyral/core';
+import { listen, routes, type RouteLocation, type RouteMatch } from '@gyral/router';
+
+const site = routes({ home: '/', game: '/games/:id' });
+
+interface State {
+  readonly route: RouteMatch<typeof site.table> | undefined;
+}
+type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
+
+export const App = define<State, Msg>('my-app', {
+  shadow: false, // a page-level component: fragment targets are in the document
+  init: () => [{ route: undefined }, [listen((location): Msg => ({ _tag: 'Routed', location }))]],
+  intent: {},
+  update: {
+    // Not on the page load (seq 0); h1 needs tabindex="-1".
+    Routed: (_s, m) => [
+      { route: site.match(m.location.href) },
+      m.location.seq > 0 ? [focus('main h1')] : [],
+    ],
+  },
+  view: (s) => html`<main><h1 tabindex="-1">${s.route?.name ?? 'Not found'}</h1></main>`,
+});
+```
 
 ## Substituting drivers (by name)
 
