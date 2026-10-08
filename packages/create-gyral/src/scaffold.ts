@@ -20,7 +20,6 @@ const TOOLS = {
   typescript: '^6.0.3',
   '@types/node': '^24.19.1',
   hono: '^4.13.13',
-  '@hono/node-server': '^2.1.3',
   tsx: '^4.23.15',
 } as const;
 
@@ -71,7 +70,7 @@ export function manifest(template: Template, name: string, gyralVersion: string)
     dependencies: {
       '@gyral/core': gyral,
       '@gyral/ssr': gyral,
-      ...pick(['@hono/node-server', 'hono']),
+      ...pick(['hono']),
     },
     devDependencies: {
       '@gyral/testing': gyral,

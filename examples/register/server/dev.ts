@@ -1,7 +1,7 @@
 /// <reference types="node" />
 // Dev server: Vite serves client modules; every other request is server-rendered.
 import http from 'node:http';
-import { getRequestListener } from '@hono/node-server';
+import { toNodeListener } from '@gyral/ssr/node';
 import { createServer as createViteServer } from 'vite';
 import { devFetch } from '../../shared/dev-fetch.js';
 
@@ -16,7 +16,7 @@ const vite = await createViteServer({
 
 // The app module is re-loaded per request, so server-rendered output follows source edits;
 // its in-memory state is created once (examples/shared/dev-fetch.ts).
-const ssr = getRequestListener(
+const ssr = toNodeListener(
   devFetch(
     async () => (await vite.ssrLoadModule('/server/app.ts')) as typeof import('./app.js'),
     (mod) => mod.createState(),
@@ -26,7 +26,9 @@ const ssr = getRequestListener(
 
 http
   .createServer((req, res) => {
-    vite.middlewares(req, res, () => void ssr(req, res));
+    vite.middlewares(req, res, () => {
+      ssr(req, res);
+    });
   })
   .listen(port, () => {
     console.log(`register example: http://localhost:${String(port)}`);
