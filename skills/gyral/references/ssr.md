@@ -43,8 +43,11 @@ Pages work before JavaScript loads.
 
 ## Request handler
 
-`renderPage(options, init?)` returns a streaming `Response` for a full document. It works with
-any framework that speaks `fetch` (Hono, Node adapters, Workers). Templates are core's `html`:
+`renderPage(options, init?)` returns a `Response` for a full document. Its body is chunked
+output of a synchronous render, pulled one component boundary at a time: load all data before
+calling it (nothing is awaited, there is no async or suspense streaming, and the head can't be
+sent while data loads). Status and headers are final before the first byte, so a 404 is a real 404. It works with any framework that speaks `fetch` (Hono, `@gyral/ssr/node`, Workers).
+Templates are core's `html`:
 
 ```ts
 import { html } from '@gyral/core';
@@ -68,6 +71,33 @@ and `renderToStream(value, { stores })`. Head content (`head`) is written with c
 too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
+
+### One URL per page: redirect to the canonical path
+
+The router ignores one trailing slash, so `/games/x/` matches the same route as `/games/x`.
+`match()` returns the canonical `path` (`href(name, params)`); redirect when the request's
+pathname differs, so search engines and caches see one URL per page:
+
+```ts
+import { html } from '@gyral/core';
+import { routes } from '@gyral/router';
+import { renderPage } from '@gyral/ssr';
+
+export const site = routes({ home: '/', game: '/games/:id' });
+
+export function handle(request: Request): Response {
+  const url = new URL(request.url);
+  const m = site.match(url);
+  if (m === undefined) return new Response('Not found', { status: 404 });
+  if (m.path !== url.pathname) return Response.redirect(new URL(m.path + url.search, url), 301);
+  return renderPage({
+    title: m.name === 'game' ? `Game ${m.params.id}` : 'Home',
+    lang: 'en',
+    body: html`<my-app path=${m.path}></my-app>`,
+    scripts: ['/src/entry-client.ts'],
+  });
+}
+```
 
 ## Content-Security-Policy
 
@@ -96,9 +126,15 @@ export function home(): Response {
 for the components registered when it is called: import them first (in development
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
-Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
-CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()` (every
-registered shadow component's hash) and `componentStyles()` (tag → `<style>` text).
+Hand-written `<style>` in `head` isn't covered: move that CSS into `styles` or a stylesheet.
+Inline `style="…"` attributes in server HTML aren't either: a strict `style-src` blocks them
+on first paint, and hydration then applies them through the CSSOM (client renders and updates
+are never blocked). Put declarations in stylesheets selected by classes or data attributes, and
+use inline styles only for custom properties the stylesheet has a fallback for; or allow known
+values with `'style-src-attr': "'unsafe-hashes' 'sha256-…'"`.
+
+`@gyral/core/server` also exports `styleHashes()` (every registered shadow component's hash)
+and `componentStyles()` (tag → `<style>` text).
 
 ## Client entry
 
@@ -142,15 +178,17 @@ import { clientAssetsFromManifest, prerender, productionServer } from '@gyral/ss
 interface AppOptions {
   readonly clientEntry: string;
   readonly modulepreload?: readonly string[];
+  readonly stylesheets?: readonly string[];
 }
 
-const createApp = ({ clientEntry, modulepreload = [] }: AppOptions) => ({
+const createApp = ({ clientEntry, modulepreload = [], stylesheets = [] }: AppOptions) => ({
   fetch: (_request: Request) =>
     renderPage({
       title: 'Home',
       body: html`<my-home></my-home>`,
       scripts: [clientEntry],
       modulepreload, // <link rel="modulepreload"> for the entry's imports and the hydration chunk
+      stylesheets, // <link rel="stylesheet"> for the hashed CSS the client entry imports
     }),
 });
 
@@ -161,7 +199,11 @@ const assets = await clientAssetsFromManifest(
   'src/entry-client.ts',
 );
 await prerender({
-  app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
+  app: createApp({
+    clientEntry: assets.entry,
+    modulepreload: assets.modulepreload,
+    stylesheets: assets.css,
+  }),
   paths: ['/'],
   outDir: join(dist, 'static'),
 });
@@ -171,13 +213,21 @@ export const server = await productionServer({ distDir: dist, createApp });
 ```
 
 `prerender` fails the build on any non-200 page. Mount `server.fetch` in your HTTP server.
-`productionServer` passes `{ clientEntry, modulepreload }` to `createApp`. Hydration code loads
-lazily (only pages with server-rendered components need it); passing `modulepreload` on to
-`renderPage` lets the browser fetch it together with the entry instead of a round trip later.
-A page whose route module is imported lazily passes `preload(['src/routes/product.ts'])`
-(also given to `createApp`) as `modulepreload` instead: the same list plus that module and its
-imports (`clientAssets(manifest, entry, also)` underneath). `clientEntryFromManifest()` (the
-entry URL alone) still works.
+`productionServer` passes `{ clientEntry, modulepreload, stylesheets }` to `createApp`.
+Hydration code loads lazily (only pages with server-rendered components need it); passing
+`modulepreload` on to `renderPage` lets the browser fetch it together with the entry instead of
+a round trip later. A page whose route module is imported lazily spreads
+`assets(['src/routes/product.ts'])` (also given to `createApp`) into `renderPage` instead:
+`{ modulepreload, stylesheets }` with that module, its imports and its CSS added
+(`clientAssets(manifest, entry, also)` underneath; `preload(modules)` is the `modulepreload`
+half alone). `clientEntryFromManifest()` (the entry URL alone) still works.
+
+**Hashed stylesheets.** Import the app's global CSS from the client entry
+(`import './app.css';`), so Vite bundles it into a content-hashed file listed in the manifest;
+`clientAssets(...).css` (`stylesheets` in `createApp`) lists those files, and
+`renderPage({ stylesheets })` links them before any inline `styles`. They are served immutable
+from `/assets/`, cached across pages, and `style-src 'self'` allows them without hashes. Use
+`styles` (inline, hashed for CSP) only for small critical CSS.
 
 `productionServer` options: `assetsDir` (served at `/assets/`, default `dist/client/assets`),
 `staticDir` (prerendered pages, default `dist/static`; `false` when nothing is prerendered, so
@@ -196,6 +246,41 @@ const assets = assetHandler({ dir: '/srv/assets' });
 export async function handle(request: Request): Promise<Response> {
   return (await assets(request)) ?? new Response('Not found', { status: 404 });
 }
+```
+
+## Serving on Node (`@gyral/ssr/node`)
+
+`toNodeListener(fetch, { origin?, onError? })` mounts any fetch handler on `node:http`, so a
+Node server needs no Hono or adapter of its own. The `Request` carries the method, headers, a
+streamed body and a `signal` that aborts when the client disconnects; the `Response` body is
+written with backpressure (a slow client slows the render; one that leaves cancels it); `HEAD`
+sends headers only; each `set-cookie` stays separate; a throwing handler is a 500.
+
+```ts
+import { createServer } from 'node:http';
+import { join } from 'node:path';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+
+const app = await productionServer({
+  distDir: join(process.cwd(), 'dist'),
+  staticDir: false, // nothing prerendered: every page renders per request
+  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+    fetch: (_request: Request) =>
+      renderPage({
+        title: 'Home',
+        body: html`<my-home></my-home>`,
+        scripts: [clientEntry],
+        modulepreload,
+        stylesheets,
+      }),
+  }),
+});
+
+// origin: the public origin request URLs are built on (default: the Host header).
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
 ```
 
 ## Islands: hydrate later

@@ -102,6 +102,33 @@ values are rejected before any DOM change.
 All attribute parts compare the new value (or joined string) with the committed one and write
 only on change.
 
+## Style attributes
+
+**`style` is written through the CSSOM** (0.3.1, gyral-dyn.5): a single or multi `style`
+binding sets `el.style.cssText` to the value (or the joined string) where any other attribute
+calls `setAttribute`; `null`, `undefined` and `nothing` remove the attribute as above. HTML,
+SVG and MathML elements all have `.style`.
+
+Why: a strict Content Security Policy (`style-src` without `'unsafe-inline'`) blocks every
+`style` attribute the HTML parser creates and `setAttribute('style', …)`, but not CSSOM writes
+from script (MDN, "CSP: style-src"). Verified with a real `style-src 'self'` header in Chromium,
+Firefox and WebKit: `setAttribute` is refused; `style.cssText`, `style.setProperty` (custom
+properties too) and `el.style = '…'` apply. So `style=${…}` and `style="--w: ${w}px"` keep
+working under such a policy, on the first render and every update
+(`core/test/view/style-csp.test.ts`).
+
+- Parts compare with the committed value, never with the serialized `cssText`: an unchanged
+  value writes nothing.
+- The attribute reads back as the CSSOM serializes it (`color: red;`), and declarations the
+  browser doesn't parse are dropped, as with any CSSOM write. The server writes the text as
+  given (06); hydration adopts it without a write.
+- **Static** `style="…"` in a template is applied the same way, once, when an instance is
+  created (01 "Normalization"): Firefox blocks a `style` attribute in a `<template>`'s HTML
+  under a strict CSP, and Chromium reports a violation for it.
+- `.style=${'--x: 1'}` (a property binding) was already a CSSOM write and is unchanged.
+- What a strict CSP does to the server's `style` attributes, and how hydration repairs them:
+  08 "Style attributes under a strict CSP".
+
 ## Boolean attributes
 
 `?name=${v}`: truthy → present (`""`), falsy → absent (`toggleAttribute`). `nothing` counts as
@@ -302,6 +329,7 @@ removes the attribute (also in a multi-attribute).
 | ---------- | ---------------------------------------------------------------------------------------------------- | ------------------------------ |
 | Text       | `Text.data`                                                                                          | widely                         |
 | Attributes | `setAttribute`, `removeAttribute`, `toggleAttribute`                                                 | widely                         |
+| `style`    | `el.style.cssText` (CSSOM), which `style-src` doesn't restrict                                       | widely                         |
 | Insertion  | `insertBefore` / `before`, `DocumentFragment`                                                        | widely                         |
 | Form state | `.value`, `.checked`, `.selected`, `.indeterminate`, `defaultValue`/`defaultChecked`, `form.reset()` | widely                         |
 | Raw markup | `<template>` + `innerHTML`; Sanitizer API later                                                      | widely; Sanitizer not Baseline |

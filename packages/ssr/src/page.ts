@@ -42,6 +42,12 @@ export interface PageOptions extends RenderOptions {
    * close the element early. Trusted CSS only: never put user input here.
    */
   readonly styles?: string | readonly string[];
+  /**
+   * Stylesheet URLs, written as `<link rel="stylesheet">` before `styles`: in production,
+   * `clientAssetsFromManifest()`'s `css` (the hashed CSS Vite emitted for what the client entry
+   * imports), served immutable and allowed by `style-src 'self'` without hashes.
+   */
+  readonly stylesheets?: readonly string[];
   /** Module scripts to load, e.g. the client entry. */
   readonly scripts?: readonly string[];
   /**
@@ -89,6 +95,7 @@ export function documentStyles(styles: string | readonly string[] | undefined): 
 export function page(options: PageOptions): ChildValue {
   const { title, body, description, head, scripts = [], stores = [], styles } = options;
   const preload = options.modulepreload ?? [];
+  const sheets = options.stylesheets ?? [];
   return html`<!doctype html>
     <html lang=${options.lang ?? 'en'} dir=${options.dir ?? 'ltr'}>
       <head>
@@ -96,6 +103,7 @@ export function page(options: PageOptions): ChildValue {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${title}</title>
         ${description === undefined ? nothing : html`<meta name="description" content=${description} />`}
+        ${sheets.map((href) => html`<link rel="stylesheet" href=${href} />`)}
         ${documentStyles(styles)}${head ?? nothing}${storeSeed(stores)}
         ${[
           ...preload.map((href) => html`<link rel="modulepreload" href=${href} />`),

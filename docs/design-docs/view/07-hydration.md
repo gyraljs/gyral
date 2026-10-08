@@ -52,7 +52,10 @@ The walk, the mismatch messages and islands live in one internal module
   chunk once the first seeded host connects. No bytes change; client-only pages, which aren't
   rendered by `page()`, still never fetch the chunk. Checked by the isomorphic example's production
   test (`examples/isomorphic/test/prod.node.test.ts`) and
-  `packages/ssr/test/modulepreload.node.test.ts`.
+  `packages/ssr/test/modulepreload.node.test.ts`. The same walk collects the chunks' hashed CSS
+  as `css` for `page({ stylesheets })`, and `createApp` also gets `assets(modules)`, which
+  returns `{ modulepreload, stylesheets }` for a route (0.3.1, gyral-dyn.2; ADR 0016 "Hashed
+  stylesheets").
 
 ## Client-only builds (gyral-c5d.11, 0.3.1)
 
@@ -186,6 +189,12 @@ until the first change; since 2026-10-06 that is simply the rule for every rende
 `?indeterminate` is the exception: no attribute carries it (06), so the walk sets the property
 from the model (the user can't set it; a click clears it). `?open` is kept too: the user may
 toggle a `<details>` before scripts run.
+
+**Style attributes** (0.3.1, gyral-dyn.5) are adopted like any attribute, then one write may
+follow: an element whose adopted `style` value has no inline declarations had its attribute
+blocked by a strict CSP, so the walk writes the value through the CSSOM (08 "Style attributes
+under a strict CSP"). The development check runs first, and skips a `style` attribute without
+declarations (Firefox empties a blocked one).
 
 ### The walk's algorithm (Phase 5)
 

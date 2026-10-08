@@ -35,6 +35,12 @@ Compute derived values in plain helper functions of state.
   clamp to a different value, or re-create the form with a key (`references/forms.md`).
 - Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
   `style="--w: ${s.width}px"`. (`classMap` and `styleMap` may return if a real need appears.)
+  The client writes `style` through the CSSOM, so a strict CSP (`style-src` without
+  `'unsafe-inline'`) doesn't block client renders or updates. It does block the `style`
+  attributes in server-rendered HTML until hydration re-applies them: prefer classes or data
+  attributes over a value set (`class="tile v-${n}"`), and keep inline styles to custom
+  properties whose stylesheet has a fallback (`inline-size: var(--w, auto)`)
+  (`references/ssr.md` "Content-Security-Policy").
 - Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
   (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build

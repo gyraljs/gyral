@@ -46,6 +46,7 @@ const workspace: ViteManifest = {
 describe('clientAssets (gyral-g1r.21)', () => {
   it("preloads the entry's static imports and the hydration chunk, nothing lazy of the app's", () => {
     expect(clientAssets(workspace, 'src/entry-client.ts')).toEqual({
+      css: [],
       entry: '/assets/entry-client-Dc.js',
       modulepreload: [
         '/assets/entry-client-Dc.js',
@@ -95,6 +96,7 @@ describe('clientAssets (gyral-g1r.21)', () => {
 
   it('preloads nothing for an entry without imports, the entry first otherwise, and handles cycles', () => {
     expect(clientAssets({ 'a.ts': { file: 'a.js' } }, 'a.ts')).toEqual({
+      css: [],
       entry: '/a.js',
       modulepreload: [],
     });
@@ -142,8 +144,9 @@ describe('modulepreload on the page', () => {
       },
     });
     const [first] = seen as [Record<string, unknown>];
-    const { preload, ...rest } = first;
+    const { preload, assets, ...rest } = first;
     expect(rest).toEqual(toAppOptions(clientAssets(workspace, 'src/entry-client.ts')));
+    expect(typeof assets).toBe('function');
     if (typeof preload !== 'function') throw new Error('no preload');
     // A page with a lazily imported route module preloads it and its imports too.
     const urls = preload as (modules: readonly string[]) => readonly string[];
@@ -154,7 +157,8 @@ describe('modulepreload on the page', () => {
   });
 });
 
-const toAppOptions = ({ entry, modulepreload }: ReturnType<typeof clientAssets>) => ({
+const toAppOptions = ({ entry, modulepreload, css }: ReturnType<typeof clientAssets>) => ({
   clientEntry: entry,
   modulepreload,
+  stylesheets: css,
 });

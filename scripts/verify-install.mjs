@@ -41,7 +41,7 @@ import { renderToString } from '@gyral/ssr';
 const entries = [
   '@gyral/core', '@gyral/core/server', '@gyral/core/vite', '@gyral/core/eslint',
   '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time', '@gyral/time/delay',
-  '@gyral/ssr', '@gyral/ssr/static', '@gyral/testing', '@gyral/testing/arbitraries',
+  '@gyral/ssr', '@gyral/ssr/static', '@gyral/ssr/node', '@gyral/testing', '@gyral/testing/arbitraries',
 ];
 for (const entry of entries) {
   const mod = await import(entry);

@@ -1,7 +1,7 @@
 // Server rendering for Gyral (docs/design-docs/0012-ssr.md, view/06-server.md). Runtime-agnostic:
 // returns web `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
-// Rendering is `@gyral/core/server`'s; this package adds the page shell, streaming with the
-// request's store scope (ADR 0013), static generation and form actions.
+// Rendering is `@gyral/core/server`'s; this package adds the page shell, chunked output with
+// the request's store scope (ADR 0013), static generation and form actions.
 import { StoreRegistry, withStoreScope, type ChildValue } from '@gyral/core';
 import { development, render, renderToString as renderString } from '@gyral/core/server';
 import { checkPolicy, policyAtRender } from './csp.js';
@@ -27,9 +27,11 @@ export function renderToString(value: ChildValue, options: RenderOptions = {}): 
 }
 
 /**
- * Renders to a byte stream, so the first bytes leave before the whole page is ready. Each pull
- * renders up to the next component boundary inside this request's store scope, so interleaved
- * requests never see each other's stores (ADR 0013), on any runtime.
+ * Renders to a byte stream, pulled one component boundary at a time: the render is synchronous
+ * (load data before calling it; nothing is awaited and there is no suspense), and each pull
+ * renders up to the next boundary inside this request's store scope, so interleaved requests
+ * never see each other's stores (ADR 0013), on any runtime. A consumer that reads slowly
+ * (backpressure) renders the page slowly too; one that cancels stops the render.
  */
 export function renderToStream(
   value: ChildValue,
@@ -54,7 +56,10 @@ export function renderToStream(
 }
 
 /**
- * A streaming HTML `Response` for a full page. `csp` sets the `Content-Security-Policy`
+ * An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one
+ * component boundary per pull; `renderToStream`): load data first, since nothing is awaited
+ * and there is no async or suspense streaming. Status and headers are final before the first
+ * byte. `csp` sets the `Content-Security-Policy`
  * header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
  * component registered by the time the page renders (and the page's `styles`).
  */

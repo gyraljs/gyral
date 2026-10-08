@@ -3,11 +3,15 @@
 
 export type ContentMode = 'data' | 'rawtext' | 'rcdata';
 
-/** A static attribute as written: `value` is the raw source, quotes included, or null. */
+/**
+ * A static attribute as written: `value` is the raw source, quotes included, or null. `css`:
+ * a `style` attribute's decoded value, set by the tree builder (01 "Normalization", step 3).
+ */
 export interface StaticAttr {
   readonly kind: 'static';
   readonly name: string;
   readonly value: string | null;
+  readonly css?: string;
 }
 
 /** A bound attribute. `strings` (raw static pieces) only for multi-attributes. */

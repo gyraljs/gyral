@@ -96,3 +96,63 @@ even for apps that prerender nothing. The asset half is now its own export:
 
 Tests: `packages/ssr/test/assets.node.test.ts` (each bug above, types, traversal, cache bound,
 configurable directories).
+
+## Addendum: hashed stylesheets (gyral-dyn.2, 2026-10-08)
+
+`page({ styles })` inlines the app's global CSS into every page, which costs bytes per page and
+can't be cached. Vite already bundles CSS imported from the client entry into content-hashed
+files and lists them in the manifest (`ManifestChunk.css`), which `clientAssets` ignored.
+
+- **`ClientAssets.css`**: the CSS files of the chunks `clientAssets` walks: the entry, its
+  static imports and the `also` modules with theirs (the hydration chunk has none). Each
+  chunk's files come after its imports' files, the order the modules evaluate in and the order
+  Vite itself links them in HTML builds, so the cascade matches the dev server's. Each file
+  once.
+- **`page({ stylesheets })`** writes `<link rel="stylesheet" href>` per URL in the head, before
+  the inline `styles`, so small inline overrides still win on equal specificity.
+- **`productionServer`** hands `createApp` `stylesheets` beside `modulepreload`, and a new
+  `assets(modules)` returning `{ modulepreload, stylesheets }` with those modules added (cached
+  per list), named so it spreads into `renderPage`. `preload(modules)` keeps its type (a URL
+  list for `modulepreload`) and equals `assets(modules).modulepreload`: changing its result to
+  carry CSS would break 0.3.0 apps that pass it straight to `modulepreload`.
+- **CSP:** linked files are same-origin, so `style-src 'self'` (the default
+  `contentSecurityPolicy()` writes) allows them without hashes.
+- **The app's part:** import the CSS from the client entry (`import './app.css'`), so it is in
+  the client build. CSS only a lazily loaded module imports is linked only when that module is
+  named in `also`/`assets(modules)`; otherwise Vite's preload helper loads it with the chunk.
+
+Tests: `packages/ssr/test/stylesheets.node.test.ts` (ordering and dedupe on a manifest, the link
+markup, the `createApp` options, and a real Vite build whose entry and lazy module import CSS,
+served as `text/css`).
+
+## Addendum: Node adapter (gyral-dyn.6, 2026-10-08)
+
+Everything `@gyral/ssr` returns is a web `Response`, so Node apps needed Hono's
+`@hono/node-server` or their own glue (Joystyk wrote 78 lines). `@gyral/ssr/node` exports
+`toNodeListener(fetch, { origin?, onError? })`, a `node:http` request listener. Node-only, on
+its own subpath like `/static`; the main entry stays runtime-neutral.
+
+- **Request.** Method, headers (from `rawHeaders`, repeated headers kept, HTTP/2 pseudo-headers
+  skipped), and for methods other than `GET`/`HEAD` the body as a stream (`duplex: 'half'`).
+  The URL is the request target appended to `origin` (default: the scheme of the socket plus
+  the `Host` header). The target is never resolved against the origin, so `//evil.example/x`
+  stays a path; an absolute-form target keeps only its path and query. A target or `Host` that
+  makes no URL is a 400.
+- **Abort.** `request.signal` aborts when the response closes before it finished (the client
+  went away). The body being written is cancelled then, which ends `renderToStream`'s
+  iterator.
+- **Response.** Status, status text when set, headers; `set-cookie` from `getSetCookie()` as
+  separate headers (joined with `", "`, cookie dates would be ambiguous). `HEAD` and null bodies
+  end after the headers (a `HEAD` body is cancelled).
+- **Backpressure.** One `res.write` per chunk read; when Node's buffer is full the loop waits
+  for `drain` (or the abort), so a pull-based body such as `renderPage`'s is rendered only as
+  fast as the client reads. An explicit loop instead of `stream.pipeline`: a body that fails
+  must be told apart from a client that left, and `pipeline` destroys the response either way.
+- **Errors.** A throwing handler or failing body goes to `onError` (default `console.error`);
+  before the headers it is a `no-store` 500, after them the connection is destroyed so the
+  client never sees a truncated page as complete. Errors after the client left are ignored.
+
+Tests: `packages/ssr/test/node.node.test.ts`, on a real server: streamed request bodies, URL
+building (origin, `//` targets, absolute-form), a `renderPage` response, `HEAD`, separate
+cookies, a paused client holding the producer back and a disconnect cancelling it, 500s,
+mid-body failures, a bad `Host`.

@@ -23,7 +23,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./hydrate": "./src/hydrate.ts",
-    "./static": "./src/static.ts"
+    "./static": "./src/static.ts",
+    "./node": "./src/node.ts"
   },
   "publishConfig": {
     "exports": {
@@ -38,6 +39,10 @@
       "./static": {
         "types": "./dist/static.d.ts",
         "default": "./dist/static.js"
+      },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
       }
     }
   },

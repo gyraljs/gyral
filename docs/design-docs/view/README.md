@@ -15,7 +15,7 @@ records which implementation phase built each part.
 | [03-lists.md](03-lists.md)                   | `each(items, key, row, pick?)`, row skipping, reconciliation, the dev check               | 2     |
 | [04-scheduler.md](04-scheduler.md)           | Dirty marking, the flush, post-render work, view transitions, frame lane, `settled()`     | 3     |
 | [05-element.md](05-element.md)               | `define()`'s element, props through Standard Schema, attributes, lifecycle                | 3     |
-| [06-server.md](06-server.md)                 | `@gyral/core/server`, component rendering, light and DSD output, seeds, streaming         | 4     |
+| [06-server.md](06-server.md)                 | `@gyral/core/server`, component rendering, light and DSD output, seeds, chunked output    | 4     |
 | [07-hydration.md](07-hydration.md)           | Parallel walk, per-component hydration, islands, mismatches, typed input                  | 5     |
 | [08-styles.md](08-styles.md)                 | `css`, shared sheets, DSD styles, CSP hashes, the hydration swap                          | 3–5   |
 | [09-template-rules.md](09-template-rules.md) | Errors and warnings, where they surface, message style                                    | 1, 6  |

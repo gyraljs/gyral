@@ -13,7 +13,7 @@ pnpm add @gyral/core
 # Optional packages
 pnpm add @gyral/http @gyral/router @gyral/time
 pnpm add -D @gyral/testing
-# Server rendering: page shell, streaming, static generation (see "Server rendering" below)
+# Server rendering: page shell, chunked responses, static generation (see "Server rendering" below)
 pnpm add @gyral/ssr
 ```
 
@@ -184,7 +184,8 @@ network: answer fakes or advance `virtualTime` first. It replaces 0.2's `el.upda
 
 `@gyral/core/server` renders template results and components to HTML without a DOM
 (view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (no
-Node-only APIs). It is server-only: never import it from client code, so client bundles
+Node-only APIs). Chunked is not async streaming: data is loaded before the render starts, and
+`renderPage`'s body is that render pulled one component boundary at a time. It is server-only: never import it from client code, so client bundles
 carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
 `renderToString` (with per-request `stores`), `page()`, `renderPage({ csp })` and
 `contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and
@@ -199,6 +200,15 @@ carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStre
   override.
 - SSR builds keep the server segments of compiled templates (the Vite preset does this for
   `build.ssr`); a template compiled for the client can't be server-rendered.
+- **CSP:** `renderPage({ csp: { directives } })` allows every shadow component's `<style>` by
+  hash, so `style-src` needs no `'unsafe-inline'`. `style` attributes are different. The
+  client writes them through the CSSOM, which `style-src` doesn't restrict, so client renders
+  and updates always apply. The server writes them into the HTML, where a strict `style-src`
+  blocks them until the element hydrates (hydration writes them again through the CSSOM).
+  For the first paint, select stylesheet rules with classes or data attributes, use inline
+  styles only for custom properties with a fallback in the stylesheet, or allow known values
+  by hash (`style-src-attr 'unsafe-hashes' 'sha256-…'`). Details:
+  [view/08-styles.md](../design-docs/view/08-styles.md) "Style attributes under a strict CSP".
 
 Hydration is built into core (view/07-hydration.md): a server-rendered component resumes its
 state from its `data-gyral-seed` and adopts the server's DOM in place; there is no hydration
@@ -211,8 +221,45 @@ server-rendered component, so client-only pages never fetch it. For server-rende
 read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
 (`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser
 then fetches the hydration chunk together with the entry (`productionServer` hands
-`modulepreload` to your `createApp`, and `preload(modules)` for pages that import a route's
-module lazily).
+`modulepreload` to your `createApp`, and `assets(modules)` for pages that import a route's
+module lazily). CSS imported from the client entry (`import './app.css'`) is hashed by Vite and
+listed as `css`: pass it as `renderPage({ stylesheets })` to link it (immutable, cached across
+pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on every page.
+
+### Serving a production build on Node
+
+`productionServer({ distDir, createApp })` (`@gyral/ssr/static`) serves the Vite client build
+(`/assets/*`, immutable), prerendered pages and everything else through your `createApp`;
+`toNodeListener` (`@gyral/ssr/node`) mounts it on `node:http`, writing each page's chunks with
+backpressure. Options: `assetsDir` (another directory for `/assets/*`, for example a volume
+that keeps older releases' files), `staticDir: false` when nothing is prerendered, `cache`.
+
+```ts
+import { createServer } from 'node:http';
+import { join } from 'node:path';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+
+const app = await productionServer({
+  distDir: join(process.cwd(), 'dist'),
+  staticDir: false, // nothing prerendered: every page renders per request
+  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+    fetch: (_request: Request) =>
+      renderPage({
+        title: 'Home',
+        body: html`<my-home></my-home>`,
+        scripts: [clientEntry],
+        modulepreload,
+        stylesheets,
+      }),
+  }),
+});
+
+// origin: the public origin request URLs are built on (default: the Host header).
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
 
 ## Removed in 0.3.0
 
