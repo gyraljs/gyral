@@ -298,6 +298,15 @@ structurally (07).
   upgraded at once, so parts set props on upgraded elements (05, upgrade capture).
 - Parts are found by following paths with `firstChild`/`nextSibling`, sharing prefixes between
   consecutive parts. No TreeWalker, no marker search at instantiation time.
+- **Trusted Types** (0.3.1, gyral-ei9): the HTML is assigned through one Trusted Types policy
+  named `gyral` (`view/trusted-html.ts`), created on first use where the browser has
+  `trustedTypes`, so a document whose CSP says `require-trusted-types-for 'script'` still
+  parses templates. The policy passes the text through unchanged: a template's HTML is the
+  author's own strings with markers for the holes, never a value. `raw()` (02) parses through
+  the same policy. An app that names its allowed policies lists it:
+  `trusted-types gyral` (plus its own). Without Trusted Types the string is assigned as before.
+  Tested in Chromium, Firefox and WebKit by `core/test/view/trusted-types.test.ts`, in a
+  document where a bare string assignment is refused.
 
 ## Native primitives
 

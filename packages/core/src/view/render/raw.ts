@@ -4,6 +4,7 @@
 import { DEV } from '#view-dev';
 import { EMPTY, RAW, type ChildPart } from './child-part.js';
 import { removeRange } from './nodes.js';
+import { trustedHTML } from '../trusted-html.js';
 import { report } from './seen.js';
 import { MARKUP, type RawResult } from './values.js';
 import { warnRaw } from './warn.js';
@@ -31,10 +32,13 @@ export class RawRange {
 
 let parser: HTMLTemplateElement | undefined;
 
-/** `html` parsed by a <template> (its content is reused: read it before the next call). */
+/**
+ * `html` parsed by a <template> through the `gyral` Trusted Types policy (its content is reused:
+ * read it before the next call).
+ */
 export function parse(html: string): DocumentFragment {
   parser ??= document.createElement('template');
-  parser.innerHTML = html;
+  parser.innerHTML = trustedHTML(html);
   return parser.content;
 }
 
