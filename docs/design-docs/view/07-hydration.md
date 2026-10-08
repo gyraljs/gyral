@@ -317,6 +317,9 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 - `@gyral/testing`'s `mountSsr` keeps parsing server output with `setHTMLUnsafe` (Chromium-only
   tests; newly available is fine there).
 - `hydrated()` releases islands if asked, then awaits `settled()` (04).
+- Server markup comes from golden fixtures written by Node tests, or on demand from
+  `renderOnServer` (`@gyral/testing/vitest`, a Vitest browser command that renders with
+  `@gyral/core/server` in Node; gyral-dyn.8).
 - Every hydration test runs against development and production builds of core (the
   `browser-prod` Vitest project stays).
 - **Phase 5:** `core/test/view/walk-hydration.test.ts` (the walk), `mismatch-hydration.test.ts`
