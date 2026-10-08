@@ -225,21 +225,6 @@ headings need `tabindex="-1"`. A selector that matches nothing logs a warning. I
 the server. Typical uses are moving focus to a results heading after paging and to an input
 after opening an editor.
 
-## Clipboard as a command (gyral-dyn.22, 2026-10-08, 0.3.1)
-
-Copying an invite link needed a hand-written driver (server-rooms feedback). Core now ships
-`copyText(text, { onSuccess?, onFailure? })`, a command for the `clipboard` driver (exported as
-`clipboard`) over `navigator.clipboard.writeText`. Unlike `focus()` it is an ordinary driver,
-so tests and apps substitute it by name (`el.drivers = { clipboard: fake }`). Failures arrive
-as a typed `ClipboardError { reason, cause }`: `unavailable` when there is no Clipboard API
-(not a secure context), `denied` for the browser's `NotAllowedError` (no user activation, or
-a permission or permissions policy refused), `failed` otherwise. The browser requires a user
-activation, so the command belongs in the reducer of a message a click parsed: with a
-synchronous parser, the interpreter starts it while the click is being handled. It never runs
-on the server. Its own module, so apps that don't copy bundle none of it (counter: 0 B).
-Tested in `packages/core/test/clipboard.test.ts`: a real click (the browser test project grants
-`clipboard-write`), the three error reasons, and substitution by name.
-
 ## App-level request headers (gyral-ud5.9, 2026-10-04)
 
 `makeHttpDriver({ headers })` adds default headers to every request through that driver:

@@ -22,8 +22,7 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
-            // Clipboard writes need the permission (copyText(), packages/core/test/clipboard.test.ts).
-            provider: playwright({ contextOptions: { permissions: ['clipboard-write'] } }),
+            provider: playwright(),
             instances: [{ browser: 'chromium' }],
           },
         },

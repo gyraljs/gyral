@@ -13,8 +13,6 @@ export type {
 export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
 export { child, emit, outputs } from './children.js';
-export { clipboard, copyText } from './clipboard.js';
-export type { ClipboardError, CopyTextHandlers } from './clipboard.js';
 export { focus } from './focus.js';
 export type { FocusOptions } from './focus.js';
 export { invokersSupported } from './invokers.js';
@@ -68,7 +66,6 @@ export type { FormDefinition, FormRedirected, FormResult, FormValue } from './fo
 export { runInit } from './init.js';
 export { invalid } from './hooks/invalid.js';
 export { capturePointer } from './hooks/capture-pointer.js';
-export { cssVars, type CssVars } from './hooks/css-vars.js';
 export { findInScope, labelledBy } from './hooks/labelled-by.js';
 export { prop } from './prop.js';
 export type { Prop, PropGuard, PropKind, PropsOf } from './prop.js';
