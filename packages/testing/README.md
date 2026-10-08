@@ -20,6 +20,10 @@ test('increment', () => {
 });
 ```
 
+Commands are data: `inputsFor(commands, driver)` lists a driver's inputs,
+`outputsIn(commands, Component)` the outputs sent to the parent (typed by the component's
+output union) and `focusTargetsIn(commands)` the `focus()` requests.
+
 Element tests run in a real browser (Vitest browser mode, not jsdom): mount the element,
 dispatch events, then `await settled()` (from `@gyral/core`) before you check the DOM: it
 waits until every component has rendered and messages have stopped arriving (streams that

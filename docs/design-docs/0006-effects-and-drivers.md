@@ -107,6 +107,15 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `Next`. Framework messages (`PropsChanged`, `IntentRejected`) step like any other.
   `inputsFor(commands, driver)`, `resolve(cmd, output)` and `reject(cmd, error)` drive the
   loop through a command's mappers with no DOM.
+- **Outputs and focus** (gyral-dyn.8, 0.3.1): `outputsIn(commands, Component)` returns what a
+  reducer sent to the parent with `emit()` / `outputs<O>()`, typed by the class's output union
+  (`OutputsOf<C>`; `outputsIn<Out>(commands)` names the union instead), and
+  `focusTargetsIn(commands)` returns each `focus()` request as `{ selector, ...options }`. Core
+  runs both commands itself with marker drivers; tests once filtered on their names
+  (`'@gyral/emit'`, `'@gyral/focus'`), which are internals. **Decision:** core keeps the marker
+  drivers private (no `EMIT`/`FOCUS` export); the helpers take the names from the public
+  builders (`emit(…).driver`, `focus(…).driver`), so the names may change without breaking a
+  test. Export them only if a need appears that these helpers can't cover.
 - **DOM:** `fakeDriver(driverOrName, { impl?, toError?, … })` records each call (input and
   `AbortSignal`) and waits for `resolveNext` / `rejectNext` (or `calls[i].resolve`). Errors
   pass through unchanged, so a test rejects with the already-typed error. Streaming commands:

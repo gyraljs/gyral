@@ -74,6 +74,11 @@ describe('search model', () => {
   `StoreChanged`) work too.
 - `commandsFor(commands, driver)` / `inputsFor(commands, driver)` filter by driver name;
   `resolve(command, output)` / `reject(command, error)` give the resulting message.
+- `outputsIn(commands, Component)` returns the outputs a reducer sent to the parent (`emit`,
+  `outputs<O>()`), typed by the class's output union (or `outputsIn<Out>(commands)`).
+  `focusTargetsIn(commands)` returns each `focus()` request as
+  `{ selector, preventScroll?, select? }`. Never filter on driver names such as
+  `'@gyral/emit'`: they are core internals.
 - Stores: `stepStore(store, state, msg)`, `testStore(store, initial?)` (an instance to pass in
   `stores`), `sentTo(commands, store)` (messages a reducer sends to a store).
 - Pure update functions make property tests easy: `@gyral/testing/arbitraries` builds
