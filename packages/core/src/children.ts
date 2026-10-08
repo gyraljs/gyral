@@ -96,7 +96,7 @@ const resolveSource = <O extends Tagged, E extends Element>(
 export function child<O extends Tagged, E extends Element, M>(
   source: ChildSource<O, E>,
   toMsg: (output: O, el: E) => M | undefined,
-): IntentParser<M> {
+): (input: IntentInput) => ReturnType<IntentParser<M>> {
   return (input: IntentInput) => {
     const type = resolveSource(source); // resolved per event, so the lazy form never hits TDZ
     if (!(input.target instanceof type) || input.detail === undefined) return undefined;

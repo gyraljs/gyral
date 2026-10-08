@@ -90,9 +90,14 @@ type ParseResult<M> = M | IntentRejected | undefined;
 
 /**
  * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
- * ignore it. May be async because schema validation may be.
+ * ignore it. May be async because schema validation may be. `ctx` is the read-only context
+ * reducers get (props as they are when the event fires, `read(store)`); parsers that don't
+ * need it take one parameter.
  */
-export type IntentParser<M> = (input: IntentInput) => ParseResult<M> | Promise<ParseResult<M>>;
+export type IntentParser<M, P = unknown> = (
+  input: IntentInput,
+  ctx: Ctx<P>,
+) => ParseResult<M> | Promise<ParseResult<M>>;
 
 type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 
@@ -102,8 +107,8 @@ type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag
  * message tags, so several controls that change one thing share one intent and tell
  * themselves apart by `name`.
  */
-export type Intents<M extends Tagged> = {
-  readonly [K in M['_tag']]?: IntentParser<Variant<M, K>>;
+export type Intents<M extends Tagged, P = unknown> = {
+  readonly [K in M['_tag']]?: IntentParser<Variant<M, K>, P>;
 };
 
 type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
@@ -149,7 +154,7 @@ interface SpecBody<S, M extends Tagged, P> {
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
   /** INTENT: platform events to messages. */
-  readonly intent: Intents<M>;
+  readonly intent: Intents<M, P>;
   /** MODEL: pure state transitions. */
   readonly update: Update<S, M, P>;
   /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */

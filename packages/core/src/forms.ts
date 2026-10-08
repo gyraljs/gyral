@@ -113,7 +113,7 @@ export function validateForm<Schema extends StandardSchemaV1>(
 export function form<Schema extends StandardSchemaV1, M>(
   definition: FormDefinition<Schema> | Schema,
   toMsg: (data: Out<Schema>, formData: FormData) => M | undefined,
-): IntentParser<M> {
+): (input: IntentInput) => ReturnType<IntentParser<M>> {
   return (input: IntentInput) => {
     const { formData } = input;
     if (formData === undefined) return undefined;
@@ -131,7 +131,7 @@ export function form<Schema extends StandardSchemaV1, M>(
 export function field<Schema extends StandardSchemaV1, M>(
   schema: Schema,
   toMsg: (value: Out<Schema>) => M | undefined,
-): IntentParser<M> {
+): (input: IntentInput) => ReturnType<IntentParser<M>> {
   return (input: IntentInput) => {
     const name = input.target.getAttribute('name') ?? input.name;
     return parse(schema, input.checked ?? input.value, input.name, name, toMsg);

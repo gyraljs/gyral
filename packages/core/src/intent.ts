@@ -1,6 +1,6 @@
 import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
-import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
+import type { Ctx, IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
 import { message, type Markup } from './view/index.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010); public. */
@@ -218,12 +218,16 @@ export function listenForIntents(
   }
 }
 
-/** Parses one event with its matching parser and delivers the message (sync or async). */
+/**
+ * Parses one event with its matching parser and delivers the message (sync or async). `ctx`
+ * is called only when a parser runs, so the props it reads are those at event time.
+ */
 export function handleIntent<M>(
   event: Event,
   root: Node,
   parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
   tag: string,
+  ctx: () => Ctx<unknown>,
   deliver: (msg: Tagged | undefined) => void,
 ): void {
   const input = readIntent(event, root);
@@ -233,7 +237,7 @@ export function handleIntent<M>(
     console.warn(message(11, tag, input.name));
     return;
   }
-  const result = parser(input) as Tagged | undefined | Promise<Tagged | undefined>;
+  const result = parser(input, ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
   if (result instanceof Promise) {
     result.then(deliver, (error: unknown) => {
       console.error(message(12, tag, input.name), error);
