@@ -32,20 +32,33 @@ export const INTENT_EVENTS: readonly string[] = [
 ];
 
 /**
- * A static `data-intent-on` value, quoted or not: one event name, or a quoted list of them
- * separated by spaces.
+ * A static `data-intent-<event>` attribute: a per-event intent (the event is in the name), or
+ * `data-intent-on` (its value is the event, or a quoted list of them separated by spaces).
  */
-const INTENT_ON = /\sdata-intent-on=(["']?)(.*?)\1[\s/>]/gi;
-const eventList = (value: string): string[] => value.match(/\S+/g) ?? [];
+const INTENT_ATTR = /\sdata-intent-([\w-]+)=(["']?)(.*?)\2[\s/>]/gi;
+// Whitespace at the ends gives an empty name, which no event has.
+const eventList = (value: string): string[] => value.split(/\s+/);
 const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
 
-/** The intent events a template's (or `raw()` markup's) `data-intent-on` attributes name. */
+/**
+ * The intent events a template's (or `raw()` markup's) `data-intent-<event>` and
+ * `data-intent-on` attributes name. A bound attribute's name is in its part; a bound
+ * `data-intent-on` adds every intent event.
+ */
 export function eventsOf(markup: Markup): readonly string[] {
   let events = eventsByTemplate.get(markup);
   if (events === undefined) {
-    events = markup.parts?.some((p) => p[2] === 'data-intent-on') // a bound attribute's name
-      ? INTENT_EVENTS
-      : Array.from(markup.html.matchAll(INTENT_ON)).flatMap((m) => eventList(m[2] ?? ''));
+    // Bound attributes are in the parts, by name: listed as ` name=* ` and matched like markup
+    // (other parts' names are never intent attributes; `*` marks a bound data-intent-on).
+    const bound = markup.parts?.map((p) => ` ${p[2] as string}=* `).join('') ?? '';
+    events = Array.from((markup.html + bound).matchAll(INTENT_ATTR)).flatMap(
+      ([, event, , value]) =>
+        event !== 'on'
+          ? (event as string)
+          : value === '*'
+            ? INTENT_EVENTS
+            : eventList(value as string),
+    );
     eventsByTemplate.set(markup, events);
   }
   return events;
@@ -53,12 +66,6 @@ export function eventsOf(markup: Markup): readonly string[] {
 
 const isToggle = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
-
-// ToggleEvent (popover, <details>) is not Baseline widely available; read it structurally.
-function toggleState(event: Event): 'open' | 'closed' | undefined {
-  if (event.type !== 'toggle' || !('newState' in event)) return undefined;
-  return event.newState === 'open' ? 'open' : 'closed';
-}
 
 const CLICK_INPUT_TYPES = /^(button|submit|reset|image)$/;
 
@@ -125,25 +132,6 @@ function ownedBy(node: Element, root: Node): boolean {
   return false;
 }
 
-/**
- * Finds the nearest `data-intent` element for this event that belongs to `root`. Elements
- * inside nested components are ignored: that is component isolation.
- */
-export function findIntentElement(event: Event, root: Node): Element | undefined {
-  for (const node of event.composedPath()) {
-    if (node === root) return undefined;
-    if (
-      node instanceof Element &&
-      node.hasAttribute('data-intent') &&
-      triggersOf(node).includes(event.type) &&
-      ownedBy(node, root)
-    ) {
-      return node;
-    }
-  }
-  return undefined;
-}
-
 function valueOf(el: Element): string | undefined {
   if (
     el instanceof HTMLInputElement ||
@@ -156,28 +144,40 @@ function valueOf(el: Element): string | undefined {
   return undefined;
 }
 
-/** Reads an event into an IntentInput. Form submissions are prevented and turned into FormData. */
+/**
+ * Reads an event into an IntentInput for the nearest element on its path that names an intent
+ * for it and belongs to `root`: its `data-intent-<type>`, else its `data-intent` when the
+ * event is one of its triggers. Elements inside nested components are ignored: that is
+ * component isolation. Form submissions are prevented and turned into FormData.
+ */
 export function readIntent(event: Event, root: Node): IntentInput | undefined {
-  const target = findIntentElement(event, root);
-  const name = target?.getAttribute('data-intent');
-  if (target === undefined || name == null) return undefined;
-  let formData: FormData | undefined;
-  if (target instanceof HTMLFormElement && event instanceof SubmitEvent) {
-    event.preventDefault();
-    formData = new FormData(target, event.submitter);
+  for (const target of event.composedPath()) {
+    if (target === root) return undefined;
+    if (!(target instanceof Element)) continue;
+    const name =
+      target.getAttribute('data-intent-' + event.type) ??
+      (triggersOf(target).includes(event.type) ? target.getAttribute('data-intent') : null);
+    if (name === null || !ownedBy(target, root)) continue;
+    let formData: FormData | undefined;
+    if (target instanceof HTMLFormElement && event instanceof SubmitEvent) {
+      event.preventDefault();
+      formData = new FormData(target, event.submitter);
+    }
+    return {
+      name,
+      event,
+      target,
+      value: valueOf(target),
+      checked: isToggle(target) ? target.checked : undefined,
+      formData,
+      detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
+      key: event instanceof KeyboardEvent ? event.key : undefined,
+      // ToggleEvent (popover, <details>) is not Baseline widely available: read it structurally.
+      newState: (event as { readonly newState?: 'open' | 'closed' }).newState,
+      command: commandOf(event),
+    };
   }
-  return {
-    name,
-    event,
-    target,
-    value: valueOf(target),
-    checked: isToggle(target) ? target.checked : undefined,
-    formData,
-    detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
-    key: event instanceof KeyboardEvent ? event.key : undefined,
-    newState: toggleState(event),
-    command: commandOf(event),
-  };
+  return undefined;
 }
 
 // Any property read returns its own name, so `intents.Increment === 'Increment'`.

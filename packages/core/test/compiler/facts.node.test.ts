@@ -54,6 +54,9 @@ describe('facts: command intents', () => {
     ['any case in the attribute name', 'html`<div DATA-INTENT-ON="command"></div>`'],
     ['a bound data-intent-on', 'html`<div data-intent-on=${on}></div>`'],
     ['a quoted bound one', 'html`<div data-intent-on="${on}"></div>`'],
+    ['a per-event command intent', 'html`<div data-intent-command="Run"></div>`'],
+    ['a bound per-event command intent', 'html`<div data-intent-command=${i.Run}></div>`'],
+    ['a setAttribute of one', "el.setAttribute('data-intent-command', 'Run');"],
     ['a list naming command', 'html`<div data-intent-on="focusin command"></div>`'],
     ['a list with a bound part', 'html`<div data-intent-on="keyup ${on}"></div>`'],
     ['markup in a string', `const m = '<i data-intent-on="command"></i>';`],
@@ -67,6 +70,7 @@ describe('facts: command intents', () => {
   it.each([
     ['another event', 'html`<div data-intent-on="keydown"></div>`'],
     ['a longer name', 'html`<div data-intent-on="commander"></div>`'],
+    ['another per-event intent', 'html`<div data-intent-keydown=${i.Run}></div>`'],
     ['a list without command', 'html`<div data-intent-on="pointerdown pointerup"></div>`'],
     ['a list with a longer name', 'html`<div data-intent-on="keyup my-command"></div>`'],
     ['comments', '// data-intent-on="command"\n/* events: ["command"] */ export const x = 1;'],

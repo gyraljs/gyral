@@ -85,6 +85,7 @@ describe('client-only builds', () => {
     ],
     ['an unquoted one', `<div data-intent=\${i.Run} data-intent-on=command></div>`, ''],
     ['a bound data-intent-on', `<div data-intent=\${i.Run} data-intent-on=\${'click'}></div>`, ''],
+    ['a per-event command intent', `<div data-intent-command=\${i.Run}></div>`, ''],
     ['spec.events with command', button, `events: ['command'],`],
   ])('keep the invoker fallback for %s', async (_name, markup, extra) => {
     const imports = await dynamicImports(component(markup, extra), true);

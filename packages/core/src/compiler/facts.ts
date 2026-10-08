@@ -6,8 +6,8 @@
 //     anywhere in runtime code (a property key, `spec.states = …`, `{ states }`, a binding a
 //     namespace import may spread, `export { f as states }`), or a string that is exactly the
 //     name (`Object.defineProperty(spec, 'states', …)`). A word inside a longer string doesn't;
-//   - command intents: a string or template whose markup has `data-intent-on="command"` or a
-//     bound `data-intent-on`, or a string that is exactly "command" (`events: ['command']`, a
+//   - command intents: a string or template whose markup has a `data-intent-command` attribute,
+//     `data-intent-on="command"` or a bound `data-intent-on`, or a string that is exactly "command" (`events: ['command']`, a
 //     `setAttribute`);
 //   - `raw` (its markup is read at run time, so it may hold `data-intent-on="command"`): the
 //     module lists the specifiers through which it may reach a `raw` export, and features.ts
@@ -29,13 +29,14 @@ export const FIELDS = {
 } as const satisfies Readonly<Record<Exclude<Feature, 'invokers'>, string>>;
 
 /**
- * Markup that makes a root listen for `command` (05 "Intent events"): a static
- * `data-intent-on="command"` (quoted or not, alone or in a quoted list), or a bound value (all intent events), which a
- * template's text shows as `${}` where its expression is, and a string as an unfinished value
- * at its end. The attribute's name is matched in any case, as the runtime reads it.
+ * Markup that makes a root listen for `command` (05 "Intent events"): a `data-intent-command`
+ * attribute (static or bound; a string that is exactly its name, as `setAttribute` takes it), a
+ * static `data-intent-on="command"` (quoted or not, alone or in a quoted list), or a bound
+ * `data-intent-on` (all intent events), which a template's text shows as `${}` where its
+ * expression is, and a string as an unfinished value at its end. The attribute's name is matched in any case, as the runtime reads it.
  */
 const INTENT_ON_COMMAND =
-  /data-intent-on\s*=\s*(?:["'][^"'>]*?(?:(?<![\w-])command(?![\w-])|\$\{\}|$)|command(?![\w-])|[^"'\s>]*(?:\$\{\}|$))/i;
+  /data-intent-command(?:\s*=|$)|data-intent-on\s*=\s*(?:["'][^"'>]*?(?:(?<![\w-])command(?![\w-])|\$\{\}|$)|command(?![\w-])|[^"'\s>]*(?:\$\{\}|$))/i;
 
 export interface ModuleFacts {
   /** Identifier names in runtime code, import declarations left out. */

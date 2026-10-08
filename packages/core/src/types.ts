@@ -10,12 +10,12 @@ export interface Tagged {
   readonly _tag: string;
 }
 
-/** What the intent layer sees when a `data-intent` element fires its trigger event. */
+/** What the intent layer sees when an element's intent fires. */
 export interface IntentInput {
-  /** The `data-intent` value (a message tag). */
+  /** The intent's name (a message tag): the `data-intent-<event>` or `data-intent` value. */
   readonly name: string;
   readonly event: Event;
-  /** The element carrying `data-intent`. */
+  /** The element carrying the intent attribute (`event.currentTarget` is Gyral's root). */
   readonly target: Element;
   /** `value` of the input, select, textarea or button that carries the intent. */
   readonly value: string | undefined;

@@ -5,7 +5,7 @@
 // error state) count as used; that is why the warning lives here and not in the runtime, which
 // sees only the templates rendered so far. A name counts as used when the module mentions it as
 // a property (`i.Name`, `intents.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal
-// `data-intent` value in an html or svg template. A component is skipped when its intent names
+// `data-intent` or `data-intent-<event>` value in an html or svg template. A component is skipped when its intent names
 // may be used elsewhere: its view is not in the module (an imported function), the view hands
 // its intents to an imported function, the module exports an `intents()` constant, or a
 // template in the module calls (or passes on) a function imported from another module, which
@@ -20,10 +20,13 @@ import {
   type NodeOf,
 } from './imports.js';
 
-/** A static `data-intent` value in template text. */
-const STATIC_INTENT = /\sdata-intent=["']?([^"'\s>]+)/g;
-/** Template text that ends where a `data-intent` hole starts. */
-const INTENT_HOLE = /\sdata-intent=["']?$/;
+/**
+ * A static `data-intent` or `data-intent-<event>` value in template text (not `data-intent-on`,
+ * whose value is events).
+ */
+const STATIC_INTENT = /\sdata-intent(?:-(?!on=)[\w-]+)?=["']?([^"'\s>]+)/g;
+/** Template text that ends where a `data-intent` or `data-intent-<event>` hole starts. */
+const INTENT_HOLE = /\sdata-intent(?:-(?!on=)[\w-]+)?=["']?$/;
 
 interface Component {
   readonly parsers: readonly { readonly name: string; readonly node: Node }[];

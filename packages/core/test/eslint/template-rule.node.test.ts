@@ -45,6 +45,8 @@ describe('gyral/template', () => {
       `${IMPORT}export const v = (s) => html\`<p class="a \${s.c}">\${s.text}</p>\`;`,
       `${IMPORT}export const v = (s) => html\`<ul>\${s.items.map((n) => html\`<li>\${n}</li>\`)}</ul>\`;`,
       `${IMPORT}export const v = (s) => html\`<my-input .value=\${s.v}></my-input><input value=\${s.v}>\`;`,
+      // Per-event intent attributes, bound and static (gyral-dyn.15).
+      `${IMPORT}export const v = (s, i) => html\`<li data-intent-pointerdown=\${i.Grab} data-intent-keydown="Key" data-intent-on="focusin focusout" data-intent=\${i.Focus}></li>\`;`,
       // Rule 11 is the runtime's: a page shell is fine on the server.
       `${IMPORT}export const page = (b) => html\`<!doctype html><html><body>\${b}</body></html>\`;`,
       // Not Gyral's html: another library's, a shadowing local, an untagged template.

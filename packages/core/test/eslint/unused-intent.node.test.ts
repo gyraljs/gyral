@@ -57,10 +57,22 @@ describe('gyral/unused-intent', () => {
         '(s, i) => html`<svg data-intent=${i.Save}>${svg`<g>${pips(3)}</g>`}</svg>`',
         "import { svg } from '@gyral/core';\nimport { pips } from './pips.js';\n",
       ),
+      // Per-event attributes name intents too: a property, a static value and a literal hole.
+      component(
+        '(s, i) => html`<b data-intent-pointerdown=${i.Save} data-intent-keyup="Load"></b>`',
+      ),
+      component(
+        "(s, i) => html`<b data-intent-click=${i.Save} data-intent-focusin=${'Load'}></b>`",
+      ),
       // Not Gyral's define.
       "import { define } from 'elsewhere';\ndefine('x', { intent: { A: () => 1 }, view: () => 1 });",
     ],
     invalid: [
+      {
+        // data-intent-on's value is events, not an intent name.
+        code: component('(s, i) => html`<b data-intent=${i.Save} data-intent-on="Load"></b>`'),
+        errors: [unused('Load')],
+      },
       {
         code: component('(s, i) => html`<button data-intent=${i.Save}>Save</button>`'),
         errors: [{ ...unused('Load'), line: 5, column: 45 }],
