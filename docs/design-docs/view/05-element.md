@@ -40,7 +40,7 @@ define('shop-filter', {
 
 `prop.json` and `prop.value` take a Standard Schema or, since 0.3.1 (gyral-c5d.7), a plain type
 guard `(u: unknown) => u is T`; the prop's type is the guard's `T`. A guard that returns false
-is reported like a schema issue (`failed isSeat`, the guard's name).
+is reported like a schema issue (`failed isFilter`, the guard's name).
 
 Options: `schema` (refines `string`/`number`/`boolean`), `attribute` (a name, or `false` for
 property only), `required`, `default`. The honesty rule of ADR 0007 stays: a prop whose type

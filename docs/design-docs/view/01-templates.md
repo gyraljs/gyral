@@ -20,7 +20,7 @@ an `<svg>` around them) is an error that points to `svg` (09, rule 10).
 
 ### svg templates (0.3.1, gyral-c5d.8)
 
-Dropped in 0.3.0 (ADR 0018), back in 0.3.1 for a real need (sabacc.starwars.run): small SVG
+Dropped in 0.3.0 (ADR 0018), back in 0.3.1 for a real need (an app migrated to Gyral): small SVG
 fragments (status marks, labels) rendered as their own templates. Without `svg`, every variant
 had to be inlined in one `<svg>`, the unused ones hidden with `display="none"`.
 

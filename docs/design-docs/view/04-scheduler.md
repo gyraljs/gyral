@@ -165,8 +165,8 @@ reached a host or a store for 8 microtask turns in a row**.
 
 Until 0.3.1 `settled()` drained 4 microtask turns and looked at the scheduler only before and
 after: a message that arrived and rendered inside those turns was invisible, so a follow-up a
-few turns later was missed. sabacc.starwars.run (a Lit → Gyral 0.3 migration whose game state
-lives in a TC39-signals store Gyral doesn't own) added `for (let n = 0; n < 20; n++) await
+few turns later was missed. An app migrated from Lit to Gyral 0.3, whose state lives in a
+TC39-signals store Gyral doesn't own, added `for (let n = 0; n < 20; n++) await
 Promise.resolve()` before `settled()` as insurance. Their chain itself (a watcher that notifies
 synchronously, re-armed in a microtask) already settled with 4 turns; the same chain over a
 store that notifies in a microtask, where each move is answered by the next, did not
