@@ -306,43 +306,7 @@ to validate that seed in the browser.
 
 ## Preloads under a service worker
 
-`modulepreload` is optional: pass `[]` and the browser fetches the hydration chunk when the
-first server-rendered component connects. That matters under a service worker that serves the
-app's modules (a PWA precache): Chromium may fetch a preloaded module outside the worker and
-then warn that the preload went unused while the worker serves the module itself, so it is
-requested twice. Leave the preloads out for navigations the worker handles. With navigation
-preload enabled in the worker (`registration.navigationPreload.enable()`), those requests
-carry a `Service-Worker-Navigation-Preload` header:
-
-```ts
-import { html } from '@gyral/core';
-import { renderPage } from '@gyral/ssr';
-
-interface AppOptions {
-  readonly clientEntry: string;
-  readonly modulepreload?: readonly string[];
-}
-
-const SW_HEADER = 'service-worker-navigation-preload';
-
-export const createApp = ({ clientEntry, modulepreload = [] }: AppOptions) => ({
-  fetch: (request: Request) => {
-    // The service worker fetched this page and serves the modules: no preloads.
-    const viaWorker = request.headers.has(SW_HEADER);
-    const response = renderPage({
-      title: 'Home',
-      body: html`<my-home></my-home>`,
-      scripts: [clientEntry],
-      modulepreload: viaWorker ? [] : modulepreload,
-    });
-    response.headers.append('vary', SW_HEADER); // caches keep both versions apart
-    return response;
-  },
-});
-```
-
-- A worker without navigation preload can mark the navigations it forwards with a header of
-  its own (`fetch(new Request(event.request, { headers: … }))`) or a cookie it sets after
-  installing; check that instead.
-- Prerendered pages are written once, so they can't vary: render pages a worker serves per
-  request, or let the worker's cached copy be the one without preloads.
+Chrome 152–153 may warn "preload … not used because it is a cross-world service worker
+resource mismatch" and fetch the module again from the worker when DevTools or a test driver
+is attached. It is a browser bug, fixed in Chrome 154; the page works the same. If your tests
+run Playwright's bundled Chromium, upgrade to a build ≥ 154.

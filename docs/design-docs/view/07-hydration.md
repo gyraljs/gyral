@@ -314,15 +314,14 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 
 ## Preloads under a service worker (gyral-dyn.11, 0.3.1)
 
-Preloads are a server choice per response: `modulepreload: []` drops them and the page still
-hydrates (the chunk loads when the first seeded host connects, "Loading" above). A PWA whose
-service worker serves the modules hit Chromium warning that a module preloaded outside the
-worker went unused, so it was fetched twice. A server can tell
-the navigations the worker handles by the `Service-Worker-Navigation-Preload` header (sent
-when the worker enables navigation preload) or a marker the worker adds, and leave the
-preloads out for those, with `Vary` on that header. The recipe is in the skill's ssr.md
-"Preloads under a service worker". No API change: emitting preloads only when no worker
-controls the page can't be decided by the server without such a signal.
+Chrome 152–153 may warn "preload … not used because it is a cross-world service worker
+resource mismatch" and fetch the module again from the worker when DevTools or a test driver
+is attached. It is a browser bug, fixed in Chrome 154; the page works the same. If your tests
+run Playwright's bundled Chromium, upgrade to a build ≥ 154.
+
+No change to `@gyral/ssr`: the preload does go through the worker, and Gyral's markup isn't
+involved (Chromium CL 8007646 introduced it, CL 8254944 fixed it). Leaving the preloads out
+doesn't avoid it on 153 either: the entry script is fetched twice anyway.
 
 ## Testing
 
