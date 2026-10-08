@@ -89,6 +89,10 @@ attributes can't be bound: `xlink:href=${v}`, `xml:lang=${v}` and `xmlns…` are
 them in their own namespace and `setAttribute` can't. Static ones (`xlink:href="#a"`) are fine:
 the parser handles them on both sides (0.3.1).
 
+Intent attributes are plain attribute bindings: `data-intent=${i.Save}` and the per-event
+`data-intent-pointerdown=${i.Grab}` (05 "Per-event intents") write the intent's name, and
+`nothing` removes one, so an intent can come and go with the state.
+
 **Multi** (`name="a ${x} b"`): pieces are joined with the static strings. `null`/`undefined`
 pieces become `''`; `nothing` in any piece removes the attribute.
 

@@ -24,6 +24,83 @@ component listens for the events its templates name. Only a type that comes from
 fires the intent for both, and the parser tells them apart with `event.type` (see "Press and
 release" below).
 
+### One element, an intent per event: `data-intent-<event>`
+
+When each event on an element means something different, name an intent per event type
+(0.3.1): `data-intent-pointerdown=${i.Grab} data-intent-keydown=${i.Key}`. For an event of type
+T, an element's `data-intent-T` comes first; its plain `data-intent` (with `data-intent-on` or
+its default trigger) handles the other events. Lookup still starts at the element that was hit
+and goes outward: the nearest element with an intent for that event wins. A card table, where
+one card element handles the pointer, the keyboard and focus without wrapper elements:
+
+```ts
+import { define, each, html, intents } from '@gyral/core';
+
+interface Card {
+  readonly id: string;
+  readonly face: string;
+}
+interface State {
+  readonly cards: readonly Card[];
+  readonly held: string | undefined;
+  readonly focused: string | undefined;
+}
+type Msg =
+  | { readonly _tag: 'Grab'; readonly id: string }
+  | { readonly _tag: 'Drop'; readonly id: string }
+  | { readonly _tag: 'Flip'; readonly id: string }
+  | { readonly _tag: 'Focus'; readonly id: string };
+
+const i = intents<Msg>();
+
+const CardRow = (c: Card) =>
+  html`<li
+    tabindex="0"
+    data-id=${c.id}
+    data-intent-pointerdown=${i.Grab}
+    data-intent-pointerup=${i.Drop}
+    data-intent-keydown=${i.Flip}
+    data-intent-focusin=${i.Focus}
+  >
+    ${c.face}
+  </li>`;
+
+const idOf = (el: Element): string => el.getAttribute('data-id') ?? '';
+
+export const Table = define<State, Msg>('my-card-table', {
+  init: () => ({ cards: [{ id: 'a', face: 'A♠' }], held: undefined, focused: undefined }),
+  intent: {
+    Grab: ({ target }) => ({ _tag: 'Grab', id: idOf(target) }),
+    Drop: ({ target }) => ({ _tag: 'Drop', id: idOf(target) }),
+    // Space or Enter flips the focused card; other keys keep their default.
+    Flip: ({ target, key, event }) => {
+      if (key !== ' ' && key !== 'Enter') return undefined;
+      event.preventDefault();
+      return { _tag: 'Flip', id: idOf(target) };
+    },
+    Focus: ({ target }) => ({ _tag: 'Focus', id: idOf(target) }),
+  },
+  update: {
+    Grab: (s, m) => ({ ...s, held: m.id }),
+    Drop: (s) => ({ ...s, held: undefined }),
+    Flip: (s) => s,
+    Focus: (s, m) => ({ ...s, focused: m.id }),
+  },
+  view: (s) =>
+    html`<ul aria-label="Table">
+      ${each(s.cards, (c) => c.id, CardRow)}
+    </ul>`,
+});
+```
+
+- The event type is in the attribute's name, so write it in lower case, as event types are
+  (`data-intent-pointerdown`). The name `data-intent-on` is the event list, not an event.
+- The component listens for the event types in these names, bound or static, also in list
+  rows and `raw()` markup; no `spec.events` needed.
+- `data-intent-keydown=${s.editing ? i.Key : nothing}` adds the intent only while editing.
+- One intent for several events stays `data-intent` with a `data-intent-on` list, when the
+  events share a message (press and release below).
+
 ## `IntentInput`
 
 | Field             | Value                                                |
@@ -89,8 +166,9 @@ export const Filters = define<State, Msg>('my-filters', {
 });
 ```
 
-One element carries one `data-intent`. For a second trigger on the same control, put the
-second intent on a wrapper element: events bubble to it (here, `keydown` from the input).
+For a second trigger on the same control, put the second intent on a wrapper element (events
+bubble to it: here, `keydown` from the input), or on the control itself with a per-event
+attribute (`data-intent-keydown=${i.Cancel}`, above).
 
 **Typing a parser.** Each key in `intent` must produce its own variant (`Qty` produces
 `{ _tag: 'Qty'; … }`), so don't annotate a parser with the whole union: `(): Msg => …` widens

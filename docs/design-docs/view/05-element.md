@@ -215,6 +215,33 @@ Effect: 5 listeners per typical host instead of 12 (11 intent events plus the in
 click listener on every root); keyboard and focus events no longer run intent lookup in
 components that don't use them.
 
+## Per-event intents (gyral-dyn.15, 0.3.1)
+
+An element may name an intent per event type: `data-intent-<type>=${i.Msg}`. For an event of
+type T, each element on the event's composed path (nearest first, within the host as before)
+is asked for `data-intent-T` first, then for its plain `data-intent` if T is one of its
+triggers (`data-intent-on` or the default trigger); the first element with either answers.
+The intent's name is that attribute's value (`IntentInput.name`). `data-intent-on` is reserved:
+it is the trigger list, never a per-event attribute.
+
+Why (game-platform feedback, card table): one element had several events with different
+meanings (pointerdown, pointerup, keydown, focusin), and one `data-intent` per element forced a
+stack of wrapper elements, or one message whose parser branched on `event.type`. The event
+list (below) stays for the one-message case. Decided by the user on 2026-10-08.
+
+Listening: the root listens for the event type in each `data-intent-<type>` name its templates
+render, bound or static (bound attributes' names come from the template's parts, static ones
+from its HTML, `raw()` markup included). Attribute names are lower-cased by the HTML parser, so
+per-event names are written in lower case. The compiler's client-only scan counts a
+`data-intent-command` attribute as a command intent (07 "Client-only builds"); the ESLint rule
+`gyral/unused-intent` counts per-event values as uses (09 "Warnings").
+
+Cost: per-event lookup is one `getAttribute` per element on the path. With the lookup folded
+into `readIntent` and `newState` read structurally, core stays the same size (counter:
+11 008 → 11 006 B gzip, `pnpm size counter`). Tests:
+`packages/core/test/per-event-intents.test.ts` (priority, an `each` row, nesting, `raw()`,
+the event scan).
+
 ## Press and release (gyral-dyn.13, 0.3.1)
 
 `data-intent-on` takes a list of event types separated by whitespace. An element's intent
