@@ -183,4 +183,30 @@ describe.each(modes)('scroll and focus: %s', (_label, navigationApi) => {
     expect(scrollY).toBe(1500);
     expect(document.activeElement).toBe(button);
   });
+  // gyral-dyn.30: a replace keeps the query in sync (a search box); it must not move the page.
+  it('leaves scroll and focus alone for a replace, unless asked', async () => {
+    button.focus();
+    scrollTo(0, 1500);
+    await go('/users/7', { replace: true });
+    expect(scrollY).toBe(1500);
+    expect(document.activeElement).toBe(button);
+    await go('/users/8', { replace: true, scroll: true, focusReset: true });
+    await vi.waitFor(() => {
+      expect(scrollY).toBe(0);
+      expect(document.activeElement).toBe(document.body);
+    });
+  });
+
+  it('leaves a traversal to the same page to the browser (an entry pushed for a dialog)', async () => {
+    await go('/users/7');
+    button.focus();
+    history.pushState({ dialog: true }, '', location.href);
+    el.send({ _tag: 'Back' });
+    await vi.waitFor(() => {
+      expect(history.state).not.toEqual({ dialog: true });
+    });
+    await settled();
+    await new Promise((r) => setTimeout(r, 100));
+    expect(document.activeElement).toBe(button);
+  });
 });

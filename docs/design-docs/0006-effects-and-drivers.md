@@ -150,8 +150,8 @@ it. A finite stream may resolve, and its resolved value is delivered last. Used 
 
 ### Outside sources: `subscription()` (gyral-c5d.5, 0.3.1)
 
-Apps keep some state in stores Gyral doesn't own: sabacc.starwars.run's game lives in a
-TC39-signals store, read through a hand-written streaming driver (`Signal.subtle.Watcher`,
+Apps keep some state in stores Gyral doesn't own: an app migrated to Gyral kept its domain
+state in a TC39-signals store, read through a hand-written streaming driver (`Signal.subtle.Watcher`,
 re-armed in a microtask, unwatched on abort) and written with a `play` command whose driver
 calls `store.dispatch` synchronously. Every such driver repeats the same plumbing: a promise
 that never resolves, an abort listener, the unsubscribe, ignoring late values. Core now ships

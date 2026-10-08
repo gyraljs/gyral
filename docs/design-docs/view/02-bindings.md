@@ -301,8 +301,10 @@ export const flash = defineDisposableHook<[value: unknown]>({
 - Child position only. The string is trusted markup from your own code (Markdown output, JSON-LD
   scripts). Never pass user input.
 - Server: written verbatim, preceded by an anchor comment, so hydration knows where it starts.
-- Browser: parsed with a `<template>` (`innerHTML`) and inserted after the same start anchor,
-  only when the string changes.
+- Browser: parsed with a `<template>` (`innerHTML`, through the `gyral` Trusted Types policy,
+  01 "Instantiation") and inserted after the same start anchor, only when the string changes.
+  Under `require-trusted-types-for 'script'` that policy is what lets `raw()` parse, so the
+  string must still never be user input: the policy trusts it as the template's own HTML.
 - A `raw()` value in a component that renders in the browser is a development warning (09):
   every change re-parses it.
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`

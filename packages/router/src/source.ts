@@ -3,7 +3,7 @@ import type { RouteLocation } from './stream.js';
 
 /** What the browser history does once a navigation's render has committed (ADR 0009). */
 export interface AfterNavigation {
-  /** Scroll to the `#fragment` target or the top (push, replace), or restore (back/forward). */
+  /** Scroll to the `#fragment` target or the top (push), or restore (back/forward). */
   readonly scroll: boolean;
   /** Move focus to the first `[autofocus]` element, or reset it to the page start. */
   readonly focusReset: boolean;
@@ -16,7 +16,7 @@ export interface Source {
     url: string,
     replace: boolean,
     after?: Partial<AfterNavigation>,
-  ): RouteLocation | Promise<RouteLocation> | undefined;
+  ): RouteLocation | Promise<RouteLocation | undefined> | undefined;
   traverse(delta: number): void;
   setHead(head: Head): void;
   snapshot(): RouterSnapshot;

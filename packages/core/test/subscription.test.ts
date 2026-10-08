@@ -179,7 +179,7 @@ describe('subscription()', () => {
   });
 });
 
-// The signals recipe (after sabacc.starwars.run's watch()): notify, then re-arm and read in a
+// The signals recipe (skills/gyral/references/outside-stores.md): notify, then re-arm and read in a
 // microtask; settled() waits for values on their way.
 const moves = signalLike(0, { batched: true });
 const movesDriver = subscription<number>('moves', (emit, { signal }) => {

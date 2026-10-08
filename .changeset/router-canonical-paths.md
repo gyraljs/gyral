@@ -14,3 +14,5 @@ starting with `//` is read as a path, not a host. Patterns the two matchers woul
 differently throw (`/v:id`, `:post-id`, empty or dot segments, a param named twice, `#`), and
 literal segments are stored as URLs spell them (`/café` → `/caf%C3%A9`). A generated set of
 about 56,000 paths checks both matchers agree, in Chromium and in Node.
+
+Behavior change: `routes()` throws at startup for patterns 0.3.0 accepted (`/:post-id` → rename to `/:postId`; `/v:id`, empty or dot segments, a param named twice, `#`); `/users//1` no longer matches `/users/:id`; `RouteMatch` has a required `path` field, so hand-built matches and `toEqual` assertions need it; `href()` spells non-ASCII literal segments percent-encoded.

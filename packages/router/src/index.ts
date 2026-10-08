@@ -31,9 +31,10 @@ export interface NavigateOptions extends Partial<AfterNavigation> {
 
 /**
  * Navigates in-app (pushes a history entry, or replaces the current one). In the browser, once
- * the new page has rendered, the router scrolls to the `#fragment` target or the top and resets
+ * the new page has rendered, a push scrolls to the `#fragment` target or the top and resets
  * focus, as the browser does for a page load (ADR 0009 "Scroll and focus"); `scroll: false` or
- * `focusReset: false` leaves that to the app for this navigation.
+ * `focusReset: false` leaves that to the app. A `replace` (keeping the query in sync with a
+ * search box) leaves scroll and focus alone unless `scroll: true` / `focusReset: true`.
  */
 export function navigate(url: string, options: NavigateOptions = {}): Command<never> {
   return fireAndForget({ _tag: 'Navigate', url, ...options, replace: options.replace ?? false });

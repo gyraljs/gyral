@@ -35,7 +35,7 @@ export const INTENT_EVENTS: readonly string[] = [
  * A static `data-intent-<event>` attribute: a per-event intent (the event is in the name), or
  * `data-intent-on` (its value is the event, or a quoted list of them separated by spaces).
  */
-const INTENT_ATTR = /\sdata-intent-([\w-]+)=(["']?)(.*?)\2[\s/>]/gi;
+const INTENT_ATTR = /\sdata-intent-([\w-]+)=(["']?)(.*?)\2(?=[\s/>])/gi;
 // Names separated by any whitespace; none empty, so no listener for "".
 const eventList = (value: string): string[] => value.match(/\S+/g) ?? [];
 const eventsByTemplate = new WeakMap<Markup, readonly string[]>();

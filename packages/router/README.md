@@ -18,8 +18,8 @@ export const site = routes({ home: '/', product: '/products/:id' });
 site.match('/products/42/'); // { name: 'product', params: { id: '42' }, path: '/products/42' }
 
 // In an update: [state, [navigate('/products/42')]]
-// Filters in the URL, without a new history entry or moving scroll and focus:
-// [state, [navigate('?q=shoes&sort=price', { replace: true, scroll: false, focusReset: false })]]
+// Filters in the URL, without a new history entry; a replace doesn't move scroll or focus:
+// [state, [navigate('?q=shoes&sort=price', { replace: true })]]
 ```
 
 `setHead(head)` makes the document's head (title, description, canonical, robots, meta, links,
@@ -27,9 +27,10 @@ JSON-LD, `lang`, `dir`) match a `Head` after a navigation: pass it the same valu
 gives `page()` / `renderPage()` (from `@gyral/ssr`), so a client navigation leaves the same head
 as a page load.
 
-After a navigation renders, the router scrolls to the `#fragment` target or the top, restores
-the position on back and forward, and resets focus; pass `scroll: false` / `focusReset: false`
-to `navigate` or `makeRouter` to manage them yourself.
+After a push renders, the router scrolls to the `#fragment` target or the top, restores the
+position on back and forward, and resets focus; pass `scroll: false` / `focusReset: false` to
+`navigate` or `makeRouter` to manage them yourself. A `replace` leaves scroll and focus alone
+unless you pass `scroll: true` / `focusReset: true`.
 
 ## Documentation
 

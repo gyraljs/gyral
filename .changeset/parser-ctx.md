@@ -7,3 +7,5 @@ Intent parsers get the read-only context reducers get as a second argument: `(in
 props whether to call `preventDefault()`, synchronously. One-parameter parsers keep working;
 `IntentParser<M, P>` takes the props type as an optional second parameter, and `form()`,
 `field()` and `child()` return one-parameter parsers, so calling them directly still compiles.
+
+Behavior change (types): `IntentParser<M, P>` is `(input, ctx) => …`; code that holds a value typed `IntentParser<M>` and calls it with one argument passes a context (or types the value as `(input: IntentInput) => …`).

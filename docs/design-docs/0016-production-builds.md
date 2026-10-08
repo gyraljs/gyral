@@ -154,7 +154,9 @@ its own subpath like `/static`; the main entry stays runtime-neutral.
 - **Connection info** (gyral-dyn.29). The handler's second argument is
   `{ incoming, remoteAddress }`: the Node request and `req.socket.remoteAddress`, for apps
   that rate-limit, log or audit by client. `incoming` is the shape Hono's Node adapter uses, so
-  `getConnInfo` from `@hono/node-server/conninfo` works on a Hono app mounted this way. Behind a
+  `getConnInfo` from `@hono/node-server/conninfo` works on a Hono app mounted this way.
+  `productionServer`'s `fetch` forwards this second argument to the app (`FetchApp<Env>`,
+  `productionServer<NodeEnv>(…)`), so an app behind it sees it too (gyral-dyn.30). Behind a
   proxy the address is the proxy's; `X-Forwarded-For` is trusted only from a known proxy, which
   the app decides, not the adapter.
 
