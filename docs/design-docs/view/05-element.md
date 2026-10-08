@@ -231,7 +231,19 @@ capture, provided by the `capturePointer()` element hook (02 "Element hooks"): i
 naming `pointerdown` and `pointerup` because built in it cost every app about 35 B gzip; as a
 hook only apps that use it bundle it, and the capture is visible in the markup. List support
 itself costs about 25 B. Capture is not set for synthetic events (the pointer isn't active:
-the call throws and is ignored). Tests: `packages/core/test/press-release.test.ts` (a real
+the call throws and is ignored).
+
+Two consequences parsers must know (gyral-dyn.16, found by game-platform's card table):
+
+- `input.target` is the intent element. `event.currentTarget` is the root Gyral delegates from
+  (the shadow root, or the host for light-DOM components), and `event.target` is the hit
+  element inside the intent element.
+- While an element holds pointer capture, the browser targets that pointer's events at it.
+  `capturePointer()` captures on the intent element, so its own intents keep firing, but
+  intents on elements inside a capturing ancestor stop firing until release: their events
+  are retargeted to the ancestor, and the lookup starts there.
+
+Tests: `packages/core/test/press-release.test.ts` (a real
 pointer released outside the button, `pointercancel`, `lostpointercapture`, key repeat).
 
 ## `ElementInternals`

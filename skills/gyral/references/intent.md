@@ -38,6 +38,10 @@ release" below).
 | `newState`        | `'open'`/`'closed'` for `toggle`                     |
 | `command`         | invoker command info for `command` intents           |
 
+Read the intent element from `target`, not from the event: Gyral listens on the component's
+root, so `event.currentTarget` is that root (the shadow root), and `event.target` is whatever
+was hit inside the element (the label's `<span>`, an icon).
+
 ## Parsers
 
 A parser returns a message, `undefined` (ignore the event), or an `IntentRejected` (via
@@ -262,6 +266,11 @@ export const Pad = define<State, Msg>('my-pad', {
 - A button that may disappear mid-press (a re-render that drops it) never gets its
   `pointerup`. Also list `lostpointercapture` and treat it as a release, ignoring ones from
   other elements (`event.target !== target`): the event bubbles.
+- Capture retargets the pointer's events to the capturing element until release. Because
+  `capturePointer()` captures on the element that carries the intent, that intent keeps
+  firing. Intents on elements _inside_ an element that holds capture stop firing meanwhile:
+  their events now target the capturer. Put `capturePointer()` on the element whose intent
+  needs the release, not on a container of other interactive elements.
 - Pressing a key while the wrapper isn't focused does nothing; for keys anywhere on the page,
   read them in a driver (`subscription()` over `keydown`/`keyup` on `window`,
   outside-stores.md).
