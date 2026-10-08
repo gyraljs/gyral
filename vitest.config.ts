@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { gyralVitePreset } from './packages/core/src/vite.js';
+import { renderOnServer } from './packages/testing/src/vitest.js';
 
 export default defineConfig({
   test: {
@@ -24,6 +25,8 @@ export default defineConfig({
             headless: true,
             provider: playwright(),
             instances: [{ browser: 'chromium' }],
+            // Real server markup for hydration tests (@gyral/testing/vitest).
+            commands: { renderOnServer },
           },
         },
       },
@@ -46,6 +49,7 @@ export default defineConfig({
             headless: true,
             provider: playwright(),
             instances: [{ browser: 'chromium' }],
+            commands: { renderOnServer },
           },
         },
       },

@@ -107,6 +107,15 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `Next`. Framework messages (`PropsChanged`, `IntentRejected`) step like any other.
   `inputsFor(commands, driver)`, `resolve(cmd, output)` and `reject(cmd, error)` drive the
   loop through a command's mappers with no DOM.
+- **Outputs and focus** (gyral-dyn.8, 0.3.1): `outputsIn(commands, Component)` returns what a
+  reducer sent to the parent with `emit()` / `outputs<O>()`, typed by the class's output union
+  (`OutputsOf<C>`; `outputsIn<Out>(commands)` names the union instead), and
+  `focusTargetsIn(commands)` returns each `focus()` request as `{ selector, ...options }`. Core
+  runs both commands itself with marker drivers; tests once filtered on their names
+  (`'@gyral/emit'`, `'@gyral/focus'`), which are internals. **Decision:** core keeps the marker
+  drivers private (no `EMIT`/`FOCUS` export); the helpers take the names from the public
+  builders (`emit(…).driver`, `focus(…).driver`), so the names may change without breaking a
+  test. Export them only if a need appears that these helpers can't cover.
 - **DOM:** `fakeDriver(driverOrName, { impl?, toError?, … })` records each call (input and
   `AbortSignal`) and waits for `resolveNext` / `rejectNext` (or `calls[i].resolve`). Errors
   pass through unchanged, so a test rejects with the already-typed error. Streaming commands:
@@ -244,6 +253,25 @@ including those inside nested shadow roots, re-scanning until nested children ha
 throws if any problem was recorded (Lit's dev-mode banner excepted). `mountSsr(html, { stores:
 false })` withholds the seed, to prove a test depends on it. Import component modules after
 mounting so they hydrate in place.
+
+**Server markup on demand (gyral-dyn.8, 0.3.1).** A browser test can't produce server markup:
+in the browser `define()` registers elements instead of recording server specs, and client
+builds drop the server segments of compiled templates. Golden fixtures are heavy for
+component-level hydration tests, which then tend to become end-to-end tests. `@gyral/testing/vitest` exports `renderOnServer`, a
+Vitest browser command (`test.browser.commands`, run in Vitest's Node process): given a module
+(relative to the test file), an export and JSON props, it loads the module with the project's
+Vite server in its `ssr` environment (module runner; same plugins and preset, development
+condition) and renders it with the `@gyral/core/server` that the module's own `@gyral/core`
+resolves to, so its components are registered with that renderer. The export may be a
+`define()` class (its element, with props bound as properties), a function of the props
+returning a template result, an HTML string or a `Response` (a full page), or a template result.
+The browser test then runs `mountSsr(html)`, imports the module and awaits `hydrated(page)`.
+`vitest` is an optional peer, used only by this entry, which is config-side: test files reach
+the command through `commands` from `vitest/browser` (typed by the entry's module augmentation).
+Modules stay loaded between calls, like a dev server. The testing package's
+`render-on-server-hydration.test.ts` hydrates its output in the development and production
+builds of core. Golden fixtures stay for markup from a whole server stack (routing, data
+loading, a built server), for markup reviewed in diffs, and for other runners.
 
 ## Property tests from schemas (gyral-czi.11, 2026-10-04)
 

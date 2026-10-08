@@ -127,6 +127,6 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
-- `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR tests
+- `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR/hydration tests (`renderOnServer`, golden fixtures)
 - `references/devtools.md` — the dev-only timeline panel
 - `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes
