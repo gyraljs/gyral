@@ -31,6 +31,28 @@ never end don't block it; timers are yours to advance). Swap
 drivers for fakes with `fakeDriver` and `withDrivers`; `mountSsr` and `hydrated` test
 server-rendered pages through hydration (below).
 
+```ts
+import { defineDriver } from '@gyral/core';
+import { fakeDriver, withDrivers } from '@gyral/testing';
+
+const urls: (string | null)[] = [];
+el.drivers = {
+  'saved-query': defineDriver<undefined, string | null>({
+    name: 'saved-query',
+    run: () => 'gyral',
+  }),
+  // fakeDriver(name, run) answers every call with run and records the inputs.
+  'url-sync': fakeDriver<string | null, undefined>('url-sync', (query) => void urls.push(query)),
+  clipboard: fakeDriver<string, undefined, string>('clipboard'), // waits for resolveNext()
+};
+withDrivers(container, { 'saved-query': fakeDriver('saved-query', () => null) }); // a subtree
+```
+
+Drivers need no cast in `el.drivers`, `withDrivers` or `provideDrivers`: any
+`Driver<I, O, E>` (typed input, output and error, `toError`, `retry`, a `subscription`, a fake)
+is assignable to `AnyDriver`. Type your own driver maps as `DriverOverrides` from
+`@gyral/core`; `Record<string, Driver<unknown, unknown>>` rejects drivers with typed inputs.
+
 ## Server-rendered pages: hydration tests
 
 A hydration test mounts real server markup with `mountSsr(html)`, imports the component modules

@@ -146,7 +146,13 @@ it('loads the user when clicked', async () => {
   `await Promise.resolve()` loops before it.
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
-  `signal`, so you can assert that `switch` aborted it.
+  `signal`, so you can assert that `switch` aborted it. `fakeDriver(name, run)` answers every
+  call with `run`: `fakeDriver<string | null, undefined>('url-sync', (query) => void urls.push(query))`.
+- Drivers and fakes need **no cast** anywhere drivers are substituted (`el.drivers`,
+  `withDrivers`, `provideDrivers`): any `Driver<I, O, E>`, from `defineDriver`, `subscription`
+  or `fakeDriver`, is assignable to `AnyDriver`. Never write `as AnyDriver`. Type a driver map
+  as `DriverOverrides` (or `Record<string, AnyDriver>`), not
+  `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
 - Removing an element interrupts its commands **synchronously**: right after `el.remove()`,
   every running call's `signal.aborted` is `true` and its `abort` listeners have run; assert
   without yielding. Only cleanup a driver runs after an `await` needs a yield

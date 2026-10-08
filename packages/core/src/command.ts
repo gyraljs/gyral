@@ -38,10 +38,17 @@ export interface Driver<I, O, E = unknown> {
   readonly toError?: (cause: unknown) => E;
 }
 
-/** Any driver, with its input type erased. */
+/**
+ * Any driver, with its input type erased. Every `Driver<I, O, E>` (from `defineDriver`,
+ * `subscription`, a test fake) is assignable to it as is: no cast.
+ */
 export type AnyDriver = Driver<never, unknown>;
 
-/** Drivers substituted by name (test fakes, configured instances). */
+/**
+ * Drivers substituted by name (test fakes, configured instances): `el.drivers`,
+ * `provideDrivers`. Annotate a driver map with this type (or `Record<string, AnyDriver>`), not
+ * `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
+ */
 export type DriverOverrides = Readonly<Record<string, AnyDriver>>;
 
 /** A side effect described as data, plus pure mappers from its outcome to messages. */
