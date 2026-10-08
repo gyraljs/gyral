@@ -30,11 +30,12 @@ export const FIELDS = {
 
 /**
  * Markup that makes a root listen for `command` (05 "Intent events"): a static
- * `data-intent-on="command"` (quoted or not), or a bound value (all intent events), which a
+ * `data-intent-on="command"` (quoted or not, alone or in a quoted list), or a bound value (all intent events), which a
  * template's text shows as `${}` where its expression is, and a string as an unfinished value
  * at its end. The attribute's name is matched in any case, as the runtime reads it.
  */
-const INTENT_ON_COMMAND = /data-intent-on\s*=\s*["']?(?:command(?![\w-])|[^"'\s>]*(?:\$\{\}|$))/i;
+const INTENT_ON_COMMAND =
+  /data-intent-on\s*=\s*(?:["'][^"'>]*?(?:(?<![\w-])command(?![\w-])|\$\{\}|$)|command(?![\w-])|[^"'\s>]*(?:\$\{\}|$))/i;
 
 export interface ModuleFacts {
   /** Identifier names in runtime code, import declarations left out. */

@@ -54,6 +54,8 @@ describe('facts: command intents', () => {
     ['any case in the attribute name', 'html`<div DATA-INTENT-ON="command"></div>`'],
     ['a bound data-intent-on', 'html`<div data-intent-on=${on}></div>`'],
     ['a quoted bound one', 'html`<div data-intent-on="${on}"></div>`'],
+    ['a list naming command', 'html`<div data-intent-on="focusin command"></div>`'],
+    ['a list with a bound part', 'html`<div data-intent-on="keyup ${on}"></div>`'],
     ['markup in a string', `const m = '<i data-intent-on="command"></i>';`],
     ['an unfinished value in a string', `const m = '<i data-intent-on="' + on + '">';`],
     ['an exact "command"', "export const spec = { events: ['command'] };"],
@@ -65,6 +67,8 @@ describe('facts: command intents', () => {
   it.each([
     ['another event', 'html`<div data-intent-on="keydown"></div>`'],
     ['a longer name', 'html`<div data-intent-on="commander"></div>`'],
+    ['a list without command', 'html`<div data-intent-on="pointerdown pointerup"></div>`'],
+    ['a list with a longer name', 'html`<div data-intent-on="keyup my-command"></div>`'],
     ['comments', '// data-intent-on="command"\n/* events: ["command"] */ export const x = 1;'],
     ['the word in a longer string', "export const x = 'run a command';"],
     ['a type', "type E = 'command' | 'click';\nexport const x = 1;"],

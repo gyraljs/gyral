@@ -30,7 +30,7 @@ export type { Feature } from './facts.js';
 /** The text fallback, for a module that doesn't parse: the 0.3.1-next.0 scan. */
 const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
   invokers:
-    /data-intent-on\s*=\s*\\?["']?(?:command\b|\$\{)|(["'`])command\1|\braw\b\s*(?:\(|as\b)/i,
+    /data-intent-on\s*=\s*\\?["']?(?:[\w-]+\s+)*(?:command\b|\$\{)|(["'`])command\1|\braw\b\s*(?:\(|as\b)/i,
   transitions: /\bviewTransition\b/,
   frame: /\brenderOnFrame\b/,
   states: /\bstates\b/,

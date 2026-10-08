@@ -31,8 +31,12 @@ export const INTENT_EVENTS: readonly string[] = [
   'command',
 ];
 
-/** A static `data-intent-on` value, quoted or not (event names have no spaces or quotes). */
-const INTENT_ON = /\sdata-intent-on=["']?([^"'\s>]+)/gi;
+/**
+ * A static `data-intent-on` value, quoted or not: one event name, or a quoted list of them
+ * separated by spaces.
+ */
+const INTENT_ON = /\sdata-intent-on=(["']?)(.*?)\1[\s/>]/gi;
+const eventList = (value: string): string[] => value.match(/\S+/g) ?? [];
 const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
 
 /** The intent events a template's (or `raw()` markup's) `data-intent-on` attributes name. */
@@ -41,7 +45,7 @@ export function eventsOf(markup: Markup): readonly string[] {
   if (events === undefined) {
     events = markup.parts?.some((p) => p[2] === 'data-intent-on') // a bound attribute's name
       ? INTENT_EVENTS
-      : Array.from(markup.html.matchAll(INTENT_ON), (m) => m[1] ?? '');
+      : Array.from(markup.html.matchAll(INTENT_ON)).flatMap((m) => eventList(m[2] ?? ''));
     eventsByTemplate.set(markup, events);
   }
   return events;
@@ -77,8 +81,9 @@ export function defaultTrigger(el: Element): string {
   return el.localName.includes('-') ? OUTPUT_EVENT : 'click';
 }
 
-function triggerOf(el: Element): string {
-  return el.getAttribute('data-intent-on') ?? defaultTrigger(el);
+/** The events that fire `el`'s intent: its `data-intent-on` list, or its default trigger. */
+function triggersOf(el: Element): string[] {
+  return eventList(el.getAttribute('data-intent-on') ?? defaultTrigger(el));
 }
 
 /** Every class `define()` creates, so intent lookup can tell where a component begins. */
@@ -130,7 +135,7 @@ export function findIntentElement(event: Event, root: Node): Element | undefined
     if (
       node instanceof Element &&
       node.hasAttribute('data-intent') &&
-      triggerOf(node) === event.type &&
+      triggersOf(node).includes(event.type) &&
       ownedBy(node, root)
     ) {
       return node;

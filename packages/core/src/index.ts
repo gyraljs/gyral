@@ -65,6 +65,7 @@ export {
 export type { FormDefinition, FormRedirected, FormResult, FormValue } from './forms.js';
 export { runInit } from './init.js';
 export { invalid } from './hooks/invalid.js';
+export { capturePointer } from './hooks/capture-pointer.js';
 export { findInScope, labelledBy } from './hooks/labelled-by.js';
 export { prop } from './prop.js';
 export type { Prop, PropGuard, PropKind, PropsOf } from './prop.js';

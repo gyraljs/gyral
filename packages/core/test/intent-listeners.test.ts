@@ -129,4 +129,11 @@ describe('intent listeners (gyral-g1r.20)', () => {
     expect(eventsOf(template)).toEqual(['toggle', 'keyup', 'focusout']);
     expect(eventsOf(template)).toBe(eventsOf(template));
   });
+
+  it('collects every event of a list (gyral-dyn.13)', () => {
+    const template = normalize([
+      '<a data-intent-on="pointerdown  pointerup"></a><b data-intent-on=\'keydown\tkeyup\'></b>',
+    ]);
+    expect(eventsOf(template)).toEqual(['pointerdown', 'pointerup', 'keydown', 'keyup']);
+  });
 });
