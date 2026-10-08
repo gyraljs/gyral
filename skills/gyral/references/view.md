@@ -123,6 +123,97 @@ Keys must be unique strings or numbers (duplicates are a development error). `pi
 are compared one level deep (`Object.is` per element or key), so returning a small object or
 tuple is fine.
 
+### Moving items between lists
+
+A card that moves from one `each` list to another is a new element in the second list, so the
+browser can't animate it by itself. A FLIP hook can: it remembers where each key last was and,
+when its element appears somewhere else, plays the move with the Web Animations API. Give it
+the item's slot so it also runs when the item shifts inside its list:
+
+```ts
+import { define, defineHook, each, html, intents } from '@gyral/core';
+
+/** Where each key was last seen, in page coordinates. */
+const seen = new Map<string, { readonly x: number; readonly y: number }>();
+
+/** Animates the element from where `key` was last seen to where it is now. */
+export const flip = defineHook<[key: string, slot: number]>({
+  client: (el, [key]) => {
+    const box = el.getBoundingClientRect();
+    const now = { x: box.left + scrollX, y: box.top + scrollY };
+    const before = seen.get(key);
+    seen.set(key, now);
+    if (before === undefined || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dx = before.x - now.x;
+    const dy = before.y - now.y;
+    if (dx === 0 && dy === 0) return;
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+      duration: 200,
+      easing: 'ease-out',
+    });
+  },
+});
+
+interface Card {
+  readonly id: string;
+  readonly label: string;
+}
+interface State {
+  readonly todo: readonly Card[];
+  readonly done: readonly Card[];
+}
+type Msg = { readonly _tag: 'Move'; readonly id: string };
+
+const i = intents<Msg>();
+
+const CardRow = (c: Card, slot: number) =>
+  html`<li ${flip(c.id, slot)}>
+    <button type="button" value=${c.id} data-intent=${i.Move}>${c.label}</button>
+  </li>`;
+
+const column = (label: string, cards: readonly Card[]) =>
+  html`<ul aria-label=${label}>
+    ${each(
+      cards,
+      (c) => c.id,
+      CardRow,
+      (c) => cards.indexOf(c),
+    )}
+  </ul>`;
+
+export const Board = define<State, Msg>('my-board', {
+  init: () => ({
+    todo: [
+      { id: 'a', label: 'Write' },
+      { id: 'b', label: 'Test' },
+    ],
+    done: [],
+  }),
+  intent: { Move: ({ value }) => (value ? { _tag: 'Move', id: value } : undefined) },
+  update: {
+    Move: (s, { id }) => {
+      const card = [...s.todo, ...s.done].find((c) => c.id === id);
+      if (card === undefined) return s;
+      return s.todo.includes(card)
+        ? { todo: s.todo.filter((c) => c !== card), done: [...s.done, card] }
+        : { done: s.done.filter((c) => c !== card), todo: [...s.todo, card] };
+    },
+  },
+  view: (s) => html`${column('To do', s.todo)} ${column('Done', s.done)}`,
+});
+```
+
+- The hook runs only when its arguments change: for a new element (the card in its new list)
+  and for cards whose slot changed. Cards that move because the layout changed around them
+  (a resize, a column that grew) aren't animated.
+- `seen` keeps keys of deleted items; clear it when a game or board resets.
+- The native way is a View Transition: `viewTransition` (components.md) runs a render inside
+  `document.startViewTransition`, and a card whose `view-transition-name` is the same before
+  and after (say `view-transition-name: var(--card)` in CSS, with
+  ``${cssVars({ '--card': `card-${c.id}` })}`` on the row) morphs from its old place to its new
+  one. Same-document View Transitions are only newly Baseline, so keep the hook as the
+  fallback for now. A built-in for moves between lists is planned for 0.4.
+
 ## SVG fragments: `svg`
 
 `svg` (from `@gyral/core`, since 0.3.1) is `html` for SVG fragments: its top level is SVG
