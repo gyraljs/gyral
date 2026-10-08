@@ -33,6 +33,11 @@ export interface Prop<T> {
   readonly required: boolean;
   /** Used whenever the element's value is missing (`boolean` props default to `false`). */
   readonly default?: unknown;
+  /**
+   * When a new value counts as unchanged (no re-render, no `PropsChanged`): `Object.is`, the
+   * same JSON for `prop.json`, or the `equals` option of `prop.json`/`prop.value`.
+   */
+  readonly equals: (a: unknown, b: unknown) => boolean;
   /** Type-only: the value components see. Never set. */
   readonly [OUTPUT]?: () => T;
 }
@@ -80,12 +85,20 @@ interface Scalar<B> {
   <O extends B = B>(opts?: Refined<O> & Optional): Prop<O | undefined>;
 }
 
+/** `equals` for `prop.json`/`prop.value`: the old and new value (`undefined` when unset). */
+interface Equals<T> {
+  readonly equals?: (a: T | undefined, b: T | undefined) => boolean;
+}
+
 interface WithSchema {
   <S extends Check>(
     schema: S,
-    opts: Common & (Required | Defaulted<NoInfer<Out<S>>>),
+    opts: Common & Equals<NoInfer<Out<S>>> & (Required | Defaulted<NoInfer<Out<S>>>),
   ): Prop<Out<S>>;
-  <S extends Check>(schema: S, opts?: Common & Optional): Prop<Out<S> | undefined>;
+  <S extends Check>(
+    schema: S,
+    opts?: Common & Equals<NoInfer<Out<S>>> & Optional,
+  ): Prop<Out<S> | undefined>;
 }
 
 interface Options {
@@ -93,7 +106,11 @@ interface Options {
   readonly schema?: StandardSchemaV1;
   readonly required?: boolean;
   readonly default?: unknown;
+  readonly equals?: (a: unknown, b: unknown) => boolean;
 }
+
+/** `prop.json` values are JSON: the same JSON text is the same value. */
+const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 function make(kind: PropKind, opts: Options = {}, schema?: Check): Prop<unknown> {
   features.props = propFeature; // components can declare props now (features.ts)
@@ -103,6 +120,7 @@ function make(kind: PropKind, opts: Options = {}, schema?: Check): Prop<unknown>
     attribute: kind === 'value' ? false : opts.attribute,
     schema: schema ?? opts.schema,
     required: opts.required === true,
+    equals: opts.equals ?? (kind === 'json' ? sameJson : Object.is),
   };
   return value === undefined ? base : { ...base, default: value };
 }
@@ -117,11 +135,15 @@ export const prop: {
   readonly boolean: <O extends boolean = boolean>(
     opts?: Refined<O> & { readonly default?: NoInfer<O> },
   ) => Prop<O>;
-  /** Attribute parsed with `JSON.parse`, then the schema (or type guard). */
+  /**
+   * Attribute parsed with `JSON.parse`, then the schema (or type guard). Compared by value: a
+   * new but equal object (a fresh `.prop=${{…}}` each render) changes nothing.
+   */
   readonly json: WithSchema;
   /**
    * Property only: no attribute. Validated in development by the schema (or type guard), and
-   * the object set is kept as is (production skips the check).
+   * the object set is kept as is (production skips the check). Compared with `Object.is`
+   * unless `equals` is given.
    */
   readonly value: WithSchema;
 } = {

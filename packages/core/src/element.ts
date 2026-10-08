@@ -172,7 +172,8 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #write(name: string, value: unknown): void {
-      if (Object.is(this.#values[name], value)) return;
+      // The prop's `equals` (prop.ts): `Object.is`, the same JSON for prop.json, or the option.
+      if (table[name]?.equals(this.#values[name], value)) return;
       this.#values[name] = value;
       if (this.#model.ready) this.#invalidate();
     }

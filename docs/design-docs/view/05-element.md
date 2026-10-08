@@ -103,6 +103,25 @@ schema library.
 - No property-to-attribute reflection. State that CSS needs goes through custom states
   (`spec.states`).
 
+### Prop equality (gyral-dyn.27, 0.3.1)
+
+Every builder gives its prop an `equals(old, new)`; a write (property set, attribute change)
+that `equals` accepts is dropped: no invalidation, so no render and no `PropsChanged`.
+
+| Builder                       | `equals`                                               |
+| ----------------------------- | ------------------------------------------------------ |
+| `string`, `number`, `boolean` | `Object.is`                                            |
+| `json`                        | the same `JSON.stringify` text (it is JSON data)       |
+| `value`                       | `Object.is`, or the `equals` option (sees `undefined`) |
+
+Why: binding `.prop=${{…}}` with a fresh object each render fired `PropsChanged` (and a child
+render) every time, and components added their own syncing. `prop.json` values are JSON by
+definition, so equal text is equal data; key order differing only costs an extra render.
+`prop.value` holds anything (class instances, functions, nodes), so it keeps identity unless
+told otherwise. `equals` lives on the prop (set by the builder in prop.ts), so the element's
+write is one call and apps without props pay nothing for it. Decided by the
+user on 2026-10-08. Tests: `packages/core/test/prop-equals.test.ts`.
+
 ### Accessors and upgrade capture
 
 - Each declared prop is an accessor on the class prototype. The setter compares with

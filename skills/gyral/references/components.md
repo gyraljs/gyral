@@ -18,7 +18,7 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `view(state, intents, ctx)`       | yes                          | Pure template; `ctx.props`, `ctx.read(store)`                                   |
 | `props`                           | no                           | `prop.*` builders (Standard Schema), with the `required`/`default` rule         |
 | `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
-| `shadow`                          | no                           | `false` renders into light DOM (page-level content). Default `true`             |
+| `shadow`                          | no                           | `false`: light DOM (page content); `{ delegatesFocus: true }`. Default `true`   |
 | `hydrate`                         | no                           | `'load'` (default), `'idle'`, `'visible'`, `'interaction'` for SSR islands      |
 | `events`                          | no                           | Extra event types a bound `data-intent-on=${…}` may produce (see intent.md)     |
 | `drivers`                         | no                           | Driver substitutions by name for every instance                                 |
@@ -77,7 +77,8 @@ export const Stepper = define<State, Msg, Props>('my-stepper', {
 `prop.value(isSeat, { required: true })` with `const isSeat = (u: unknown): u is Seat => …`.
 
 Options: `schema` (refines `string`/`number`/`boolean`, e.g. `v.picklist([...])`),
-`attribute` (a name, or `false` for property only), `required`, `default`. Any Standard Schema
+`attribute` (a name, or `false` for property only), `required`, `default`, and `equals` for
+`prop.json`/`prop.value` (below). Any Standard Schema
 library works (valibot, zod, …); schemas must be synchronous and should validate, not transform.
 
 - **Attributes are always validated** (they're external strings). Property sets and hydration
@@ -95,6 +96,32 @@ A `default` replaces only `undefined`: setting a defaulted prop to `undefined` (
 attribute) brings the default back, so `undefined` can't mean "nobody on purpose". Use `null`
 for that, with a nullable schema: `owner: prop.value(v.nullable(User), { default: team })`,
 then `.owner=${null}` (or `prop.json(…)` and the attribute `owner="null"`).
+
+### When a prop counts as changed
+
+A new value that equals the old one changes nothing: no re-render, no `PropsChanged` (0.3.1).
+`prop.json` compares the JSON (`JSON.stringify`), so a parent that writes
+`.range=${{ min: s.min, max: s.max }}` with a fresh object every render is fine.
+`prop.value` compares with `Object.is` (it can hold anything: class instances, functions, DOM
+nodes); give it `equals` when you know what "the same" means. It receives the old and new value
+(`undefined` when unset):
+
+```ts
+import { prop } from '@gyral/core';
+
+interface Sort {
+  readonly key: string;
+  readonly dir: 1 | -1;
+}
+const isSort = (u: unknown): u is Sort => typeof u === 'object' && u !== null && 'key' in u;
+
+export const props = {
+  sort: prop.value(isSort, { equals: (a, b) => a?.key === b?.key && a?.dir === b?.dir }),
+};
+```
+
+Otherwise, keep bound objects stable in the parent: build them in the reducer (state) rather
+than in the view, so an unchanged object is the same object.
 
 ## Stateless components
 
