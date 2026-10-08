@@ -10,7 +10,7 @@ import {
   settled,
   type IntentRejected,
 } from '@gyral/core';
-import { makeHttpDriver, submitForm } from '../src/index.js';
+import { csrfFromMeta, makeHttpDriver, submitForm } from '../src/index.js';
 
 const Login = defineForm(
   v.object({
@@ -37,7 +37,6 @@ const LoginEl = define<State, Msg>('test-submit-login', {
       s,
       [
         submitForm('/login', m.form, {
-          csrf: { meta: 'csrf-token' },
           onSuccess: (body) => ({ _tag: 'SignedIn', location: redirectedTo(body) ?? '/' }),
           onFailure: () => ({ _tag: 'Failed' }),
         }),
@@ -58,7 +57,13 @@ type Answer = () => Response;
 async function mount(answer: Answer) {
   const fetch = vi.fn<typeof globalThis.fetch>(() => Promise.resolve(answer()));
   const el = new LoginEl();
-  el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'https://shop.test/' }) };
+  el.drivers = {
+    http: makeHttpDriver({
+      fetch,
+      baseUrl: 'https://shop.test/',
+      headers: csrfFromMeta('csrf-token'),
+    }),
+  };
   document.body.append(el);
   await settled();
   const submit = async (email: string, password: string) => {
@@ -84,7 +89,7 @@ afterEach(() => {
 });
 
 describe('submitForm()', () => {
-  it('posts the raw FormData with JSON accept and the CSRF token from the page', async () => {
+  it('posts the raw FormData with JSON accept and the driver adds the CSRF token', async () => {
     const meta = document.createElement('meta');
     meta.name = 'csrf-token';
     meta.content = 'tok-1';
@@ -100,6 +105,22 @@ describe('submitForm()', () => {
     expect((init?.body as FormData).get('email')).toBe('a@b.co');
     expect(init?.headers).toMatchObject({ accept: 'application/json', 'x-csrf-token': 'tok-1' });
     expect(el.state.done).toBe('/account');
+  });
+
+  it('sends a token the app already holds with csrf: { token }', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(() =>
+      Promise.resolve(Response.json({ _tag: 'Redirected', location: '/' })),
+    );
+    const driver = makeHttpDriver({ fetch, baseUrl: 'https://shop.test/' });
+    const cmd = submitForm('/login', new FormData(), {
+      csrf: { token: 'held-1', header: 'x-xsrf' },
+      onSuccess: () => undefined,
+    });
+    await driver.run(cmd.input as never, {
+      signal: new AbortController().signal,
+      emit: () => undefined,
+    });
+    expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({ 'x-xsrf': 'held-1' });
   });
 
   it("dispatches the server's 422 IntentRejected to the component's reducer", async () => {

@@ -10,6 +10,7 @@ export type {
   Next,
   RetryPolicy,
 } from './command.js';
+export { retry } from './retry.js';
 export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
 export { child, emit, outputs } from './children.js';

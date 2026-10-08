@@ -3,8 +3,15 @@
 // `<style>` elements are allowed by their SHA-256 hashes, so `style-src` needs no
 // 'unsafe-inline'. Hashes are synchronous and cached per text (core's styleHashSync), so
 // `renderPage({ csp: options })` builds the header at render time, when the page's components
-// are registered; `contentSecurityPolicy()` builds it ahead of time.
-import { componentStyles, registryVersion, styleHashSync } from '@gyral/core/server';
+// are registered; `contentSecurityPolicy()` builds it ahead of time. With
+// `styleAttributes: 'hash'`, `renderPage` also allows the page's `style` attributes by hash
+// (ADR 0020): it renders the page first, collecting their values, then builds the header.
+import {
+  componentStyles,
+  registryVersion,
+  styleHashSync,
+  type StyleValues,
+} from '@gyral/core/server';
 import { styleList, styleSafe } from './page.js';
 
 /** CSP directives by name: a source list, as one string or a list of sources. */
@@ -21,6 +28,21 @@ export interface CspOptions {
    * `renderPage({ csp })` it defaults to the page's own `styles`.
    */
   readonly styles?: string | readonly string[];
+  /**
+   * `'hash'` (`renderPage` only, ADR 0020): allow the `style` attributes the page writes by
+   * hash, in `style-src-attr` with `'unsafe-hashes'`, so they apply on first paint under a
+   * strict policy. The page is rendered to a string before the response is built (its
+   * headers need every value), so the body isn't chunked. Covers static, bound, multi-part and
+   * element-hook values, not `raw()` markup. A `style-src-attr` given in `directives` is kept;
+   * when it allows `'unsafe-inline'`, no hashes are added (a hash would disable it).
+   */
+  readonly styleAttributes?: 'hash';
+  /**
+   * The most `style` attribute hashes one page's header lists (default 128, about 7 KB of
+   * header; proxies reject large headers). Values past it are left out and logged once;
+   * hydration applies them.
+   */
+  readonly maxStyleHashes?: number;
 }
 
 const sources = (value: string | readonly string[]): readonly string[] =>
@@ -28,19 +50,30 @@ const sources = (value: string | readonly string[]): readonly string[] =>
 
 type PageStyles = string | readonly string[] | undefined;
 
-/** The header for `directives` and the page's `styles`, with the components registered now. */
+const ATTR = 'style-src-attr';
+
+/**
+ * The header for `directives` and the page's `styles`, with the components registered now.
+ * `attributes`: hashes of the page's `style` attribute values for `style-src-attr` (ADR 0020).
+ */
 function build(
   directives: CspDirectives,
   styles: PageStyles,
   components: ReadonlyMap<string, string>,
+  attributes: readonly string[] = [],
 ): string {
   const page = styleList(styles).map((css) => styleHashSync(styleSafe(css)));
   const hashes = [...new Set([...[...components.values()].map(styleHashSync), ...page])];
   const style = [...sources(directives['style-src'] ?? "'self'"), ...hashes];
   const policy: [name: string, sources: readonly string[]][] = Object.entries(directives)
-    .filter(([name]) => name !== 'style-src')
+    .filter(([name]) => name !== 'style-src' && (name !== ATTR || attributes.length === 0))
     .map(([name, value]) => [name, sources(value)]);
   policy.push(['style-src', style]);
+  if (attributes.length > 0) {
+    const given = sources(directives[ATTR] ?? []);
+    const unsafe = given.includes("'unsafe-hashes'") ? [] : ["'unsafe-hashes'"];
+    policy.push([ATTR, [...given, ...unsafe, ...attributes]]);
+  }
   return policy.map(([name, list]) => [name, ...list].join(' ')).join('; ');
 }
 
@@ -71,6 +104,60 @@ export function policyAtRender(options: CspOptions, pageStyles: PageStyles): str
   const header = build(options.directives ?? {}, styles, componentStyles());
   cache.set(options, { version, styles, header });
   return header;
+}
+
+const announced = new Set<string>();
+
+/** Logs `message` once per process, under `key`. */
+function once(key: string, message: string): void {
+  if (announced.has(key)) return;
+  announced.add(key);
+  console.warn(message);
+}
+
+/** Distinct values a page may write before development warns (ADR 0020 "A size guard"). */
+const WARN_AT = 32;
+
+/**
+ * `renderPage({ csp: { styleAttributes: 'hash' } })`: the header for a page that wrote the
+ * `style` values in `values` (ADR 0020). Not cached: it depends on the page's content. No
+ * hashes are added when the app's `style-src-attr` allows `'unsafe-inline'`, since a hash
+ * would make the browser ignore it.
+ */
+export function policyWithAttributes(
+  options: CspOptions,
+  pageStyles: PageStyles,
+  values: StyleValues,
+  dev: boolean,
+): string {
+  const directives = options.directives ?? {};
+  const given = sources(directives[ATTR] ?? []);
+  let list = given.includes("'unsafe-inline'") ? [] : [...values.keys()];
+  if (dev && list.length > WARN_AT) {
+    const counts = new Map<string, number>();
+    for (const where of values.values()) counts.set(where, (counts.get(where) ?? 0) + 1);
+    const [top] = [...counts].sort((a, b) => b[1] - a[1]);
+    const from = top === undefined || top[0] === '' ? '' : ` (most from ${top[0]})`;
+    once(
+      `many:${top?.[0] ?? ''}`,
+      `gyral: this page writes ${String(list.length)} distinct style attribute values${from}; ` +
+        `each adds about 54 bytes to its Content-Security-Policy header. Use a class or data ` +
+        `attribute for values from a known set, or a custom property with a stylesheet ` +
+        `fallback (ADR 0020).`,
+    );
+  }
+  const max = options.maxStyleHashes ?? 128;
+  if (list.length > max) {
+    once(
+      'cut',
+      `gyral: a page wrote ${String(list.length)} distinct style attribute values; its ` +
+        `Content-Security-Policy lists the first ${String(max)} (maxStyleHashes). The others ` +
+        `are blocked until hydration applies them (ADR 0020).`,
+    );
+    list = list.slice(0, max);
+  }
+  const styles = options.styles ?? pageStyles;
+  return build(directives, styles, componentStyles(), list.map(styleHashSync));
 }
 
 const warned = new Set<string>();

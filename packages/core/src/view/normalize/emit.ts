@@ -28,6 +28,8 @@ export interface Emitted {
   readonly parts: PartSpec[];
   readonly segments: Segment[];
   readonly shape: Shape;
+  /** The decoded values of the template's non-empty static `style` attributes (types.ts). */
+  readonly staticStyles: string[];
 }
 
 class Emitter {
@@ -37,6 +39,7 @@ class Emitter {
   html = '';
   readonly parts: PartSpec[] = [];
   readonly segments: Segment[] = [];
+  readonly staticStyles: string[] = [];
 
   /** Static markup: appended to the HTML and to the last string segment. */
   out(text: string): void {
@@ -120,6 +123,9 @@ class Emitter {
       if (a.kind !== 'static') continue;
       const attr = a.value === null ? ` ${a.name}` : ` ${a.name}=${a.value}`;
       open += attr;
+      if (a.css !== undefined && a.css !== '' && !this.staticStyles.includes(a.css)) {
+        this.staticStyles.push(a.css);
+      }
       // The CSSOM applies it under a strict CSP, where Firefox blocks the attribute in a
       // <template>'s HTML: a multi-attribute with no holes (attr-parts.ts writes it once).
       if (a.css !== undefined && !this.server)
@@ -175,5 +181,6 @@ class Emitter {
 export function emit(root: readonly TreeNode[], server: boolean): Emitted {
   const e = new Emitter(server);
   const shape = e.children(root, []);
-  return { html: e.html, parts: e.parts, segments: e.segments, shape };
+  const { html, parts, segments, staticStyles } = e;
+  return { html, parts, segments, shape, staticStyles };
 }

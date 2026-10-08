@@ -1,4 +1,5 @@
-// The style-attribute and Trusted Types tests in Chromium, Firefox and WebKit (not part of
+// The style-attribute (including ADR 0020's hashed server style attributes) and Trusted Types
+// tests in Chromium, Firefox and WebKit (not part of
 // `pnpm check`, which runs Chromium only):
 // `pnpm vitest run --config packages/core/test/view/browsers.config.ts`.
 // Firefox is the browser that blocks a static `style` in a <template>'s HTML under a strict
@@ -13,6 +14,7 @@ export default defineConfig({
   test: {
     include: [
       'packages/core/test/view/{render-style,style-hydration,style-csp,trusted-types,render-raw,render-svg}.test.ts',
+      'packages/ssr/test/style-attribute-hashes.test.ts',
     ],
     browser: {
       enabled: true,

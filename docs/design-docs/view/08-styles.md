@@ -112,20 +112,28 @@ best first:
    the stylesheet) and give the stylesheet a sensible fallback for the first paint.
 3. A value only the client knows can be a `.style=${…}` property binding: client-only on every
    page, CSP or not, since the server drops property bindings on plain elements.
-4. Allow known attribute values by hash: `style-src-attr 'unsafe-hashes' 'sha256-…'`, one hash
-   per distinct value as the server writes it. Practical for a handful of fixed values; Gyral
-   doesn't compute these hashes yet.
+4. Let Gyral allow the page's values by hash: `renderPage({ csp: { styleAttributes: 'hash' } })`
+   (ADR 0020). The server renderer collects every `style` value it writes (static, bound,
+   multi-part and element-hook values, decoded as the DOM sees them; not `raw()` markup), and
+   the header gets `style-src-attr 'unsafe-hashes' 'sha256-…' …`, one hash per distinct value.
+   The page is rendered to a string before the response is built, so its body isn't chunked,
+   and each value adds about 54 bytes of header: development warns above 32 distinct values on
+   a page, and `maxStyleHashes` (default 128) caps the list (values past it apply at
+   hydration). A `style-src-attr` the app gives is kept; when it allows `'unsafe-inline'`, no
+   hashes are added, since a hash would make the browser ignore it. Serve-time pages only:
+   `prerender` doesn't write per-page headers. Suits a handful of fixed or slowly varying
+   values; a custom property with many values (`--pct: 37%`, `--pct: 38%`, …) is one hash each.
 5. `style-src-attr 'unsafe-inline'` allows every `style` attribute, injected ones too, while
    `style-src` keeps `<style>` elements to their hashes.
 
-**0.4** (gyral-dyn.10): opt-in hashing of server-rendered `style` attributes: the server
-renderer would collect each value it writes and `renderPage({ csp })` would add
-`'unsafe-hashes'` and their hashes to `style-src-attr`.
-
 **Tests:** `core/test/view/style-csp.test.ts` loads Gyral into an iframe whose policy is
 `style-src 'self'` and checks client renders, updates and hydration there, with
-`setAttribute('style', …)` blocked as the control (Chromium in `pnpm check`; Firefox and WebKit
-with `pnpm vitest run --config packages/core/test/view/browsers.config.ts`).
+`setAttribute('style', …)` blocked as the control. `ssr/test/style-attribute-hashes.test.ts`
+loads a `styleAttributes: 'hash'` page under the header it produced and checks that light-DOM
+and shadow-root style attributes paint before hydration with no violations, that hydration
+then writes nothing, and that a value past `maxStyleHashes` stays blocked until hydration
+(Chromium in `pnpm check`; Firefox and WebKit with
+`pnpm vitest run --config packages/core/test/view/browsers.config.ts`).
 
 ## Future
 

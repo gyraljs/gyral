@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html, prop, settled } from '@gyral/core';
+import { command, define, defineDriver, html, prop, retry, settled } from '@gyral/core';
 import {
   commandsFor,
   fakeDriver,
@@ -261,16 +261,18 @@ describe('virtualTime', () => {
     expect(time.now()).toBe(Date.now());
   });
 
-  it('drives retry delays of the runtime', async () => {
+  it('drives the delays of a retry() wrapper', async () => {
     time = virtualTime();
     let attempts = 0;
-    const flaky = fakeDriver(users, {
-      retry: { times: 2, delayMs: 1_000, backoff: 'fixed' },
-      impl: () => {
-        attempts += 1;
-        return attempts < 3 ? Promise.reject(new Error('flaky')) : { name: 'Ok' };
-      },
-    });
+    const flaky = retry(
+      fakeDriver(users, {
+        impl: () => {
+          attempts += 1;
+          return attempts < 3 ? Promise.reject(new Error('flaky')) : { name: 'Ok' };
+        },
+      }),
+      { times: 2, delayMs: 1_000, backoff: 'fixed' },
+    );
     const el = new Profile();
     Object.assign(el, { userId: 'u1' });
     el.drivers = { users: flaky };

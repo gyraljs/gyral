@@ -9,6 +9,7 @@ import {
   defineDriver,
   html,
   provideDrivers,
+  retry,
   settled,
   subscription,
   type AnyDriver,
@@ -36,8 +37,8 @@ const clipboard = defineDriver<string, undefined, string>({
   name: 'clipboard',
   run: () => Promise.resolve(undefined),
   toError: (cause) => (cause instanceof Error ? cause.message : String(cause)),
-  retry: { times: 2, delayMs: 10, backoff: 'exponential' },
 });
+const retried = retry(clipboard, { times: 2, delayMs: 10, backoff: 'exponential' });
 const ticks = defineDriver<number, number>({
   name: 'ticks',
   run: (from: number, ctx: DriverContext<number>) => {
@@ -103,6 +104,7 @@ describe('driver substitution needs no cast', () => {
     expectTypeOf(savedQuery).toExtend<AnyDriver>();
     expectTypeOf(urlSync).toExtend<AnyDriver>();
     expectTypeOf(clipboard).toExtend<AnyDriver>();
+    expectTypeOf(retried).toEqualTypeOf<Driver<string, undefined, string>>();
     expectTypeOf(ticks).toExtend<AnyDriver>();
     expectTypeOf(session).toExtend<AnyDriver>();
     expectTypeOf(fakeDriver(clipboard)).toExtend<AnyDriver>();

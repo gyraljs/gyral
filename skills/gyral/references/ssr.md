@@ -197,11 +197,31 @@ for the components registered when it is called: import them first (in developme
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
 Hand-written `<style>` in `extraHead` isn't covered: move that CSS into `styles` or a stylesheet.
-Inline `style="…"` attributes in server HTML aren't either: a strict `style-src` blocks them
-on first paint, and hydration then applies them through the CSSOM (client renders and updates
-are never blocked). Put declarations in stylesheets selected by classes or data attributes, and
-use inline styles only for custom properties the stylesheet has a fallback for; or allow known
-values with `'style-src-attr': "'unsafe-hashes' 'sha256-…'"`.
+Inline `style="…"` attributes in server HTML aren't covered by default: a strict `style-src`
+blocks them on first paint, and hydration then applies them through the CSSOM (client renders
+and updates are never blocked). Put declarations in stylesheets selected by classes or data
+attributes, and use inline styles only for custom properties the stylesheet has a fallback
+for. When a page needs its few inline values exact on first paint (or never hydrates), let
+Gyral hash them:
+
+```ts
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+
+export function progress(done: number): Response {
+  return renderPage({
+    title: 'Upload',
+    body: html`<div class="bar" style="--done: ${done}%"></div>`,
+    csp: { directives: { 'default-src': "'self'" }, styleAttributes: 'hash' },
+  });
+}
+```
+
+The header then gets `style-src-attr 'unsafe-hashes' 'sha256-…'` for every distinct `style`
+value the page wrote (static, bound and element-hook values; not `raw()` markup). The page is
+rendered to a string first, so the body isn't chunked; each value adds about 54 bytes of
+header (development warns above 32; `maxStyleHashes`, default 128, caps the list). Serve-time
+pages only: `prerender` writes no per-page header.
 
 `@gyral/core/server` also exports `styleHashes()` (every registered shadow component's hash)
 and `componentStyles()` (tag → `<style>` text).

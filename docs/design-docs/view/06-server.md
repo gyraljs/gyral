@@ -235,14 +235,18 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
   when it is called. A string `csp` is set as is; in development `renderPage` warns, once per
   component, when a header that allows styles by hash (and not `'unsafe-inline'`) lacks the
   hash of a registered component.
-- `style` attributes and hand-written `<style>` elements in `extraHead` are not covered.
+- Hand-written `<style>` elements in `extraHead` are not covered; `style` attributes are covered
+  only with `styleAttributes: 'hash'` (below).
   Verified (Phase 4) with a real header in Chromium 153, Firefox 155 and WebKit 26.6: a hashed
   `<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
   constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is
   a test (`core/test/view/server-csp.test.ts`).
 - A strict `style-src` blocks the server's `style` attributes; hydration then writes them
-  through the CSSOM (0.3.1, 08 "Style attributes under a strict CSP"). Opt-in hashing of them
-  is planned for 0.4 (gyral-dyn.10).
+  through the CSSOM (0.3.1, 08 "Style attributes under a strict CSP"). With
+  `csp: { styleAttributes: 'hash' }` (ADR 0020), `renderPage` renders the page to a string
+  first, collecting every `style` value the writer emits (`render`'s `styleAttributes`
+  option), and adds `style-src-attr 'unsafe-hashes'` plus their hashes, so they apply on first
+  paint. The writer's output is the same with or without collection.
 
 ## Conformance (Phase 4)
 

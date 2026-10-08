@@ -5,7 +5,7 @@
 import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from '../attributes.js';
 import type { ServerComponent } from '../registry.js';
 import { escapeSeed, styleSafe } from './escape.js';
-import { ROOT, Writer, type Deferred, type Item } from './writer.js';
+import { ROOT, Writer, type Deferred, type Item, type StyleValues } from './writer.js';
 
 const styleTexts = new WeakMap<ServerComponent, string>();
 
@@ -23,9 +23,13 @@ export function styleText(component: ServerComponent): string {
 }
 
 /** Writes a deferred component; nested components are deferred again. */
-export function expand({ component, input }: Deferred, dev: boolean): Item[] {
+export function expand(
+  { component, input }: Deferred,
+  dev: boolean,
+  styles: StyleValues | undefined,
+): Item[] {
   const { view, seed } = component.render(input);
-  const w = new Writer(dev, input.scope);
+  const w = new Writer(dev, input.scope, styles);
   let tail = component.light ? ` ${LIGHT_ATTRIBUTE}` : '';
   // Single-quoted, so the JSON's double quotes stay raw (ADR 0012).
   tail += ` ${SEED_ATTRIBUTE}='${escapeSeed(JSON.stringify(seed))}'`;

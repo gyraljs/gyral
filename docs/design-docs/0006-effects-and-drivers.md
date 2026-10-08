@@ -336,3 +336,13 @@ From gyral-shop's admin tests:
   Vitest fails the run, or passed to `onResponderError(error, request)` when given. All such
   errors are also kept in `http.responderErrors`. Simulate a real network failure with
   `failNext()` instead.
+
+## Addendum: retries are a driver wrapper (ADR 0022, 0.3.1)
+
+`Driver.retry` and `SubscriptionOptions.retry` are gone, and the interpreter runs a driver once.
+`retry(driver, policy)` returns the same driver (same name, so substitution by name still
+works) with a rejected `run` retried after the policy's delay; an abort ends it at once and is
+never retried. `RetryPolicy` keeps its shape. Apps that never call `retry` don't bundle it.
+The `retry` field in the `Driver` interface and the subscription options above describe 0.3.0.
+On the http driver, a CSRF token from a `<meta>` is configured only through the driver's
+`headers` (`csrfFromMeta`); `HttpRequest.csrf` is gone.

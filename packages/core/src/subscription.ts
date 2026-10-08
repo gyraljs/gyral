@@ -3,7 +3,7 @@
 // return how to stop" into a driver: values become messages through the command's
 // `onSuccess`, and the source is released when the command is switched away or its component
 // disconnects. A standalone module: apps that don't import it don't bundle it.
-import type { Concurrency, Driver, RetryPolicy } from './command.js';
+import type { Concurrency, Driver } from './command.js';
 import { message } from './view/index.js';
 
 /** How to stop listening: a function, or an object with `unsubscribe()` (RxJS, XState). */
@@ -16,7 +16,7 @@ export interface SubscriptionContext<I> {
   readonly signal: AbortSignal;
   /**
    * Ends the subscription with an error: the source is released and the command's
-   * `onFailure` gets it (after the driver's `retry`, which subscribes again).
+   * `onFailure` gets it. Wrap the driver in `retry()` to subscribe again instead.
    */
   readonly fail: (error: unknown) => void;
 }
@@ -24,7 +24,6 @@ export interface SubscriptionContext<I> {
 /** Driver options a subscription may set. `concurrency` defaults to `'switch'`. */
 export interface SubscriptionOptions<E> {
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
   readonly toError?: (cause: unknown) => E;
 }
 

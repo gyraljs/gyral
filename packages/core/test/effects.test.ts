@@ -4,6 +4,7 @@ import {
   define,
   defineDriver,
   html,
+  retry,
   settled,
   type Concurrency,
   type Driver,
@@ -181,22 +182,69 @@ describe('commands and drivers', () => {
   it.each<[RetryPolicy, string]>([
     [{ times: 2, delayMs: 1 }, 'done:x'],
     [{ times: 1, delayMs: 1, backoff: 'exponential' }, 'failed:attempt 2'],
-  ])('retries per policy %o', async (retry, expected) => {
+  ])('retries per policy %o (retry wrapper)', async (policy, expected) => {
     let attempts = 0;
-    const el = await mount({
-      name: 'work',
-      retry,
-      toError: (cause) => (cause instanceof Error ? cause.message : 'unknown'),
-      run: (q) => {
-        if (q === 'init') return q;
-        attempts += 1;
-        return attempts < 3 ? Promise.reject(new Error(`attempt ${String(attempts)}`)) : q;
-      },
-    });
+    const el = await mount(
+      retry(
+        {
+          name: 'work',
+          toError: (cause) => (cause instanceof Error ? cause.message : 'unknown'),
+          run: (q: string) => {
+            if (q === 'init') return q;
+            attempts += 1;
+            return attempts < 3 ? Promise.reject(new Error(`attempt ${String(attempts)}`)) : q;
+          },
+        },
+        policy,
+      ),
+    );
     el.send(go('x'));
     await vi.waitFor(() => {
       expect(el.state.log).toEqual(['done:init', expected]);
     });
+  });
+
+  it('runs a driver once: a rejection goes straight to onFailure', async () => {
+    let attempts = 0;
+    const el = await mount({
+      name: 'work',
+      toError: (cause) => (cause instanceof Error ? cause.message : 'unknown'),
+      run: (q) => {
+        if (q === 'init') return q;
+        attempts += 1;
+        return Promise.reject(new Error(`attempt ${String(attempts)}`));
+      },
+    });
+    el.send(go('x'));
+    await vi.waitFor(() => {
+      expect(el.state.log).toEqual(['done:init', 'failed:attempt 1']);
+    });
+    expect(attempts).toBe(1);
+  });
+
+  it('stops retrying when the command is aborted during a delay', async () => {
+    let attempts = 0;
+    const el = await mount(
+      retry(
+        {
+          name: 'work',
+          run: (q: string) => {
+            if (q === 'init') return q;
+            attempts += 1;
+            return Promise.reject(new Error('down'));
+          },
+        },
+        { times: 5, delayMs: 50 },
+      ),
+    );
+    el.send(go('x'));
+    await vi.waitFor(() => {
+      expect(attempts).toBe(1);
+    });
+    el.remove();
+    await new Promise((r) => setTimeout(r, 200));
+    expect(attempts).toBe(1);
+    expect(el.state.log).toEqual(['done:init']);
   });
 
   it('interrupts in-flight work on disconnect and never dispatches it', async () => {

@@ -18,9 +18,10 @@ import {
   styleHashes as hashes,
   styleHashSync,
   type ServerRenderOptions,
+  type StyleValues,
 } from './view/server/index.js';
 
-export type { ServerRenderOptions };
+export type { ServerRenderOptions, StyleValues };
 export { styleHash, styleHashSync };
 
 /**

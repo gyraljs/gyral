@@ -29,7 +29,7 @@ export function analyze(strings: readonly string[], loc?: string, svg = false): 
   const src = new Source(normalized, loc);
   const tree = new TreeBuilder(src, svg);
   tokenize(src, tree);
-  const { html, parts, segments, shape } = emit(tree.root, tree.server);
+  const { html, parts, segments, shape, staticStyles } = emit(tree.root, tree.server);
   const template: NormalizedTemplate = {
     id: templateId(normalized, svg),
     html,
@@ -37,6 +37,7 @@ export function analyze(strings: readonly string[], loc?: string, svg = false): 
     ...(tree.server ? { server: true as const } : {}),
     ...(svg ? { svg: true as const } : {}),
     segments,
+    ...(staticStyles.length === 0 ? {} : { staticStyles }),
     ...(loc === undefined ? {} : { loc }),
   };
   return { template, strings: normalized, shape };
