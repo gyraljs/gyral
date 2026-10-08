@@ -31,6 +31,8 @@ export const handle = (req: Request): Response =>
 import './app.js';
 ```
 
+The head fields (`title`, `description`, `canonical`, `robots`, `meta`, `links`, `jsonLd`, `lang`, `dir`) are a `Head` from `@gyral/core`: build it with one pure function and pass the same value to the router's `setHead()` after client navigations, so both write the same head. Anything else for the head goes in `extraHead` (core's `html`).
+
 `renderPage` writes the status and headers first, then the body in chunks pulled from a synchronous render, one component boundary per pull (a slow reader slows the render, a cancelled body stops it). Load data before rendering: there is no async or suspense streaming, so the head can't go out while data loads.
 
 `renderPage({ …, csp: { directives } })` sets a `Content-Security-Policy` whose `style-src` allows every component's `<style>` and the page's `styles` by hash, built when the page renders, so components imported late are covered. `contentSecurityPolicy({ styles, directives })` returns the same header ahead of time, for the components registered when it is called (development warns if a registered component's hash is missing from a header passed to `renderPage`). `formAction` handles no-JS form posts with the same schema as the browser.

@@ -51,7 +51,7 @@ function page(options: AppOptions, { attendees, joined, rejected }: View, status
     {
       title: 'RSVP: Web Platform Meetup — Gyral no-js-first',
       description: 'An RSVP form that works without JavaScript and gets better with it.',
-      head,
+      extraHead: head,
       body: html`<main>
         <h1>Web Platform Meetup</h1>
         <p>Thursday at 18:30. Say you're coming:</p>

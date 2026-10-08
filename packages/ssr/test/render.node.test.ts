@@ -125,7 +125,7 @@ describe('server rendering (ADR 0012)', () => {
       page({
         title: 'A <b> title',
         description: 'About us',
-        head: html`<link rel="icon" href="/favicon.ico" />`,
+        extraHead: html`<link rel="icon" href="/favicon.ico" />`,
         body: html`<ssr-card label="p" .items=${[]}></ssr-card>`,
         scripts: ['/src/entry-client.ts'],
       }),
@@ -133,7 +133,9 @@ describe('server rendering (ADR 0012)', () => {
     expect(out.startsWith('<!doctype html>')).toBe(true);
     expect(out).toContain('<html lang="en" dir="ltr">');
     expect(out).toContain('<title>A &lt;b&gt; title</title>');
-    expect(out).toContain('<meta name="description" content="About us">');
+    expect(out).toContain(
+      '<meta name="description" content="About us" data-gyral-head="name:description">',
+    );
     expect(out).toContain('<script type="module" src="/src/entry-client.ts"></script>');
     expect(out).toContain('<link rel="icon" href="/favicon.ico">');
     expect(out).toMatch(/<ssr-card\s+label="p"/);

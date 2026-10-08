@@ -2,6 +2,8 @@
 // `server` template written with core's `html`, never hydrated. The page-level store seed
 // (ADR 0013) and global styles go into its head as `raw()` markup.
 import {
+  HEAD_ATTRIBUTE,
+  headEntries,
   html,
   nothing,
   raw,
@@ -11,6 +13,8 @@ import {
   warnJsonHazard,
   type AnyStoreInstance,
   type ChildValue,
+  type Head,
+  type HeadEntry,
 } from '@gyral/core';
 import type { CspOptions } from './csp.js';
 
@@ -27,15 +31,19 @@ export interface RenderOptions {
   readonly dev?: boolean;
 }
 
-export interface PageOptions extends RenderOptions {
-  readonly title: string;
+/**
+ * The page shell's options. The `Head` fields (title, description, canonical, robots, meta,
+ * links, JSON-LD, lang, dir) are the managed head (ADR 0019): the same object a client router
+ * applies with `setHead()` after a navigation, so build both from one function.
+ */
+export interface PageOptions extends RenderOptions, Head {
   /** The hydratable app: an `html` template, usually one custom element. */
   readonly body: ChildValue;
-  readonly lang?: string;
-  readonly dir?: 'ltr' | 'rtl' | 'auto';
-  readonly description?: string;
-  /** Extra server-only head content, written with `html` (links, meta). */
-  readonly head?: ChildValue;
+  /**
+   * Server-only head content the head model doesn't cover, written with `html` (icons that
+   * never change, preconnect hints, …). Never touched by `setHead()`.
+   */
+  readonly extraHead?: ChildValue;
   /**
    * Global CSS for the document (your app's own stylesheet text, e.g. a `?raw` import), written
    * as `<style>` elements in the head. A `</style` inside the text is escaped, so it can't
@@ -91,9 +99,26 @@ export function documentStyles(styles: string | readonly string[] | undefined): 
   return raw(sheets.map((css) => `<style>${styleSafe(css)}</style>`).join(''));
 }
 
+const attr = (value: string): string =>
+  value.replace(/[&"<>]/g, (c) => `&#${String(c.charCodeAt(0))};`);
+
+/** The managed head elements (ADR 0019), each marked with its key. JSON-LD is script-safe. */
+export function headMarkup(entries: readonly HeadEntry[]): ChildValue {
+  if (entries.length === 0) return nothing;
+  return raw(
+    entries
+      .map(({ key, tag, attributes, text }) => {
+        const attrs = attributes.map(([name, value]) => ` ${name}="${attr(value)}"`).join('');
+        const open = `<${tag}${attrs} ${HEAD_ATTRIBUTE}="${attr(key)}">`;
+        return tag === 'script' ? `${open}${text ?? ''}</script>` : open;
+      })
+      .join(''),
+  );
+}
+
 /** The server-only document shell around the hydratable body. Never hydrated itself. */
 export function page(options: PageOptions): ChildValue {
-  const { title, body, description, head, scripts = [], stores = [], styles } = options;
+  const { title, body, extraHead, scripts = [], stores = [], styles } = options;
   const preload = options.modulepreload ?? [];
   const sheets = options.stylesheets ?? [];
   return html`<!doctype html>
@@ -102,9 +127,9 @@ export function page(options: PageOptions): ChildValue {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${title}</title>
-        ${description === undefined ? nothing : html`<meta name="description" content=${description} />`}
+        ${headMarkup(headEntries(options))}
         ${sheets.map((href) => html`<link rel="stylesheet" href=${href} />`)}
-        ${documentStyles(styles)}${head ?? nothing}${storeSeed(stores)}
+        ${documentStyles(styles)}${extraHead ?? nothing}${storeSeed(stores)}
         ${[
           ...preload.map((href) => html`<link rel="modulepreload" href=${href} />`),
           ...scripts.map((src) => html`<script type="module" src=${src}></script>`),

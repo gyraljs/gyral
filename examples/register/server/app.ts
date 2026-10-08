@@ -49,7 +49,7 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
     {
       title: 'Create an account — Gyral register',
       description: 'A form that validates the same way with and without JavaScript.',
-      head: baseStyles,
+      extraHead: baseStyles,
       body: html`<main>
         <h1>Create an account</h1>
         <gy-register

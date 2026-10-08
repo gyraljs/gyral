@@ -323,7 +323,7 @@ export function home(): Response {
   return renderPage({
     title: 'Home',
     styles,
-    head: html`<link rel="icon" href="/favicon.svg" />`, // was serverHtml`…`
+    extraHead: html`<link rel="icon" href="/favicon.svg" />`, // was head: serverHtml`…`; `head` in 0.3.0
     body: html`<my-home></my-home>`,
     scripts: ['/src/entry-client.ts'],
     csp: { directives: { 'default-src': "'self'" } }, // built when the page renders
