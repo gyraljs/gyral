@@ -66,6 +66,10 @@ export function checkAttr(
     case ATTR:
     case VALUE:
     case MULTI:
+      // A style the CSP blocked can't be compared: Firefox empties the attribute.
+      if (name === 'style' && el.hasAttribute(name) && (el as HTMLElement).style.length === 0) {
+        return;
+      }
       if (part.kind !== MULTI) want = absent(value) ? null : String(value);
       got = el.getAttribute(name);
       break;
