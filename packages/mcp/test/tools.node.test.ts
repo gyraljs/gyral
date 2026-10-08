@@ -13,9 +13,10 @@ import type { Corpus } from '../src/types.js';
 const pkgDir = fileURLToPath(new URL('..', import.meta.url));
 let corpus: Corpus;
 
+// Building the corpus is CPU-bound (several seconds when the suite runs in parallel).
 beforeAll(() => {
   corpus = buildCorpus(parseLlmsFull);
-});
+}, 60_000);
 
 describe('docs', () => {
   it('parses every page of llms-full.txt with sections and site anchors', () => {
