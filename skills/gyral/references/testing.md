@@ -236,6 +236,8 @@ it('hydrates the server markup in place and stays interactive', async () => {
   `Response` (`renderPage(…)` from `@gyral/ssr`, an app's `fetch`: whole pages with store seeds),
   or a template result. `props` must be JSON. `dev: false` renders production markup.
 - Server modules stay loaded between calls (like a dev server): pass per-test data as props.
+  The first call loads the module graph and can take seconds under a parallel run: give those
+  tests a longer timeout (`{ timeout: 60_000 }`).
 - Types come with `@gyral/testing/vitest`; when the tsconfig doesn't include
   `vitest.config.ts`, add `import type {} from '@gyral/testing/vitest';` to the test.
 - Don't `fetch('/')` from a browser test for server markup: that reaches Vitest's own server,

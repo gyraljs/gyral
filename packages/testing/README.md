@@ -100,7 +100,9 @@ it('hydrates the server markup in place and stays interactive', async () => {
   result. `props` travel from the browser, so they must be JSON. `dev: false` renders
   production markup (default: development, as Vitest resolves core).
 - The server keeps modules loaded between calls, like a dev server: module-level state carries
-  over, so pass what a render needs through `props`.
+  over, so pass what a render needs through `props`. The first call loads the module graph
+  (core's server renderer included), which can take seconds in a busy parallel run: give those
+  tests a longer timeout (`describe('…', { timeout: 60_000 }, …)`).
 - Types: the command's types come with `@gyral/testing/vitest`. If your tsconfig doesn't
   include `vitest.config.ts`, add `import type {} from '@gyral/testing/vitest';` to the test.
 

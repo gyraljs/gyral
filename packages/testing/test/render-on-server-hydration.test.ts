@@ -17,7 +17,9 @@ const counters = (root: ParentNode) => [...root.querySelectorAll('test-server-co
 const inside = (host: Element | undefined, selector: string) =>
   host?.shadowRoot?.querySelector(selector) ?? undefined;
 
-describe('renderOnServer', () => {
+// The first call loads the module graph on the server (core's server renderer included): about
+// 10 s in a full parallel run, against Vitest's 15 s browser default.
+describe('renderOnServer', { timeout: 60_000 }, () => {
   it('renders a component class with props, which hydrates in place and stays interactive', async () => {
     const html = await commands.renderOnServer({
       module: './server-app/counter.ts',
