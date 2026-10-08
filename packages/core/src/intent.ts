@@ -238,13 +238,19 @@ export function handleIntent<M>(
   for (let input: IntentInput | undefined; (input = readIntent(event, root, input?.target));) {
     const { name } = input;
     const parser = parsers[name];
-    if (parser === undefined) return console.warn(message(11, tag, name));
+    if (parser === undefined) {
+      console.warn(message(11, tag, name));
+      return;
+    }
     const result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
     if (result instanceof Promise) {
       return void result.then(deliver, (error: unknown) => {
         console.error(message(12, tag, name), error);
       });
     }
-    if (result !== undefined) return deliver(result);
+    if (result !== undefined) {
+      deliver(result);
+      return;
+    }
   }
 }

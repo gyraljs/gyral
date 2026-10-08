@@ -8,13 +8,18 @@ interface Range {
   readonly min: number;
   readonly max: number;
 }
+interface Sort {
+  readonly key: string;
+  readonly dir: 1 | -1;
+}
+const isSort = (u: unknown): u is Sort => typeof u === 'object' && u !== null && 'key' in u;
 const isRange = (u: unknown): u is Range =>
   typeof u === 'object' && u !== null && 'min' in u && 'max' in u;
 
 const props = {
   range: prop.json(isRange),
   columns: prop.value((u: unknown): u is readonly string[] => Array.isArray(u)),
-  sort: prop.value((u: unknown): u is { readonly key: string; readonly dir: 1 | -1 } => true, {
+  sort: prop.value(isSort, {
     equals: (a, b) => a?.key === b?.key && a?.dir === b?.dir,
   }),
 };

@@ -68,7 +68,7 @@ type ToolbarElement = HTMLElement & { readonly state: State };
 let el: ToolbarElement;
 
 async function mount(): Promise<ToolbarElement> {
-  el = new Toolbar() as ToolbarElement;
+  el = new Toolbar();
   document.body.append(el);
   await settled();
   return el;

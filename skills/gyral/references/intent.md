@@ -214,9 +214,11 @@ export const Toolbar = define<{ readonly at: number }, Msg>('my-toolbar', {
   intent: {
     // The toolbar owns the arrow keys...
     Move: ({ key }) =>
-      key === 'ArrowLeft' ? { _tag: 'Move', by: -1 }
-      : key === 'ArrowRight' ? { _tag: 'Move', by: 1 }
-      : undefined,
+      key === 'ArrowLeft'
+        ? { _tag: 'Move', by: -1 }
+        : key === 'ArrowRight'
+          ? { _tag: 'Move', by: 1 }
+          : undefined,
     // ...except where the field keeps a key: Enter commits, every other key declines (and
     // the arrows reach Move).
     Rename: ({ key, value }) =>
