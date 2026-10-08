@@ -23,8 +23,13 @@ export function syncStates(el: HTMLElement, states: Readonly<Record<string, bool
     sets.set(el, set);
   }
   if (set === false) return;
-  for (const [name, on] of Object.entries(states)) {
-    if (on) set.add(name);
-    else set.delete(name);
+  try {
+    for (const [name, on] of Object.entries(states)) {
+      if (on) set.add(name);
+      else set.delete(name);
+    }
+  } catch {
+    // Chromium 90–124 accept only `--`-prefixed names: no `:state()` support, so skip states.
+    sets.set(el, false);
   }
 }

@@ -56,6 +56,27 @@ function requestUrl(req: IncomingMessage, origin: string | undefined): URL {
   return new URL(`${new URL(base).origin}${path}`);
 }
 
+/**
+ * The request body as a web stream that starts reading `req` only when the handler reads it.
+ * A body the handler never touches stays unconsumed, so Node discards it after the response
+ * and the keep-alive socket can carry the next request.
+ */
+function lazyBody(req: IncomingMessage): ReadableStream<Uint8Array> {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  return new ReadableStream<Uint8Array>(
+    {
+      async pull(controller) {
+        reader ??= (Readable.toWeb(req) as ReadableStream<Uint8Array>).getReader();
+        const { done, value } = await reader.read();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      },
+      cancel: (reason) => reader?.cancel(reason),
+    },
+    { highWaterMark: 0 },
+  );
+}
+
 function toRequest(req: IncomingMessage, url: URL, signal: AbortSignal): Request {
   const headers = new Headers();
   const raw = req.rawHeaders;
@@ -64,14 +85,12 @@ function toRequest(req: IncomingMessage, url: URL, signal: AbortSignal): Request
     if (!name.startsWith(':')) headers.append(name, raw[i + 1] ?? '');
   }
   const method = req.method ?? 'GET';
-  const body = method === 'GET' || method === 'HEAD' ? undefined : Readable.toWeb(req);
+  const body = method === 'GET' || method === 'HEAD' ? undefined : lazyBody(req);
   return new Request(url, {
     method,
     headers,
     signal,
-    ...(body === undefined
-      ? {}
-      : { body: body as ReadableStream<Uint8Array>, duplex: 'half' as const }),
+    ...(body === undefined ? {} : { body, duplex: 'half' as const }),
   });
 }
 
@@ -111,11 +130,17 @@ async function send(
 ): Promise<void> {
   const reader = body.getReader();
   const cancel = (): void => void reader.cancel().catch(() => undefined);
+  const gone = (): boolean => signal.aborted;
+  // Gone before the first byte: an abort listener added now would never fire.
+  if (gone()) {
+    cancel();
+    return;
+  }
   signal.addEventListener('abort', cancel);
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (signal.aborted) return;
+      if (gone()) return;
       if (done) break;
       if (!res.write(value)) await drained(res, signal);
     }
@@ -147,11 +172,16 @@ export function toNodeListener(
   fetch: FetchHandler,
   options: NodeListenerOptions = {},
 ): NodeListener {
-  const onError =
-    options.onError ??
-    ((error: unknown) => {
-      console.error(error);
-    });
+  const report = options.onError;
+  // A throwing reporter must not become an unhandled rejection (which ends the process).
+  const onError = (error: unknown, request: Request): void => {
+    try {
+      if (report === undefined) console.error(error);
+      else report(error, request);
+    } catch (reportError) {
+      console.error(reportError);
+    }
+  };
   return (req, res) => {
     const controller = new AbortController();
     res.on('close', () => {
@@ -170,6 +200,9 @@ export function toNodeListener(
           incoming: req,
           remoteAddress: req.socket.remoteAddress,
         });
+        // A body the handler started reading but didn't finish can't be skipped without
+        // reading it: close the connection after this response instead of stalling the next.
+        if (sent.bodyUsed && !req.complete) res.shouldKeepAlive = false;
         writeHead(res, response);
         if (req.method === 'HEAD' || response.body === null) {
           await response.body?.cancel();

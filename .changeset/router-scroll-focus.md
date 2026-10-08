@@ -3,7 +3,7 @@
 ---
 
 Scroll and focus after a navigation, the same on both paths. Once the new page has rendered
-(`settled()`), the browser router scrolls to the `#fragment` target or the top (push, replace),
+(`settled()`), the browser router scrolls to the `#fragment` target or the top (push),
 restores the scroll position on back/forward, and resets focus to the first `[autofocus]`
 element or the page start, unless the app moved focus during the navigation (the recommended
 `focus('main h1')` from the `Routed` reducer). The Navigation API path now intercepts with
@@ -12,5 +12,10 @@ of against the old page (a fragment only the new page renders was missed); the H
 did none of it and now does the same steps. Opt out with `navigate(url, { scroll: false,
 focusReset: false })` or `makeRouter({ scroll: false, focusReset: false })`; new type
 `NavigateOptions`. The History API path now loads with `import()` only in browsers without the
-Navigation API (ADR 0003 tier 3), so a navigation there resolves a moment later on first use.
-See ADR 0009 "Scroll and focus".
+Navigation API (ADR 0003 tier 3), so a navigation there resolves a moment later on first use; if
+that chunk can't load, navigations become full page loads. A `replace` leaves scroll and focus
+alone unless `navigate(url, { replace: true, scroll: true, focusReset: true })`, and back/forward
+to an entry with the same path and query is left to the browser on both paths. See ADR 0009
+"Scroll and focus".
+
+Behavior change: after a push, the browser router now scrolls to the fragment or the top and resets focus (opt out with `scroll: false` / `focusReset: false`, per call or in `makeRouter`); on the Navigation API path it intercepts same-document back/forward to another page; without the Navigation API the first navigation resolves a moment later. A replace leaves scroll and focus as they were.

@@ -32,8 +32,9 @@ export const MESSAGES = {
     'probably feeding each other props or messages; break the cycle with a condition in update ' +
     '(docs/design-docs/view/04-scheduler.md "Loop guard").',
   34:
-    'settled(): the page did not settle after {rounds} flushes or busy turns. Components (or ' +
-    'drivers) are probably feeding each other messages in a cycle.',
+    'settled(): the page did not settle after {rounds} flushes or busy turns. A stream is ' +
+    'emitting without pause, or components (or drivers) are feeding each other messages in a ' +
+    'cycle.',
   // Commands
   40: 'gyral: command mapper threw',
   41: 'gyral: unhandled failure from driver "{driver}"',
@@ -65,4 +66,8 @@ export const MESSAGES = {
     'gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition ' +
     'every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).',
   71: 'gyral: template rule 11: a page shell rendered in the browser.',
+  72:
+    'gyral: this page\'s Trusted Types policy list does not allow the policy "gyral", so ' +
+    'templates are parsed from plain strings, which works only while Trusted Types are not ' +
+    'enforced. Add `trusted-types gyral` to the Content-Security-Policy.',
 } as const;

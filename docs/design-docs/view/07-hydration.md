@@ -98,8 +98,8 @@ untouched):
   plugin runs before the template compiler) and over-approximates. Development (the
   `development` condition) always keeps the fallback. The mechanism is the build-time
   detection of 05 "Features register themselves". Before 0.3.1 shipped, the scan read every
-  module's raw text: in sabacc a function named `raw` in effect and the word "states" in
-  effect's and three's comments kept the fallback, Vite's preload helper and custom states
+  module's raw text: in one app a function named `raw` in a dependency and the word "states"
+  in dependencies' comments kept the fallback, Vite's preload helper and custom states
   (873 B gzip per page).
 
 - Apps without the option are unchanged (the loader moved behind a conditional import, about

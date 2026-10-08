@@ -23,7 +23,9 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 | Overlays       | `<dialog>`, `popover` (check status when used) | Anchor positioning                                                                                       |
 | Shared state   | Stores (ADR 0013)                              | Native TC39 signals when they ship                                                                       |
 | Page changes   | Plain re-render                                | View Transitions (`viewTransition`)                                                                      |
-| State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`)                                                                     |
+| State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`); skipped where only `--`-prefixed names work (Chromium 90–124)      |
+| HTML parsing   | Template HTML and `raw()` as strings           | Trusted Types policy `gyral` where `trustedTypes` exists; plain strings if the page's CSP refuses it     |
+| Focus          | Focus commands on the host's own content       | `shadow: { delegatesFocus: true }` (client and `shadowrootdelegatesfocus` on the server)                 |
 
 Check a feature's current status in `web-features` / MDN before relying on it, and record the
 answer here.
@@ -55,6 +57,7 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 | Primitive                                                             | Newly available | Widely available |
 | --------------------------------------------------------------------- | --------------- | ---------------- |
 | Declarative shadow DOM                                                | 2024-02-20      | 2026-08-20 (now) |
+| `shadowrootdelegatesfocus` (declarative shadow DOM)                   | 2024-03-22      | 2026-09-22 (now) |
 | Custom states (`:state()`)                                            | 2024-05-17      | 2026-11-17       |
 | `popover`                                                             | 2025-01-27      | 2027-07-27       |
 | `<details name>`                                                      | 2024-09-03      | 2027-03-03       |
@@ -62,6 +65,7 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 | View Transitions                                                      | 2025-10-14      | 2028-04-14       |
 | Invoker commands                                                      | 2025-12-12      | 2028-06-12       |
 | Navigation API                                                        | 2026-01-13      | 2028-07-13       |
+| Trusted Types (`trustedTypes.createPolicy`)                           | 2026-02-24      | 2028-08-24       |
 | CSS `@scope`                                                          | 2026-03-24      | 2028-09-24       |
 | `moveBefore`, `requestIdleCallback`, `scheduler.yield`, Sanitizer API | not Baseline    | —                |
 

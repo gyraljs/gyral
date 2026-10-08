@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { buildApp } from './fixture.js';
 
 const guards = `
-  export const isGame = (u: unknown): u is { id: string } => typeof u === 'object' && u !== null && 'MARK_GUARD' in u;
-  export const schemas = { game: (u: unknown): u is string => typeof u === 'string' && u !== 'MARK_MEMBER' };
+  export const isItem = (u: unknown): u is { id: string } => typeof u === 'object' && u !== null && 'MARK_GUARD' in u;
+  export const schemas = { item: (u: unknown): u is string => typeof u === 'string' && u !== 'MARK_MEMBER' };
   export const made = (mark: string) => (u: unknown): u is string => u !== mark;
 `;
 
@@ -15,7 +15,7 @@ const component = (props: string, extra = ''): Record<string, string> => ({
   'guards.ts': guards,
   'main.ts': `
     import { define, html, prop } from '@gyral/core';
-    import { isGame, schemas, made } from './guards.ts';
+    import { isItem, schemas, made } from './guards.ts';
     ${extra}
     export const C = define('x-c', {
       props: { ${props} },
@@ -33,7 +33,7 @@ const build = (files: Record<string, string>, production: boolean) =>
 describe('prop.value checks in production client builds', () => {
   it('drop a referenced guard, a member chain and an inline function', async () => {
     const files = component(
-      `game: prop.value(isGame), name: prop.value(schemas.game),
+      `item: prop.value(isItem), name: prop.value(schemas.item),
        inline: prop.value((u): u is number => typeof u === 'number' && u !== 424242)`,
     );
     const prod = await build(files, true);
@@ -48,8 +48,8 @@ describe('prop.value checks in production client builds', () => {
 
   it('keep calls, prop.json checks and a local prop that shadows the import', async () => {
     const files = component(
-      `made: prop.value(made('MARK_CALL')), json: prop.json(isGame)`,
-      `function local() { const prop = { value: (x: unknown) => x }; return prop.value(schemas.game); }
+      `made: prop.value(made('MARK_CALL')), json: prop.json(isItem)`,
+      `function local() { const prop = { value: (x: unknown) => x }; return prop.value(schemas.item); }
        export const used = local();`,
     );
     const prod = await build(files, true);

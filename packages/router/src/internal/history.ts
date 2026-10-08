@@ -4,7 +4,6 @@
 // Removal date 2028-07-13, when the Navigation API becomes widely available.
 import type { AfterNavigation } from '../source.js';
 import type { LocationStream } from '../stream.js';
-import { rendered } from './rendered.js';
 
 export interface HistoryPath {
   /** Pushes or replaces an entry for the same-origin `url`, then notifies. */
@@ -57,6 +56,10 @@ export function historyPath(
   win: Window,
   stream: LocationStream,
   defaults: () => AfterNavigation,
+  // Passed in, not imported: a static import would put rendered → settled → scheduler in both
+  // the eager graph and this lazy chunk, and the bundler splits them into extra chunks every
+  // page pays for. This module must have no runtime imports (checked by a router test).
+  rendered: () => Promise<void>,
 ): HistoryPath {
   const { history } = win;
   // The scroll position each entry was left at, by key. `here` is the latest position: scroll

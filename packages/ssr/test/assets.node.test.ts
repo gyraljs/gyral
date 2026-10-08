@@ -150,6 +150,15 @@ describe('assetHandler (gyral-dyn.1)', () => {
     expect(await (await bounded(request('/assets/a.js')))?.text()).toBe('changed');
     expect((await cached(request('/assets/late.js')))?.status).toBe(200);
   });
+
+  it('counts a file once when concurrent requests miss it together (gyral-dyn.30)', async () => {
+    const dir = assetDir();
+    const bounded = assetHandler({ dir, cache: { maxBytes: 10 } });
+    await Promise.all([bounded(request('/assets/a.js')), bounded(request('/assets/a.js'))]);
+    await bounded(request('/assets/a.css')); // 4 + 5 bytes: both fit
+    writeFileSync(join(dir, 'a.js'), 'changed');
+    expect(await (await bounded(request('/assets/a.js')))?.text()).toBe('a.js');
+  });
 });
 
 /** A renderer that answers every request it gets, saying so. */

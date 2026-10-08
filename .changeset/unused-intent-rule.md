@@ -7,3 +7,5 @@ parser that no template in the module names with `data-intent` is reported as a 
 dead code. It is static, so intents rendered only in some states count as used; components whose
 intent names may be used in another module (an imported view, imported template helpers, an
 exported `intents()` constant) are skipped.
+
+Behavior change: the rule is a warning in `recommended`, so a lint run with `--max-warnings 0` fails on unused parsers until they are removed or renamed.
