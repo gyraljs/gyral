@@ -334,6 +334,50 @@ export const cssVars = defineHook<[vars: Readonly<Record<`--${string}`, string>>
 });
 ```
 
+### Replaying a CSS animation
+
+A CSS animation runs once when its element appears, so a "flash on change" (a counter that
+pulses when it updates, a field that shakes on a rejected value) needs replaying. Count the
+replays in state and restart the element's animations with the Web Animations API when the
+count changes:
+
+```ts
+import { define, defineHook, html } from '@gyral/core';
+
+/** Restarts the element's CSS animations whenever `count` changes (not on the first render). */
+export const replay = defineHook<[count: number]>({
+  client: (el, [count], prev) => {
+    if (prev === undefined || prev[0] === count) return;
+    for (const animation of el.getAnimations()) {
+      animation.cancel();
+      animation.play();
+    }
+  },
+});
+
+interface State {
+  readonly unread: number;
+  readonly pulses: number;
+}
+type Msg = { readonly _tag: 'Arrived' };
+
+export const Inbox = define<State, Msg>('my-inbox', {
+  init: () => ({ unread: 0, pulses: 0 }),
+  intent: { Arrived: () => ({ _tag: 'Arrived' }) },
+  update: { Arrived: (s) => ({ unread: s.unread + 1, pulses: s.pulses + 1 }) },
+  view: (s, i) => html`
+    <output class="badge" ${replay(s.pulses)}>${s.unread}</output>
+    <button type="button" data-intent=${i.Arrived}>Simulate a message</button>
+  `,
+  // .badge { animation: pulse 300ms ease-out; } in the component's styles
+});
+```
+
+`getAnimations()` covers CSS animations and transitions on the element (pass
+`{ subtree: true }` for its descendants). Without a hook, a keyed one-item list replays by
+replacing the element: `each([s.pulses], String, Badge)` renders a new `<output>` per count, at
+the cost of a new node (and its focus, if it had any).
+
 ## Widgets with a lifecycle: their own element, or a disposable hook
 
 Anything with setup and teardown (a Three.js or WebGL stage, a chart or map library, an
