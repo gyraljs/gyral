@@ -160,6 +160,17 @@ When one parser that branches on `name` reads better (several `<select>`s editin
 the shared-intent pattern stays the simpler choice. Type tests and a browser test are in
 `packages/core/test/intent-names.test.ts`.
 
+## Addendum: declining parsers (gyral-dyn.25, 2026-10-08, 0.3.1; decided by the user)
+
+A parser's `undefined` used to mean "ignore": the nearest element with an intent for the event
+took it, and nothing else ran. Now a synchronous `undefined` **declines**: the lookup continues
+outward to the next intent for the same event, within the component (view/05-element.md
+"Declining"). This keeps parsers the place where "is this event mine?" is decided, and lets a
+container's shortcuts coexist with its fields' own key handling without `composedPath()`
+filtering. Async parsers can't decline. It is a behavior change for code that relied on an
+inner `undefined` hiding the event from an outer intent; such code returns a no-op message or
+checks `event.target` in the outer parser.
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the

@@ -51,8 +51,9 @@ export const Counter = define<State, Msg>('my-counter', {
    child component → its outputs); override with `data-intent-on="keydown"`.
 3. **Reducers are pure.** No `fetch`, timers, `Math.random`, `Date.now`, DOM or `localStorage`
    in `update`/`init`/`view`. Return `[nextState, [command, …]]` and let a driver do it.
-4. **Intent parsers validate.** Return a message, `undefined` (ignore the event) or let
-   `form()`/`field()` produce `IntentRejected`. Never trust `value` without checking it.
+4. **Intent parsers validate.** Return a message, `undefined` (decline: the next intent outward
+   gets the event) or let `form()`/`field()` produce `IntentRejected`. Never trust `value`
+   without checking it.
 5. **Props are read-only context** (`ctx.props`), declared with `prop.*` builders
    (Standard Schema; attributes are kebab-case and always validated). They enter state only
    through `init(props)` and the optional `PropsChanged` reducer.

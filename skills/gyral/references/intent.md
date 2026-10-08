@@ -145,7 +145,7 @@ was hit inside the element (the label's `<span>`, an icon).
 
 ## Parsers
 
-A parser returns a message, `undefined` (ignore the event), or an `IntentRejected` (via
+A parser returns a message, `undefined` (decline the event), or an `IntentRejected` (via
 `form()`/`field()`); it may be async. Validate here so reducers only see valid messages.
 
 ```ts
@@ -193,6 +193,52 @@ export const Filters = define<State, Msg>('my-filters', {
 For a second trigger on the same control, put the second intent on a wrapper element (events
 bubble to it: here, `keydown` from the input), or on the control itself with a per-event
 attribute (`data-intent-keydown=${i.Cancel}`, above).
+
+### Declining: `undefined` passes the event outward
+
+Lookup starts at the element that was hit and goes outward, and the nearest element with an
+intent for the event runs its parser. When that parser returns `undefined` **synchronously**,
+it declines: the next element outward with an intent for the same event gets it, up to the
+component's root (0.3.1; before, `undefined` ended the lookup). So a container's keyboard
+shortcuts and its fields' own keys live together:
+
+```ts
+import { define, html } from '@gyral/core';
+
+type Msg =
+  | { readonly _tag: 'Move'; readonly by: -1 | 1 }
+  | { readonly _tag: 'Rename'; readonly name: string };
+
+export const Toolbar = define<{ readonly at: number }, Msg>('my-toolbar', {
+  init: () => ({ at: 0 }),
+  intent: {
+    // The toolbar owns the arrow keys...
+    Move: ({ key }) =>
+      key === 'ArrowLeft' ? { _tag: 'Move', by: -1 }
+      : key === 'ArrowRight' ? { _tag: 'Move', by: 1 }
+      : undefined,
+    // ...except where the field keeps a key: Enter commits, every other key declines (and
+    // the arrows reach Move).
+    Rename: ({ key, value }) =>
+      key === 'Enter' ? { _tag: 'Rename', name: value ?? '' } : undefined,
+  },
+  update: {
+    Move: (s, m) => ({ at: s.at + m.by }),
+    Rename: (s) => s,
+  },
+  view: (_s, i) => html`
+    <div role="toolbar" aria-label="Formatting" data-intent-keydown=${i.Move}>
+      <input aria-label="Name" data-intent-keydown=${i.Rename} />
+    </div>
+  `,
+});
+```
+
+An async parser can't decline: the lookup can't wait for it, so the event stays with it even
+if it resolves to `undefined`. Declining never crosses into another component: a nested
+component's lookup ends at its own root, and the outer component sees the same event through
+its own listener (once). To skip events by where they started rather than by key, read
+`event.target` (the element hit) next to `input.target` (the element with the intent).
 
 **Typing a parser.** Each key in `intent` must produce its own variant (`Qty` produces
 `{ _tag: 'Qty'; … }`), so don't annotate a parser with the whole union: `(): Msg => …` widens

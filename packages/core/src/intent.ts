@@ -146,11 +146,14 @@ function valueOf(el: Element): string | undefined {
 /**
  * Reads an event into an IntentInput for the nearest element on its path that names an intent
  * for it and belongs to `root`: its `data-intent-<type>`, else its `data-intent` when the
- * event is one of its triggers. Elements inside nested components are ignored: that is
- * component isolation. Form submissions are prevented and turned into FormData.
+ * event is one of its triggers. With `after`, the search starts past that element (the intent
+ * whose parser declined). Elements inside nested components are ignored: that is component
+ * isolation. Form submissions are prevented and turned into FormData.
  */
-export function readIntent(event: Event, root: Node): IntentInput | undefined {
-  for (const target of event.composedPath()) {
+export function readIntent(event: Event, root: Node, after?: Element): IntentInput | undefined {
+  const path = event.composedPath();
+  // indexOf(undefined) is -1: without `after`, the whole path.
+  for (const target of path.slice(path.indexOf(after as Element) + 1)) {
     if (target === root) return undefined;
     if (!(target instanceof Element)) continue;
     const name =
@@ -219,8 +222,10 @@ export function listenForIntents(
 }
 
 /**
- * Parses one event with its matching parser and delivers the message (sync or async). The
- * model's `ctx()` is built only when a parser runs, so its props are those at event time.
+ * Parses one event with its matching parser and delivers the message (sync or async). A
+ * parser that returns `undefined` synchronously declines: the next intent outward for the same
+ * event gets it, up to the component root. A promise can't decline. The model's `ctx()` is
+ * built only when a parser runs, so its props are those at event time.
  */
 export function handleIntent<M>(
   event: Event,
@@ -230,19 +235,16 @@ export function handleIntent<M>(
   model: { ctx(): Ctx<unknown> },
   deliver: (msg: Tagged | undefined) => void,
 ): void {
-  const input = readIntent(event, root);
-  if (input === undefined) return;
-  const parser = parsers[input.name];
-  if (parser === undefined) {
-    console.warn(message(11, tag, input.name));
-    return;
-  }
-  const result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
-  if (result instanceof Promise) {
-    result.then(deliver, (error: unknown) => {
-      console.error(message(12, tag, input.name), error);
-    });
-  } else {
-    deliver(result);
+  for (let input: IntentInput | undefined; (input = readIntent(event, root, input?.target));) {
+    const { name } = input;
+    const parser = parsers[name];
+    if (parser === undefined) return console.warn(message(11, tag, name));
+    const result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
+    if (result instanceof Promise) {
+      return void result.then(deliver, (error: unknown) => {
+        console.error(message(12, tag, name), error);
+      });
+    }
+    if (result !== undefined) return deliver(result);
   }
 }

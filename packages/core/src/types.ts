@@ -93,7 +93,9 @@ type ParseResult<M> = M | IntentRejected | undefined;
 
 /**
  * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
- * ignore it. May be async because schema validation may be. `ctx` is the read-only context
+ * decline it: a synchronous `undefined` passes the event to the next intent outward for the
+ * same event (view/05-element.md "Declining"). May be async because schema validation may be;
+ * an async parser keeps the event. `ctx` is the read-only context
  * reducers get (props as they are when the event fires, `read(store)`); parsers that don't
  * need it take one parameter.
  */

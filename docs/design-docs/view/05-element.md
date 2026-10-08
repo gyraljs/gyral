@@ -242,6 +242,23 @@ into `readIntent` and `newState` read structurally, core stays the same size (co
 `packages/core/test/per-event-intents.test.ts` (priority, an `each` row, nesting, `raw()`,
 the event scan).
 
+## Declining (gyral-dyn.25, 0.3.1)
+
+A parser that returns `undefined` synchronously declines: `handleIntent` continues the same
+walk outward from the element whose parser declined (`readIntent(event, root, after)`), so the
+next element on the path with an intent for that event type answers, up to the host's root. A
+parser that returns a promise has taken the event, whatever it resolves to (the walk can't
+wait). A missing parser still warns and ends the walk. Each component walks only its own tree,
+so declining never reaches a parent's intents through the child's lookup; the parent's own
+capture listener sees the event as before.
+
+Why: containers with keyboard shortcuts (a toolbar, a grid, a listbox around inputs) need
+keys the inner control doesn't handle. Before, the nearest intent took the event even when its
+parser returned `undefined`, so a container intent never saw keys from an inner element with
+its own `keydown` intent, and code filtered with `event.composedPath()` instead. Behavior change:
+an outer intent can now receive events an inner parser ignored. Decided by the user on
+2026-10-08. Tests: `packages/core/test/intent-decline.test.ts`.
+
 ## Press and release (gyral-dyn.13, 0.3.1)
 
 `data-intent-on` takes a list of event types separated by whitespace. An element's intent
