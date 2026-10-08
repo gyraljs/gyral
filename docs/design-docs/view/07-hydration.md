@@ -303,6 +303,18 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
   document), so it hydrates on its own at load; only the island itself waits. Put widgets
   that should wait inside the island's own view as islands too.
 
+## Preloads under a service worker (gyral-dyn.11, 0.3.1)
+
+Preloads are a server choice per response: `modulepreload: []` drops them and the page still
+hydrates (the chunk loads when the first seeded host connects, "Loading" above). A PWA whose
+service worker serves the modules hit Chromium warning that a module preloaded outside the
+worker went unused, so it was fetched twice (game-platform feedback item 9). A server can tell
+the navigations the worker handles by the `Service-Worker-Navigation-Preload` header (sent
+when the worker enables navigation preload) or a marker the worker adds, and leave the
+preloads out for those, with `Vary` on that header. The recipe is in the skill's ssr.md
+"Preloads under a service worker". No API change: emitting preloads only when no worker
+controls the page can't be decided by the server without such a signal.
+
 ## Testing
 
 - `@gyral/testing`'s `mountSsr` keeps parsing server output with `setHTMLUnsafe` (Chromium-only
