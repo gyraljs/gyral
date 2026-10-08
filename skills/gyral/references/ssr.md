@@ -265,8 +265,10 @@ sends headers only; each `set-cookie` stays separate; a throwing handler is a 50
 
 The handler's second argument is `{ incoming, remoteAddress }` (the Node request and the
 client's IP address), for rate limits, logs and audits. A Hono app gets it as `c.env`, so
-`getConnInfo(c)` from `@hono/node-server/conninfo` works. Behind a proxy `remoteAddress` is the
-proxy: read `X-Forwarded-For` only when the request came from a proxy you run.
+`getConnInfo(c)` from `@hono/node-server/conninfo` works. `productionServer`'s `fetch` passes it
+on to the app `createApp` returns (`productionServer<NodeEnv>(…)` types it), so an app behind it
+sees the address too. Behind a proxy `remoteAddress` is the proxy: read `X-Forwarded-For` only
+when the request came from a proxy you run.
 
 ```ts
 import { createServer } from 'node:http';

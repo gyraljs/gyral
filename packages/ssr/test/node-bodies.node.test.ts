@@ -1,9 +1,18 @@
 // gyral-dyn.30: `toNodeListener` with request bodies the handler doesn't read, clients that
 // leave before the response starts, and a reporter that throws.
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { Agent, createServer, request as httpRequest, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { toNodeListener, type FetchHandler, type NodeListenerOptions } from '../src/node.js';
+import {
+  toNodeListener,
+  type FetchHandler,
+  type NodeEnv,
+  type NodeListenerOptions,
+} from '../src/node.js';
+import { productionServer } from '../src/static.js';
 
 const servers: Server[] = [];
 afterEach(async () => {
@@ -114,5 +123,29 @@ describe('toNodeListener: unread bodies and early disconnects', () => {
     );
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(500);
+  });
+});
+
+describe('productionServer behind toNodeListener', () => {
+  it("passes the server's env on to the app, so it sees the client's address", async () => {
+    const dist = mkdtempSync(join(tmpdir(), 'gyral-env-'));
+    try {
+      mkdirSync(join(dist, 'client', '.vite'), { recursive: true });
+      writeFileSync(
+        join(dist, 'client', '.vite', 'manifest.json'),
+        JSON.stringify({ 'src/entry-client.ts': { file: 'assets/entry.js' } }),
+      );
+      const server = await productionServer<NodeEnv>({
+        distDir: dist,
+        staticDir: false,
+        createApp: () => ({
+          fetch: (_request, env) => new Response(env?.remoteAddress ?? 'none'),
+        }),
+      });
+      const base = await serve(server.fetch);
+      expect(await (await fetch(`${base}/who`)).text()).toBe('127.0.0.1');
+    } finally {
+      rmSync(dist, { recursive: true, force: true });
+    }
   });
 });
