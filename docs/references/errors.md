@@ -93,7 +93,7 @@ Arguments: `tags`.
 
 ### G0034
 
-> settled(): the page did not settle after {rounds} flushes or busy turns. Components (or drivers) are probably feeding each other messages in a cycle.
+> settled(): the page did not settle after {rounds} flushes or busy turns. A stream is emitting without pause, or components (or drivers) are feeding each other messages in a cycle.
 
 Arguments: `rounds`.
 

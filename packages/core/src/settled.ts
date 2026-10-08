@@ -8,8 +8,13 @@
 import { activityCount, isQuiet, whenQuiet } from './scheduler.js';
 import { message } from './view/index.js';
 
-/** Flushes and busy turns settled() waits through before it gives up: a cycle. */
-const MAX_ROUNDS = 100;
+/**
+ * Flushes and busy turns settled() waits through before it gives up. High enough for a finite
+ * burst (a progress stream, an async iterable over a list: a few hundred messages in a row),
+ * low enough that a stream that never stops, or components feeding each other, still fails
+ * fast instead of hanging a test.
+ */
+const MAX_ROUNDS = 10_000;
 
 /**
  * Consecutive microtask turns with no message and nothing to render before the page counts as

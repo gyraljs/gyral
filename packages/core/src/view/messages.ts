@@ -32,8 +32,9 @@ export const MESSAGES = {
     'probably feeding each other props or messages; break the cycle with a condition in update ' +
     '(docs/design-docs/view/04-scheduler.md "Loop guard").',
   34:
-    'settled(): the page did not settle after {rounds} flushes or busy turns. Components (or ' +
-    'drivers) are probably feeding each other messages in a cycle.',
+    'settled(): the page did not settle after {rounds} flushes or busy turns. A stream is ' +
+    'emitting without pause, or components (or drivers) are feeding each other messages in a ' +
+    'cycle.',
   // Commands
   40: 'gyral: command mapper threw',
   41: 'gyral: unhandled failure from driver "{driver}"',

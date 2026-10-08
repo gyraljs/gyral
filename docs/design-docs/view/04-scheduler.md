@@ -147,9 +147,10 @@ reached a host or a store for 8 microtask turns in a row**.
   boundary (a `setTimeout`, `fetch`, a `message` event, IndexedDB) is outside it: tests drive
   time with `@gyral/testing`'s `virtualTime` (or answer fakes) and then `await settled()`.
   The frame lane is the exception that is waited for (a pending frame flush is scheduler work).
-- **Bounded.** More than 100 flushes or busy turns (turns in which messages arrived) without a
-  quiet window reject with an error naming the likely cycle (components or drivers feeding each
-  other messages), like the loop guard. A flush's loop-guard error rejects it too.
+- **Bounded.** More than 10,000 flushes or busy turns (turns in which messages arrived) without
+  a quiet window reject with an error naming the likely cause (a stream emitting without pause,
+  or components or drivers feeding each other messages), like the loop guard. A finite burst (a
+  progress stream, a few hundred values in a row) settles. A flush's loop-guard error rejects it too.
 - Code core loads lazily for rendering (the hydration code, 07 "Loading") counts as pending
   until the hosts waiting for it have started (`hold()` in the scheduler).
 - `@gyral/testing`'s `hydrated()` releases the document's islands (if asked), then awaits
