@@ -91,7 +91,7 @@ function createBrowserSource(options: RouterOptions): Source {
   // History API path (ADR 0003 tier 3): loaded only without the Navigation API.
   const history: Promise<HistoryPath> | undefined =
     nav === undefined
-      ? import('./internal/history.js').then((m) => m.historyPath(win, stream, what))
+      ? import('./internal/history.js').then((m) => m.historyPath(win, stream, what, rendered))
       : undefined;
 
   const navigate = (url: string, replace: boolean, asked?: Partial<AfterNavigation>) => {
