@@ -1,13 +1,14 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
-import type { AnyDriver, Command, Concurrency, DriverOverrides, RetryPolicy } from '../command.js';
+import type { AnyDriver, Command, Concurrency, DriverOverrides } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
 import { message } from '../view/index.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
-// latest task per key. Interruption is `controller.abort()`, retry schedules are timers
-// that cancel on abort, and `queue` chains on the previous task's promise.
+// latest task per key. Interruption is `controller.abort()`,
+// and `queue` chains on the previous task's promise. A driver runs once: retries are a driver
+// wrapper (retry.ts, ADR 0022).
 
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
@@ -38,46 +39,18 @@ const aborted = (signal: AbortSignal): Promise<never> => {
   return promise;
 };
 
-/** Waits `ms`, or rejects as soon as `signal` aborts. */
-const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
-  Promise.race([
-    new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, ms);
-      signal.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-        },
-        { once: true },
-      );
-    }),
-    aborted(signal),
-  ]);
-
-/** Delay before retry number `retry` (0-based): fixed, or doubling from `delayMs`. */
-const delayFor = (policy: RetryPolicy, retry: number): number => {
-  const base = policy.delayMs ?? 0;
-  return policy.backoff === 'exponential' ? base * 2 ** retry : base;
-};
-
-async function attemptWithRetry(
+/** Runs the driver once; an abort settles it at once, even if the driver ignores the signal. */
+const attempt = (
   driver: AnyDriver,
   cmd: Command<unknown>,
   signal: AbortSignal,
   emit: (output: unknown) => void,
-): Promise<unknown> {
-  const policy = driver.retry;
-  for (let retry = 0; ; retry += 1) {
-    try {
-      // The input type was erased by command(); it was built for this driver's name.
-      const result = Promise.resolve(driver.run(cmd.input as never, { signal, emit }));
-      return await Promise.race([result, aborted(signal)]);
-    } catch (cause) {
-      if (signal.aborted || policy === undefined || retry >= policy.times) throw cause;
-      await sleep(delayFor(policy, retry), signal);
-    }
-  }
-}
+): Promise<unknown> =>
+  // The input type was erased by command(); it was built for this driver's name.
+  Promise.race([
+    Promise.resolve(driver.run(cmd.input as never, { signal, emit })),
+    aborted(signal),
+  ]);
 
 /** Maps a result to a message and dispatches it; a throwing mapper is logged, not fatal. */
 const deliver = <M>(map: () => M | undefined, dispatch: (msg: M) => void): void => {
@@ -111,7 +84,7 @@ async function execute<M>(
   }
   let output: unknown;
   try {
-    output = await attemptWithRetry(driver, cmd, signal, emit);
+    output = await attempt(driver, cmd, signal, emit);
   } catch (cause) {
     if (signal.aborted) return; // interrupted: reported by the abort listener
     settled = true;

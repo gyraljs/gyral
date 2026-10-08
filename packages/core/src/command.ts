@@ -8,6 +8,7 @@ import type { IntentRejected } from './types.js';
 /** How commands in the same lane interact. See ADR 0006 for the table. */
 export type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';
 
+/** How `retry(driver, policy)` retries a rejected run (retry.ts). */
 export interface RetryPolicy {
   /** Retries after the first failure. */
   readonly times: number;
@@ -33,7 +34,6 @@ export interface Driver<I, O, E = unknown> {
   readonly run: (input: I, ctx: DriverContext<O>) => O | Promise<O>;
   /** Default policy for this driver's commands. Default `'merge'`. */
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
   /** Turns a thrown or rejected value into this driver's typed error. */
   readonly toError?: (cause: unknown) => E;
 }

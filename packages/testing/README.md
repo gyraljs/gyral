@@ -49,7 +49,7 @@ withDrivers(container, { 'saved-query': fakeDriver('saved-query', () => null) })
 ```
 
 Drivers need no cast in `el.drivers`, `withDrivers` or `provideDrivers`: any
-`Driver<I, O, E>` (typed input, output and error, `toError`, `retry`, a `subscription`, a fake)
+`Driver<I, O, E>` (typed input, output and error, `toError`, a `retry()` wrapper, a `subscription`, a fake)
 is assignable to `AnyDriver`. Type your own driver maps as `DriverOverrides` from
 `@gyral/core`; `Record<string, Driver<unknown, unknown>>` rejects drivers with typed inputs.
 

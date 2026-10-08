@@ -61,9 +61,9 @@ export const Counter = define<{ readonly n: number }, Msg>('my-outside-counter',
   disconnects, and after `fail(error)`; emits after that are ignored.
 - Lane default `'switch'`: issuing the command again replaces the subscription. Give each
   input its own `key` when one component keeps several (one per chat room).
-- `fail(error)` ends it with an error: `onFailure` gets it (through `toError` if given), after
-  the driver's `retry`, which subscribes again (a socket that reconnects). A `subscribe` that
-  throws fails the same way.
+- `fail(error)` ends it with an error: `onFailure` gets it (through `toError` if given). Wrap
+  the driver in `retry(driver, policy)` to subscribe again first (a socket that reconnects). A
+  `subscribe` that throws fails the same way.
 - Writes are plain commands (`addToCounter` above); the change comes back through the
   subscription, not through the write's `onSuccess`.
 - `await settled()` doesn't wait for subscriptions to end (they don't), but it waits for values
@@ -203,12 +203,11 @@ export const watchSignals = <T>(name: string, read: () => T) =>
 ## A WebSocket feed
 
 ```ts
-import { command, subscription, type Command } from '@gyral/core';
+import { command, retry, subscription, type Command } from '@gyral/core';
 
 /** Text messages from `url` until the component goes away; reconnects twice on failure. */
-export const feed = subscription<string, string>(
-  'feed',
-  (emit, { input: url, fail }) => {
+export const feed = retry(
+  subscription<string, string>('feed', (emit, { input: url, fail }) => {
     const socket = new WebSocket(url);
     socket.addEventListener('message', (e: MessageEvent<unknown>) => {
       if (typeof e.data === 'string') emit(e.data);
@@ -219,8 +218,8 @@ export const feed = subscription<string, string>(
     return () => {
       socket.close();
     };
-  },
-  { retry: { times: 2, delayMs: 1000, backoff: 'exponential' } },
+  }),
+  { times: 2, delayMs: 1000, backoff: 'exponential' },
 );
 
 export const listenTo = <M>(url: string, toMsg: (line: string) => M): Command<M> =>

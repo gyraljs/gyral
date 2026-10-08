@@ -7,6 +7,7 @@ import {
   define,
   html,
   provideDrivers,
+  retry,
   settled,
   subscription,
   type Command,
@@ -43,9 +44,8 @@ let failNext: ((error: unknown) => void) | undefined;
 let subscribed = 0;
 let released = 0;
 /** Keyed by room; returns an `{ unsubscribe }` object, as RxJS and XState do. */
-const room = subscription<string, string>(
-  'room',
-  (emit, { input, fail }) => {
+const room = retry(
+  subscription<string, string>('room', (emit, { input, fail }) => {
     subscribed += 1;
     failNext = fail;
     emit(`joined ${input}`);
@@ -54,8 +54,8 @@ const room = subscription<string, string>(
         released += 1;
       },
     };
-  },
-  { retry: { times: 1 } },
+  }),
+  { times: 1 },
 );
 
 const broken = subscription<number>('broken', () => {
