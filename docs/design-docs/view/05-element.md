@@ -273,6 +273,15 @@ Two consequences parsers must know (gyral-dyn.16):
 Tests: `packages/core/test/press-release.test.ts` (a real
 pointer released outside the button, `pointercancel`, `lostpointercapture`, key repeat).
 
+## Intent names (gyral-dyn.12, 0.3.1)
+
+The runtime looks a parser up by the `data-intent` (or `data-intent-<event>`) value and
+dispatches what it returns; it never checks the name against the message union. Which names
+exist is a type-level rule (ADR 0001 "Intent names"): a message tag, whose parser returns that
+variant, or a name declared with `IntentName<…>` in the union, whose parser may return any
+message and which has no reducer. Both appear in the view's `i` and in `intents<Msg>()`, so
+markup and rows name them the same way, and an unknown name fails to compile.
+
 ## `ElementInternals`
 
 Attached lazily and only once per element, through one internal accessor, when a feature needs

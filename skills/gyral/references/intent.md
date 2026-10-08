@@ -304,10 +304,10 @@ export const SizePicker = define<State, Msg>('my-size-picker', {
 
 ## Several controls, one message
 
-Intent names are message tags: `data-intent=${i.Category}` needs a `Category` variant in
-`Msg`, and `intent: { Category: … }` must produce it. Controls that all change one thing don't
-need a message each. Give them the same intent and tell them apart by their `name`, as in a
-search filters panel:
+An intent name is a message tag (`data-intent=${i.Category}` needs a `Category` variant in
+`Msg`, and `intent: { Category: … }` must produce it) or a name declared with `IntentName<…>`
+(next section). Controls that all change one thing don't need a message each. Give them the
+same intent and tell them apart by their `name`, as in a search filters panel:
 
 ```ts
 import { define, html } from '@gyral/core';
@@ -354,11 +354,76 @@ export const SearchFilters = define<Filters, Msg>('my-search-filters', {
 });
 ```
 
-Give each its own message only when the reducers really differ. A name that isn't a tag fails
-to compile with "Object literal may only specify known properties, and 'Category' does not exist
-in type 'Intents<Msg, object>'" (with props, their type instead of `object`; plus "Binding element 'value' implicitly has an 'any' type" for its
-parameters), and in the view with "Property 'Category' does not exist on type
-'IntentNames<Msg>'": add the variant to `Msg`, or use the tag the controls share.
+Give each its own message only when the reducers really differ. A name that is neither a tag
+nor declared fails to compile with "Object literal may only specify known properties, and
+'Category' does not exist in type 'Intents<Msg, object>'" (with props, their type instead of
+`object`; plus "Binding element 'value' implicitly has an 'any' type" for its parameters), and
+in the view with "Property 'Category' does not exist on type 'IntentNames<Msg>'": add the
+variant to `Msg`, declare the name, or use the tag the controls share.
+
+## Intent names that aren't messages: `IntentName<…>`
+
+When several controls each do something different but all end in the same message (a table
+toolbar whose Archive, Restore and Duplicate buttons all send one request to the server),
+declare their names in the union. Each declared name needs a parser, which may return any
+message, and gets no reducer:
+
+```ts
+import { define, each, html, intents, type IntentName, type Messages } from '@gyral/core';
+
+interface Doc {
+  readonly id: number;
+  readonly title: string;
+  readonly archived: boolean;
+}
+type Action =
+  { readonly kind: 'archive' | 'restore'; readonly id: number } | { readonly kind: 'duplicate' };
+type Msg =
+  | { readonly _tag: 'Send'; readonly action: Action }
+  | IntentName<'Archive' | 'Restore' | 'Duplicate'>;
+
+interface State {
+  readonly docs: readonly Doc[];
+  readonly pending: readonly Action[];
+}
+
+const i = intents<Msg>(); // declared names are in it, so rows can use them
+const idOf = (target: Element): number =>
+  Number(target.closest('[data-id]')?.getAttribute('data-id'));
+// Helpers that build messages return Messages<Msg>: the union without its intent names.
+const send = (action: Action): Messages<Msg> => ({ _tag: 'Send', action });
+
+const Row = (doc: Doc) =>
+  html`<li data-id=${doc.id}>
+    ${doc.title}
+    <button type="button" data-intent=${doc.archived ? i.Restore : i.Archive}>
+      ${doc.archived ? 'Restore' : 'Archive'}
+    </button>
+  </li>`;
+
+export const DocTable = define<State, Msg>('my-doc-table', {
+  init: () => ({ docs: [], pending: [] }),
+  intent: {
+    Archive: ({ target }) => send({ kind: 'archive', id: idOf(target) }),
+    Restore: ({ target }) => send({ kind: 'restore', id: idOf(target) }),
+    Duplicate: () => send({ kind: 'duplicate' }),
+  },
+  // One reducer for all three (in an app it also returns the request command).
+  update: { Send: (s, m) => ({ ...s, pending: [...s.pending, m.action] }) },
+  view: (s) => html`
+    <ul>
+      ${each(s.docs, (doc) => doc.id, Row)}
+    </ul>
+    <button type="button" data-intent=${i.Duplicate}>Duplicate</button>
+  `,
+});
+```
+
+Prefer one shared intent (previous section) when one parser that reads `name` is clearer;
+declare names when each control's parser differs. Errors: a declared name without a parser
+("Property 'Restore' is missing in type … but required"), a reducer for one ("'Archive' does
+not exist in type 'Update<…>'"), and a helper typed with the whole union instead of
+`Messages<Msg>` ("Type 'IntentName<…>' is not assignable to type 'ParseResult<…>'").
 
 ## Press and release (press and hold)
 

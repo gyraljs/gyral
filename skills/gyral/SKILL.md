@@ -44,7 +44,7 @@ export const Counter = define<State, Msg>('my-counter', {
 ## Golden rules
 
 1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`). The tag is also the
-   intent name in markup. `update` must have a reducer for **every** tag (exhaustive by type).
+   intent name in markup (or declare extra names with `IntentName<…>`; intent.md). `update` must have a reducer for **every** tag (exhaustive by type).
 2. **Views are pure and name intents; they never attach closures.** Write
    `data-intent=${i.Save}`, never `@click=${() => …}`. The trigger is the element's default
    event (button → click, form → submit, input/textarea → input, select/checkbox → change,

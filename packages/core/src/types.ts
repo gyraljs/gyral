@@ -104,14 +104,41 @@ export type IntentParser<M, P = unknown> = (
 
 type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 
+declare const INTENT_ONLY: unique symbol;
+
 /**
- * Intent parsers keyed by the message tag they produce. Messages from drivers need none. A key
- * that isn't a tag fails with "'X' does not exist in type 'Intents<…>'": intent names are
- * message tags, so several controls that change one thing share one intent and tell
- * themselves apart by `name`.
+ * Intent names that are not messages (ADR 0001 "Intent names"). List them in the component's
+ * message union, `type Msg = Request | Loaded | IntentName<'Archive' | 'Restore'>`: each
+ * becomes a key of `intent` (required) whose parser may return any message, and a name in the
+ * view's `i` and in `intents<Msg>()`. They are never dispatched, so they need no reducer.
+ * Helpers that build messages for such a component return `Messages<Msg>`.
+ */
+export interface IntentName<Name extends string> {
+  readonly _tag: Name;
+  /**
+   * Brand: real messages never have it, so `Messages<M>` can tell the two apart, and no code
+   * can build one, so an intent name is never sent or produced by a command.
+   */
+  readonly [INTENT_ONLY]: true;
+}
+
+/** The messages of a union, without its `IntentName`s: what parsers and commands produce. */
+export type Messages<M extends Tagged> = Exclude<M, IntentName<string>>;
+
+/** The tags of a union's `IntentName`s. */
+type IntentOnly<M extends Tagged> = Extract<M, IntentName<string>>['_tag'];
+
+/**
+ * Intent parsers, keyed by intent name. An intent name is a message tag, whose parser returns
+ * that variant (optional: messages from drivers need none), or a name declared with
+ * `IntentName<…>` in the union, whose parser may return any message (required). Any other key
+ * fails with "'X' does not exist in type 'Intents<…>'". Several controls that change one thing
+ * can also share one intent and tell themselves apart by `name`.
  */
 export type Intents<M extends Tagged, P = unknown> = {
-  readonly [K in M['_tag']]?: IntentParser<Variant<M, K>, P>;
+  readonly [K in Exclude<M['_tag'], IntentOnly<M>>]?: IntentParser<Variant<M, K>, P>;
+} & {
+  readonly [K in IntentOnly<M>]: IntentParser<Messages<M>, P>;
 };
 
 type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
@@ -121,7 +148,7 @@ type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
  * for framework messages. Reducers may return commands.
  */
 export type Update<S, M extends Tagged, P = object> = {
-  readonly [K in M['_tag']]: Reducer<S, M, Variant<M, K>, P>;
+  readonly [K in Exclude<M['_tag'], IntentOnly<M>>]: Reducer<S, M, Variant<M, K>, P>;
 } & {
   readonly PropsChanged?: Reducer<S, M, PropsChanged<P>, P>;
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
