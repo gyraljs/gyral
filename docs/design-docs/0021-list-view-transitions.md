@@ -1,6 +1,6 @@
 # ADR 0021 — Built-in view transitions for items that move between lists
 
-Status: **proposed** (2026-10-08), for **0.3.1**. Bead: gyral-dyn.18. Builds on the ADR 0001
+Status: **proposed, blocked by the spike** (2026-10-08), for **0.3.1**. Bead: gyral-dyn.18. Builds on the ADR 0001
 addendum "View Transitions" (gyral-czi.12), view/04-scheduler.md "View transitions",
 view/03-lists.md and ADR 0003.
 
@@ -152,6 +152,29 @@ Chromium, Firefox and WebKit, check:
 If 1–3 fail in an engine, the feature ships for light-DOM components and single shadow roots
 only, with that limit in the docs; if 4 fails, names are removed only at `finished` (already
 the plan) and the docs say so.
+
+### Spike result (2026-10-08): the gate failed
+
+Run in Playwright 1.63's Chromium, Firefox and WebKit (vitest browser mode), with a light-DOM
+control that passed in all three:
+
+| Where `view-transition-name` is set                                                                              | Captured by `document.startViewTransition`                     |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Light-DOM element, inline style                                                                                  | yes, all three engines                                         |
+| Element inside an open shadow root: inline style                                                                 | **no**, all three                                              |
+| …: the shadow root's adopted stylesheet or a `<style>` in it                                                     | **no**, all three                                              |
+| The shadow host itself (in the document tree)                                                                    | yes, all three                                                 |
+| Element inside a shadow root, named from a document sheet via `::part()`                                         | yes, all three                                                 |
+| Chromium's scoped `element.startViewTransition()` on the host or a light-DOM ancestor, names inside shadow roots | **no** (only `root` captured); Firefox and WebKit lack the API |
+
+So names are tree-scoped in every engine: an element inside a shadow root takes part in a
+document transition only when its name comes from the document's tree (the host itself, or
+`::part()` from a document stylesheet, which needs `exportparts` at every nesting level).
+Checks 1–3 fail everywhere for shadow-DOM components, including a single shadow root, not only
+pairing across roots. Gyral components use shadow DOM by default, so option B as written works
+only when every component from the document down to the moving item is light DOM
+(`shadow: false`). Implementation is stopped pending an owner decision. The spike's files are
+kept outside the repo.
 
 ## Size
 
