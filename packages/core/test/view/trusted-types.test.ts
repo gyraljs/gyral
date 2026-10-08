@@ -14,19 +14,21 @@ interface Gyral {
   raw: typeof raw;
   render: typeof render;
 }
-type Win = Window & typeof globalThis & { gyral?: Gyral; violations?: number };
+type Win = Window & typeof globalThis & { gyral?: Gyral; violations?: number; warnings?: string[] };
 
 const VIEW = new URL('../../src/view/index.ts', import.meta.url).href;
 
-/** An iframe that enforces Trusted Types and allows only the `gyral` policy, with Gyral in it. */
-async function enforced(): Promise<{ win: Win; doc: Document; gyral: Gyral }> {
+/** An iframe with `csp` (default: enforce Trusted Types, allow only `gyral`), with Gyral in it. */
+async function enforced(
+  csp = "require-trusted-types-for 'script'; trusted-types gyral",
+): Promise<{ win: Win; doc: Document; gyral: Gyral }> {
   const iframe = document.createElement('iframe');
   iframe.srcdoc =
-    `<!doctype html><meta http-equiv="Content-Security-Policy" ` +
-    `content="require-trusted-types-for 'script'; trusted-types gyral">` +
+    `<!doctype html><meta http-equiv="Content-Security-Policy" content="${csp}">` +
     `<div id="client"></div>` +
     `<script>window.violations = 0; document.addEventListener('securitypolicyviolation', ` +
-    `() => { window.violations += 1; });</script>` +
+    `() => { window.violations += 1; }); window.warnings = []; ` +
+    `console.warn = (...a) => { window.warnings.push(String(a[0])); };</script>` +
     `<script type="module">import * as g from ${JSON.stringify(VIEW)}; window.gyral = g;</script>`;
   document.body.append(iframe);
   const win = iframe.contentWindow as Win;
@@ -78,5 +80,17 @@ describe("templates and raw() under `require-trusted-types-for 'script'`", () =>
     expect(root.querySelector('div')?.innerHTML).toBe('<!----><i>two</i>');
 
     expect(await violations(win)).toBe(0);
+  });
+
+  // gyral-dyn.30: a CSP that lists other policies but not `gyral`, without enforcing Trusted
+  // Types, worked on 0.3.0; creating the policy throws there, so Gyral falls back to strings.
+  it("renders when the page's policy list leaves gyral out and Trusted Types aren't enforced", async () => {
+    const { win, doc, gyral } = await enforced('trusted-types app-policy');
+    const root = doc.getElementById('client') as HTMLElement;
+    gyral.render(view(gyral, 'Count', 1, '<b>one</b>'), root);
+    expect(root.querySelector('p')?.textContent).toBe('Count: 1');
+    gyral.render(view(gyral, 'Count', 2, '<i>two</i>'), root);
+    expect(root.querySelector('div')?.innerHTML).toBe('<!----><i>two</i>');
+    expect(win.warnings?.filter((w) => w.includes('trusted-types gyral'))).toHaveLength(1);
   });
 });

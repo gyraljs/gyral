@@ -5,7 +5,11 @@
 // contract (view/02 "raw(html)"). Both go through one policy named `gyral`, created on first use
 // where the browser has Trusted Types; an app allows it with `trusted-types gyral`. On first use
 // rather than at import, so a policy that refuses the name fails where HTML is parsed, not when
-// a module loads.
+// a module loads. A CSP whose `trusted-types` list leaves `gyral` out (with or without
+// enforcement) makes `createPolicy` throw: Gyral then parses plain strings, as before Trusted
+// Types, and warns in development; where Trusted Types are enforced the sink reports it.
+import { DEV } from '#view-dev';
+import { message } from './message.js';
 
 interface Policy {
   createHTML(input: string): string;
@@ -25,10 +29,17 @@ let policy: Policy | undefined;
  * `innerHTML` setter takes only strings; the browser stringifies a `TrustedHTML` to the same text.
  */
 export function trustedHTML(html: string): string {
-  policy ??=
-    (globalThis as { trustedTypes?: PolicyFactory }).trustedTypes?.createPolicy(
-      'gyral',
-      passThrough,
-    ) ?? passThrough;
+  policy ??= create();
   return policy.createHTML(html);
+}
+
+function create(): Policy {
+  const factory = (globalThis as { trustedTypes?: PolicyFactory }).trustedTypes;
+  if (factory === undefined) return passThrough;
+  try {
+    return factory.createPolicy('gyral', passThrough);
+  } catch (error) {
+    if (DEV) console.warn(message(72), error);
+    return passThrough;
+  }
 }

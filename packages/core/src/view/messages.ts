@@ -66,4 +66,8 @@ export const MESSAGES = {
     'gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition ' +
     'every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).',
   71: 'gyral: template rule 11: a page shell rendered in the browser.',
+  72:
+    'gyral: this page\'s Trusted Types policy list does not allow the policy "gyral", so ' +
+    'templates are parsed from plain strings, which works only while Trusted Types are not ' +
+    'enforced. Add `trusted-types gyral` to the Content-Security-Policy.',
 } as const;

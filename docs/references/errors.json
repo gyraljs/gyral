@@ -201,5 +201,12 @@
     "message": "gyral: template rule 11: a page shell rendered in the browser.",
     "arguments": [],
     "url": "https://gyral.dev/errors/#G0071"
+  },
+  {
+    "code": "G0072",
+    "group": "Templates",
+    "message": "gyral: this page's Trusted Types policy list does not allow the policy \"gyral\", so templates are parsed from plain strings, which works only while Trusted Types are not enforced. Add `trusted-types gyral` to the Content-Security-Policy.",
+    "arguments": [],
+    "url": "https://gyral.dev/errors/#G0072"
   }
 ]

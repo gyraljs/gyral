@@ -194,3 +194,9 @@ Arguments: `start`.
 > gyral: template rule 11: a page shell rendered in the browser.
 
 Arguments: none.
+
+### G0072
+
+> gyral: this page's Trusted Types policy list does not allow the policy "gyral", so templates are parsed from plain strings, which works only while Trusted Types are not enforced. Add `trusted-types gyral` to the Content-Security-Policy.
+
+Arguments: none.
