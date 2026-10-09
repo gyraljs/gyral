@@ -515,6 +515,12 @@ export const Pager = define<State, Msg>()('my-pager', {
 });
 ```
 
+**Focusing what a later render brings.** When the target arrives with data (the first result
+after a search), the reducer that starts the search can already ask for it:
+`focus('#results li:first-child a', { wait: true })` keeps the request until a render of this
+component produces the target, then focuses it. A newer `focus()` replaces it; after one second
+it gives up with the usual warning (0.3.1).
+
 **Focusing into a child component.** `focus()` looks inside this component's own root, so it
 can't reach an element in a child's shadow root. Give the child `shadow: { delegatesFocus: true }` and
 focus the child itself: its first focusable element gets focus (0.3.1).

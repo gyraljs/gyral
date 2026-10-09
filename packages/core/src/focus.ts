@@ -21,7 +21,19 @@ export interface FocusOptions {
   readonly preventScroll?: boolean;
   /** Also select the text of an input or textarea. */
   readonly select?: boolean;
+  /**
+   * If nothing matches after this render, keep the request and focus the target as soon as a
+   * later render of this component produces it; a newer `focus()` from the component replaces
+   * it, and after one second it gives up with the usual warning. `settled()` doesn't wait for it.
+   */
+  readonly wait?: boolean;
 }
+
+// How long `focus(selector, { wait: true })` waits for its target to appear.
+const FOCUS_WAIT_MS = 1000;
+
+// A component's waiting focus request, so the next focus() can cancel it.
+const waiting = new WeakMap<Element, () => void>();
 
 /** The input of a `focus()` command. */
 export interface FocusInput extends FocusOptions {
@@ -65,7 +77,31 @@ export function queueFocus(
   input: FocusInput,
 ): void {
   afterRender(POST_FOCUS, () => {
+    waiting.get(host)?.();
     const target = root();
-    if (host.isConnected && target !== undefined) runFocus(target, tag, input);
+    if (!host.isConnected || target === undefined) return;
+    if (input.wait !== true || target.querySelector(input.selector) !== null) {
+      runFocus(target, tag, input);
+      return;
+    }
+    // Not rendered yet: watch the component's own DOM (renders are the only writers) until the
+    // target appears, a newer focus() cancels, or time runs out. settled() doesn't wait for it.
+    const stop = (): void => {
+      observer.disconnect();
+      clearTimeout(timer);
+      waiting.delete(host);
+    };
+    const observer = new MutationObserver(() => {
+      if (target.querySelector(input.selector) !== null) {
+        stop();
+        if (host.isConnected) runFocus(target, tag, input);
+      }
+    });
+    const timer = setTimeout(() => {
+      stop();
+      runFocus(target, tag, input);
+    }, FOCUS_WAIT_MS);
+    observer.observe(target, { childList: true, subtree: true, attributes: true });
+    waiting.set(host, stop);
   });
 }

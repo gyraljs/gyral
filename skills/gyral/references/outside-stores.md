@@ -227,6 +227,50 @@ export const listenTo = <M>(url: string, toMsg: (line: string) => M): Command<M>
 Sending on the same socket: keep the connection in one module and give it a plain driver for
 writes (`run: (text) => { socket.send(text); }`).
 
+## Telling a refused request from no change
+
+When a server (or a shared session) can refuse what the user asked for, don't infer the refusal
+from a snapshot that didn't change: "same data" can mean refused, not yet processed, or a move
+that changed nothing. Make the refusal a message of its own. A request with a reply maps the
+refusal to its own variant through the command's `onFailure`; a feed that answers out of band
+carries the request's id, so the component can tell its own refusal from someone else's update:
+
+```ts
+import { command, defineDriver, type Command } from '@gyral/core';
+
+interface Move {
+  readonly id: string;
+  readonly cell: number;
+}
+type Refusal = { readonly reason: string };
+
+type Msg =
+  | { readonly _tag: 'Accepted'; readonly id: string }
+  | { readonly _tag: 'Refused'; readonly id: string; readonly reason: string };
+
+/** The server answers 200 or a 409 with `{ reason }`; `toError` turns the 409 into a Refusal. */
+const moves = defineDriver<Move, void, Refusal>({
+  name: 'moves',
+  run: async (move, { signal }) => {
+    const res = await fetch('/api/moves', { method: 'POST', body: JSON.stringify(move), signal });
+    if (!res.ok) throw (await res.json()) as Refusal;
+  },
+  toError: (cause) =>
+    typeof cause === 'object' && cause !== null && 'reason' in cause
+      ? { reason: String(cause.reason) }
+      : { reason: 'unavailable' },
+});
+
+export const propose = (move: Move): Command<Msg> =>
+  command(moves, move, {
+    onSuccess: (): Msg => ({ _tag: 'Accepted', id: move.id }),
+    onFailure: (refusal): Msg => ({ _tag: 'Refused', id: move.id, reason: refusal.reason }),
+  });
+```
+
+The `Refused` reducer can then undo an optimistic change and show the reason. For form
+submissions, `IntentRejected` is already this message (forms.md).
+
 ## Testing
 
 - Use the real source: create the store in the test and provide it by name

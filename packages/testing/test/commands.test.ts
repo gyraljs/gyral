@@ -65,6 +65,9 @@ describe('focusTargetsIn', () => {
       { selector: 'input', select: true },
     ]);
     expect(focusTargetsIn([focus('h2')])).toEqual([{ selector: 'h2' }]);
+    expect(focusTargetsIn([focus('#first', { wait: true })])).toEqual([
+      { selector: '#first', wait: true },
+    ]);
     expect(focusTargetsIn([emit({ _tag: 'Cleared' })])).toEqual([]);
   });
 
@@ -74,6 +77,7 @@ describe('focusTargetsIn', () => {
       readonly selector: string;
       readonly preventScroll?: boolean;
       readonly select?: boolean;
+      readonly wait?: boolean;
     }>();
   });
 });

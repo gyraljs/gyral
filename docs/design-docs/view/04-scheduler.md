@@ -55,7 +55,11 @@ remaining work, so the page doesn't freeze.
 Everything that must happen after the DOM reflects the new state runs here, in this order, once
 per flush:
 
-1. Focus commands (`focus(selector)`), against the host's root.
+1. Focus commands (`focus(selector)`), against the host's root. With `{ wait: true }`, a
+   selector that matches nothing yet is kept: a `MutationObserver` on the host's root focuses
+   the target when a later render produces it, a newer focus command from the host replaces
+   it, and after one second it gives up with G0013. It is outside the scheduler's queues, so
+   `settled()` doesn't wait for it.
 2. Custom-state sync (`spec.states` → `ElementInternals.states`).
 3. `Hydrated` messages for hosts that finished their first client render (07).
 4. Starting `init` commands that waited for hydration (ADR 0012).
