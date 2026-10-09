@@ -164,6 +164,41 @@ running, so a `subscription()` or periodic timer started in `init` keeps deliver
   never sent on the first connect (`init` covers that) and never after a move (nothing stopped).
 - `moveBefore()` keeps everything, as before (`connectedMoveCallback`).
 
+## Errors (ADR 0024, 0.3.1)
+
+Every failure Gyral catches becomes a `GyralError` (`component`, `phase`, `msg`, and the thrown
+value as `cause`) and goes through one channel, in this order:
+
+1. **Devtools:** an `error` row in the timeline (development builds, ADR 0017).
+2. **The boundary event:** a bubbling, composed, cancelable `ErrorEvent('error')` is dispatched
+   on the failing host. An ancestor catches it with its intents,
+   `<child-x data-intent=${i.ChildFailed} data-intent-on="error">`, reads
+   `input.event.error`, and claims it with `preventDefault()`. The event stops at the document,
+   so `window` never hears it.
+3. **The component's own fallback,** claimed or not: `spec.error(failure, state)` for an `init`
+   or view failure, the optional `Errored` reducer for an update, parse or command failure.
+4. **`reportError(error)`** unless an ancestor claimed it: `window` `error` listeners and
+   monitoring tools see it once.
+
+| Phase       | What threw                                                                                | Result                                                                                                                                                                                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `init`      | `init`, or a seed resume's `init`                                                         | No state. `spec.error(failure, undefined)` renders, or the host stays empty. Messages to it are ignored. Re-mount to retry.                                                                                                                                                   |
+| `update`    | A reducer (for an intent, a command result, `send()`, a framework message)                | **Nothing changes**: the state stays, the reducer's commands don't run. `Errored` is sent. `send()` never throws. A failed `PropsChanged` is sent again with the next render.                                                                                                 |
+| `view`      | The view, or committing its result                                                        | `spec.error(failure, state)` renders; without it the previous DOM stays (empty on a first render). A server-rendered host's first-render steps (deferred init commands, `Hydrated`) wait for a render that succeeds. A development hydration mismatch (07) is such a failure. |
+| `parse`     | An intent parser, synchronous or rejected                                                 | No message. `Errored` is sent.                                                                                                                                                                                                                                                |
+| `command`   | An `onSuccess`/`onFailure` mapper, or a driver failure the command has no `onFailure` for | No message. `Errored` is sent.                                                                                                                                                                                                                                                |
+| `hook`      | An element hook's `client`                                                                | The DOM is committed and **the other hooks still run**.                                                                                                                                                                                                                       |
+| `store`     | A store reducer, or one of a store's subscribers                                          | A store reducer changes nothing; **the other subscribers are still notified** and the store's commands still run.                                                                                                                                                             |
+| `subscribe` | A subscription's unsubscribe                                                              | The command still stops.                                                                                                                                                                                                                                                      |
+
+A failure while reducing `Errored`, or in `spec.error`, is reported and ends there: no second
+`Errored`, and the previous DOM stays. Recovery is the `Errored` reducer returning a different
+state, or a parent re-mounting the child (a different template, or a new key in `each()`), which
+runs its `init` again.
+
+Production behaves the same; messages are codes (`G0073`–`G0078`, docs/references/errors.md).
+The render loop guard keeps its split (04 "Loop guard"). On the server see 06 "Errors".
+
 ## Public instance API
 
 | Member              | Purpose                                                  |

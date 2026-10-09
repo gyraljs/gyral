@@ -162,6 +162,12 @@ it('loads the user when clicked', async () => {
   `reply(status, body)`, `failNext()`.
 - `withDrivers(container, { http: fake })` provides fakes to every component below a container.
 - `virtualTime()` fakes timers: `await time.advance(500)`, `time.runAll()`, `time.restore()`.
+- **Deliberate failures:** Gyral reports what a component throws with `reportError` (ADR 0024,
+  `errors.md`), which Vitest counts as an uncaught error and fails the run on. Wrap such tests
+  in `collectErrors()` from `@gyral/testing`: `const collected = collectErrors();` … then
+  `collected.stop()` and assert on `collected.errors` (`GyralError`s with `component`, `phase`,
+  `msg`, `cause`). `step(spec, state, { _tag: 'Errored', phase, error })` tests an `Errored`
+  reducer without a DOM.
 - Dispatch input events as the browser does: set `input.value`, then
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 

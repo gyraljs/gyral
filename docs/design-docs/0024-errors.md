@@ -1,6 +1,7 @@
 # ADR 0024 — Errors: one reporting channel, component fallbacks, parent boundaries
 
-Status: **proposed** (2026-10-09), for **0.3.1**. Bead: gyral-1zd.8. Builds on ADR 0006
+Status: **accepted** (2026-10-09; the owner accepted every recommendation, see "Decision"),
+shipped in **0.3.1**. Bead: gyral-1zd.8. Builds on ADR 0006
 (commands and drivers), ADR 0012 (server rendering and seeds), ADR 0013 (stores), ADR 0016
 (production builds and error codes), ADR 0017 (devtools) and view/04-scheduler.md.
 
@@ -117,7 +118,7 @@ phase msg`) in production (ADR 0016).
   `error: (failure: GyralError, state: S | undefined) => TemplateResult` renders instead of the
   view when `init` or the view throws (`state` is `undefined` when `init` threw). An optional
   `Errored` reducer receives `{ _tag: 'Errored', phase, error }` after a failure in `update`,
-  `parse`, `command` or `hook`, so the component can show its own error state or reset; its
+  `parse` or `command`, so the component can show its own error state or reset; its
   commands run normally. The fallback and the reducer are spec-field features (view/05
   "Features register themselves"): apps that don't use them pay nothing for them.
 - **B. `Errored` only.** The component must keep an `error` field in its state and the view
@@ -222,7 +223,7 @@ Every catch site in the table calls `fail()` instead of logging. On the server, 
 | 5   | A failing `StoreChanged` subscriber no longer stops other subscribers or the store's commands                                                                                               | Apps that hit the bug                                                                                                                  |
 | 6   | A failing hook no longer skips the remaining hooks of the render                                                                                                                            | Apps that hit the bug                                                                                                                  |
 | 7   | Server: a component that throws renders its fallback (or an empty marked host) and the page continues, instead of a truncated body                                                          | Apps with failing components on the server; `onError: 'throw'` keeps a hard failure                                                    |
-| 8   | New error code `G0073`; G0031's and G0040's texts no longer cover hooks and reducers                                                                                                        | Docs and anyone matching on codes                                                                                                      |
+| 8   | New error codes `G0073`–`G0078`; G0031's, G0040's and G0041's texts are re-scoped                                                                                                           | Docs and anyone matching on codes                                                                                                      |
 | 9   | `spec.error`, `Errored`, `GyralError`, `ErrorPhase` and `renderPage({ onError })` are new API                                                                                               | Additive                                                                                                                               |
 
 ## Implementation plan (0.3.1)
@@ -249,7 +250,44 @@ about **+0.2 to +0.3 KiB**; the `error` view and `Errored` only in apps that use
 loaded hydration chunk (about +20 B). Budgets would move by 0.1–0.3 KiB; the budget file
 records the reason as usual.
 
-## Open questions for the owner
+## Decision (owner, 2026-10-09)
+
+Every recommendation is accepted: 1A (`reportError` only, no `setErrorHandler`), 2A
+(`spec.error` plus `Errored`), 3A (a bubbling, composed, cancelable `ErrorEvent('error')` on the
+failing host, caught with `data-intent-on="error"` and claimed with `preventDefault()`), 4C
+(server isolation with `onError`, default `console.error`, and `onError: 'throw'`), `el.send()`
+reports instead of throwing, a driver failure without `onFailure` is an error, and
+`collectErrors()` ships in `@gyral/testing`.
+
+### As built
+
+- **`fail(cause, phase, text, { host, tag, msg })`** in `packages/core/src/errors.ts`;
+  `GyralError(phase, text, cause, component?, msg?)` is exported from `@gyral/core` with
+  `ErrorPhase` and the `Errored` message type. `Errored` is sent for `update`, `parse` and
+  `command` failures (a hook has no reducer context); `init` and view failures use `spec.error`.
+- **The boundary event stops at the document.** An event dispatched on an element bubbles to
+  `window` too, so without a stop every unclaimed failure would reach `window` `error` twice (the
+  bubbling event, then `reportError`), and monitoring tools would count it twice. The first
+  `fail()` adds one document listener that stops a `GyralError` event's propagation; ancestors'
+  boundaries (capture listeners on their roots) still see it first. A `window` listener in the
+  capture phase still sees the event before the stop; a regression test checks that the bubble
+  phase sees each failure once, from `reportError`.
+- **Hooks:** view/ may not import core (ADR 0018), so `runHooks` isolates each `client` call and
+  hands failures to a handler core's element.ts installs (`onHookFailure`); unset, the first
+  failure is rethrown after every hook ran.
+- **Server:** `ServerRendering.failed` carries the `GyralError` from `server-component.ts`, and
+  `view/server/component.ts` writes `data-gyral-error` instead of the seed and calls the
+  render's `onError`. A view value that fails while being written uses
+  `ServerComponent.fallback`. The client check lives in element.ts (it removes the marker and
+  clears the root), not in the hydration chunk.
+- **Codes:** G0073 (update), G0074 (init), G0075 (hook), G0076 (store reducer), G0077 (store
+  subscriber), G0078 (server component); G0012, G0030, G0031, G0032, G0040, G0041 and G0042 are
+  now the messages of reported `GyralError`s, G0031/G0040/G0041 with new texts.
+- **Tests:** `packages/core/test/errors-cases.ts` (run by `errors.test.ts` and
+  `errors.prod.test.ts`), `errors-hydration.test.ts`, `packages/ssr/test/errors.node.test.ts`,
+  `packages/testing/test/errors.test.ts`, and the devtools model test.
+
+## Open questions for the owner (answered above)
 
 1. **Global channel:** `reportError` only (**recommended**), or also a `setErrorHandler`?
 2. **Parent catch:** a bubbling, cancelable `ErrorEvent` named `error` (**recommended**), a
