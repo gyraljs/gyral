@@ -283,8 +283,15 @@ reports instead of throwing, a driver failure without `onFailure` is an error, a
 - **Codes:** G0073 (update), G0074 (init), G0075 (hook), G0076 (store reducer), G0077 (store
   subscriber), G0078 (server component); G0012, G0030, G0031, G0032, G0040, G0041 and G0042 are
   now the messages of reported `GyralError`s, G0031/G0040/G0041 with new texts.
-- **Tests:** `packages/core/test/errors-cases.ts` (run by `errors.test.ts` and
-  `errors.prod.test.ts`), `errors-hydration.test.ts`, `packages/ssr/test/errors.node.test.ts`,
+- **Size, measured:** +0.64 to +0.79 KiB gzip per example, all chunks and initial (counter
+  8.5 → 9.2 KiB initial; hello-world 8.6 → 9.3, above ADR 0018's 9.0 KiB target), more than the
+  +0.2–0.3 estimated above: the catches, `fail()`, `GyralError` and the event, the init/view
+  fallback and the `Errored` dispatch are all in every app. The budgets were raised with that
+  reason. Follow-up: registering `spec.error` and `Errored` as spec-field features (view/05
+  "Features register themselves") would leave them out of apps that don't name them, an
+  estimated 0.15–0.2 KiB.
+- **Tests:** `packages/core/test/errors-cases.ts` and `errors-cases-more.ts` (run by `errors.test.ts`
+  and `errors.prod.test.ts`), `errors-hydration.test.ts`, `packages/ssr/test/errors.node.test.ts`,
   `packages/testing/test/errors.test.ts`, and the devtools model test.
 
 ## Open questions for the owner (answered above)
