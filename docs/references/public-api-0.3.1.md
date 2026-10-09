@@ -26,7 +26,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `StoreRegistry`, `withStoreScope`                                                                                                                                                                                                                                              | `@gyral/core`           | `@gyral/core/server` only (they were exported from both)                                             |
 | `headEntries`, `HEAD_ATTRIBUTE`, `HeadEntry`, `scriptSafeJson`, `STORE_SEND`, `StoreSendInput`, `STORE_SEED_ATTRIBUTE`, `warnJsonHazard`, `formFields`, `formDataToObject`, `intentRejectedSchema`, `runInit`, `ISLAND_ATTRIBUTE`, `devtoolsEnabled`, `devtoolsLiveComponents` | `@gyral/core`           | `@gyral/core/internal` (no semver); apps use `Head`, `page()`, `setHead()`, `form()`, `submitForm()` |
 | `isLightComponent`, `findInScope`                                                                                                                                                                                                                                              | `@gyral/core`           | not exported                                                                                         |
-| `gyralTemplateLocations`, `gyralDependents`, `gyralDevSsr`, `gyralComponents`, `DEFAULT_TEMPLATE_SOURCES`, `GYRAL_PACKAGES`, `COMPILED_CONDITION`, `CLIENT_ONLY_CONDITION`, `CLIENT_CONDITIONS`, `SERVER_CONDITIONS`                                                                           | `@gyral/core/vite`      | not exported: `gyralVitePreset()` (or `gyralTemplateCompiler()`, `gyralClientOnly()`) sets them up   |
+| `gyralTemplateLocations`, `gyralDependents`, `gyralDevSsr`, `gyralComponents`, `DEFAULT_TEMPLATE_SOURCES`, `GYRAL_PACKAGES`, `COMPILED_CONDITION`, `CLIENT_ONLY_CONDITION`, `CLIENT_CONDITIONS`, `SERVER_CONDITIONS`                                                           | `@gyral/core/vite`      | not exported: `gyralVitePreset()` (or `gyralTemplateCompiler()`, `gyralClientOnly()`) sets them up   |
 | `templateRule`, `rowPurityRule`, `unusedIntentRule`                                                                                                                                                                                                                            | `@gyral/core/eslint`    | not exported: use the plugin (`gyral.rules['template']`, `gyral.configs.recommended`)                |
 | `capturedUrl`                                                                                                                                                                                                                                                                  | `@gyral/router`         | not exported                                                                                         |
 | `customElementsIn`, `undefinedElementsIn`                                                                                                                                                                                                                                      | `@gyral/testing`        | not exported: `hydrated()` reports undefined elements                                                |
@@ -53,7 +53,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `ChildValue`           | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
 | `command`              | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Command`              | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
-| `CommandHandlers`      | type  | supporting type |                                                                                                        |
+| `CommandHandlers`      | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `CommandInfo`          | type  | supporting type |                                                                                                        |
 | `CommandPhase`         | type  | supporting type |                                                                                                        |
 | `CommandTraceEvent`    | type  | supporting type |                                                                                                        |
@@ -78,8 +78,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `Driver`               | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DriverContext`        | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `DriverOverrides`      | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
-| `DriverToken`          | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DRIVERS_ELEMENT`      | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `DriverToken`          | type  | supporting type |                                                                                                        |
 | `each`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `emit`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Errored`              | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -96,7 +96,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `FormResult`           | type  | supporting type |                                                                                                        |
 | `FormValue`            | type  | supporting type |                                                                                                        |
 | `formValues`           | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
-| `FormValues`           | type  | supporting type |                                                                                                        |
+| `FormValues`           | type  | documented      | [design-docs/0008-forms.md](../design-docs/0008-forms.md)                                              |
 | `GyralElement`         | type  | supporting type |                                                                                                        |
 | `GyralElementClass`    | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `GyralError`           | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                           |
@@ -139,7 +139,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `PropKind`             | type  | supporting type |                                                                                                        |
 | `PropsChanged`         | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `PropsOf`              | type  | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
-| `provideDrivers`       | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `provideDrivers`       | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `random`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `randomDriver`         | value | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `RandomInput`          | type  | supporting type |                                                                                                        |
@@ -163,7 +163,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `StoreRef`             | type  | supporting type |                                                                                                        |
 | `StoreResolver`        | type  | supporting type |                                                                                                        |
 | `STORES_ELEMENT`       | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
-| `StoreSpec`            | type  | supporting type |                                                                                                        |
+| `StoreSpec`            | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `StoreUpdate`          | type  | supporting type |                                                                                                        |
 | `Styles`               | type  | documented      | [design-docs/0001-mvi-parsed-intent.md](../design-docs/0001-mvi-parsed-intent.md)                      |
 | `StyleSource`          | type  | supporting type |                                                                                                        |
@@ -219,6 +219,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                    | Kind  | Status          | Documented in                                                           |
 | ------------------------- | ----- | --------------- | ----------------------------------------------------------------------- |
+| `ComponentsOptions`       | type  | supporting type |                                                                         |
 | `gyralClientOnly`         | value | documented      | [design-docs/view/07-hydration.md](../design-docs/view/07-hydration.md) |
 | `gyralTemplateCompiler`   | value | documented      | [consumer-setup.md](consumer-setup.md)                                  |
 | `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)              |
@@ -340,6 +341,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                  | Kind  | Status          | Documented in                                                                               |
 | ----------------------- | ----- | --------------- | ------------------------------------------------------------------------------------------- |
+| `ComponentAssets`       | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
+| `ComponentModule`       | type  | supporting type |                                                                                             |
 | `contentSecurityPolicy` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `CspDirectives`         | type  | supporting type |                                                                                             |
 | `CspOptions`            | type  | documented      | [design-docs/0020-style-attribute-hashes.md](../design-docs/0020-style-attribute-hashes.md) |
@@ -354,6 +357,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `renderToStream`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `renderToString`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `seeOther`              | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                  |
+| `wantsJson`             | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 
 ### `@gyral/ssr/static`
 
@@ -368,6 +372,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `ClientAssets`             | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
 | `clientAssetsFromManifest` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
 | `clientEntryFromManifest`  | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
+| `componentsFromManifest`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
 | `FetchApp`                 | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
 | `ManifestChunk`            | type  | documented      | [design-docs/0016-production-builds.md](../design-docs/0016-production-builds.md) |
 | `ManifestOptions`          | type  | supporting type |                                                                                   |
@@ -385,7 +390,12 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                | Kind  | Status          | Documented in                                                          |
 | --------------------- | ----- | --------------- | ---------------------------------------------------------------------- |
+| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
+| `DevServer`           | type  | supporting type |                                                                        |
+| `DevServerContext`    | type  | supporting type |                                                                        |
+| `DevServerOptions`    | type  | supporting type |                                                                        |
 | `FetchHandler`        | type  | supporting type |                                                                        |
+| `gyralDevServer`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
 | `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
 | `NodeListener`        | type  | supporting type |                                                                        |
 | `NodeListenerOptions` | type  | supporting type |                                                                        |

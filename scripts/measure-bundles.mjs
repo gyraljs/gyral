@@ -162,7 +162,8 @@ if (json) {
   }
   console.log(
     'Sizes in KiB. gzip/brotli: all chunks; initial: gzip of the entry and its static imports ' +
-      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
+      '(no lazy chunks; a components build: the loader, every component module and the ' +
+      'hydration chunk). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
       'also caps `initial`.',
   );
 }

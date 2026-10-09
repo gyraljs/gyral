@@ -254,6 +254,31 @@ module lazily). CSS imported from the client entry (`import './app.css'`) is has
 listed as `css`: pass it as `renderPage({ stylesheets })` to link it (immutable, cached across
 pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on every page.
 
+**Automatic component loading** replaces the client entry for most apps:
+`gyralVitePreset({ components: true })` gives every component defined under `src/` its own
+module behind a small loader, and `renderPage({ components })` links exactly the components a
+page rendered (their modules, preloaded, and the loader) after the body; a page that rendered
+none loads no JavaScript. `gyralDevServer` and `productionServer` hand `components` to your app,
+and `componentsFromManifest(join(dist, 'client'))` reads it for a prerender step. Keep a small
+entry, passed in `scripts`, only for app-wide setup such as `provideDrivers`. Details:
+[ADR 0016](../design-docs/0016-production-builds.md) "Automatic component loading".
+
+### Development server
+
+`gyralDevServer({ entry: '/server/app.ts', app })` (`@gyral/ssr/node`) is the development
+server: Vite serves client modules and HMR, and every other request loads your server module
+through Vite and streams its response; `state` keeps in-memory data across reloads, and a
+render error shows Vite's error overlay. See the SSR skill's "Development server".
+
+### Request layer
+
+Gyral doesn't route requests or run middleware: use a fetch router such as Hono for routing,
+middleware, cookies and error pages, and plug `renderPage`, `formAction` and
+`productionServer` into it ([ADR 0026](../design-docs/0026-request-layer.md)). The seams:
+`formAction` without `invalid` for endpoints only `submitForm` calls, `wantsJson(request)` for
+routes that answer both ways, and `productionServer({ onResponse })` for headers and cookies on
+every response.
+
 ### Serving a production build on Node
 
 `productionServer({ distDir, createApp })` (`@gyral/ssr/static`) serves the Vite client build
@@ -273,14 +298,15 @@ import { productionServer } from '@gyral/ssr/static';
 const app = await productionServer({
   distDir: join(process.cwd(), 'dist'),
   staticDir: false, // nothing prerendered: every page renders per request
-  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+  // With gyralVitePreset({ components: true }): each page loads the components it rendered.
+  // With a client entry instead: scripts: [clientEntry], plus modulepreload and stylesheets.
+  createApp: ({ components, stylesheets }) => ({
     fetch: (_request: Request) =>
       renderPage({
         title: 'Home',
         body: html`<my-home></my-home>`,
-        scripts: [clientEntry],
-        modulepreload,
         stylesheets,
+        ...(components === undefined ? {} : { components }),
       }),
   }),
 });
