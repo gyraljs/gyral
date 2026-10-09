@@ -45,7 +45,6 @@ const watch = (): Command<Msg> =>
 /** Re-issues its watch on Connected. */
 const Badge = define<State, Msg>()('test-reconnect-badge', {
   init: () => [{ n: -1, reconnects: 0 }, [watch()]],
-  intent: {},
   update: {
     Count: (s, m) => ({ ...s, n: m.n }),
     Connected: (s) => [{ ...s, reconnects: s.reconnects + 1 }, [watch()]],
@@ -59,16 +58,13 @@ const Plain = define<State, Exclude<Msg, { _tag: 'Connected' }>>()('test-reconne
     { n: -1, reconnects: 0 },
     [command(unreadDriver, undefined, { onSuccess: (n) => ({ _tag: 'Count' as const, n }) })],
   ],
-  intent: {},
   update: { Count: (s, m) => ({ ...s, n: m.n }) },
   view: (s) => html`<output>${s.n}</output>`,
 });
 
 /** A parent rendering a Badge, for the nested case. */
-const Panel = define<object, never>()('test-reconnect-panel', {
+const Panel = define<object>()('test-reconnect-panel', {
   init: () => ({}),
-  intent: {},
-  update: {},
   view: () => html`<test-reconnect-badge></test-reconnect-badge>`,
 });
 

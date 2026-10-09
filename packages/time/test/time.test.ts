@@ -24,7 +24,6 @@ const Clock = define<State, Msg>()('test-clock', {
     { ticks: [], fired: [], deltas: [] },
     [periodic(1000, (n) => ({ _tag: 'Tick', n }))],
   ],
-  intent: {},
   update: {
     Tick: (s, m) => ({ ...s, ticks: [...s.ticks, m.n] }),
     Fired: (s, m) => ({ ...s, fired: [...s.fired, m.label] }),

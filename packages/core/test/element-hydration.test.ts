@@ -133,10 +133,8 @@ describe('each host hydrates on its own (07)', () => {
       '</template></test-eh-shadow>',
       '</template><b>slotted x</b></test-eh-shadow>',
     );
-    define<object, never>()('test-eh-parent', {
+    define<object>()('test-eh-parent', {
       init: () => ({}),
-      intent: {},
-      update: {},
       view: () => parentView('x'),
     });
     const root = mount(page);
@@ -163,10 +161,8 @@ describe('each host hydrates on its own (07)', () => {
     const late = root.querySelector('test-eh-late') as Live;
     const child = late.shadowRoot?.querySelector('test-eh-shadow') as Live;
     expect(child.hasAttribute('data-gyral-seed')).toBe(false);
-    define<object, never>()('test-eh-late', {
+    define<object>()('test-eh-late', {
       init: () => ({}),
-      intent: {},
-      update: {},
       view: () => parentView('y'),
     });
     const errors = vi.spyOn(console, 'error');

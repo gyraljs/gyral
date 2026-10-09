@@ -53,7 +53,6 @@ type Msg = { readonly _tag: 'Noop' };
 
 const Seeded = define<State, Msg>()('test-initial-messages', {
   init: () => ({ errors: {}, inits: 1 }),
-  intent: {},
   update: {
     Noop: (s) => s,
     IntentRejected: (s, m) => ({ ...s, errors: fieldErrors(m.issues) }),

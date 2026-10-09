@@ -43,9 +43,9 @@ const Table = define<State, Msg>()('test-per-event', {
     Drop: ({ target }) => ({ _tag: 'Drop', id: idOf(target) }),
     Pick: ({ target }) => ({ _tag: 'Pick', id: idOf(target) }),
     Key: ({ key }) => (key === undefined ? undefined : { _tag: 'Key', key }),
-    Enter: () => ({ _tag: 'Enter' }),
+    Enter: true,
     // eslint-disable-next-line gyral/unused-intent -- named in raw() markup, which the rule skips
-    Raw: () => ({ _tag: 'Raw' }),
+    Raw: true,
   },
   update: {
     Grab: (s, m) => ({ ...s, log: [...s.log, `grab:${m.id}`] }),

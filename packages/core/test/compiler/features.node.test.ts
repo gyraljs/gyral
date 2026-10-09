@@ -11,7 +11,6 @@ const appWith = (extra: string, files: Record<string, string> = {}): Record<stri
     import { html } from ${JSON.stringify(VIEW)};
     export const C = define()('x-c', {
       init: () => ({ on: false }),
-      intent: {},
       update: { Flip: (s) => ({ on: !s.on }) },
       view: (s) => html\`<p>\${String(s.on)}</p>\`,
       ${extra}

@@ -70,7 +70,7 @@ export const RoutingView = define<State, Msg>()('gy-routing-view', {
     [listen((location) => ({ _tag: 'Routed', location }))],
   ],
   intent: {
-    Back: () => ({ _tag: 'Back' }),
+    Back: true,
   },
   update: {
     Routed: (_s, { location }) => {

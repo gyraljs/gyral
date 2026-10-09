@@ -13,7 +13,7 @@ const component = (view: string, before = ''): string =>
   `${IMPORT}${before}
 define()('x-a', {
   init: () => ({ open: false, items: [] }),
-  intent: { Save: () => ({ _tag: 'Save' }), Load: () => ({ _tag: 'Load' }) },
+  intent: { Save: true, Load: true },
   update: { Save: (s) => s, Load: (s) => s, Done: (s) => s },
   view: ${view},
 });
@@ -101,8 +101,27 @@ describe('gyral/unused-intent', () => {
   });
 
   tsTester.run('gyral/unused-intent: TypeScript', unusedIntentRule, {
-    valid: [],
+    valid: [
+      // `true` entries (tag-only intents) are parsers like any other.
+      `${IMPORT}type Msg = { readonly _tag: 'Deal' } | { readonly _tag: 'Fold' };
+define<object, Msg>()('x-d', {
+  intent: { Deal: true, Fold: true },
+  update: { Deal: (s) => s, Fold: (s) => s },
+  view: (s, i) => html\`<button data-intent=\${i.Deal}></button><b data-intent=\${i.Fold}></b>\`,
+});
+`,
+    ],
     invalid: [
+      {
+        code: `${IMPORT}type Msg = { readonly _tag: 'Deal' } | { readonly _tag: 'Fold' };
+define<object, Msg>()('x-e', {
+  intent: { Deal: true, Fold: true },
+  update: { Deal: (s) => s, Fold: (s) => s },
+  view: (s, i) => html\`<button data-intent=\${i.Deal}></button>\`,
+});
+`,
+        errors: [unused('Fold')],
+      },
       {
         // Intent names are the parser keys (ADR 0023): a misspelled key is a new name that no
         // template uses, so it is reported even when nothing names the intended one.
@@ -119,7 +138,7 @@ define<object, Msg>()('x-c', {
         code: `${IMPORT}type Msg = { readonly _tag: 'Go' } | { readonly _tag: 'Stop' };
 const i = intentsOf<typeof B>();
 const B = define<object, Msg>()('x-b', {
-  intent: { Go: () => ({ _tag: 'Go' }), Stop: () => ({ _tag: 'Stop' }) },
+  intent: { Go: true, Stop: true },
   update: { Go: (s) => s, Stop: (s) => s },
   view: () => html\`<button data-intent=\${i.Go}>Go</button>\`,
 });

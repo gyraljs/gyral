@@ -23,8 +23,6 @@ const strings: StandardSchemaV1<readonly string[]> = {
 both<object, ShadowProps>('cf-shadow', {
   props: { label: prop.string({ default: '' }), items: prop.value(strings, { default: [] }) },
   init: () => ({}),
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) =>
     html`<p class="c">${props.label}</p>
       <ul>
@@ -42,8 +40,6 @@ both<object, { readonly n: number }>('cf-light', {
   shadow: false,
   props: { n: prop.number({ default: 0 }) },
   init: () => ({}),
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) =>
     html`<h3>Light ${props.n}</h3>
       ${props.n > 1 ? html`<cf-shadow label="in light"></cf-shadow>` : ''}`,

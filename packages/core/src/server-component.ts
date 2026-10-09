@@ -72,7 +72,7 @@ export function serverComponent<S, M extends Tagged, P>(
   spec: ComponentSpec<S, M, P>,
 ): ServerComponent {
   const table = (spec.props ?? {}) as PropTable;
-  const reducers = spec.update as unknown as Reducers<S>;
+  const reducers = (spec.update ?? {}) as unknown as Reducers<S>;
   const declared = new Set((spec.stores ?? []).map((store: AnyStore) => store.name));
   const reader =
     (scope: unknown) =>

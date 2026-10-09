@@ -16,7 +16,7 @@ export const ADDRESS = 'hello@example.com';
 export const Contact = define<State, Msg>()('gy-iso-contact', {
   shadow: false,
   init: () => ({ revealed: false }),
-  intent: { Reveal: () => ({ _tag: 'Reveal' }) },
+  intent: { Reveal: true },
   update: { Reveal: () => ({ revealed: true }) },
   view: (s) =>
     html`<p>

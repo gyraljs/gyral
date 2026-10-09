@@ -148,9 +148,23 @@ type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
  * The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
  * variant; any other name is an intent of its own whose parser may produce any message.
  */
-export type ParserFor<M extends Tagged, P, K, S = unknown> = K extends M['_tag']
-  ? IntentParser<Variant<M, K>, P, S>
-  : IntentParser<M, P, S>;
+export type ParserFor<M extends Tagged, P, K, S = unknown> = string extends K
+  ? // The wide form (any intent name), which every specific spec is assignable to.
+    IntentParser<M, P, S> | true | TrueOnlyForFieldlessMessage
+  : K extends M['_tag']
+    ? IntentParser<Variant<M, K>, P, S> | TagOnly<Variant<M, K>>
+    : IntentParser<M, P, S>;
+
+/**
+ * `true` in the intent table: the intent sends its own tag, `{ _tag: K }` (as Elm's `onClick
+ * Deal` names the message itself). Only for a variant with no field besides `_tag`; for any
+ * other the type names the rule.
+ */
+type TagOnly<V> = [Exclude<keyof V, '_tag'>] extends [never] ? true : TrueOnlyForFieldlessMessage;
+
+interface TrueOnlyForFieldlessMessage {
+  readonly 'true only sends a message with no fields besides _tag; write a parser': never;
+}
 
 /**
  * Intent parsers keyed by intent name (ADR 0001, ADR 0023). The keys are the component's
@@ -212,10 +226,30 @@ export type ComponentSpec<S, M extends Tagged, P, N extends string = string> = S
   S,
   M,
   P,
-  N,
-  Intents<M, P, N, S>
+  N
 > &
+  IntentField<S, M, P, N> &
+  UpdateField<S, M, P> &
   InitField<S, M, P>;
+
+interface IntentField<S, M extends Tagged, P, N extends string> {
+  /**
+   * INTENT: platform events to messages, keyed by intent name (ADR 0023). `Key: true` sends
+   * `{ _tag: 'Key' }`. Omit it when the component handles no events.
+   */
+  readonly intent?: Intents<M, P, N, S>;
+}
+
+// `update` is required (and exhaustive) whenever the component has messages.
+type UpdateField<S, M extends Tagged, P> = [M] extends [never]
+  ? {
+      /** MODEL: pure state transitions (only framework messages for a component without any). */
+      readonly update?: Update<S, M, P>;
+    }
+  : {
+      /** MODEL: pure state transitions, one reducer per message tag. */
+      readonly update: Update<S, M, P>;
+    };
 
 /**
  * `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
@@ -225,13 +259,9 @@ export type ComponentSpec<S, M extends Tagged, P, N extends string = string> = S
  */
 export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
 
-interface SpecBody<S, M extends Tagged, P, N extends string, I> {
+interface SpecBody<S, M extends Tagged, P, N extends string> {
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
-  /** INTENT: platform events to messages. */
-  readonly intent: I;
-  /** MODEL: pure state transitions. */
-  readonly update: Update<S, M, P>;
   /**
    * VIEW: pure function of state and props. Name intents in markup; never attach closures.
    * (A method, so a class typed with fewer intent names, e.g. `GyralElementClass<S, M, P, O>`

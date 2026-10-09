@@ -30,7 +30,6 @@ define<{ readonly count: number }, Msg, Props>()('srv-counter', {
     tags: prop.value(list, { default: [] }),
   },
   init: (p) => ({ count: p.start }),
-  intent: {},
   update: { Add: (s, m) => ({ count: s.count + m.n }) },
   view: (s, _i, { props }) =>
     html`<p>${props.label}: ${s.count} ${props.open ? 'open' : 'shut'} ${props.tags.join()}</p>`,
@@ -44,11 +43,9 @@ define<{ readonly count: number }, Msg, Props>()('srv-counter', {
   ],
 });
 
-define<{ readonly n: number }, never>()('srv-light', {
+define<{ readonly n: number }>()('srv-light', {
   shadow: false,
   init: () => ({ n: 1 }),
-  intent: {},
-  update: {},
   view: (s) =>
     html`<section>
       <h2>Light ${s.n}</h2>
@@ -56,19 +53,15 @@ define<{ readonly n: number }, never>()('srv-light', {
     </section>`,
 });
 
-define<{ readonly n: number }, never>()('srv-island', {
+define<{ readonly n: number }>()('srv-island', {
   hydrate: 'visible',
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<i>later</i>`,
 });
 
-define<{ readonly n: number }, never>()('srv-focus', {
+define<{ readonly n: number }>()('srv-focus', {
   shadow: { delegatesFocus: true },
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<input aria-label="Name" />`,
 });
 
@@ -185,13 +178,11 @@ describe('host attributes', () => {
 describe('streaming (06 "API")', () => {
   it('yields at every component boundary and renders each component only when pulled', () => {
     let rendered = 0;
-    define<{ readonly n: number }, never>()('srv-counted', {
+    define<{ readonly n: number }>()('srv-counted', {
       init: () => {
         rendered++;
         return { n: rendered };
       },
-      intent: {},
-      update: {},
       view: (s) => html`<b>${s.n}</b>`,
     });
     const chunks = render(

@@ -10,14 +10,12 @@ const boom = (): never => {
   throw new Error('boom');
 };
 define<number, Msg>()('ssr-err-init', {
-  intent: {},
   init: boom,
   update: { X: (s) => s },
   view: (s) => html`<p>${s}</p>`,
   error: (failure, state) => html`<p role="alert">${failure.phase} ${String(state)}</p>`,
 });
 define<number, Msg>()('ssr-err-view', {
-  intent: {},
   init: () => 4,
   update: { X: (s) => s },
   view: boom,
@@ -25,20 +23,17 @@ define<number, Msg>()('ssr-err-view', {
   shadow: false,
 });
 define<number, Msg>()('ssr-err-plain', {
-  intent: {},
   init: () => 1,
   update: { X: (s) => s },
   view: boom,
 });
 define<number, Msg>()('ssr-err-twice', {
-  intent: {},
   init: () => 1,
   update: { X: (s) => s },
   view: boom,
   error: boom,
 });
 define<number, Msg>()('ssr-err-fine', {
-  intent: {},
   init: () => 2,
   update: { X: (s) => s },
   view: (s) => html`<p>fine ${s}</p>`,

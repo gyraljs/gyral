@@ -51,7 +51,6 @@ export const App = define<State, Msg, Props>()('gy-iso-app', {
     { path: props.path ?? '/' },
     [listen((location) => ({ _tag: 'Routed', location }))],
   ],
-  intent: {},
   update: {
     // pageHead() also renders the server's head: one source for both (ADR 0019). The first
     // Routed after hydration finds the server's head already matching and writes nothing.

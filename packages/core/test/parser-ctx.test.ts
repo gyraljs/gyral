@@ -39,7 +39,7 @@ const Keys = define<{ readonly log: readonly string[] }, Msg, Props>()('test-par
       return { _tag: 'Key', key };
     },
     // A one-parameter parser still fits.
-    LockAll: () => ({ _tag: 'LockAll' }),
+    LockAll: true,
   },
   update: {
     Key: (s, m) => ({ log: [...s.log, m.key] }),

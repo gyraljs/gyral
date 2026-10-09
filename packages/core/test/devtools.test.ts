@@ -54,7 +54,7 @@ type Msg =
 const Probe = define<{ readonly got: readonly string[] }, Msg>()('test-devtools-probe', {
   init: () => ({ got: [] }),
   stores: [counter],
-  intent: { Bump: () => ({ _tag: 'Bump' }) },
+  intent: { Bump: true },
   update: {
     Go: (s, m) => [
       s,

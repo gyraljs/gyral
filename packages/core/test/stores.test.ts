@@ -44,10 +44,9 @@ const cart = defineStore<Cart, CartMsg>('test-cart', {
 });
 
 // Two distant components: a badge that only reads, a button that only writes.
-define<{ readonly changes: number }, never>()('test-badge', {
+define<{ readonly changes: number }>()('test-badge', {
   stores: [cart],
   init: () => ({ changes: 0 }),
-  intent: {},
   update: {
     StoreChanged: (s, m) => (changed(cart, m) === undefined ? s : { changes: s.changes + 1 }),
   },
@@ -59,17 +58,15 @@ type AddMsg = { readonly _tag: 'AddOne' };
 define<{ readonly n: number }, AddMsg>()('test-add', {
   stores: [cart],
   init: () => ({ n: 0 }),
-  intent: { AddOne: () => ({ _tag: 'AddOne' }) },
+  intent: { AddOne: true },
   update: {
     AddOne: (s) => [{ n: s.n + 1 }, [send(cart, { _tag: 'Add', sku: `sku-${String(s.n)}` })]],
   },
   view: (_s, i) => html`<button data-intent=${i.AddOne}>add</button>`,
 });
 
-define<{ readonly x: number }, never>()('test-undeclared', {
+define<{ readonly x: number }>()('test-undeclared', {
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`${read(cart).lines.length}`,
 });
 

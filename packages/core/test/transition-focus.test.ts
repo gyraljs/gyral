@@ -7,7 +7,6 @@ type Msg = { readonly _tag: 'Open'; readonly id: string };
 
 const Cards = define<{ readonly open: string | null }, Msg>()('test-transition-focus', {
   init: () => ({ open: null }),
-  intent: {},
   update: {
     Open: (s, m) => [{ ...s, open: m.id }, [focus('#detail')]],
   },

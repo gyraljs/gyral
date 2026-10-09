@@ -25,7 +25,7 @@ const load = defineDriver<string, string>({ name: 'load', run: (id) => id });
 const Card = define<State, Msg, Props>()('test-card', {
   props: { userId: prop.string({ required: true }), label: prop.string({ required: true }) },
   init: (props) => ({ draft: '', loadedFor: props.userId, saved: [], fetched: [] }),
-  intent: { Save: () => ({ _tag: 'Save' }) },
+  intent: { Save: true },
   update: {
     Edit: (s) => ({ ...s, draft: 'edited' }),
     Save: (s, _m, { props }) => ({ ...s, saved: [...s.saved, `${props.userId}:${s.draft}`] }),
@@ -50,8 +50,6 @@ const Card = define<State, Msg, Props>()('test-card', {
 const Plain = define<{ readonly n: number }, never, { readonly label: string }>()('test-plain', {
   props: { label: prop.string({ required: true }) },
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) => html`<p>${props.label}</p>`,
 });
 
@@ -138,8 +136,6 @@ describe('honest prop types (ADR 0007 addendum)', () => {
       note: prop.string(),
     },
     init: () => ({ n: 0 }),
-    intent: {},
-    update: {},
     view: (_s, _i, { props }) =>
       html`<p>${props.label}|${String(props.size)}|${props.note ?? '-'}</p>`,
   });
@@ -179,8 +175,6 @@ describe('honest prop types (ADR 0007 addendum)', () => {
       // @ts-expect-error -- `code: string` needs `required: true` or a `default`
       props: { code: prop.string() },
       init: () => ({ n: 0 }),
-      intent: {},
-      update: {},
       view: () => html``,
     });
   });
@@ -190,8 +184,6 @@ describe('honest prop types (ADR 0007 addendum)', () => {
       define()('test-shadowing-props', {
         props: { hidden: prop.boolean(), title: prop.string(), label: prop.string() },
         init: () => ({ n: 0 }),
-        intent: {},
-        update: {},
         view: () => html``,
       });
     expect(shadowing).toThrow(/<test-shadowing-props>.*hidden, title/);

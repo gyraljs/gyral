@@ -58,7 +58,6 @@ const Search = define<{ readonly query: string }, Msg>()('test-driver-types-sear
       }),
     ],
   ],
-  intent: {},
   update: { Restored: (_s, m) => ({ query: m.query }) },
   view: (s) => html`<output>${s.query}</output>`,
 });

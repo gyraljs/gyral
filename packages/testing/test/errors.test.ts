@@ -9,7 +9,6 @@ interface State {
   readonly failed: string | undefined;
 }
 const Panel = define<State, Msg>()('testing-err-panel', {
-  intent: {},
   init: () => ({ failed: undefined }),
   update: {
     Go: () => {

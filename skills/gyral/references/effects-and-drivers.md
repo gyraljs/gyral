@@ -170,7 +170,7 @@ export const Shell = define<State, Msg>()('my-shell', {
   ],
   intent: {
     Open: ({ value }) => (value === undefined ? undefined : { _tag: 'Open', id: value }),
-    Save: () => ({ _tag: 'Save' }),
+    Save: true,
   },
   update: {
     Routed: (s, m) => [
@@ -251,7 +251,6 @@ type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 export const App = define<State, Msg>()('my-app', {
   shadow: false, // a page-level component: fragment targets are in the document
   init: () => [{ route: undefined }, [listen((location): Msg => ({ _tag: 'Routed', location }))]],
-  intent: {},
   update: {
     // Not on the page load (seq 0); h1 needs tabindex="-1".
     Routed: (_s, m) => [
@@ -365,8 +364,6 @@ import { makeRouter } from '@gyral/router';
 // Per component type: this app shell owns the page, so it captures link clicks.
 export const App = define<Stateless, never>()('my-app', {
   drivers: { router: makeRouter({ captureLinks: true }) },
-  intent: {},
-  update: {},
   view: () => html`<slot></slot>`,
 });
 
