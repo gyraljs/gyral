@@ -5,6 +5,7 @@ import {
   type ComponentSpec,
   type Ctx,
   type Connected,
+  type Errored,
   type Hydrated,
   type IntentRejected,
   type Next,
@@ -22,7 +23,7 @@ export interface Stepped<S, M> {
 
 /** Any message `update` accepts: the component's own, or a framework message. */
 export type StepMessage<M, P> =
-  M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected;
+  M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected | Errored;
 
 const FRAMEWORK = new Set([
   'PropsChanged',
@@ -30,6 +31,7 @@ const FRAMEWORK = new Set([
   'StoreChanged',
   'Hydrated',
   'Connected',
+  'Errored',
 ]);
 
 /** `ctx.read` over the given store instances (ADR 0013); unknown stores fail loudly. */
@@ -68,7 +70,7 @@ export function initial<S, M extends Tagged, P>(
 
 /**
  * Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
- * `IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`) without a reducer leave state unchanged, as in
+ * `IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`, `Errored`) without a reducer leave state unchanged, as in
  * the element. `stores` are the instances `ctx.read()` sees.
  */
 export function step<S, M extends Tagged, P>(
