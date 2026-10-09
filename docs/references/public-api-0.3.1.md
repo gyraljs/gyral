@@ -80,6 +80,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `DriverOverrides`      | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
 | `DRIVERS_ELEMENT`      | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `each`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `keyed`                | value | documented      | [skills/gyral/references/view.md](../../skills/gyral/references/view.md)                               |
 | `emit`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Errored`              | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ErrorPhase`           | type  | documented      | [design-docs/0024-errors.md](../design-docs/0024-errors.md)                                            |

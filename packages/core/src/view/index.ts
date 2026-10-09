@@ -32,6 +32,7 @@ export { render, renderBatch } from './render/render.js';
 export type { Markup, SeenMarkup } from './render/seen.js';
 export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
+export { keyed } from './render/keyed.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
 export { defineHook } from './render/hook-part.js';
