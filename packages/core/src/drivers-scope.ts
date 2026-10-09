@@ -1,6 +1,6 @@
 // Tree-scoped driver overrides (gyral-czi.35, ADR 0006 addendum): which driver a command uses.
-// Resolution: el.drivers → nearest driver provider (across shadow roots) → spec.drivers →
-// the command's own driver. Mirrors <gyral-stores> (ADR 0013) for stores.
+// Resolution: el.drivers → nearest driver provider (across shadow roots) → the command's own
+// driver; a driver token (defineDriver('name')) has no own implementation. Mirrors <gyral-stores> (ADR 0013) for stores.
 import type { AnyDriver, DriverOverrides } from './command.js';
 
 /** Provider element name: `<gyral-drivers .drivers=${{ http: fake }}>…</gyral-drivers>`. */

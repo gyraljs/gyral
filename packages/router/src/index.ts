@@ -17,10 +17,7 @@ export type { LocationLike } from './stream.js';
 export { routes } from './routes.js';
 export type { Matcher, Params, RouteMatch, RouteTable, Routes } from './routes.js';
 
-type Output = RouteLocation | undefined;
-
-const fireAndForget = (input: RouterInput): Command<never> =>
-  command<RouterInput, Output, unknown, never>(router, input, { onSuccess: () => undefined });
+const fireAndForget = (input: RouterInput): Command<never> => command(router, input);
 
 /** Options of `navigate()`. */
 export interface NavigateOptions extends Partial<AfterNavigation> {
@@ -68,7 +65,7 @@ export const forward = (): Command<never> => go(1);
  *   init: () => [initial, [listen((location) => ({ _tag: 'Routed', location }))]]
  */
 export function listen<M>(toMsg: (location: RouteLocation) => M | undefined): Command<M> {
-  return command<RouterInput, Output, unknown, M>(
+  return command(
     router,
     { _tag: 'Listen' },
     {

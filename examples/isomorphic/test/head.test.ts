@@ -1,8 +1,9 @@
 // ADR 0019 round trip: the head the server writes for a URL is the head a client navigation to
 // that URL leaves, and the first navigation after hydration adopts the server's head unchanged.
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
+import { makeRouter } from '@gyral/router';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { settled } from '@gyral/core';
+import { provideDrivers, settled } from '@gyral/core';
 import serverHtml from './fixtures/about.ssr.html?raw';
 
 const original = { href: location.href, title: document.title };
@@ -22,6 +23,8 @@ const observer = new MutationObserver((list) => records.push(...list));
 
 beforeAll(() => {
   history.replaceState(null, '', '/about');
+  // As entry-client.ts does: the app's router captures link clicks.
+  provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) });
   page = mountSsr(serverHtml);
   serverHead = managedHead();
   // The app sets the title through setHead(); start from the server's title, as a page load does.

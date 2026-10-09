@@ -268,14 +268,18 @@ export class HostModel<S, P> implements LocalHost {
     const el = this.el;
     return (this.#interpreter ??= (features.commands as NonNullable<typeof features.commands>)(
       el,
-      this.#spec.drivers,
       (msg) => {
         this.dispatch(msg);
       },
       DEVTOOLS_ENABLED ? devCommands(() => devOwner(el, this.tag)) : undefined,
       (cause, code, driver) => {
         const owner = `<${this.tag}>`;
-        const text = code === 40 ? message(40, owner, driver) : message(41, owner, driver);
+        const text =
+          code === 40
+            ? message(40, owner, driver)
+            : code === 41
+              ? message(41, owner, driver)
+              : message(43, owner, driver);
         this.fail(cause, 'command', text, driver);
       },
     ));

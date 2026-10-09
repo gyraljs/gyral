@@ -24,37 +24,43 @@ export const storage = defineDriver<SaveInput, void, string>({
   toError: (cause) => (cause instanceof Error ? cause.message : String(cause)),
 });
 
+// Nothing to report on success, so there is no onSuccess: only failures answer.
 export const save = <M>(key: string, value: string, onFailure: (reason: string) => M): Command<M> =>
-  command<SaveInput, void, string, M>(
-    storage,
-    { key, value },
-    {
-      onSuccess: () => undefined, // nothing to report on success
-      onFailure,
-    },
-  );
+  command(storage, { key, value }, { onFailure });
 ```
 
 `Driver<I, O, E>` fields: `name` (substitution key), `run(input, { signal, emit })` returning
 `O` or a `Promise<O>`, optional default `concurrency`, and `toError` (turns a thrown value into
 the typed error `E` that `onFailure` receives). A driver runs once per command; for retries,
-wrap it (below). Without `onFailure`, failures are
-logged and dropped. `onSuccess` returning `undefined` sends no message.
+wrap it (below). Without `onFailure`, a failure is reported to the error channel (G0041).
+Without `onSuccess`, or when it returns `undefined`, no message is sent.
 
 ### Commands that answer nothing: `Command<never>`
 
-`focus()`, `emit()`, `navigate()` and `go()` (and your own fire-and-forget commands) return
-`Command<never>`: they produce no message, and `never` fits any message type, so they go in a
-reducer's command list or a helper typed `Command<Msg>` with no type argument:
+`focus()`, `emit()`, `navigate()` and `go()` return `Command<never>`: they produce no message,
+and `never` fits any message type, so they go in a reducer's command list or a helper typed
+`Command<Msg>` with no type argument. Your own fire-and-forget commands are the same: call
+`command(driver, input)` with no handlers (or without `onSuccess`). A failure is still reported
+(G0041). With handlers, the message type is inferred from them, literal tags included, so
+`command<…>` type arguments are rarely needed:
 
 ```ts
-import { focus, type Command } from '@gyral/core';
+import { command, defineDriver, focus, type Command } from '@gyral/core';
 import { navigate } from '@gyral/router';
 
 type Msg = { readonly _tag: 'Saved' } | { readonly _tag: 'Failed' };
 
 /** After a save: back to the list, with focus on its heading. No `<M>` needed. */
 export const afterSave = (): readonly Command<Msg>[] => [navigate('/items'), focus('h1')];
+
+const log = defineDriver<string, undefined>({
+  name: 'log',
+  run: (line) => {
+    console.info(line);
+  },
+});
+/** Fire and forget: no handlers, no type arguments. */
+export const audit = (line: string): Command<Msg> => command(log, line);
 ```
 
 ## Concurrency (per lane: `key`, default the driver name)
@@ -354,25 +360,58 @@ export const copyText = <M>(text: string, done: M, failed: (e: CopyError) => M) 
 ## Substituting drivers (by name)
 
 Lookup order: the element's `drivers` property → the nearest `<gyral-drivers>` provider
-(`provideDrivers(element, { http: … })`) → the spec's `drivers` → the command's own driver.
-`DRIVERS_ELEMENT` is that provider's tag name, for code that looks for it.
+(`provideDrivers(element, { http: … })`) → the command's own driver. Configure app-wide
+drivers once, at the entry. `DRIVERS_ELEMENT` is the provider's tag name, for code that looks
+for it.
 
 ```ts
-import { define, html, provideDrivers, type Stateless } from '@gyral/core';
+import { provideDrivers } from '@gyral/core';
 import { csrfFromMeta, makeHttpDriver } from '@gyral/http';
 import { makeRouter } from '@gyral/router';
 
-// Per component type: this app shell owns the page, so it captures link clicks.
-export const App = define<Stateless, never>()('my-app', {
-  drivers: { router: makeRouter({ captureLinks: true }) },
-  intent: {},
-  update: {},
-  view: () => html`<slot></slot>`,
-});
+// The whole page: this app owns it, so its router captures link clicks.
+provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) });
 
-// Per subtree: every component under <main> sends the CSRF token with its requests.
+// One subtree: every component under <main> sends the CSRF token with its requests.
 const main = document.querySelector('main');
 if (main !== null) {
   provideDrivers(main, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) });
 }
 ```
+
+## Driver tokens (no default implementation)
+
+An app service (a game session, a socket, a payment SDK) has no sensible default. Define it by
+name alone: the result is a typed **token**. Commands built from it are typed, and it runs only
+when a provider or `el.drivers` supplies a driver of that name. If nothing does, the command is
+reported as G0043, naming the driver and the component. There are no placeholder drivers that
+throw, no import order to get right and no casts.
+
+```ts
+import { command, defineDriver, provideDrivers, type Command } from '@gyral/core';
+
+interface Move {
+  readonly card: number;
+}
+interface Snapshot {
+  readonly turn: number;
+}
+
+// Shared module: the token. No implementation here.
+export const session = defineDriver<Move, Snapshot, string>('session');
+
+// Components: fully typed, no type arguments.
+export const play = (card: number): Command<{ readonly _tag: 'Synced'; readonly turn: number }> =>
+  command(session, { card }, { onSuccess: (s) => ({ _tag: 'Synced', turn: s.turn }) });
+
+// App entry (or a test): the implementation, by name.
+provideDrivers(document.body, {
+  session: defineDriver<Move, Snapshot, string>({
+    name: 'session',
+    run: async (move) => ({ turn: move.card }),
+  }),
+});
+```
+
+Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `withDrivers`,
+`el.drivers` or `mountSsr`.
