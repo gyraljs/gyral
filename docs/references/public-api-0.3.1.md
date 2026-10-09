@@ -62,7 +62,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `Connected`            | type  | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md)           |
 | `css`                  | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `CssValue`             | type  | supporting type |                                                                                                        |
-| `Ctx`                  | type  | documented      | [design-docs/0001-mvi-parsed-intent.md](../design-docs/0001-mvi-parsed-intent.md)                      |
+| `Ctx`                  | type  | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
 | `define`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `defineDisposableHook` | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `defineDriver`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -124,6 +124,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `outputs`              | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `OutputsOf`            | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `OutputSource`         | type  | supporting type |                                                                                                        |
+| `ParserCtx`            | type  | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
 | `ParserFor`            | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `prop`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Prop`                 | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |

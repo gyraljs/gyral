@@ -89,6 +89,12 @@ orientation prop says which arrow keys it owns). Parsers stay pure apart from `p
 one-parameter parsers still fit, and `form()`/`field()`/`child()` return one-parameter
 parsers so existing direct calls still compile.
 
+**Update (gyral-1zd.14, 2026-10-09, 0.3.1; decided by the user):** the parser's `ctx` also
+carries `state`, the component's state when the event fires, read-only (`ParserCtx<P, S>`,
+`IntentParser<M, P, S>`). Where the user is often decides `preventDefault()`: a grid keeps Tab
+only until its last cell. Without it, views wrote `data-first`/`data-last` attributes for the
+parser to read. Parsers still only read.
+
 ## Addendum: Intent names (gyral-dyn.12, gyral-dyn.31, 2026-10-08, 0.3.1; decided by the user)
 
 **Context.** Intent names were message tags, so a component with many controls that each send

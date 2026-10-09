@@ -253,11 +253,11 @@ it. A parser written outside the spec needs `_tag: 'Qty' as const` or the varian
 type (`Extract<Msg, { _tag: 'Qty' }> | undefined`). The same holds for `child()`, `form()` and
 `field()` mappers.
 
-## Props and stores in a parser: `(input, ctx)`
+## Props, state and stores in a parser: `(input, ctx)`
 
-A parser's second argument is the read-only context reducers get: `props` as they are when the
-event fires, and `read(store)` for the stores in `spec.stores` (0.3.1). Parsers that don't need
-it take one parameter. Use it when the decision must happen during the event, such as whether
+A parser's second argument is the read-only context reducers get, plus the component's state:
+`props` as they are when the event fires, `state` at that moment, and `read(store)` for the
+stores in `spec.stores` (0.3.1). Parsers that don't need it take one parameter. Use it when the decision must happen during the event, such as whether
 to call `preventDefault()`, which an async reducer is too late for:
 
 ```ts
@@ -311,9 +311,41 @@ export const Folders = define<{ readonly active: number }, Msg, Props>()('my-fol
 });
 ```
 
-Keep parsers pure apart from `preventDefault()`: read, don't write. `form()`, `field()` and
-`child()` return one-parameter parsers, so a parser can still call one directly
-(`field(schema, toMsg)(input)`).
+Where the user is often decides it, which is what `state` is for. A grid keeps Tab inside it
+until the last cell; there Tab keeps its default and focus moves on to the next control:
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface Grid {
+  readonly cell: number;
+  readonly cells: number;
+}
+type Msg = { readonly _tag: 'NextCell' };
+
+export const Seats = define<Grid, Msg>()('my-seat-grid', {
+  init: () => ({ cell: 0, cells: 12 }),
+  intent: {
+    NextCell: ({ key, event }, { state }) => {
+      if (key !== 'Tab' || state.cell === state.cells - 1) return undefined;
+      event.preventDefault();
+      return { _tag: 'NextCell' };
+    },
+  },
+  update: { NextCell: (s) => ({ ...s, cell: s.cell + 1 }) },
+  view: (s, i) => html`
+    <div role="grid" tabindex="0" aria-label="Seats" data-intent-keydown=${i.NextCell}>
+      Seat ${s.cell + 1} of ${s.cells}
+    </div>
+  `,
+});
+```
+
+`state` is the state when the event fires, including messages sent before the next render, and
+it is read-only (`Readonly<State>`); a parser that needs it no longer has to have the view write
+`data-first`/`data-last` attributes for it. Keep parsers pure apart from `preventDefault()`:
+read, don't write. `form()`, `field()` and `child()` return one-parameter parsers, so a parser
+can still call one directly (`field(schema, toMsg)(input)`).
 
 ## One intent, many elements
 
@@ -536,6 +568,58 @@ In the app, the reducer would also start and stop the microphone with commands.
   needs the release, not on a container of other interactive elements.
 - Keys reach the button only while it has focus; for a shortcut anywhere on the page, read keys
   in a driver (`subscription()` over `keydown`/`keyup` on `window`, outside-stores.md).
+
+## The element under a captured pointer
+
+While an element holds pointer capture, every move lands on it, not on what the pointer is
+over. To trace a path across items (drawing across a grid of cells, selecting a range of days
+by dragging), capture on the container and ask the component's root which element is under the
+pointer: `elementFromPoint` on the shadow root (or `document` for a light-DOM component) sees
+inside the shadow tree. The cell carries its index in `data-cell`:
+
+```ts
+import { capturePointer, define, html } from '@gyral/core';
+
+interface State {
+  readonly path: readonly number[];
+}
+type Msg = { readonly _tag: 'Trace'; readonly cell: number; readonly start: boolean };
+
+const CELLS = Array.from({ length: 16 }, (_, n) => n);
+
+export const PathGrid = define<State, Msg>()('my-path-grid', {
+  init: () => ({ path: [] }),
+  intent: {
+    Trace: ({ event, target }) => {
+      if (!(event instanceof PointerEvent)) return undefined;
+      if (event.type === 'pointermove' && event.buttons === 0) return undefined;
+      const root = target.getRootNode() as Document | ShadowRoot;
+      const under = root.elementFromPoint(event.clientX, event.clientY);
+      const cell = under?.closest('[data-cell]')?.getAttribute('data-cell');
+      if (cell == null) return undefined;
+      return { _tag: 'Trace', cell: Number(cell), start: event.type === 'pointerdown' };
+    },
+  },
+  update: {
+    Trace: (s, m) =>
+      m.start ? { path: [m.cell] } : s.path.at(-1) === m.cell ? s : { path: [...s.path, m.cell] },
+  },
+  view: (s, i) => html`
+    <div
+      class="grid"
+      ${capturePointer()}
+      data-intent=${i.Trace}
+      data-intent-on="pointerdown pointermove"
+    >
+      ${CELLS.map(
+        (n) => html`<span data-cell=${n} class=${s.path.includes(n) ? 'on' : ''}>${n}</span>`,
+      )}
+    </div>
+  `,
+});
+```
+
+Give the container `touch-action: none` so a finger traces instead of scrolling.
 
 ## Messages without intents
 

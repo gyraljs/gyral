@@ -1,6 +1,6 @@
 import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
-import type { Ctx, IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
+import type { IntentInput, IntentNames, IntentParser, ParserCtx, Tagged } from './types.js';
 import { message, type Markup } from './view/index.js';
 
 /** Event a child component dispatches on its host to send an output up (ADR 0010); public. */
@@ -236,7 +236,7 @@ export function handleIntent<M>(
   root: Node,
   parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
   tag: string,
-  model: { ctx(): Ctx<unknown> },
+  model: { ctx(): ParserCtx<unknown> },
   deliver: (msg: Tagged | undefined) => void,
 ): void {
   for (let input: IntentInput | undefined; (input = readIntent(event, root, input?.target));) {

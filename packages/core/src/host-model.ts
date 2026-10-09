@@ -18,7 +18,7 @@ import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
 import { noteActivity, requestTransition } from './scheduler.js';
 import type { AnyStore } from './store.js';
-import type { ComponentSpec, Ctx, IntentRejected, Tagged } from './types.js';
+import type { ComponentSpec, Ctx, IntentRejected, ParserCtx, Tagged } from './types.js';
 import { message } from './view/index.js';
 
 type Bag = Readonly<Record<string, unknown>>;
@@ -154,8 +154,13 @@ export class HostModel<S, P> implements LocalHost {
     this.apply([this.state(), commands]);
   }
 
-  ctx(): Ctx<P> {
-    return { props: this.#host.props() as P, read: (store) => this.stores().read(store) };
+  // Reducers and the view get this too; only parsers' type (ParserCtx) names `state`.
+  ctx(): ParserCtx<P, S> {
+    return {
+      props: this.#host.props() as P,
+      read: (store) => this.stores().read(store),
+      state: this.state(),
+    };
   }
 
   /**

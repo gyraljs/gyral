@@ -70,6 +70,7 @@ export type {
   IntentParser,
   IntentRejected,
   Intents,
+  ParserCtx,
   ParserFor,
   PropDeclarations,
   Connected,

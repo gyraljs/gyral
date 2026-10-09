@@ -296,6 +296,15 @@ its own `keydown` intent, and code filtered with `event.composedPath()` instead.
 an outer intent can now receive events an inner parser ignored. Decided by the user on
 2026-10-08. Tests: `packages/core/test/intent-decline.test.ts`.
 
+## Parser context (gyral-dyn.17, gyral-1zd.14, 0.3.1)
+
+`handleIntent` calls each parser as `parser(input, model.ctx())`. The context is built when
+the parser runs, not at the last render: `props` read from the element, `read(store)`, and
+`state`, the model's current state (messages already reduced in this task included). The type
+is `ParserCtx<P, S>`, with `state: Readonly<S>`; reducers and the view receive the same object
+typed as `Ctx<P>`, which doesn't name `state` (they get it as their first argument). Tests:
+`packages/core/test/parser-ctx.test.ts`, `parser-state.test.ts`.
+
 ## Press and release (gyral-dyn.13, 0.3.1)
 
 `data-intent-on` takes a list of event types separated by whitespace. An element's intent

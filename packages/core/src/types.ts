@@ -47,6 +47,16 @@ export interface Ctx<P> {
   readonly read: StoreReader;
 }
 
+/**
+ * What an intent parser gets besides the input: the reducers' context plus the component's
+ * current state, read-only. Parsers decide synchronously (`preventDefault()`), and where the
+ * user is often decides it: Tab leaves a grid only from its last cell.
+ */
+export interface ParserCtx<P, S = unknown> extends Ctx<P> {
+  /** The state when the event fires. */
+  readonly state: Readonly<S>;
+}
+
 /** Framework message: declared props changed after the first render (ADR 0007). */
 export interface PropsChanged<P> {
   readonly _tag: 'PropsChanged';
@@ -110,13 +120,13 @@ type ParseResult<M> = M | IntentRejected | undefined;
  * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
  * decline it: a synchronous `undefined` passes the event to the next intent outward for the
  * same event (view/05-element.md "Declining"). May be async because schema validation may be;
- * an async parser keeps the event. `ctx` is the read-only context
- * reducers get (props as they are when the event fires, `read(store)`); parsers that don't
- * need it take one parameter.
+ * an async parser keeps the event. `ctx` is the read-only context reducers get (props as
+ * they are when the event fires, `read(store)`) plus `state`, the component's state at that
+ * moment; parsers that don't need it take one parameter.
  */
-export type IntentParser<M, P = unknown> = (
+export type IntentParser<M, P = unknown, S = unknown> = (
   input: IntentInput,
-  ctx: Ctx<P>,
+  ctx: ParserCtx<P, S>,
 ) => ParseResult<M> | Promise<ParseResult<M>>;
 
 type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
@@ -125,9 +135,9 @@ type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
  * The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
  * variant; any other name is an intent of its own whose parser may produce any message.
  */
-export type ParserFor<M extends Tagged, P, K> = K extends M['_tag']
-  ? IntentParser<Variant<M, K>, P>
-  : IntentParser<M, P>;
+export type ParserFor<M extends Tagged, P, K, S = unknown> = K extends M['_tag']
+  ? IntentParser<Variant<M, K>, P, S>
+  : IntentParser<M, P, S>;
 
 /**
  * Intent parsers keyed by intent name (ADR 0001, ADR 0023). The keys are the component's
@@ -136,8 +146,8 @@ export type ParserFor<M extends Tagged, P, K> = K extends M['_tag']
  * other key may return any message (several controls that change one thing can also share one
  * intent and tell themselves apart by `name`). Messages from drivers need no parser.
  */
-export type Intents<M extends Tagged, P = unknown, N extends string = string> = {
-  readonly [K in N]: ParserFor<M, P, K>;
+export type Intents<M extends Tagged, P = unknown, N extends string = string, S = unknown> = {
+  readonly [K in N]: ParserFor<M, P, K, S>;
 };
 
 type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
@@ -189,7 +199,7 @@ export type ComponentSpec<S, M extends Tagged, P, N extends string = string> = S
   M,
   P,
   N,
-  Intents<M, P, N>
+  Intents<M, P, N, S>
 > &
   InitField<S, M, P>;
 
