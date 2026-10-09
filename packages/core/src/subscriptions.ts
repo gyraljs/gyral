@@ -13,10 +13,16 @@
 import type { Command } from './command.js';
 import { DEV, message } from './view/index.js';
 
-/** What syncing needs from the host's interpreter. */
-export interface SubscriptionRunner<M> {
-  readonly run: (cmd: Command<M>) => void;
-  readonly cancel: (lane: string) => void;
+/** What syncing needs from the host's model (host-model.ts). */
+export interface SubscriptionHost<M> {
+  readonly tag: string;
+  state(): unknown;
+  ctx(): { readonly props: unknown };
+  /** Runs commands as a reducer's would. */
+  run(commands: readonly Command<M>[]): void;
+  /** Aborts the running task of `lane`. */
+  cancel(lane: string): void;
+  fail(cause: unknown, phase: 'update', text: string, msg: string): unknown;
 }
 
 /** One host's subscriptions. */
@@ -39,15 +45,14 @@ const fingerprint = (input: unknown): unknown => {
 };
 
 /**
- * `derive` evaluates the spec field for the current state and props; a throw goes to `failed`
- * (reported as an update failure, ADR 0024) and leaves the running set as it was.
+ * `derive` is the spec field. A throw is reported as an update failure (ADR 0024) and leaves
+ * the running set as it was.
  */
 export function subscriptionSet<M>(
-  tag: string,
-  derive: () => readonly Command<M>[],
-  runner: SubscriptionRunner<M>,
-  failed: (cause: unknown) => void,
+  host: SubscriptionHost<M>,
+  derive: (state: never, props: never) => readonly Command<M>[],
 ): Subscriptions {
+  const tag = host.tag;
   const running = new Map<string, unknown>();
   // A command can emit while it starts (a timer that fires at once), so its message's update
   // asks to sync again in the middle of a sync: it runs once this one is done.
@@ -57,9 +62,10 @@ export function subscriptionSet<M>(
   const sync = (): void => {
     let commands: readonly Command<M>[];
     try {
-      commands = derive();
+      // Sound: the host passes its own state and props to its own spec's field.
+      commands = derive(host.state() as never, host.ctx().props as never);
     } catch (cause) {
-      failed(cause);
+      host.fail(cause, 'update', message(73, tag, 'subscriptions'), 'subscriptions');
       return;
     }
     const seen = new Set<string>();
@@ -73,14 +79,14 @@ export function subscriptionSet<M>(
       const print = fingerprint(cmd.input);
       if (running.has(lane)) {
         if (Object.is(running.get(lane), print)) continue;
-        runner.cancel(lane);
+        host.cancel(lane);
       }
       running.set(lane, print);
-      runner.run(cmd);
+      host.run([cmd]);
     }
     for (const lane of running.keys()) {
       if (seen.has(lane)) continue;
-      runner.cancel(lane);
+      host.cancel(lane);
       running.delete(lane);
     }
   };
@@ -98,7 +104,7 @@ export function subscriptionSet<M>(
           sync();
           if (!askedAgain()) return;
         }
-        failed(new Error(message(80, tag)));
+        host.fail(new Error(message(80, tag)), 'update', message(80, tag), 'subscriptions');
       } finally {
         syncing = false;
       }

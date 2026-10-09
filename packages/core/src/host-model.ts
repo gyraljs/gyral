@@ -249,23 +249,14 @@ export class HostModel<S, P> implements LocalHost {
    */
   subscribe(): void {
     const derive = this.#spec.subscriptions;
-    if (derive === undefined || subscriptionSet === undefined || this.#subs !== undefined) return;
-    this.#subs = subscriptionSet<Tagged | IntentRejected>(
-      this.tag,
-      () => derive(this.state(), this.#host.props() as P),
-      {
-        run: (cmd) => {
-          this.#commands().run(cmd);
-        },
-        cancel: (lane) => {
-          this.#interpreter?.cancel(lane);
-        },
-      },
-      (cause) => {
-        this.fail(cause, 'update', message(73, this.tag, 'subscriptions'), 'subscriptions');
-      },
-    );
+    if (derive === undefined || subscriptionSet === undefined) return;
+    this.#subs ??= subscriptionSet(this, derive);
     this.#resubscribe();
+  }
+
+  /** Aborts the running command of `lane` (a subscription that left, ADR 0025). */
+  cancel(lane: string): void {
+    this.#interpreter?.cancel(lane);
   }
 
   /** Syncs the subscriptions while connected and healthy. */
