@@ -122,16 +122,18 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `fake.emitNext(value)` pushes into the newest running call, or use `calls[i].emit(value)`
   for a specific one (gyral-czi.15). Emits into a settled or aborted call are ignored, like
   the real runtime.
-- **Disconnect interrupts synchronously** (contract since 0.3.0, written down in 0.3.1,
-  gyral-g1r.29): `disconnectedCallback` disposes the element's interpreter, which aborts every
-  running or queued command's `AbortController`. `abort` listeners run inside `abort()`, so
-  when `el.remove()` returns, each command's `signal.aborted` is `true`, the listeners a driver
-  added to the signal have run, and no later result of those commands is dispatched. What a
-  driver does after an `await` (a `finally` once its aborted promise settles, a rejection
-  handler) runs on later microtasks, like any promise continuation. Tests assert
-  `signal.aborted` right after `remove()`; they yield (`await Promise.resolve()`, or
-  `await clock.advance(0)` under `virtualTime()`) only to observe such promise-based cleanup.
-  (Until 0.2 the Lit element disconnected through an update cycle and tests had to yield first.)
+- **Disconnect interrupts one microtask later** (0.3.1, gyral-dyn.33; until next.4 it was
+  synchronous, gyral-g1r.29): `disconnectedCallback` schedules the disposal of the element's
+  interpreter for the next microtask. If the element is connected again first (a move with
+  `appendChild`/`insertBefore`, which disconnects and connects in one task), the disposal is
+  cancelled and every command keeps running. Otherwise the interpreter is disposed, which aborts
+  every running or queued command's `AbortController`; `abort` listeners run inside `abort()`,
+  and no later result of those commands is dispatched. A host attached again after that gets
+  the optional framework message `Connected { reconnect: true }` to re-issue long-lived
+  commands (view/05 "Moves and reconnects"). Tests assert `signal.aborted` after
+  `el.remove(); await Promise.resolve();` (or `await clock.advance(0)` under `virtualTime()`).
+  Why: list libraries and DOM code reorder elements by removing and re-inserting them, and a
+  synchronous dispose ended `init`'s subscriptions for good on every reorder.
 - **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
   microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
   promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's

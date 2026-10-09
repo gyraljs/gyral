@@ -153,6 +153,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
 
   it('stops listening when the component disconnects', async () => {
     el.remove();
+    await Promise.resolve(); // commands stop one microtask after a real removal
     history.pushState(null, '', '/users/99');
     window.dispatchEvent(new PopStateEvent('popstate'));
     await new Promise((r) => setTimeout(r, 20));

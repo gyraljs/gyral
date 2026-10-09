@@ -98,6 +98,7 @@ export type {
   Intents,
   ParserFor,
   PropDeclarations,
+  Connected,
   Hydrated,
   PropsChanged,
   ShadowOption,

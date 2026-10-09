@@ -257,7 +257,9 @@ describe('commands and drivers', () => {
     let heard = false;
     calls[0]?.signal.addEventListener('abort', () => (heard = true));
     el.remove();
-    // Synchronous (ADR 0006 "Disconnect interrupts synchronously"): no yield needed.
+    // One microtask later (view/05 "Lifecycle"): a move in the same task keeps the work.
+    expect(calls[0]?.signal.aborted).toBe(false);
+    await Promise.resolve();
     expect(calls[0]?.signal.aborted).toBe(true);
     expect(heard).toBe(true);
     calls[0]?.resolve('a');

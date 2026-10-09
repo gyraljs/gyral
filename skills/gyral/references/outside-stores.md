@@ -234,7 +234,40 @@ writes (`run: (text) => { socket.send(text); }`).
   then `await settled()`.
 - Or fake it: `fakeDriver('counter')` records the subscription; `emitNext(value)` pushes a
   value, and `calls[0].signal.aborted` shows it was released on disconnect or switch.
-- Disconnect releases the source synchronously (ADR 0006): right after `el.remove()`,
-  `calls[0].signal.aborted` is `true` and the driver's `abort` listeners have run, so assert
-  without yielding. Only cleanup the driver runs after an `await` needs one
-  (`await Promise.resolve()`).
+- A real removal releases the source one microtask later (ADR 0006): after
+  `el.remove(); await Promise.resolve();`, `calls[0].signal.aborted` is `true` and the driver's
+  `abort` listeners have run. A move (`appendChild`/`insertBefore` in one task) keeps the
+  subscription; see "Moves and reconnects" below.
+
+## Moves and reconnects
+
+A keyed-list library or DOM code that reorders rows by removing and re-inserting them in one
+task doesn't stop a component's subscription. A component removed for real and attached again
+later gets the framework message `Connected { reconnect: true }`; re-issue its watches there.
+It is never sent on the first connect or after a move.
+
+```ts
+import { command, define, html, subscription, type Command } from '@gyral/core';
+
+declare const unread: { get(): number; subscribe(listener: () => void): () => void };
+const unreadSource = subscription<number>('unread', (emit) => {
+  emit(unread.get());
+  return unread.subscribe(() => emit(unread.get()));
+});
+
+type Msg =
+  | { readonly _tag: 'Count'; readonly n: number }
+  | { readonly _tag: 'Connected'; readonly reconnect: true };
+const watch = (): Command<Msg> =>
+  command(unreadSource, undefined, { onSuccess: (n): Msg => ({ _tag: 'Count', n }) });
+
+export const UnreadBadge = define<number, Msg>()('unread-badge', {
+  init: () => [0, [watch()]],
+  intent: {},
+  update: {
+    Count: (_n, m) => m.n,
+    Connected: (n) => [n, [watch()]], // attached again after a real removal
+  },
+  view: (n) => html`<span>${n}</span>`,
+});
+```

@@ -53,6 +53,10 @@ export class HostModel<S, P> implements LocalHost {
   #interpreter: Interpreter<Tagged | IntentRejected> | undefined;
   /** Commands kept while disconnected (init's, before the first connect); undefined once connected. */
   #pending: Cmd[] | undefined = [];
+  /** The scheduled stop of a disconnected host's commands; cleared by a reconnect (a move). */
+  #stopping: object | undefined;
+  /** Commands were stopped while detached: the next connect sends `Connected`. */
+  #stopped = false;
 
   constructor(host: ModelHost, spec: ComponentSpec<S, Tagged, P>) {
     this.#host = host;
@@ -154,21 +158,42 @@ export class HostModel<S, P> implements LocalHost {
     return { props: this.#host.props() as P, read: (store) => this.stores().read(store) };
   }
 
-  /** Resolves stores and runs kept commands. Returns true if store instances were bound. */
+  /**
+   * Resolves stores and runs kept commands; after a real detach, sends `Connected` (05
+   * "Lifecycle"). Returns true if store instances were bound.
+   */
   connect(): boolean {
+    this.#stopping = undefined; // a move: the commands never stopped
     // The nearest <gyral-stores> may differ after a move.
     const rebound = (this.#spec.stores?.length ?? 0) > 0 && this.stores().connect();
     const pending = this.#pending ?? [];
     this.#pending = undefined;
     for (const cmd of pending) this.#commands().run(cmd);
+    if (this.#stopped) {
+      this.#stopped = false;
+      if (this.#reducers['Connected'] !== undefined) {
+        this.dispatch({ _tag: 'Connected', reconnect: true } as Tagged);
+      }
+    }
     return rebound;
   }
 
+  /**
+   * Stops the commands one microtask later, unless the host is connected again first: a move
+   * (`appendChild`, `insertBefore`) disconnects and connects in one task and keeps them running.
+   */
   disconnect(): void {
     this.#binding?.disconnect();
-    this.#interpreter?.dispose();
-    this.#interpreter = undefined;
     this.#pending ??= [];
+    const token = {};
+    this.#stopping = token;
+    queueMicrotask(() => {
+      if (this.#stopping !== token) return;
+      this.#stopping = undefined;
+      this.#interpreter?.dispose();
+      this.#interpreter = undefined;
+      this.#stopped = true;
+    });
   }
 
   /**

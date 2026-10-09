@@ -66,6 +66,21 @@ export interface Hydrated {
   readonly serverRendered: boolean;
 }
 
+/**
+ * Framework message: the host is back in the document after it was really detached (view/05
+ * "Lifecycle"). Disconnecting stops a host's commands one microtask later, so a move (a
+ * disconnect and connect in the same task, as `appendChild`/`insertBefore` reorders do) keeps
+ * them running and sends nothing. Only a host that stayed detached long enough for its commands
+ * to stop receives `Connected` when it is attached again; re-issue long-lived commands (a
+ * `subscription()`, a periodic timer) from its reducer. Never sent on the first connect: `init`
+ * covers that.
+ */
+export interface Connected {
+  readonly _tag: 'Connected';
+  /** Always `true`: `Connected` is only sent when a stopped host is attached again. */
+  readonly reconnect: true;
+}
+
 /** One validation problem. `path` is dot-joined and matches the field's `name`. */
 export interface FieldIssue {
   readonly path: string;
@@ -138,6 +153,7 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
+  readonly Connected?: Reducer<S, M, Connected, P>;
 };
 
 /**
