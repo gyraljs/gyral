@@ -14,7 +14,7 @@ import {
   type Context,
   type Ns,
 } from './repairs.js';
-import { formStateFix, msg, SVG_ONLY, VOID } from './rules.js';
+import { BOOLEAN_ATTRS, formStateFix, msg, SVG_ONLY, VOID } from './rules.js';
 import type { Source } from './source.js';
 import { HTML_ONLY, namespacedAttr, SVG_HTML_POINT, svgAttr } from './svg.js';
 import type { AttrToken, ContentMode, Sink, StartTag } from './tokenizer.js';
@@ -190,7 +190,7 @@ export class TreeBuilder implements Sink {
 
   /**
    * Bound names as the parser spells them (not properties): lower case on HTML elements, SVG's
-   * camelCase on SVG elements (svg.ts); rules 4, 7 (duplicates), 10 (namespaced), 13. A
+   * camelCase on SVG elements (svg.ts); rules 4, 7 (duplicates), 10 (namespaced), 13, 14 (boolean attributes). A
    * static `style` gets its decoded value (`css`): the client applies it as a part (emit.ts).
    */
   private attributes(tag: StartTag, ns: Ns): AttrToken[] {
@@ -207,6 +207,9 @@ export class TreeBuilder implements Sink {
       if (a.kind === 'prop' && ns === 'html') {
         const fix = formStateFix(tag.name, a.name);
         if (fix !== undefined) this.src.fail(4, msg.formState(tag.name, a.name, fix));
+      }
+      if (a.kind === 'attr' && ns === 'html' && !tag.name.includes('-') && BOOLEAN_ATTRS.has(name)) {
+        this.src.fail(14, msg.booleanAttr(tag.name, name));
       }
       if ((a.kind === 'attr' || a.kind === 'bool') && ns !== 'html' && namespacedAttr(a.name)) {
         this.src.fail(10, msg.namespacedAttr(a.name));

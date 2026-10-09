@@ -40,8 +40,16 @@ fix it, and the next one shows.
 | 11  | A document-level template (`<html>`, `<head>`, `<body>`, doctype) rendered in the browser                                                                                                                                                                                                 | Page shells are server-only (01)                                      | render it with `@gyral/core/server`                              |
 | 12  | A hole in `<textarea>`/`<title>` that isn't the whole content                                                                                                                                                                                                                             | The content is one value (02)                                         | `<textarea>${v}</textarea>`                                      |
 | 13  | A named character reference other than `&amp;` `&lt;` `&gt;` `&quot;` `&apos;` `&nbsp;` in the static text of a bound or custom-element attribute                                                                                                                                         | The full entity table is too large to ship                            | the character itself, or a numeric reference                     |
+| 14  | A boolean attribute (`selected`, `checked`, `disabled`, `open`, `required`, `multiple`, `muted`, … ) bound as `name=${…}` on an HTML element (0.3.1)                                                                                                                                      | Any string turns it on, `"false"` included                            | `?name=${…}`                                                     |
 
 Allowed: `<textarea>${v}</textarea>` (live value, 02) and `<title>${t}</title>` (text).
+
+**Rule 14 since 0.3.1** (gyral-1zd.25): `<option selected=${on}>` renders `selected="false"` when
+`on` is false, and the browser selects the option anyway; an app shipped exactly that. A known
+HTML boolean attribute bound with a plain `name=${…}` (or a quoted multi-part value) is now an
+error that points to `?name=${…}`. Static boolean attributes, custom elements (their attributes
+are their own), SVG and MathML are not checked, and neither is `hidden`, whose
+`hidden="until-found"` is a real string value.
 
 **Rule 10 since 0.3.1** (gyral-c5d.8): the `svg` tag is back (01 "svg templates"). An `svg`
 template's top level is SVG content, so SVG-only elements are fine there; HTML at its top level

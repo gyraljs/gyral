@@ -85,6 +85,11 @@ export const msg = {
   textContent: (tag: string): string =>
     `A hole in <${tag}> must be its whole content. Write <${tag}>${H}</${tag}> and build the ` +
     `text in the value: <${tag}>\${\`\${page} | Site\`}</${tag}>.`,
+  // 14
+  booleanAttr: (tag: string, name: string): string =>
+    `${name}=${H} on <${tag}> sets a boolean attribute to a string: any value, even "false", ` +
+    `turns it on. Write ?${name}=${H} to add the attribute when the value is truthy and ` +
+    `remove it otherwise.`,
   // 13
   charRef: (ref: string): string =>
     `&${ref}; in the static text of a bound or custom-element attribute is a named character ` +
@@ -112,6 +117,19 @@ const FORM_STATE: Record<string, Record<string, string> | undefined> = {
 export function formStateFix(tag: string, name: string): string | undefined {
   return FORM_STATE[tag]?.[name];
 }
+
+/**
+ * Rule 14: HTML boolean attributes (present means true). `hidden` is left out because
+ * hidden="until-found" is a real string value.
+ */
+export const BOOLEAN_ATTRS = new Set(
+  (
+    'allowfullscreen async autofocus autoplay checked controls default defer disabled ' +
+    'disablepictureinpicture disableremoteplayback formnovalidate inert ismap itemscope loop ' +
+    'multiple muted nomodule novalidate open playsinline readonly required reversed selected ' +
+    'shadowrootclonable shadowrootdelegatesfocus shadowrootserializable'
+  ).split(' '),
+);
 
 /** Rule 10: SVG element names that HTML doesn't share (lower case). */
 export const SVG_ONLY = new Set(

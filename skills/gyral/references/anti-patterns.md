@@ -25,6 +25,7 @@
 | Array as the whole state                                                          | wrap it: `{ items: [...] }` (an array return means `[state, commands]`) |
 | Copying props into state in `view` or forgetting later changes                    | `init(props)` + a `PropsChanged` reducer, or read `ctx.props` directly  |
 | `.value=${s.text}` / `.checked=${s.on}` on form controls                          | `value=${s.text}` / `?checked=${s.on}` (live form state)                |
+| `selected=${s.on}` / `disabled=${s.busy}` (renders `"false"`, still on)           | `?selected=${s.on}` / `?disabled=${s.busy}` (template rule 14)          |
 | A list row reading `s`, `i` or `ctx` from the view                                | `intentsOf<typeof C>()` at module level for names; the rest via `pick`  |
 | Parent reading or setting a child's internal state                                | props down, `emit()` outputs up, or a store                             |
 | Global singletons / module-level mutable state for shared data                    | `defineStore` + `send` + `ctx.read`                                     |
