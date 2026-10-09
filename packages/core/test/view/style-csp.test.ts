@@ -4,7 +4,7 @@
 // hydration applies the server's blocked style attributes again; `setAttribute('style', …)`
 // stays blocked, which proves the policy is enforced. Chromium in `pnpm check`; Firefox and
 // WebKit too with `pnpm vitest run --config packages/core/test/view/browsers.config.ts`.
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToString } from '../../src/server.js';
 import { DEV, html, type hydrate, type render } from '../../src/view/index.js';
 
@@ -75,8 +75,15 @@ describe("style attributes under `style-src 'self'`", () => {
     const control = doc.getElementById('control') as HTMLElement;
     control.setAttribute('style', 'color: rgb(9, 9, 9)');
     expect(win.getComputedStyle(control).color).not.toBe('rgb(9, 9, 9)');
-    const seen = await violations(win);
-    expect(seen).toBeGreaterThan(0);
+    // The blocked attributes' violation events arrive asynchronously; wait for them rather than a fixed delay.
+    const seen = await vi.waitFor(
+      () => {
+        const n = win.violations ?? 0;
+        if (n === 0) throw new Error('no CSP violation reported yet');
+        return n;
+      },
+      { timeout: 5000 },
+    );
 
     const root = doc.getElementById('client') as HTMLElement;
     gyral.render(view(gyral.html, 3, 'rgb(1, 2, 3)'), root);
@@ -91,8 +98,15 @@ describe("style attributes under `style-src 'self'`", () => {
     const { win, doc, gyral } = await strict(server);
     const root = doc.getElementById('server') as HTMLElement;
     expect(computed(win, root)).not.toEqual(styled(3, 'rgb(1, 2, 3)'));
-    const seen = await violations(win);
-    expect(seen).toBeGreaterThan(0);
+    // The blocked attributes' violation events arrive asynchronously; wait for them rather than a fixed delay.
+    const seen = await vi.waitFor(
+      () => {
+        const n = win.violations ?? 0;
+        if (n === 0) throw new Error('no CSP violation reported yet');
+        return n;
+      },
+      { timeout: 5000 },
+    );
 
     gyral.hydrate(view(gyral.html, 3, 'rgb(1, 2, 3)'), root);
     expect(computed(win, root)).toEqual(styled(3, 'rgb(1, 2, 3)'));
