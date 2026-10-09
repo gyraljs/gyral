@@ -250,7 +250,7 @@ type Msg = { readonly _tag: 'Sent' };
 
 export const Feedback = define<State, Msg>()('my-feedback', {
   init: () => ({ sent: 0 }),
-  intent: { Sent: () => ({ _tag: 'Sent' }) },
+  intent: { Sent: true },
   update: { Sent: (s) => ({ sent: s.sent + 1 }) },
   // A fresh form after each send: the textarea starts empty again.
   view: (s, i) => html`

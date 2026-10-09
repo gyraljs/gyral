@@ -92,6 +92,14 @@ describe('parse', () => {
     ).toEqual({
       _tag: 'Save',
     });
+    // A `Key: true` entry just sends its tag.
+    const Pinger = define<{ readonly n: number }, { readonly _tag: 'Ping' }>()('mount-pinger', {
+      init: () => ({ n: 0 }),
+      intent: { Ping: true },
+      update: { Ping: (s) => ({ n: s.n + 1 }) },
+      view: (s, i) => html`<button data-intent=${i.Ping}>${s.n}</button>`,
+    });
+    expect(parse(Pinger, 'Ping')).toEqual({ _tag: 'Ping' });
     // @ts-expect-error: not one of the component's intents
     expect(() => parse(Note, 'Nope', {})).toThrow('no intent "Nope"');
   });
