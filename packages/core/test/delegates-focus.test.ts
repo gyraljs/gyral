@@ -1,8 +1,8 @@
 // `shadow: { delegatesFocus: true }` (gyral-dyn.26, view/05-element.md "Focus"): the shadow root delegates
 // focus, so focusing the host, or a parent's focus() command naming it, lands on the host's
 // first focusable element. Server-rendered hosts get it from shadowrootdelegatesfocus.
-import { afterEach, describe, expect, it } from 'vitest';
-import { define, focus, html, settled } from '../src/index.js';
+import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
+import { define, focus, html, settled, type ShadowOption } from '../src/index.js';
 
 type FieldMsg = never;
 
@@ -86,5 +86,13 @@ describe('delegatesFocus', () => {
     expect(inner(el)).toBe(serverInput);
     el.focus();
     expect(el.shadowRoot.activeElement).toBe(serverInput);
+  });
+});
+
+describe('ShadowOption', () => {
+  it('is exported, so a shared spec helper can type the option', () => {
+    expectTypeOf<{ delegatesFocus: true }>().toExtend<ShadowOption>();
+    expectTypeOf<false>().toExtend<ShadowOption>();
+    expectTypeOf<'open'>().not.toExtend<ShadowOption>();
   });
 });

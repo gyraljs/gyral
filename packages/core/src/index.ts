@@ -100,6 +100,7 @@ export type {
   PropDeclarations,
   Hydrated,
   PropsChanged,
+  ShadowOption,
   Stateless,
   StoreReader,
   Tagged,
