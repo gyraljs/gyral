@@ -232,6 +232,44 @@ export const Board = define<State, Msg>()('my-board', {
   morphs from its old place to its new one. Same-document View Transitions are only newly Baseline, so keep the hook as the
   fallback for now. A built-in for moves between lists is planned for 0.4.
 
+## Starting over: `keyed(key, value)`
+
+`keyed(key, value)` renders `value`, and when `key` changes it throws the old DOM away,
+nested components and their state included, and renders a fresh copy. Use it to reset
+something the model can't reach: a form's controls after sending (forms.md "What the user typed
+stays"), a CSS animation that runs on insertion, a child component that should start from its
+`init` again.
+
+```ts
+import { define, html, keyed } from '@gyral/core';
+
+interface State {
+  readonly sent: number;
+}
+type Msg = { readonly _tag: 'Sent' };
+
+export const Feedback = define<State, Msg>()('my-feedback', {
+  init: () => ({ sent: 0 }),
+  intent: { Sent: true },
+  update: { Sent: (s) => ({ sent: s.sent + 1 }) },
+  // A fresh form after each send: the textarea starts empty again.
+  view: (s, i) => html`
+    ${keyed(
+      s.sent,
+      html`<form data-intent=${i.Sent}>
+        <textarea name="text" aria-label="Feedback"></textarea>
+        <button>Send</button>
+      </form>`,
+    )}
+    <p>${s.sent} sent</p>
+  `,
+});
+```
+
+The value inside is re-evaluated on every render like any other (it isn't a row, so it may read
+`s`). It's a one-row `each`, so it costs nothing until an app imports it, and it renders on the
+server and hydrates like a list. For many items keyed by identity, use `each`; `keyed` is for one.
+
 ## SVG fragments: `svg`
 
 `svg` (from `@gyral/core`, since 0.3.1) is `html` for SVG fragments: its top level is SVG
@@ -374,9 +412,8 @@ export const Inbox = define<State, Msg>()('my-inbox', {
 ```
 
 `getAnimations()` covers CSS animations and transitions on the element (pass
-`{ subtree: true }` for its descendants). Without a hook, a keyed one-item list replays by
-replacing the element: `each([s.pulses], String, Badge)` renders a new `<output>` per count, at
-the cost of a new node (and its focus, if it had any).
+`{ subtree: true }` for its descendants). Without a hook, `keyed` replays by replacing the
+element: `keyed(s.pulses, html\`<output class="badge">${s.unread}</output>\`)`renders a new`<output>` per count, at the cost of a new node (and its focus, if it had any).
 
 ## Widgets with a lifecycle: their own element, or a disposable hook
 

@@ -100,6 +100,16 @@ Two guards:
 - Duplicate keys are a development error. In production they are handled best effort (matched
   by position where the scan can), never crashing.
 
+### `keyed(key, value)`: one value with a key (0.3.1)
+
+`keyed(key, value)` is `each([value], () => key, (v) => v)`: a one-row list. While the key stays
+the same, the row updates in place like any other child value (its value is a new template
+result on each render, so it always re-renders); when the key changes, the old row's DOM and
+nested component state are removed and a new row is created. It replaces the one-item `each`
+apps wrote to restart an element, clear a form or reset a child (gyral-1zd.25). Being a
+`ListResult`, it needs nothing new on the server or in hydration, and it's tree-shaken with the
+keyed list code.
+
 ## Reconciliation
 
 Given the old rows (keys, nodes) and the new items:

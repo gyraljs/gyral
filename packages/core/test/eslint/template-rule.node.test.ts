@@ -71,6 +71,8 @@ describe('gyral/template', () => {
       // 4: form state as a property
       bad('<input type="checkbox" .checked=${x}>', '<input type="checkbox" .checked=${x}>'),
       bad('<details .open=${x}></details>', '<details .open=${x}>'),
+      // 14: a boolean attribute bound as a string (selected="false" still selects)
+      bad('<option value="a" selected=${x}></option>', '<option value="a" selected=${x}>'),
       // 5: unquoted multi-part attributes, static text with ? or .
       bad('<b class=a${x}></b>', '${x}'),
       bad('<b ?hidden="x ${x}"></b>', '>'),

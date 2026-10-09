@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm invariants && pnpm test && pnpm size:check && node scripts/check-fixtures.mjs && pnpm pack:check",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "node scripts/element-types.mjs && tsc -p tsconfig.json",
     "lint": "eslint . && pnpm lint:css",
     "lint:css": "stylelint \"packages/*/src/**/*.ts\" \"examples/*/src/**/*.ts\" \"examples/**/*.css\" --allow-empty-input",
     "format": "prettier --write .",

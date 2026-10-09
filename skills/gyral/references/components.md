@@ -220,21 +220,28 @@ export const Loader = define<State, Msg>()('my-loader', {
 
 ## Typing the tag
 
-Declare the tag so `document.createElement('my-…')` and `querySelector` are typed:
+`gyralVitePreset()` writes `.gyral/elements.d.ts` with an `HTMLElementTagNameMap` entry for
+every **exported** two-call `define` in `src` (at the start of `vite`, `vite build` and Vitest,
+and again when a file changes), so `document.createElement('my-hello')` and `querySelector`
+return the component's class. Gitignore `.gyral/` and add `".gyral/elements.d.ts"` to tsconfig
+`include` (spelled out: TypeScript's wildcards skip dot-folders). Type checks that run without
+Vite write it first with the CLI: `"typecheck": "gyral-types && tsc --noEmit"`. Don't
+hand-write `declare global { interface HTMLElementTagNameMap … }` blocks any more.
 
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 
+// Exported, so the generated file can import its type.
 export const Hello = define<Stateless, never>()('my-hello', {
   view: () => html`<p>Hello</p>`,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'my-hello': InstanceType<typeof Hello>;
-  }
-}
 ```
+
+Options: `gyralVitePreset({ types: { dirs: ['src', 'lib'], out: 'types/elements.d.ts' } })`,
+or `types: false` to write nothing. Limits: only `export const X = define…()('tag', …)` is
+recognised (a component built some other way keeps a hand-written entry); a component's
+outputs aren't turned into typed events, because an intent parser can't know which element or
+event fired it; use `child(Component, …)` for typed outputs instead.
 
 The class also carries `.spec` (the spec you passed), which `@gyral/testing` uses:
 `step(Hello.spec, …)`.

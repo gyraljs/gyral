@@ -82,9 +82,3 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>()
     `,
   },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-labeled-slider': InstanceType<typeof LabeledSlider>;
-  }
-}

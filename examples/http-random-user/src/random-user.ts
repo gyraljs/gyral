@@ -160,9 +160,3 @@ function userCard(user: User) {
     </dl>
   </article>`;
 }
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-random-user': InstanceType<typeof RandomUser>;
-  }
-}

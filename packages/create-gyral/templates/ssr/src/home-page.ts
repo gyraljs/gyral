@@ -26,9 +26,3 @@ export const HomePage = define<Stateless, never>()('app-home', {
     </footer>
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'app-home': InstanceType<typeof HomePage>;
-  }
-}

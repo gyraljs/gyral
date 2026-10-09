@@ -122,6 +122,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `invokersSupported`    | value | documented      | [design-docs/0001-mvi-parsed-intent.md](../design-docs/0001-mvi-parsed-intent.md)                      |
 | `jsonHazard`           | value | documented      | [design-docs/0012-ssr.md](../design-docs/0012-ssr.md)                                                  |
 | `JsonValue`            | type  | documented      | [design-docs/0019-head-model.md](../design-docs/0019-head-model.md)                                    |
+| `keyed`                | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `labelledBy`           | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `LIGHT_ATTRIBUTE`      | value | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
 | `ListResult`           | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
@@ -220,6 +221,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | Export                    | Kind  | Status          | Documented in                                                           |
 | ------------------------- | ----- | --------------- | ----------------------------------------------------------------------- |
 | `ComponentsOptions`       | type  | supporting type |                                                                         |
+| `ElementTypesOptions`     | type  | supporting type |                                                                         |
 | `gyralClientOnly`         | value | documented      | [design-docs/view/07-hydration.md](../design-docs/view/07-hydration.md) |
 | `gyralTemplateCompiler`   | value | documented      | [consumer-setup.md](consumer-setup.md)                                  |
 | `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)              |
@@ -419,10 +421,15 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `HydratedOptions`  | type  | supporting type |                                                                                              |
 | `initial`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `inputsFor`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `mount`            | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `Mounted`          | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `MountedSsr`       | type  | supporting type |                                                                                              |
+| `MountOptions`     | type  | supporting type |                                                                                              |
 | `mountSsr`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `MountSsrOptions`  | type  | supporting type |                                                                                              |
 | `outputsIn`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `parse`            | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                 |
+| `ParseOptions`     | type  | supporting type |                                                                                              |
 | `Ran`              | type  | supporting type |                                                                                              |
 | `readerOf`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `reject`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |

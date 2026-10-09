@@ -67,9 +67,3 @@ export const ShoppingList = define<State, Msg>()('gy-shopping-list', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-shopping-list': InstanceType<typeof ShoppingList>;
-  }
-}

@@ -152,11 +152,3 @@ export const CartPanel = define<Stateless, PanelMsg>()('gy-cart-panel', {
   },
   styles: [button],
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-cart-badge': InstanceType<typeof CartBadge>;
-    'gy-product-list': InstanceType<typeof ProductList>;
-    'gy-cart-panel': InstanceType<typeof CartPanel>;
-  }
-}

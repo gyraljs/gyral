@@ -302,7 +302,35 @@ export function gyralClientOnly(): Plugin {
   };
 }
 
+/** Where the preset looks for components and writes their typings (gyral-1zd.25). */
+export interface ElementTypesOptions {
+  /** Source directories to scan, relative to the Vite root. Default `['src']`. */
+  readonly dirs?: readonly string[];
+  /** The declaration file to write, relative to the Vite root. Default `.gyral/elements.d.ts`. */
+  readonly out?: string;
+}
+
+/**
+ * Writes `HTMLElementTagNameMap` entries for every exported `define()` component (a
+ * `.gyral/elements.d.ts` to gitignore and include in tsconfig) at the start of a build, dev
+ * server or test run, and again when a source file changes. ./compiler/tag-map imports Node
+ * built-ins only, so Node's require loads it, from TypeScript source too: no module runner,
+ * which may be closed by the time a build starts (see loadCompiler).
+ */
+function gyralElementTypes(options: ElementTypesOptions): Plugin {
+  const source = import.meta.url.endsWith('.ts')
+    ? './compiler/tag-map.ts'
+    : './compiler/tag-map.js';
+  const tagMap = createRequire(import.meta.url)(source) as typeof import('./compiler/tag-map.js');
+  return tagMap.elementTypesPlugin(options);
+}
+
 export interface GyralViteOptions {
+  /**
+   * Generated element typings (`.gyral/elements.d.ts`, see `ElementTypesOptions`), or `false`
+   * to write none. Default: on, scanning `src`.
+   */
+  readonly types?: ElementTypesOptions | false;
   /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
@@ -350,6 +378,7 @@ export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig
       ...(options.components === undefined || options.components === false
         ? []
         : [gyralComponents(options.components === true ? {} : options.components)]),
+      ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
     ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };

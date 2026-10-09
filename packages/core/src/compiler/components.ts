@@ -3,11 +3,11 @@
 // imports a tag's module once the tag is in the page, and writes the manifest
 // `@gyral/ssr/static`'s `componentsFromManifest` reads. ../vite.ts loads it on the plugin's
 // first hook, as it loads the compiler.
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve, sep } from 'node:path';
+import { relative, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 import type { ComponentsOptions } from '../vite.js';
 import { loaderSource } from './loader-source.js';
+import { discoverComponents } from './tag-map.js';
 
 /** The loader module's id, and Vite's id for it (a virtual module). */
 const COMPONENTS_ID = 'virtual:gyral/components';
@@ -15,46 +15,19 @@ const COMPONENTS_RESOLVED = `\0${COMPONENTS_ID}`;
 /** The file the build writes next to `.vite/manifest.json` (read by `@gyral/ssr/static`). */
 const COMPONENTS_MANIFEST = '.vite/gyral-components.json';
 
-/**
- * A two-call `define<…>()('tag', …)`: the generics (lazy, so nested `<…>` extend it), the
- * empty call, then a string tag with a hyphen. `customElements.define(` doesn't match.
- */
-const DEFINE_TAG =
-  /(?<![.\w$])define\s*(?:<[\s\S]*?>)?\s*\(\s*\)\s*\(\s*(['"`])([a-z][a-z0-9._-]*-[a-z0-9._-]*)\1/g;
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
-const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
-/** Tag → root-relative URL (`/src/…`) of the module defining it, from the source files. */
+/** Tag → root-relative URL (`/src/…`) of the module defining it (./tag-map.ts's scan). */
 function scanComponents(root: string, include: readonly string[]): Map<string, string> {
   const tags = new Map<string, string>();
-  const walk = (dir: string): void => {
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
+  for (const { tag, file } of discoverComponents(root, include)) {
+    const url = `/${relative(root, file).split(sep).join('/')}`;
+    const known = tags.get(tag);
+    if (known === undefined) tags.set(tag, url);
+    else if (known !== url) {
+      console.warn(`gyral: <${tag}> is defined in ${known} and ${url}; loading ${known}`);
     }
-    for (const entry of entries) {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) walk(path);
-        continue;
-      }
-      if (!SOURCE_FILE.test(entry.name) || TEST_FILE.test(entry.name)) continue;
-      const code = readFileSync(path, 'utf8');
-      if (!code.includes('define')) continue;
-      for (const match of code.matchAll(DEFINE_TAG)) {
-        const tag = match[2] as string;
-        const url = `/${relative(root, path).split(sep).join('/')}`;
-        const known = tags.get(tag);
-        if (known === undefined) tags.set(tag, url);
-        else if (known !== url) {
-          console.warn(`gyral: <${tag}> is defined in ${known} and ${url}; loading ${known}`);
-        }
-      }
-    }
-  };
-  for (const dir of include) walk(resolve(root, dir));
+  }
   return tags;
 }
 

@@ -142,11 +142,11 @@ model's value for them changes; then the model wins, even over an edit. Any othe
 (another field's message, a refused edit, a rejection that keeps `values`) leaves the controls
 as the user left them, so passwords the model never holds stay typed after a rejection.
 
-To clear or restore a form, change the model. A keyed row re-creates the controls with the
+To clear or restore a form, change the model. `keyed(key, …)` re-creates the controls with the
 model's values (`form.reset()` would restore the first render's values instead):
 
 ```ts
-import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
+import { define, html, intentsOf, keyed, type TemplateResult } from '@gyral/core';
 
 interface State {
   readonly note: string;
@@ -172,12 +172,7 @@ export const Notes = define<State, Msg>()('my-notes', {
     // A new key: the form's elements are replaced by fresh ones with the model's values.
     Clear: (s) => ({ note: '', formKey: s.formKey + 1 }),
   },
-  view: (s) =>
-    html`${each(
-      [s],
-      (x) => x.formKey,
-      (x) => fields(x),
-    )}`,
+  view: (s) => html`${keyed(s.formKey, fields(s))}`,
 });
 ```
 

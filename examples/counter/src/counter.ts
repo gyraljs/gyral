@@ -54,9 +54,3 @@ export const Counter = define<State, Msg>()('gy-counter', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-counter': InstanceType<typeof Counter>;
-  }
-}

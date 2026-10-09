@@ -101,6 +101,7 @@ export {
   each,
   html,
   HydrationMismatch,
+  keyed,
   nothing,
   raw,
   svg,

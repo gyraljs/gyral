@@ -179,9 +179,3 @@ function repoItem(repo: Repo) {
     </article>
   </li>`;
 }
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-github-search': InstanceType<typeof GithubSearch>;
-  }
-}

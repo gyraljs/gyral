@@ -24,8 +24,26 @@ Commands are data: `inputsFor(commands, driver)` lists a driver's inputs,
 `outputsIn(commands, Component)` the outputs sent to the parent (typed by the component's
 output union) and `focusTargetsIn(commands)` the `focus()` requests.
 
-Element tests run in a real browser (Vitest browser mode, not jsdom): mount the element,
-dispatch events, then `await settled()` (from `@gyral/core`) before you check the DOM: it
+Element tests run in a real browser (Vitest browser mode, not jsdom). `mount()` creates the
+element with its drivers, stores and props set before it connects, waits for the first render,
+and gives you shadow-root queries plus `type()` and `click()` that wait for the result:
+
+```ts
+import { mount, parse } from '@gyral/testing';
+
+const search = await mount(Search, { drivers: { http: fakeHttp() } });
+await search.type('input', 'gyral');
+expect(search.$$('li')).toHaveLength(3);
+search.dispose(); // automatic after each test when the runner has a global afterEach
+
+// One parser, no DOM: the result is typed by the parser.
+expect(parse(Search, 'Key', { key: 'Escape' }, { state: { open: true } })).toEqual({
+  _tag: 'Close',
+});
+```
+
+Without `mount`, append the element, dispatch events, then `await settled()` (from
+`@gyral/core`) before you check the DOM: it
 waits until every component has rendered and messages have stopped arriving (streams that
 never end don't block it; timers are yours to advance). Swap
 drivers for fakes with `fakeDriver` and `withDrivers`; `mountSsr` and `hydrated` test

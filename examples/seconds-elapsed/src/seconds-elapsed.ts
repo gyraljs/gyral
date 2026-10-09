@@ -43,9 +43,3 @@ export const SecondsElapsed = define<State, Msg>()('gy-seconds-elapsed', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-seconds-elapsed': InstanceType<typeof SecondsElapsed>;
-  }
-}

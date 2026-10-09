@@ -127,9 +127,3 @@ export const Clicks = define<State, Msg>()('gy-clicks', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-clicks': InstanceType<typeof Clicks>;
-  }
-}

@@ -46,10 +46,10 @@ export function manifest(template: Template, name: string, gyralVersion: string)
       ...common,
       scripts: {
         dev: 'vite',
-        build: 'tsc --noEmit && vite build',
+        build: 'gyral-types && tsc --noEmit && vite build',
         preview: 'vite preview',
         test: 'vitest run',
-        typecheck: 'tsc --noEmit',
+        typecheck: 'gyral-types && tsc --noEmit',
       },
       dependencies: { '@gyral/core': gyral },
       devDependencies: {
@@ -62,10 +62,10 @@ export function manifest(template: Template, name: string, gyralVersion: string)
     ...common,
     scripts: {
       dev: 'tsx server/dev.ts',
-      build: 'tsc --noEmit && vite build && tsx server/prerender.ts',
+      build: 'gyral-types && tsc --noEmit && vite build && tsx server/prerender.ts',
       preview: 'tsx server/prod.ts',
       test: 'vitest run',
-      typecheck: 'tsc --noEmit',
+      typecheck: 'gyral-types && tsc --noEmit',
     },
     dependencies: {
       '@gyral/core': gyral,

@@ -170,9 +170,3 @@ export const Register = define<State, Msg, Props>()('gy-register', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-register': InstanceType<typeof Register>;
-  }
-}

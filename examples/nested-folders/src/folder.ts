@@ -138,9 +138,3 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-folder': InstanceType<typeof Folder>;
-  }
-}

@@ -36,9 +36,3 @@ export const Race = define<State, Msg>()('gy-typeahead-race', {
   `,
   styles: raceStyles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-typeahead-race': InstanceType<typeof Race>;
-  }
-}

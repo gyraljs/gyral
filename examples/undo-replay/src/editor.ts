@@ -180,9 +180,3 @@ export const Editor = define<State, Msg>()('gy-pixel-editor', {
   },
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-pixel-editor': InstanceType<typeof Editor>;
-  }
-}
