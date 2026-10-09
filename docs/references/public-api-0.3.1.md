@@ -48,6 +48,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `AnyStore`             | type  | supporting type |                                                                                                        |
 | `AnyStoreInstance`     | type  | supporting type |                                                                                                        |
 | `capturePointer`       | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
+| `call`                 | value | documented      | [skills/gyral/references/view.md](../../skills/gyral/references/view.md)                               |
+| `CallInput`            | type  | supporting type |                                                                                                        |
 | `changed`              | value | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `child`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ChildSource`          | type  | supporting type |                                                                                                        |
@@ -407,6 +409,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export            | Kind  | Status          | Documented in                                                                                |
 | ----------------- | ----- | --------------- | -------------------------------------------------------------------------------------------- |
+| `callsIn`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `CollectedErrors` | type  | supporting type |                                                                                              |
 | `collectErrors`   | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                 |
 | `commandsFor`     | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |

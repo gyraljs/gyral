@@ -77,8 +77,9 @@ describe('search model', () => {
 - `outputsIn(commands, Component)` returns the outputs a reducer sent to the parent (`emit`,
   `outputs<O>()`), typed by the class's output union (or `outputsIn<Out>(commands)`).
   `focusTargetsIn(commands)` returns each `focus()` request as
-  `{ selector, preventScroll?, select?, wait? }`. Never filter on driver names such as
-  `'@gyral/emit'`: they are core internals.
+  `{ selector, preventScroll?, select?, wait? }`, and `callsIn(commands)` each `call()` request
+  as `{ selector, method, args }`. Never filter on driver names such as `'@gyral/emit'`: they
+  are core internals.
 - Stores: `stepStore(store, state, msg)`, `testStore(store, initial?)` (an instance to pass in
   `stores`), `sentTo(commands, store)` (messages a reducer sends to a store).
 - Calling a parser directly: parsers take `(input, ctx)`. Build the `ctx` with

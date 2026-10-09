@@ -320,6 +320,24 @@ ships `invalid(errors)` (forms.md), `labelledBy(id, fallback?)` and `capturePoin
 server-rendered start tag. A hook that must tear down is defined with `defineDisposableHook`
 instead, which adds `dispose(el, args)` (below). A hook acts only on its own element.
 
+Hooks run after the whole update has rendered, **children first** (0.3.1): a hook in a parent's
+view sees the child components it renders already updated, so it can measure a list a child
+renders or scroll to a child's row. With `update: 'always'` a hook runs on every render, even
+when its arguments are the same, so you don't keep a counter in the model only to make it run
+again:
+
+```ts
+import { defineHook } from '@gyral/core';
+
+/** Keeps a log scrolled to its end after every render that adds lines. */
+export const stickToBottom = defineHook<[]>({
+  update: 'always',
+  client: (el) => {
+    el.scrollTop = el.scrollHeight;
+  },
+});
+```
+
 ```ts
 import { defineHook, define, html } from '@gyral/core';
 
@@ -414,6 +432,80 @@ export const Inbox = define<State, Msg>()('my-inbox', {
 `getAnimations()` covers CSS animations and transitions on the element (pass
 `{ subtree: true }` for its descendants). Without a hook, `keyed` replays by replacing the
 element: `keyed(s.pulses, html\`<output class="badge">${s.unread}</output>\`)`renders a new`<output>` per count, at the cost of a new node (and its focus, if it had any).
+
+## Dialogs and popovers from state
+
+Bind a modal dialog's open state with `?modal`, and a popover's with `?popover-open`: Gyral calls
+`showModal()`/`close()` and `showPopover()`/`hidePopover()` as the state changes, and the
+browser returns focus to the opener when they close. Name the dialog's `close` event in
+`data-intent-on`, so a dialog closed with Escape updates the model too:
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface State {
+  readonly editing: boolean;
+  readonly saved: boolean;
+}
+type Msg = { readonly _tag: 'Edit' } | { readonly _tag: 'Closed' } | { readonly _tag: 'Save' };
+
+export const Profile = define<State, Msg>()('my-profile-editor', {
+  init: () => ({ editing: false, saved: false }),
+  intent: {
+    Edit: () => ({ _tag: 'Edit' }),
+    Closed: () => ({ _tag: 'Closed' }),
+    Save: () => ({ _tag: 'Save' }),
+  },
+  update: {
+    Edit: (s) => ({ ...s, editing: true, saved: false }),
+    Closed: (s) => ({ ...s, editing: false }),
+    Save: () => ({ editing: false, saved: true }),
+  },
+  view: (s, i) => html`
+    <button type="button" data-intent=${i.Edit}>Edit profile</button>
+    <dialog ?modal=${s.editing} data-intent-on="close" data-intent=${i.Closed}>
+      <h2>Profile</h2>
+      <button type="button" data-intent=${i.Save}>Save</button>
+    </dialog>
+    <p popover="manual" ?popover-open=${s.saved}>Saved</p>
+  `,
+});
+```
+
+The server can't open a modal: neither binding writes an attribute, and hydration opens what the
+model says. `?modal` goes only on `<dialog>`, `?popover-open` only on an element with a
+`popover` attribute (template rule 4). For a non-modal dialog that should show before scripts
+run, use `?open`.
+
+## Calling a method on an element
+
+When the model must tell an element to do something (play a video, reset a canvas, a widget's
+method), return `call(selector, method, ...args)`: after the render it calls the method on the
+first match in this component's tree. The request is data, so a test reads it with
+`callsIn(next.commands)`. Arguments must be plain data. A missing element or method, or a
+method that throws, is reported through the error channel.
+
+```ts
+import { call, define, html } from '@gyral/core';
+
+type Msg = { readonly _tag: 'Play' } | { readonly _tag: 'Rewind' };
+
+export const Clip = define<object, Msg>()('my-clip', {
+  init: () => ({}),
+  intent: { Play: () => ({ _tag: 'Play' }), Rewind: () => ({ _tag: 'Rewind' }) },
+  update: {
+    Play: (s) => [s, [call('video', 'play')]],
+    Rewind: (s) => [s, [call('video', 'fastSeek', 0)]],
+  },
+  view: (_s, i) => html`
+    <video src="/intro.mp4"></video>
+    <button type="button" data-intent=${i.Play}>Play</button>
+    <button type="button" data-intent=${i.Rewind}>Rewind</button>
+  `,
+});
+```
+
+For a child Gyral component, prefer props down and outputs up; `call` is for imperative APIs.
 
 ## Widgets with a lifecycle: their own element, or a disposable hook
 
