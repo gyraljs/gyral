@@ -1,8 +1,9 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
-import type { AnyDriver, Command, Concurrency, DriverOverrides } from '../command.js';
+import type { AnyDriver, Command, Concurrency } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
+import { unprovided } from './token.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`,
@@ -28,9 +29,10 @@ type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
 
 /**
  * Reports a failure to the owner (ADR 0024): `40` a mapper threw, `41` a driver failed and the
- * command has no `onFailure`. The owner builds the message and reports it.
+ * command has no `onFailure`, `43` nothing provides a driver token. The owner builds the message
+ * and reports it.
  */
-export type CommandFailure = (cause: unknown, code: 40 | 41, driver: string) => void;
+export type CommandFailure = (cause: unknown, code: 40 | 41 | 43, driver: string) => void;
 
 /** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
 const aborted = (signal: AbortSignal): Promise<never> => {
@@ -176,6 +178,10 @@ export function makeInterpreter<M>(
   const run = (cmd: Command<M>): void => {
     if (!active) return;
     const driver = resolve(cmd.driver);
+    if (driver.run === unprovided) {
+      failed(undefined, 43, driver.name);
+      return;
+    }
     const lane = cmd.key ?? driver.name;
     const policy = cmd.concurrency ?? driver.concurrency ?? 'merge';
     const previous = lanes.get(lane);
@@ -212,21 +218,16 @@ export function makeInterpreter<M>(
 
 /**
  * A component's interpreter (registered by `command()`, features.ts). Drivers resolve by name:
- * el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
+ * el.drivers → nearest provider → the command's own (gyral-czi.35; ADR 0006 "Driver tokens").
  */
 export const hostInterpreter = <M>(
   el: FeatureHost,
-  drivers: DriverOverrides | undefined,
   dispatch: (msg: M) => void,
   trace: CommandTrace | undefined,
   failed: CommandFailure,
 ): Interpreter<M> =>
   makeInterpreter(
-    (driver) =>
-      el.drivers[driver.name] ??
-      providedDriver(el, driver.name) ??
-      drivers?.[driver.name] ??
-      driver,
+    (driver) => el.drivers[driver.name] ?? providedDriver(el, driver.name) ?? driver,
     dispatch,
     trace,
     failed,

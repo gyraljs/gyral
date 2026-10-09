@@ -1,13 +1,5 @@
 import { css, define, html, nothing, type Head } from '@gyral/core';
-import {
-  back,
-  listen,
-  makeRouter,
-  routes,
-  setHead,
-  type RouteLocation,
-  type RouteMatch,
-} from '@gyral/router';
+import { back, listen, routes, setHead, type RouteLocation, type RouteMatch } from '@gyral/router';
 
 /** The route table: pure, typed, and reusable on a server (ADR 0009). */
 export const app = routes({ home: '/', about: '/about', contacts: '/contacts' });
@@ -62,8 +54,6 @@ export const pageHead = (route: Route | undefined, origin: string): Head => ({
 });
 
 export const RoutingView = define<State, Msg>()('gy-routing-view', {
-  // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
-  drivers: { router: makeRouter({ captureLinks: true }) },
   init: () => ({ location: undefined, route: undefined }),
   // One subscription: the current location now, then every change (ADR 0009, ADR 0025).
   subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],

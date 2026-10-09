@@ -7,6 +7,7 @@ export type {
   Driver,
   DriverContext,
   DriverOverrides,
+  DriverToken,
   Next,
   RetryPolicy,
 } from './command.js';
