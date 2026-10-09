@@ -9,9 +9,9 @@ import {
   resetDocumentStores,
   send,
   settled,
-  STORE_SEED_ATTRIBUTE,
   type AnyStoreInstance,
 } from '../src/index.js';
+import { STORE_SEED_ATTRIBUTE } from '../src/internal.js';
 
 interface Cart {
   readonly lines: readonly string[];

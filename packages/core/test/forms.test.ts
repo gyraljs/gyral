@@ -7,11 +7,11 @@ import {
   field,
   fieldErrors,
   form,
-  formDataToObject,
   html,
   invalid,
   settled,
 } from '../src/index.js';
+import { formDataToObject } from '../src/internal.js';
 
 const Signup = defineForm(
   v.object({

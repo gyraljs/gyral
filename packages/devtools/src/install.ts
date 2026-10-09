@@ -1,10 +1,6 @@
 // Installs the devtools hook and mounts <gyral-devtools> (ADR 0017).
-import {
-  DEVTOOLS_GLOBAL,
-  devtoolsLiveComponents,
-  type DevEvent,
-  type DevtoolsHook,
-} from '@gyral/core';
+import { DEVTOOLS_GLOBAL, type DevEvent, type DevtoolsHook } from '@gyral/core';
+import { devtoolsLiveComponents } from '@gyral/core/internal';
 import { DevtoolsPanel, PANEL_TAG } from './panel.js';
 
 export interface DevtoolsOptions {

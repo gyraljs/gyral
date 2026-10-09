@@ -4,7 +4,8 @@
 import { createHash } from 'node:crypto';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { describe, expect, it, vi } from 'vitest';
-import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, css, define, html, prop } from '../../src/index.js';
+import { LIGHT_ATTRIBUTE, css, define, html, prop } from '../../src/index.js';
+import { ISLAND_ATTRIBUTE } from '../../src/internal.js';
 import { SEED_ATTRIBUTE } from '../../src/hydration.js';
 import * as written from '../../src/view/attributes.js';
 import { render, renderToString, styleHashes } from '../../src/server.js';

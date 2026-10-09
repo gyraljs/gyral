@@ -2,7 +2,8 @@
 // custom element, a placeholder class, and an entry in the server registry for Phase 4.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { css, define, html, isLightComponent, prop, type Stateless } from '../src/index.js';
+import { css, define, html, prop, type Stateless } from '../src/index.js';
+import { isLightComponent } from '../src/light-dom.js';
 import { registerRecordedSpecs } from '../src/server-component.js';
 import { serverComponent } from '../src/view/index.js';
 

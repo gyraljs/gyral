@@ -1,5 +1,4 @@
 import {
-  runInit,
   type AnyStoreInstance,
   type Command,
   type ComponentSpec,
@@ -13,6 +12,7 @@ import {
   type StoreReader,
   type Tagged,
 } from '@gyral/core';
+import { runInit } from '@gyral/core/internal';
 
 /** A reducer result, normalised: the new state plus the commands it asked for. */
 export interface Stepped<S, M> {

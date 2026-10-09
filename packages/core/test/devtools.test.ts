@@ -5,12 +5,12 @@ import {
   defineDriver,
   defineStore,
   DEVTOOLS_GLOBAL,
-  devtoolsEnabled,
   html,
   send,
   settled,
   type DevEvent,
 } from '../src/index.js';
+import { devtoolsEnabled } from '../src/internal.js';
 import { resetDocumentStores } from '../src/store-scope.js';
 
 let events: DevEvent[] = [];

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as v from 'valibot';
-import { defineStore, StoreRegistry } from '../src/index.js';
+import { defineStore } from '../src/index.js';
+import { StoreRegistry } from '../src/server.js';
 
 interface Cart {
   readonly lines: readonly { readonly sku: string; readonly qty: number }[];

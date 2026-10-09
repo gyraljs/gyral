@@ -2,7 +2,8 @@
 // returns web `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
 // Rendering is `@gyral/core/server`'s; this package adds the page shell, chunked output with
 // the request's store scope (ADR 0013), static generation and form actions.
-import { StoreRegistry, withStoreScope, type ChildValue } from '@gyral/core';
+import { type ChildValue } from '@gyral/core';
+import { StoreRegistry, withStoreScope } from '@gyral/core/server';
 import {
   development,
   render,

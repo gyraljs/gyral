@@ -39,7 +39,7 @@ try {
 import { define, html } from '@gyral/core';
 import { renderToString } from '@gyral/ssr';
 const entries = [
-  '@gyral/core', '@gyral/core/server', '@gyral/core/vite', '@gyral/core/eslint',
+  '@gyral/core', '@gyral/core/server', '@gyral/core/internal', '@gyral/core/vite', '@gyral/core/eslint',
   '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time', '@gyral/time/delay',
   '@gyral/ssr', '@gyral/ssr/static', '@gyral/ssr/node', '@gyral/testing', '@gyral/testing/arbitraries',
 ];

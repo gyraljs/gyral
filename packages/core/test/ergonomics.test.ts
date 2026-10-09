@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, emit, html, prop, runInit, settled, type Stateless } from '../src/index.js';
+import { define, emit, html, prop, settled, type Stateless } from '../src/index.js';
+import { runInit } from '../src/internal.js';
 
 type Out = { readonly _tag: 'Picked'; readonly value: string };
 type BadgeMsg = { readonly _tag: 'Pick' };

@@ -1,12 +1,7 @@
 // The JS path of a server-validated form (ADR 0008, "Round trip"): post the submission to the
 // same route `formAction` serves, and turn a 422 rejection into the component's IntentRejected.
-import {
-  command,
-  intentRejectedSchema,
-  type Command,
-  type Concurrency,
-  type IntentRejected,
-} from '@gyral/core';
+import { command, type Command, type Concurrency, type IntentRejected } from '@gyral/core';
+import { intentRejectedSchema } from '@gyral/core/internal';
 import { http, type HttpError, type HttpRequest } from './driver.js';
 
 export interface SubmitFormOptions<MS, MF> {

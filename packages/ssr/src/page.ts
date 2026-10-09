@@ -1,21 +1,16 @@
 // The server-only document shell (ADR 0012 decision 4, view/06-server.md "API"): `page()` is a
 // `server` template written with core's `html`, never hydrated. The page-level store seed
 // (ADR 0013) and global styles go into its head as `raw()` markup.
+import { html, nothing, raw, type AnyStoreInstance, type ChildValue, type Head } from '@gyral/core';
+import { StoreRegistry } from '@gyral/core/server';
 import {
   HEAD_ATTRIBUTE,
   headEntries,
-  html,
-  nothing,
-  raw,
   scriptSafeJson,
   STORE_SEED_ATTRIBUTE,
-  StoreRegistry,
   warnJsonHazard,
-  type AnyStoreInstance,
-  type ChildValue,
-  type Head,
   type HeadEntry,
-} from '@gyral/core';
+} from '@gyral/core/internal';
 import type { CspOptions } from './csp.js';
 
 export interface RenderOptions {
