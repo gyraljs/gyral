@@ -60,13 +60,14 @@ export default [{ files: ['src/**/*.ts'], ...gyral.configs.recommended }];
 
 `each(items, key, row, pick?)` is the only keyed list. A row re-renders only when its item
 object or its `pick` result changes, so **a row may read only its parameters, module-level
-bindings and imports**. Intent names come from a module-level `const i = intents<Msg>()` (the
-same names the view gets as `i`); anything else from the view's scope (`s`, `ctx`) goes through
+bindings and imports**. Intent names come from a module-level `const i = intentsOf<typeof C>()`
+(the same names component `C`'s view gets as `i`; a row that uses it declares its return type,
+`TemplateResult`, or the row and `C`'s type infer each other); anything else from the view's scope (`s`, `ctx`) goes through
 `pick` and arrives as the row's second argument (the ESLint rule says which name to move). Plain
 arrays still render, by position.
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface Todo {
   readonly id: number;
@@ -83,10 +84,10 @@ type Msg =
   | { readonly _tag: 'Note'; readonly note: string };
 
 // Intent names as a module constant, so rows can use them and stay pure.
-const i = intents<Msg>();
+const i = intentsOf<typeof Todos>();
 
 // A pure row: module-level, reads only (todo, selected) and module constants.
-const Row = (t: Todo, selected: boolean) =>
+const Row = (t: Todo, selected: boolean): TemplateResult =>
   html`<li class=${selected ? 'selected' : ''}>
     <label>
       <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${i.Toggle} />
@@ -94,7 +95,7 @@ const Row = (t: Todo, selected: boolean) =>
     </label>
   </li>`;
 
-export const Todos = define<State, Msg>('my-todos', {
+export const Todos = define<State, Msg>()('my-todos', {
   init: () => ({ todos: [{ id: 1, text: 'Write docs', done: false }], selected: 1, note: '' }),
   intent: {
     Toggle: ({ value }) => {
@@ -110,7 +111,8 @@ export const Todos = define<State, Msg>('my-todos', {
     }),
     Note: (s, m) => ({ ...s, note: m.note }),
   },
-  view: (s) => html`
+  // The view uses its own `i`; the module constant is for rows.
+  view: (s, i) => html`
     <ul aria-label="Todos">
       ${each(
         s.todos,
@@ -148,7 +150,7 @@ when its element appears somewhere else, plays the move with the Web Animations 
 the item's slot so it also runs when the item shifts inside its list:
 
 ```ts
-import { define, defineHook, each, html, intents } from '@gyral/core';
+import { define, defineHook, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 /** Where each key was last seen, in page coordinates. */
 const seen = new Map<string, { readonly x: number; readonly y: number }>();
@@ -181,14 +183,14 @@ interface State {
 }
 type Msg = { readonly _tag: 'Move'; readonly id: string };
 
-const i = intents<Msg>();
+const i = intentsOf<typeof Board>();
 
-const TaskRow = (t: Task, slot: number) =>
+const TaskRow = (t: Task, slot: number): TemplateResult =>
   html`<li ${flip(t.id, slot)}>
     <button type="button" value=${t.id} data-intent=${i.Move}>${t.label}</button>
   </li>`;
 
-const column = (label: string, tasks: readonly Task[]) =>
+const column = (label: string, tasks: readonly Task[]): TemplateResult =>
   html`<ul aria-label=${label}>
     ${each(
       tasks,
@@ -198,7 +200,7 @@ const column = (label: string, tasks: readonly Task[]) =>
     )}
   </ul>`;
 
-export const Board = define<State, Msg>('my-board', {
+export const Board = define<State, Msg>()('my-board', {
   init: () => ({
     todo: [
       { id: 'a', label: 'Write' },
@@ -258,7 +260,7 @@ const tile = (service: Service) => svg`<g transform="translate(${(service.id - 1
   <text x="1" y="13">${service.name}</text>
 </g>`;
 
-export const StatusStrip = define<{ readonly services: readonly Service[] }, never>(
+export const StatusStrip = define<{ readonly services: readonly Service[] }, never>()(
   'my-status-strip',
   {
     init: () => ({ services: [{ id: 1, status: 'up', name: 'API' }] }),
@@ -297,7 +299,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Next' };
 
-export const Steps = define<State, Msg>('my-steps', {
+export const Steps = define<State, Msg>()('my-steps', {
   init: () => ({ current: 0 }),
   intent: { Next: () => ({ _tag: 'Next' }) },
   update: { Next: (s) => ({ current: (s.current + 1) % 3 }) },
@@ -361,7 +363,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Arrived' };
 
-export const Inbox = define<State, Msg>('my-inbox', {
+export const Inbox = define<State, Msg>()('my-inbox', {
   init: () => ({ unread: 0, pulses: 0 }),
   intent: { Arrived: () => ({ _tag: 'Arrived' }) },
   update: { Arrived: (s) => ({ unread: s.unread + 1, pulses: s.pulses + 1 }) },
@@ -424,7 +426,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Add' };
 
-export const SceneEditor = define<State, Msg>('my-scene-editor', {
+export const SceneEditor = define<State, Msg>()('my-scene-editor', {
   init: () => ({ scene: { cubes: 1 } }),
   intent: { Add: () => ({ _tag: 'Add' }) },
   update: { Add: (s) => ({ scene: { cubes: s.scene.cubes + 1 } }) },
@@ -481,7 +483,7 @@ fallback):
 import { define, html, labelledBy, type Stateless } from '@gyral/core';
 
 // Page markup: <h1 id="page-title">Checkout</h1> <my-checkout-form></my-checkout-form>
-export const CheckoutForm = define<Stateless, never>('my-checkout-form', {
+export const CheckoutForm = define<Stateless, never>()('my-checkout-form', {
   intent: {},
   update: {},
   view: () => html`<form ${labelledBy('page-title')}><button>Pay</button></form>`,
@@ -500,7 +502,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Next' };
 
-export const Pager = define<State, Msg>('my-pager', {
+export const Pager = define<State, Msg>()('my-pager', {
   init: () => ({ page: 1 }),
   intent: { Next: () => ({ _tag: 'Next' }) },
   update: {
@@ -521,7 +523,7 @@ focus the child itself: its first focusable element gets focus (0.3.1).
 import { define, focus, html } from '@gyral/core';
 
 // The child: focusing <my-name-field> focuses its input.
-export const NameField = define<object, never>('my-name-field', {
+export const NameField = define<object, never>()('my-name-field', {
   shadow: { delegatesFocus: true },
   init: () => ({}),
   intent: {},
@@ -531,7 +533,7 @@ export const NameField = define<object, never>('my-name-field', {
 
 type Msg = { readonly _tag: 'Edit' };
 
-export const Profile = define<object, Msg>('my-profile', {
+export const Profile = define<object, Msg>()('my-profile', {
   init: () => ({}),
   intent: { Edit: () => ({ _tag: 'Edit' }) },
   update: { Edit: (s) => [s, [focus('my-name-field')]] },

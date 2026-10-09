@@ -147,7 +147,7 @@ export function handle(request: Request): Response {
 
 // Client
 type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
-export const Shop = define<{ readonly path: string }, Msg>('my-shop', {
+export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
   init: () => [{ path: '/' }, [listen((location) => ({ _tag: 'Routed', location }))]],
   intent: {},
   update: {
@@ -249,7 +249,7 @@ interface State {
 }
 type Msg = never;
 
-export const ShareButton = define<State, Msg>('my-share', {
+export const ShareButton = define<State, Msg>()('my-share', {
   init: () => ({ enhanced: false }),
   intent: {},
   update: {
@@ -403,7 +403,7 @@ createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).liste
 
 ## Islands: hydrate later
 
-`define(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered
+`define()(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered
 instance hydrate when the browser is idle, when it scrolls into view, or on first
 pointer/focus (the server writes `defer-hydration` and `data-gyral-hydrate`). Use it for
 below-the-fold or rarely used widgets; islands may sit anywhere, also inside other components.

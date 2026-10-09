@@ -42,7 +42,7 @@ const watchCounter = (): Command<Msg> =>
 const add = (by: number): Command<Msg> =>
   command(addToCounter, by, { onSuccess: (): Msg | undefined => undefined });
 
-export const Counter = define<{ readonly n: number }, Msg>('my-outside-counter', {
+export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter', {
   init: () => [{ n: 0 }, [watchCounter()]],
   intent: { Add: () => ({ _tag: 'Add' }) },
   update: {
@@ -136,14 +136,14 @@ type Msg = { readonly _tag: 'Updated'; readonly mailbox: Mailbox };
 const watchMailbox = (): Command<Msg> =>
   command(mailbox, undefined, { onSuccess: (m): Msg => ({ _tag: 'Updated', mailbox: m }) });
 
-export const UnreadBadge = define<Mailbox, Msg>('my-unread-badge', {
+export const UnreadBadge = define<Mailbox, Msg>()('my-unread-badge', {
   init: () => [feed.getState(), [watchMailbox()]],
   intent: {},
   update: { Updated: (_s, m) => m.mailbox },
   view: (s) => html`<span class="badge" aria-label="Unread messages">${s.unread}</span>`,
 });
 
-export const Sidebar = define<Mailbox, Msg>('my-sidebar', {
+export const Sidebar = define<Mailbox, Msg>()('my-sidebar', {
   init: () => [feed.getState(), [watchMailbox()]],
   intent: {},
   update: { Updated: (_s, m) => m.mailbox },

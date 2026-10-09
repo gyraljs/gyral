@@ -1,8 +1,9 @@
 # Intent: DOM events → typed messages
 
-The view names intents with `data-intent=${i.Tag}` (`i` is typed from the message union, so a
-typo fails to compile). When that element's trigger event fires, Gyral calls the parser
-`intent[Tag]` with an `IntentInput` and dispatches what it returns.
+The view names intents with `data-intent=${i.Name}`. The intent names are the keys of the
+spec's `intent` object, which `define<State, Msg>()(tag, spec)` infers (ADR 0023), so `i` offers
+exactly those names and a typo fails to compile. When that element's trigger event fires,
+Gyral calls the parser `intent[Name]` with an `IntentInput` and dispatches what it returns.
 
 ## Triggers
 
@@ -34,7 +35,7 @@ and goes outward: the nearest element with an intent for that event wins. A sort
 one item handles the pointer (drag), the keyboard (move) and focus without wrapper elements:
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface Task {
   readonly id: string;
@@ -51,9 +52,11 @@ type Msg =
   | { readonly _tag: 'Move'; readonly id: string; readonly by: -1 | 1 }
   | { readonly _tag: 'Focus'; readonly id: string };
 
-const i = intents<Msg>();
+// The row takes the component's intent names; its return type is written out, or the row and
+// `Sortable`'s type would infer each other.
+const i = intentsOf<typeof Sortable>();
 
-const TaskRow = (t: Task) =>
+const TaskRow = (t: Task): TemplateResult =>
   html`<li
     tabindex="0"
     data-id=${t.id}
@@ -77,7 +80,7 @@ const moved = (tasks: readonly Task[], id: string, to: (from: number) => number)
   return [...rest.slice(0, at), task, ...rest.slice(at)];
 };
 
-export const Sortable = define<State, Msg>('my-sortable', {
+export const Sortable = define<State, Msg>()('my-sortable', {
   init: () => ({
     tasks: [
       { id: 'a', title: 'Write the brief' },
@@ -160,7 +163,7 @@ type Msg =
   | { readonly _tag: 'Qty'; readonly qty: number }
   | { readonly _tag: 'Cancel' };
 
-export const Filters = define<State, Msg>('my-filters', {
+export const Filters = define<State, Msg>()('my-filters', {
   init: () => ({ query: '', qty: 1 }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
@@ -209,7 +212,7 @@ type Msg =
   | { readonly _tag: 'Move'; readonly by: -1 | 1 }
   | { readonly _tag: 'Rename'; readonly name: string };
 
-export const Toolbar = define<{ readonly at: number }, Msg>('my-toolbar', {
+export const Toolbar = define<{ readonly at: number }, Msg>()('my-toolbar', {
   init: () => ({ at: 0 }),
   intent: {
     // The toolbar owns the arrow keys...
@@ -272,7 +275,7 @@ const KEYS: Readonly<Record<string, readonly [string, string]>> = {
   horizontal: ['ArrowLeft', 'ArrowRight'],
 };
 
-export const Folders = define<{ readonly active: number }, Msg, Props>('my-folders', {
+export const Folders = define<{ readonly active: number }, Msg, Props>()('my-folders', {
   props: { orientation: prop.string({ default: 'vertical' }) },
   init: () => ({ active: 0 }),
   intent: {
@@ -326,7 +329,7 @@ type Msg = { readonly _tag: 'Pick'; readonly size: string };
 
 const SIZES = ['S', 'M', 'L'] as const;
 
-export const SizePicker = define<State, Msg>('my-size-picker', {
+export const SizePicker = define<State, Msg>()('my-size-picker', {
   init: () => ({ size: 'M' }),
   intent: {
     Pick: ({ value }) =>
@@ -352,10 +355,10 @@ export const SizePicker = define<State, Msg>('my-size-picker', {
 
 ## Several controls, one message
 
-An intent name is a message tag (`data-intent=${i.Category}` needs a `Category` variant in
-`Msg`, and `intent: { Category: … }` must produce it) or a name declared with `IntentName<…>`
-(next section). Controls that all change one thing don't need a message each. Give them the
-same intent and tell them apart by their `name`, as in a search filters panel:
+An intent name is a key of `intent`. A key that is also a message tag must produce that
+variant; any other key may produce any message (next section). Controls that all change one
+thing don't need a message or an intent each. Give them the same intent and tell them apart by
+their `name`, as in a search filters panel:
 
 ```ts
 import { define, html } from '@gyral/core';
@@ -369,7 +372,7 @@ type Msg = { readonly _tag: 'Filter'; readonly field: keyof Filters; readonly va
 const FIELDS: readonly (keyof Filters)[] = ['category', 'sort'];
 const isField = (name: string): name is keyof Filters => FIELDS.some((f) => f === name);
 
-export const SearchFilters = define<Filters, Msg>('my-search-filters', {
+export const SearchFilters = define<Filters, Msg>()('my-search-filters', {
   init: () => ({ category: 'all', sort: 'relevance' }),
   intent: {
     // One parser for every <select>: the name says which filter changed.
@@ -402,22 +405,19 @@ export const SearchFilters = define<Filters, Msg>('my-search-filters', {
 });
 ```
 
-Give each its own message only when the reducers really differ. A name that is neither a tag
-nor declared fails to compile with "Object literal may only specify known properties, and
-'Category' does not exist in type 'Intents<Msg, object>'" (with props, their type instead of
-`object`; plus "Binding element 'value' implicitly has an 'any' type" for its parameters), and
-in the view with "Property 'Category' does not exist on type 'IntentNames<Msg>'": add the
-variant to `Msg`, declare the name, or use the tag the controls share.
+Give each its own message only when the reducers really differ. A view that names an intent
+with no parser fails to compile with "Property 'Category' does not exist on type
+'IntentNames<"Filter">'": add the parser, or use the name the controls share.
 
-## Intent names that aren't messages: `IntentName<…>`
+## Intent names that aren't messages
 
 When several controls each do something different but all end in the same message (a table
-toolbar whose Archive, Restore and Duplicate buttons all send one request to the server),
-declare their names in the union. Each declared name needs a parser, which may return any
-message, and gets no reducer:
+toolbar whose Archive, Restore and Duplicate buttons all send one request to the server), give
+each its own parser key. A key that isn't a message tag may return any message, and gets no
+reducer:
 
 ```ts
-import { define, each, html, intents, type IntentName, type Messages } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface Doc {
   readonly id: number;
@@ -426,22 +426,19 @@ interface Doc {
 }
 type Action =
   { readonly kind: 'archive' | 'restore'; readonly id: number } | { readonly kind: 'duplicate' };
-type Msg =
-  | { readonly _tag: 'Send'; readonly action: Action }
-  | IntentName<'Archive' | 'Restore' | 'Duplicate'>;
+type Msg = { readonly _tag: 'Send'; readonly action: Action };
 
 interface State {
   readonly docs: readonly Doc[];
   readonly pending: readonly Action[];
 }
 
-const i = intents<Msg>(); // declared names are in it, so rows can use them
+const i = intentsOf<typeof DocTable>(); // the names, for rows
 const idOf = (target: Element): number =>
   Number(target.closest('[data-id]')?.getAttribute('data-id'));
-// Helpers that build messages return Messages<Msg>: the union without its intent names.
-const send = (action: Action): Messages<Msg> => ({ _tag: 'Send', action });
+const send = (action: Action): Msg => ({ _tag: 'Send', action });
 
-const Row = (doc: Doc) =>
+const Row = (doc: Doc): TemplateResult =>
   html`<li data-id=${doc.id}>
     ${doc.title}
     <button type="button" data-intent=${doc.archived ? i.Restore : i.Archive}>
@@ -449,7 +446,7 @@ const Row = (doc: Doc) =>
     </button>
   </li>`;
 
-export const DocTable = define<State, Msg>('my-doc-table', {
+export const DocTable = define<State, Msg>()('my-doc-table', {
   init: () => ({ docs: [], pending: [] }),
   intent: {
     Archive: ({ target }) => send({ kind: 'archive', id: idOf(target) }),
@@ -458,7 +455,8 @@ export const DocTable = define<State, Msg>('my-doc-table', {
   },
   // One reducer for all three (in an app it also returns the request command).
   update: { Send: (s, m) => ({ ...s, pending: [...s.pending, m.action] }) },
-  view: (s) => html`
+  // The view uses its own `i`; the module constant is for rows.
+  view: (s, i) => html`
     <ul>
       ${each(s.docs, (doc) => doc.id, Row)}
     </ul>
@@ -467,11 +465,15 @@ export const DocTable = define<State, Msg>('my-doc-table', {
 });
 ```
 
-Prefer one shared intent (previous section) when one parser that reads `name` is clearer;
-declare names when each control's parser differs. Errors: a declared name without a parser
-("Property 'Restore' is missing in type … but required"), a reducer for one ("'Archive' does
-not exist in type 'Update<…>'"), and a helper typed with the whole union instead of
-`Messages<Msg>` ("Type 'IntentName<…>' is not assignable to type 'ParseResult<…>'").
+Prefer one shared intent (previous section) when one parser that reads `name` is clearer; give
+each control its own key when the parsers differ. Errors: a reducer for an intent name
+("'Archive' does not exist in type 'Update<…>'"), a parser returning something that isn't a
+message (`Type '{ _tag: "Archived"; }' is not assignable to type 'ParseResult<Msg> | …'`), a
+row without a return type ("'i' implicitly has type 'any' because … referenced directly or
+indirectly in its own initializer"). A misspelled key is a new intent name: the view's correct
+name then fails ("Property 'Archive' does not exist on type 'IntentNames<"Archvie" | …>'. Did
+you mean 'Archvie'?", so fix the key), and a key no template names at all is reported by the
+`gyral/unused-intent` lint rule.
 
 ## Press and release (press and hold)
 
@@ -492,7 +494,7 @@ type Msg = { readonly _tag: 'Talk'; readonly down: boolean };
 
 const PRESS = new Set(['pointerdown', 'keydown']);
 
-export const PushToTalk = define<State, Msg>('my-push-to-talk', {
+export const PushToTalk = define<State, Msg>()('my-push-to-talk', {
   init: () => ({ talking: false }),
   intent: {
     Talk: ({ event, key }) => {
@@ -566,7 +568,7 @@ const isMarker = (u: unknown): u is Marker =>
 
 type Msg = { readonly _tag: 'Select'; readonly marker: Marker };
 
-export const StoreFinder = define<{ readonly selected: string }, Msg>('my-store-finder', {
+export const StoreFinder = define<{ readonly selected: string }, Msg>()('my-store-finder', {
   init: () => ({ selected: '' }),
   intent: {
     // <geo-map> dispatches `marker-select` with the marker as detail.

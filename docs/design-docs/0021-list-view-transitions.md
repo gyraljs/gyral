@@ -68,7 +68,7 @@ const TaskRow = (t: Task) =>
     <button type="button" value=${t.id} data-intent=${i.Move}>${t.label}</button>
   </li>`;
 
-define<State, Msg>('task-board', {
+define<State, Msg>()('task-board', {
   // …
   // `true`: every group; an array: only these groups get names in this transition.
   viewTransition: (_prev, _next, msg) => (msg._tag === 'Move' ? ['task'] : false),

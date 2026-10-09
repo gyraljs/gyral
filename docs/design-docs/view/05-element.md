@@ -3,7 +3,9 @@
 Status: **accepted** (2026-10-06), shipped in 0.3.0. ADR 0018 (decision E). Phase 3. Amends ADR 0007
 (props).
 
-`define(tag, spec)` creates a plain `HTMLElement` subclass and registers it. There is no
+`define<State, Msg>()(tag, spec)` creates a plain `HTMLElement` subclass and registers it. The
+two calls let TypeScript take the state and message types from the first and infer the
+intent names from the spec in the second (ADR 0023); `define()(tag, spec)` infers everything. There is no
 reactive-element base class: no per-property update promises, no attribute converters, no
 reflection, no controllers, no lifecycle hooks for users. The spec (intent, update, view) is the
 only API.
@@ -17,7 +19,7 @@ dependency), so "parse at boundaries" (core belief 3) covers component inputs to
 import { define, prop } from '@gyral/core';
 import * as v from 'valibot';
 
-define('shop-filter', {
+define()('shop-filter', {
   props: {
     label: prop.string({ required: true }), // attribute "label"
     minPrice: prop.number({ default: 0 }), // attribute "min-price"
@@ -309,14 +311,15 @@ Two consequences parsers must know (gyral-dyn.16):
 Tests: `packages/core/test/press-release.test.ts` (a real
 pointer released outside the button, `pointercancel`, `lostpointercapture`, key repeat).
 
-## Intent names (gyral-dyn.12, 0.3.1)
+## Intent names (gyral-dyn.12, gyral-dyn.31, 0.3.1)
 
 The runtime looks a parser up by the `data-intent` (or `data-intent-<event>`) value and
 dispatches what it returns; it never checks the name against the message union. Which names
-exist is a type-level rule (ADR 0001 "Intent names"): a message tag, whose parser returns that
-variant, or a name declared with `IntentName<…>` in the union, whose parser may return any
-message and which has no reducer. Both appear in the view's `i` and in `intents<Msg>()`, so
-markup and rows name them the same way, and an unknown name fails to compile.
+exist is a type-level rule (ADR 0001 "Intent names", ADR 0023): the names are the keys of
+`intent`, which `define<State, Msg>()(tag, spec)` infers. A key that is a message tag returns
+that variant; any other key may return any message and has no reducer. The view's `i` and
+`intentsOf<typeof C>()` offer exactly those keys, so markup and rows name them the same way,
+and a name with no parser fails to compile.
 
 ## Focus (gyral-dyn.26, 0.3.1)
 

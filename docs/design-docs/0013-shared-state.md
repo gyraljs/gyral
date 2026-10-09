@@ -53,7 +53,7 @@ export const cart = defineStore<Cart, CartMsg>('cart', {
 });
 
 // any component, anywhere in the tree
-define<State, Msg, Props>('cart-badge', {
+define<State, Msg, Props>()('cart-badge', {
   stores: { cart },                                       // declares what it reads
   view: (s, i, { stores }) => html`<span>${stores.cart.lines.length}</span>`,
   update: {
@@ -109,7 +109,7 @@ The declaration is an array, `stores: [cart]`. Reading a store that isn't declar
 an error naming the fix, because an undeclared store would never trigger re-renders.
 
 ```ts
-define<State, Msg>('cart-badge', {
+define<State, Msg>()('cart-badge', {
   stores: [cart],
   view: (s, i, { read }) => html`${count(read(cart))}`,
   update: {

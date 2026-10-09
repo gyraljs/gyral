@@ -151,7 +151,7 @@ type Msg =
   | { readonly _tag: 'SaveFailed'; readonly error: HttpError }
   | { readonly _tag: 'HideToast' };
 
-export const Shell = define<State, Msg>('my-shell', {
+export const Shell = define<State, Msg>()('my-shell', {
   init: () => [
     { path: '/', seconds: 0, saved: false },
     [
@@ -239,7 +239,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 
-export const App = define<State, Msg>('my-app', {
+export const App = define<State, Msg>()('my-app', {
   shadow: false, // a page-level component: fragment targets are in the document
   init: () => [{ route: undefined }, [listen((location): Msg => ({ _tag: 'Routed', location }))]],
   intent: {},
@@ -283,7 +283,7 @@ const fromSearch = (search: string): State => {
 const toSearch = (s: State): string =>
   `?${new URLSearchParams({ q: s.q, sort: s.sort }).toString()}`;
 
-export const Filters = define<State, Msg>('search-filters', {
+export const Filters = define<State, Msg>()('search-filters', {
   // listen() delivers the current location first, so the query is read in one place.
   init: () => [fromSearch(''), [listen((location): Msg => ({ _tag: 'Routed', location }))]],
   intent: {
@@ -353,7 +353,7 @@ import { csrfFromMeta, makeHttpDriver } from '@gyral/http';
 import { makeRouter } from '@gyral/router';
 
 // Per component type: this app shell owns the page, so it captures link clicks.
-export const App = define<Stateless, never>('my-app', {
+export const App = define<Stateless, never>()('my-app', {
   drivers: { router: makeRouter({ captureLinks: true }) },
   intent: {},
   update: {},

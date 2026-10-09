@@ -30,7 +30,7 @@ const loadBio = (userId: string) =>
     onSuccess: (body) => ({ _tag: 'Bio', bio: body.bio }),
   });
 
-export const UserCard = define<State, Msg, Props>('my-user-card', {
+export const UserCard = define<State, Msg, Props>()('my-user-card', {
   props: { userId: prop.string({ required: true }) },
   init: (props) => [{ draft: '', bio: '' }, [loadBio(props.userId)]],
   intent: { Draft: ({ value }) => ({ _tag: 'Draft', text: value ?? '' }) },
@@ -52,14 +52,15 @@ export const UserCard = define<State, Msg, Props>('my-user-card', {
 ## Child components: outputs up with `emit`, `child()` in the parent
 
 The child declares an output union `O` (4th type parameter) and returns `emit(output)` as a
-command. Build that `emit` with `outputs<O>()` (a module-level constant, like `intents<Msg>()`):
+command. Build that `emit` with `outputs<O>()` (a module-level constant, like
+`intentsOf<typeof C>()`):
 it is core's `emit`, typed by the union, so an output of the wrong shape fails to compile. The
 parent puts `data-intent` on the child element and parses outputs with
 `child(ChildClass, (output, el) => msg)`; `el` is the typed child element (read its props).
 
 ```ts
 import * as v from 'valibot';
-import { child, define, each, html, intents, outputs, prop } from '@gyral/core';
+import { child, define, each, html, outputs, prop } from '@gyral/core';
 
 // Child: owns its own state; reports removal up.
 type ItemOut = { readonly _tag: 'Removed' };
@@ -70,7 +71,7 @@ interface ItemProps {
   readonly item: v.InferOutput<typeof ItemData>;
 }
 
-export const Item = define<object, ItemMsg, ItemProps, ItemOut>('my-item', {
+export const Item = define<object, ItemMsg, ItemProps, ItemOut>()('my-item', {
   props: { item: prop.value(ItemData, { required: true }) },
   init: () => ({}),
   intent: { Remove: () => ({ _tag: 'Remove' }) },
@@ -85,9 +86,8 @@ interface ListState {
   readonly items: readonly { readonly id: number; readonly label: string }[];
 }
 type ListMsg = { readonly _tag: 'ItemOut'; readonly id: number; readonly out: ItemOut };
-const listIntents = intents<ListMsg>();
 
-export const List = define<ListState, ListMsg>('my-list', {
+export const List = define<ListState, ListMsg>()('my-list', {
   init: () => ({
     items: [
       { id: 1, label: 'One' },
@@ -100,13 +100,14 @@ export const List = define<ListState, ListMsg>('my-list', {
   update: {
     ItemOut: (s, m) => ({ items: s.items.filter((it) => it.id !== m.id) }),
   },
-  view: (s) =>
+  view: (s, i) =>
     html`<ul>
       ${each(
         s.items,
         (it) => it.id,
-        // Rows are pure: the intent name is a module constant (listIntents above).
-        (it) => html`<li><my-item .item=${it} data-intent=${listIntents.ItemOut}></my-item></li>`,
+        // A pure row: the intent name arrives through `pick` (the row's second argument).
+        (it, name) => html`<li><my-item .item=${it} data-intent=${name}></my-item></li>`,
+        () => i.ItemOut,
       )}
     </ul>`,
 });
@@ -133,7 +134,7 @@ import { define, html, OUTPUT_EVENT, outputs, type OutputEvent, type OutputsOf }
 type RatingOut = { readonly _tag: 'Rated'; readonly stars: number };
 const emit = outputs<RatingOut>();
 
-export const Rating = define<object, { readonly _tag: 'Rate' }, object, RatingOut>('my-rating', {
+export const Rating = define<object, { readonly _tag: 'Rate' }, object, RatingOut>()('my-rating', {
   init: () => ({}),
   intent: { Rate: () => ({ _tag: 'Rate' }) },
   update: { Rate: (s) => [s, [emit({ _tag: 'Rated', stars: 5 })]] },
@@ -190,7 +191,7 @@ interface BadgeState {
 }
 type BadgeMsg = { readonly _tag: 'Buy' };
 
-export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>('my-buy', {
+export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>()('my-buy', {
   props: { sku: prop.string({ required: true }) },
   stores: [cart],
   init: () => ({ bumped: false }),

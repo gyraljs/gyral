@@ -158,7 +158,7 @@ interface Props {
   readonly items: readonly string[];
 }
 
-export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump' }, Props>(
+export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump' }, Props>()(
   'my-stepper',
   {
     props: {
@@ -179,11 +179,12 @@ export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump
 `prop.boolean()` is presence-based and defaults to `false`; `prop.json(schema)` parses JSON
 from an attribute. `PropsChanged` and props as `ctx.props` are unchanged.
 
-## Lists: `each`, pure rows, `pick` and `intents`
+## Lists: `each`, pure rows, `pick` and `intentsOf`
 
 `each(items, key, row, pick?)` replaces `repeat` and `keyed`. A row re-renders only when its
 item or its `pick` result changes, so a row may read only its arguments and module-level
-values. Name intents in rows with a module-level `intents<Msg>()`; pass view values (the
+values. Name intents in rows with a module-level `intentsOf<typeof C>()` (0.3.1; 0.3.0 had
+`intents<Msg>()`) and give such a row a `TemplateResult` return type; pass view values (the
 selection) through `pick`. ESLint's `gyral/each-row-purity` names every read to move.
 
 ```text
@@ -194,7 +195,7 @@ ${repeat(s.todos, (t) => t.id, (t) =>
 ```
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface Todo {
   readonly id: number;
@@ -206,14 +207,14 @@ interface State {
 }
 type Msg = { readonly _tag: 'Pick'; readonly id: number };
 
-const i = intents<Msg>();
+const i = intentsOf<typeof Todos>();
 
-const Row = (t: Todo, selected: boolean) =>
+const Row = (t: Todo, selected: boolean): TemplateResult =>
   html`<li class=${selected ? 'selected' : ''}>
     <button type="button" value=${t.id} data-intent=${i.Pick}>${t.text}</button>
   </li>`;
 
-export const Todos = define<State, Msg>('my-todos', {
+export const Todos = define<State, Msg>()('my-todos', {
   init: () => ({ todos: [{ id: 1, text: 'Write docs' }], selected: 1 }),
   intent: { Pick: ({ value }) => ({ _tag: 'Pick', id: Number(value) }) },
   update: { Pick: (s, m) => ({ ...s, selected: m.id }) },

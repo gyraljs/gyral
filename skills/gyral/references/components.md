@@ -1,6 +1,6 @@
 # Components: `define()`
 
-`define<S, M, P, O>(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
+`define<S, M, P, O>()(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
 subclass), registers it under `tag`, and returns the class. Type parameters: `S` state, `M`
 message union, `P` props (default `object`; inferred from the `prop.*` builders when you pass
 no type arguments), `O` outputs a child emits to its parent (default `never`; emit them with
@@ -49,7 +49,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Bump' };
 
-export const Stepper = define<State, Msg, Props>('my-stepper', {
+export const Stepper = define<State, Msg, Props>()('my-stepper', {
   props,
   init: () => ({ value: 0 }),
   intent: { Bump: () => ({ _tag: 'Bump' }) },
@@ -130,7 +130,7 @@ than in the view, so an unchanged object is the same object.
 ```ts
 import { define, html, prop, type Stateless } from '@gyral/core';
 
-export const Badge = define<Stateless, never, { readonly text: string }>('my-badge', {
+export const Badge = define<Stateless, never, { readonly text: string }>()('my-badge', {
   props: { text: prop.string({ default: '' }) },
   intent: {},
   update: {},
@@ -149,7 +149,7 @@ trusted author code, never user input. Theme through inherited custom properties
 ```ts
 import { css, define, html, type Stateless } from '@gyral/core';
 
-export const Card = define<Stateless, never>('my-card', {
+export const Card = define<Stateless, never>()('my-card', {
   intent: {},
   update: {},
   view: () => html`<article part="card"><slot></slot></article>`,
@@ -180,7 +180,7 @@ Gyral host, so nested components keep their own intents.
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 
-export const AboutPage = define<Stateless, never>('my-about-page', {
+export const AboutPage = define<Stateless, never>()('my-about-page', {
   shadow: false,
   intent: {},
   update: {},
@@ -199,7 +199,7 @@ import { css, define, html } from '@gyral/core';
 type State = { readonly _tag: 'Idle' } | { readonly _tag: 'Loading' };
 type Msg = { readonly _tag: 'Start' } | { readonly _tag: 'Done' };
 
-export const Loader = define<State, Msg>('my-loader', {
+export const Loader = define<State, Msg>()('my-loader', {
   init: () => ({ _tag: 'Idle' }),
   intent: { Start: () => ({ _tag: 'Start' }) },
   update: {
@@ -231,7 +231,7 @@ Declare the tag so `document.createElement('my-…')` and `querySelector` are ty
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 
-export const Hello = define<Stateless, never>('my-hello', {
+export const Hello = define<Stateless, never>()('my-hello', {
   intent: {},
   update: {},
   view: () => html`<p>Hello</p>`,

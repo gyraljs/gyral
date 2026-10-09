@@ -27,7 +27,7 @@ This file tells coding agents how the project works.
 
 ## Gyral rules (follow them in every change)
 
-1. Each component: `define<State, Msg>('app-name', { init, intent, update, view })`.
+1. Each component: `define<State, Msg>()('app-name', { init, intent, update, view })`.
    Messages are tagged unions (`{ readonly _tag: 'Name' }`); `update` handles every tag.
 2. Views are pure and name intents: `data-intent=${i.Save}`. Never `@click=${…}` or any
    closure. Override the trigger event with `data-intent-on="keydown"`.

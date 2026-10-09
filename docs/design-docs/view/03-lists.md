@@ -63,13 +63,15 @@ In select-row, 998 of 1,000 rows cost one comparison each; only the old and new 
 ## Rows must be pure
 
 Skipping is only correct if a row's output depends on nothing but `(item, picked)` and module
-constants. Intent names are such constants: `intents<Msg>()` (gyral-g1r.19) returns the same
-names object the view gets as `i`, as a module-level constant, so rows name intents without
-passing them through `pick`:
+constants. Intent names are such constants: `intentsOf<typeof Todos>()` (gyral-g1r.19; ADR 0023
+in 0.3.1) returns the same names object the view gets as `i`, as a module-level constant, so
+rows name intents without passing them through `pick`. A row that uses it declares its return
+type, and the view uses its own `i`; otherwise the row, the view and the component's type infer
+each other in a circle:
 
 ```ts
-const i = intents<Msg>();
-const Row = (t: Todo, selected: boolean) =>
+const i = intentsOf<typeof Todos>();
+const Row = (t: Todo, selected: boolean): TemplateResult =>
   html`<li class=${selected ? 'selected' : ''}>
     <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${i.Toggle} />
   </li>`;

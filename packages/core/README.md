@@ -15,7 +15,7 @@ import { define, html } from '@gyral/core';
 
 type Msg = { _tag: 'Increment' } | { _tag: 'Decrement' };
 
-define<{ count: number }, Msg>('gy-counter', {
+define<{ count: number }, Msg>()('gy-counter', {
   init: () => ({ count: 0 }),
   intent: {
     Increment: () => ({ _tag: 'Increment' }),

@@ -23,7 +23,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 
-export const Counter = define<State, Msg>('my-counter', {
+export const Counter = define<State, Msg>()('my-counter', {
   init: () => ({ count: 0 }),
   intent: {
     Increment: () => ({ _tag: 'Increment' }),
@@ -43,8 +43,10 @@ export const Counter = define<State, Msg>('my-counter', {
 
 ## Golden rules
 
-1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`). The tag is also the
-   intent name in markup (or declare extra names with `IntentName<…>`; intent.md). `update` must have a reducer for **every** tag (exhaustive by type).
+1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`), and `update` must have a
+   reducer for **every** tag (exhaustive by type). Components are `define<State, Msg>()(tag,
+spec)` (two calls): the keys of `intent` are the intent names markup uses. A key that is a
+   tag parses into that variant; any other key may produce any message (intent.md).
 2. **Views are pure and name intents; they never attach closures.** Write
    `data-intent=${i.Save}`, never `@click=${() => …}`. The trigger is the element's default
    event (button → click, form → submit, input/textarea → input, select/checkbox → change,
@@ -68,8 +70,9 @@ export const Counter = define<State, Msg>('my-counter', {
    `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor. An app no
    server renders passes `{ clientOnly: true }` to leave the hydration code out (about 1 KiB).
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
-   arguments and module constants; name intents with a module-level `const i = intents<Msg>()`
-   and pass view values (the selection) through `pick`. Form state uses
+   arguments and module constants; name intents with a module-level
+   `const i = intentsOf<typeof C>()` (give such a row a `TemplateResult` return type) and pass
+   view values (the selection) through `pick`. Form state uses
    attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`;
    they are written only when the model's value changes, so other renders keep user edits.
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a

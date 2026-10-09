@@ -19,10 +19,12 @@ concern (events and state alike) was a stream. That made Cycle hard to learn. We
 
 ## Decision
 
-A component is `define(tag, { props?, init, intent, update, view, styles? })`:
+A component is `define(tag, { props?, init, intent, update, view, styles? })` (since 0.3.1,
+two calls: `define<State, Msg>()(tag, spec)`, addendum "Intent names"):
 
 - **Messages** are a tagged union (`{ _tag: 'Add', text }`). A message's tag is also its
-  intent name.
+  intent name. (Since 0.3.1 the intent names are the keys of `intent`, which may include names
+  that aren't tags.)
 - **View** is `` (state, i) => html`…` ``. It names intents in markup: `data-intent=${i.Add}`.
   `i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
 - **Intent** maps tags to parsers: `(IntentInput) => Message | undefined`. `IntentInput` holds
@@ -41,8 +43,8 @@ A component is `define(tag, { props?, init, intent, update, view, styles? })`:
 
 ## Consequences
 
-- Intent names appear in markup as message tags (PascalCase), or, since 0.3.1, as names declared
-  with `IntentName<…>` in the message union (addendum "Intent names").
+- Intent names appear in markup as message tags (PascalCase), or, since 0.3.1, as any key of
+  `intent` (addendum "Intent names").
 - Component state lives in the element (a private model field, then `requestUpdate()`).
   Shared app state across components will use signals (`@lit-labs/signals`). That is a
   separate decision, to be recorded when a shared-state bead needs it.
@@ -87,73 +89,55 @@ orientation prop says which arrow keys it owns). Parsers stay pure apart from `p
 one-parameter parsers still fit, and `form()`/`field()`/`child()` return one-parameter
 parsers so existing direct calls still compile.
 
-## Addendum: Intent names (gyral-dyn.12, 2026-10-08, 0.3.1; decided by the user)
+## Addendum: Intent names (gyral-dyn.12, gyral-dyn.31, 2026-10-08, 0.3.1; decided by the user)
 
 **Context.** Intent names were message tags, so a component with many controls that each send
 the same kind of message (a table toolbar's Archive, Restore, Duplicate and Delete, all sent to
 the server as one request) needed a message variant and a pass-through reducer per control, or
 one shared intent whose parser branches on the control's `name`.
 
-**Decision.** An intent name is a message tag **or a name declared in the message union** with
-`IntentName<…>`:
+**Decision.** The intent names are **the keys of `intent`**, inferred by a two-call `define`
+(ADR 0023):
 
 ```text
-type Msg = Request | Loaded | IntentName<'Archive' | 'Restore' | 'Duplicate'>;
+define<State, Msg>()('doc-table', {
+  intent: { Archive: …, Restore: …, Duplicate: … }, // three intent names, inferred
+  update: { Send: … },                                // reducers for messages only
+  view: (s, i) => html`<button data-intent=${i.Duplicate}>…</button>`,
+});
 ```
 
-- Each declared name is a **required** key of `intent`, because a declared name without a
-  parser is a mistake. Its parser may return any message of the union.
-- A tag key stays optional and still returns its own variant.
-- Declared names get no reducer: they are never dispatched, so `Update` has no key for them.
-- `i` in the view and `intents<Msg>()` for list rows include the declared names, so markup
-  names them exactly like tags, and a typo still fails to compile. `gyral/unused-intent`
-  needs no change: it already reads the `intent` keys and the `i.X` reads.
-- `IntentName<N>` is branded with a `unique symbol` no module exports, so no code can build
-  one: it is never sent with `el.send()` or produced by a command. `Messages<M>` is the union
-  without its intent names; helpers that build messages for such a component return it.
-- `send(msg: M)` and the reducers' command type stay `M`. Typing them `Messages<M>` broke
-  generic code such as `<M>(el: GyralElement<S, M>, m: M) => el.send(m)`, because TypeScript
-  can't narrow a deferred `Exclude`; since an intent name can't be built, keeping `M` loses
-  nothing.
-- Types only: the runtime already looks parsers up by the `data-intent` name, so it costs 0 B
-  and existing components typecheck unchanged.
+- A key that is a message tag must return that variant (a parser named after a message that
+  produces another one is almost always a mistake); any other key may return any message.
+- Names that aren't tags get no reducer: `Update` is keyed by the message tags only.
+- `i` in the view offers exactly the keys, so a name with no parser, or a misspelled one, fails
+  to compile where the view uses it. Rows get the same names from
+  `intentsOf<typeof Component>()`, and a row that uses them declares its return type, or the
+  row, the view and the component's type infer each other in a circle.
+- A misspelled key that no template names at all is a valid new name to the types;
+  `gyral/unused-intent` reports it (it already reported parsers no template names).
+- Types only, apart from the one extra call: the runtime already looks parsers up by the
+  `data-intent` name.
 
-**Why declared in the union, not inferred from the parser keys.** Components pass their types
-explicitly, `define<State, Msg>(…)`, and TypeScript has no partial inference: once some type
-arguments are given, the rest take their defaults and are never inferred from the spec. A type
-parameter for "the keys of `intent`" would therefore always be its default, and `i` could not
-learn the extra names. The alternatives were:
-
-1. Infer the keys from a curried `define<State, Msg>()('tag', spec)`. It could infer the keys
-   (and perhaps other type arguments), but it changes how every component is written. **Kept
-   as possible future work.**
-2. A fifth positional type argument, `define<State, Msg, object, never, 'Archive' | …>`. It is
-   additive but clumsy: callers fill in props and outputs they don't have.
-3. Declared names in the union (chosen): additive, no new runtime, and rows get the names from
-   `intents<Msg>()` with no new API.
-
-**Costs.** Each name is written twice, in the union and as a parser key, but the types keep
-them in step (a missing parser and a typo in the view both fail). The message union now holds
-names that aren't messages; that is why `Messages<M>` exists, and a helper typed with the whole
-union fails with a long error until it returns `Messages<Msg>`. The type errors, as users see
-them:
+The first version (gyral-dyn.12) declared the extra names in the message union with
+`IntentName<'…'>`, because TypeScript has no partial type-argument inference: with
+`define<State, Msg>(tag, spec)` the keys of `intent` could never be inferred. The owner chose
+the curried form instead (ADR 0023), which removes `IntentName`, `Messages` and the one-call
+`define` in 0.3.1. Its type errors, as users see them:
 
 ```text
-// a typo in the view or a row
-Property 'Archvie' does not exist on type 'IntentNames<Msg>'. Did you mean 'Archive'?
-
-// a declared name without a parser
-Property 'Restore' is missing in type '{ Archive: … }' but required in type '{ … }'.
+// a typo in the view, or a misspelled key the view names correctly
+Property 'Archive' does not exist on type 'IntentNames<"Archvie">'. Did you mean 'Archvie'?
 
 // a tag key returns another variant
-Type '() => { _tag: "Answered"; }' is not assignable to type 'IntentParser<Request, object>'.
+Type '{ _tag: "Sent"; }' is not assignable to type 'ParseResult<{ readonly _tag: "Send"; … }>'.
 
-// a reducer for a declared name
+// a reducer for an intent name
 Object literal may only specify known properties, and 'Archive' does not exist in type
 'Update<State, Msg, object>'.
 
-// a helper that returns the whole union instead of Messages<Msg>
-Type 'IntentName<"Archive" | …>' is not assignable to type 'ParseResult<…>'.
+// define called once, the old way
+Expected 0 arguments, but got 2.
 ```
 
 When one parser that branches on `name` reads better (several `<select>`s editing one record),

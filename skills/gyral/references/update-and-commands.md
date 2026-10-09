@@ -44,7 +44,7 @@ const load = () =>
     onFailure: (error): Msg => ({ _tag: 'Failed', error }),
   });
 
-export const Profile = define<State, Msg>('my-profile', {
+export const Profile = define<State, Msg>()('my-profile', {
   init: () => [{ _tag: 'Loading' }, [load()]],
   intent: { Reload: () => ({ _tag: 'Reload' }) },
   update: {
@@ -92,7 +92,7 @@ type Msg =
   | { readonly _tag: 'Typed'; readonly query: string }
   | { readonly _tag: 'Hits'; readonly query: string; readonly hits: readonly string[] };
 
-export const Search = define<State, Msg>('my-search', {
+export const Search = define<State, Msg>()('my-search', {
   init: () => ({ query: '', hits: [] }),
   intent: { Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }) },
   update: {

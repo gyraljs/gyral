@@ -26,7 +26,7 @@ type Msg =
   | { readonly _tag: 'Typed'; readonly query: string }
   | { readonly _tag: 'Hits'; readonly hits: readonly string[] };
 
-const Search = define<State, Msg>('test-search', {
+const Search = define<State, Msg>()('test-search', {
   init: () => ({ query: '', hits: [] }),
   intent: { Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }) },
   update: {
@@ -97,7 +97,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Load' } | { readonly _tag: 'Got'; readonly name: string };
 
-const Who = define<State, Msg>('test-who', {
+const Who = define<State, Msg>()('test-who', {
   init: () => ({ name: '' }),
   intent: { Load: () => ({ _tag: 'Load' }) },
   update: {

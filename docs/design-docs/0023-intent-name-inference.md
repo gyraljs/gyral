@@ -1,8 +1,9 @@
 # ADR 0023 — Inferring intent names from the parser keys (curried `define`)
 
-Status: **proposed** (2026-10-08), for **0.3.1**. Follows the ADR 0001 addendum "Intent names"
-(gyral-dyn.12), which shipped `IntentName<'…'>` in 0.3.1 and kept this alternative as
-possible future work. Recommendation: **don't adopt**; keep `IntentName<'…'>`.
+Status: **accepted** (2026-10-08), for **0.3.1**, by the owner, against this ADR's original
+recommendation (kept below, with its analysis). Bead: gyral-dyn.31. Follows the ADR 0001
+addendum "Intent names" (gyral-dyn.12), which first shipped `IntentName<'…'>` in a 0.3.1 test
+build; this decision replaces it. The "Decision" section records what shipped.
 
 **Scope note (owner, 2026-10-08):** 0.3.1 may break 0.3.0 APIs this once. So the question is
 not "add a second form beside `IntentName`" but "should a curried `define` **replace**
@@ -155,7 +156,59 @@ name, and rows, where most per-item intents live, pay with an annotation on ever
 type-only reference to a component declared elsewhere. Writing a name twice, checked by the
 compiler, is the cheaper cost.
 
-## Decision (recommended)
+## Decision (owner, 2026-10-08)
+
+**Adopt the curried `define`, replacing `IntentName`.** What shipped in 0.3.1:
+
+```ts
+export function define(): <S, M extends Tagged = never, P extends object = object,
+  N extends string = never>(tag: string, spec: ComponentSpec<S, M, P, N>) =>
+  GyralElementClass<S, M, P, never, N>;
+export function define<S, M extends Tagged, P extends object = object,
+  O extends Tagged = never>(): Definer<S, M, P, O>;
+
+type Intents<M, P, N extends string> = { readonly [K in N]: ParserFor<M, P, K> };
+type ParserFor<M, P, K> = K extends M['_tag'] ? IntentParser<Variant<M, K>, P> : IntentParser<M, P>;
+export declare function intentsOf<C extends { readonly intentNames?: string }>(): IntentNames<…>;
+```
+
+- **The type rule.** The intent names are the keys of `intent`, inferred as `N` from the
+  mapped type's keys (not from a homomorphic `keyof I`: TypeScript drops the keys of an object
+  whose values are generic calls such as `field(…)` or `child(…)` when it reverses a mapped
+  type, so `N` is inferred from the key set alone). A key that is a message tag must return
+  that variant; any other key may return any message of the union. This keeps the 0.3.0
+  guarantee that a parser named after a message produces that message, and gives non-tag keys
+  the freedom `IntentName` gave them.
+- **The view's `i` offers exactly the keys** (`IntentNames<N>`), not every tag as before. A
+  view naming a tag that has no parser now fails to compile instead of warning at event time;
+  and a misspelled key fails wherever the view names the intended one (error 2 below now fires
+  for case 3 too whenever the view uses the name).
+- **No type arguments** (`define()('x-badge', spec)`) infers the state, messages, props and
+  names from the spec, as the one-call `define` did.
+- **Rows** use `intentsOf<typeof C>()` and declare their return type (`TemplateResult`), and
+  the view uses its own `i` (using the module constant there is the same circle).
+- **Removed:** the one-call `define(tag, spec)`, `IntentName`, `Messages`, `intents<M>()`.
+  `IntentNames` now takes the names (`IntentNames<'Save' | 'Load'>`), not the message union.
+  `GyralElementClass` gains a fifth type parameter, the intent names (default `string`, so a
+  class annotated with four still accepts any component; `view` is a method in the spec type
+  so such annotations stay assignable).
+- **Mitigations for the risks below.**
+  - (a) A misspelled key that nothing names is a valid new name to the types: the
+    `gyral/unused-intent` lint rule reports any parser key no template in the module names
+    (it now recognizes the two-call `define`), with a test for exactly this case. A
+    development-time runtime warning was considered and not added: the runtime sees only the
+    templates rendered so far, so intents in a closed dialog or an error state would warn
+    falsely; the lint rule sees the whole module.
+  - (b) Rows: the pattern (row return type, the view's own `i`) is in the skill
+    (`intent.md`, `view.md`), the specs (view/03-lists.md) and the anti-patterns table, with
+    the exact error text.
+- **Size:** types only, apart from the outer call: `define` is a small function returning
+  the shared inner one, plus `()` per component (an arrow constant would save 8 B minified but
+  shows agents and docs tools `const define: Define` instead of the overloads). Measured on the
+  size table: +26 to +31 B minified and −1 to +19 B gzip per example; hello-world (clientOnly)
+  and hello-lastname went over by a few bytes and their budgets were raised by 0.1 KiB.
+
+## The original recommendation
 
 **Keep `IntentName<'…'>`; don't adopt the curried form.** Record the prototype and its errors
 here. Revisit if TypeScript gains partial type-argument inference (then `define<S, M>(…)`
@@ -194,9 +247,7 @@ break), not sit beside it: two ways to name intents would double the docs and th
 Types only; no browser features involved. TypeScript ≥ 5.0 for `const` type parameters (the
 repo is on 6.0).
 
-## Open questions for the owner
+## Questions the owner answered
 
-1. **Adopt?** (a) Keep `IntentName<'…'>` (recommended); (b) replace it with the curried
-   `define` in 0.3.1, accepting silent key typos and annotated rows.
-2. **If (b): row names.** (a) `intentsOf<typeof C>()` (prototyped); (b) export the names from
-   the component module as a separate `const` (no cycle, but names written twice again).
+1. **Adopt?** (b): replace `IntentName` with the curried `define` in 0.3.1.
+2. **Row names.** (a): `intentsOf<typeof C>()`.

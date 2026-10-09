@@ -63,7 +63,7 @@ const text = (values: FormFields, key: string): string => {
   return typeof value === 'string' ? value : '';
 };
 
-export const Signup = define<State, Msg>('my-signup', {
+export const Signup = define<State, Msg>()('my-signup', {
   init: () => ({ values: {}, errors: {}, done: false }),
   intent: {
     Submit: form(SignupForm, (_data, raw) => ({ _tag: 'Submit', form: raw })),
@@ -128,22 +128,22 @@ To clear or restore a form, change the model. A keyed row re-creates the control
 model's values (`form.reset()` would restore the first render's values instead):
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface State {
   readonly note: string;
   readonly formKey: number;
 }
 type Msg = { readonly _tag: 'Note'; readonly value: string } | { readonly _tag: 'Clear' };
-const i = intents<Msg>();
+const i = intentsOf<typeof Notes>();
 
-const fields = (s: State) =>
+const fields = (s: State): TemplateResult =>
   html`<form>
     <textarea name="note" data-intent=${i.Note}>${s.note}</textarea>
     <button type="button" data-intent=${i.Clear}>Clear</button>
   </form>`;
 
-export const Notes = define<State, Msg>('my-notes', {
+export const Notes = define<State, Msg>()('my-notes', {
   init: () => ({ note: '', formKey: 0 }),
   intent: {
     Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
@@ -178,7 +178,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Zip'; readonly zip: string };
 
-export const ZipInput = define<State, Msg>('my-zip', {
+export const ZipInput = define<State, Msg>()('my-zip', {
   init: () => ({ zip: '', error: undefined }),
   intent: {
     Zip: field(v.pipe(v.string(), v.regex(/^\d{5}$/, 'Five digits.')), (zip) => ({

@@ -9,7 +9,7 @@ import { css, define } from '@gyral/core';
 
 const TRANSITION_MS = 600;
 
-define('gy-letters', {
+define()('gy-letters', {
   styles: css`
     @layer component {
       li {

@@ -74,7 +74,7 @@ A command references a driver object, so most apps need no wiring at all. To sub
 fakes, configured instances), drivers are looked up **by `name`** in this order:
 
 1. the element instance's `drivers` property (`el.drivers = { http: fake }`) — tests;
-2. the spec's `drivers` option (`define(tag, { drivers: { http: makeHttpDriver({...}) } })`);
+2. the spec's `drivers` option (`define()(tag, { drivers: { http: makeHttpDriver({...}) } })`);
 3. the driver object on the command.
 
 We chose this over a `@lit/context` provider because it needs no extra element, no

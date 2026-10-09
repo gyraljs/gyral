@@ -19,7 +19,7 @@ two costs:
 
 ## Decision
 
-`define(tag, { shadow: false, … })` renders the view as the element's own **light-DOM
+`define()(tag, { shadow: false, … })` renders the view as the element's own **light-DOM
 children**.
 
 - **Client:** `createRenderRoot()` returns the element itself. Document CSS applies. `styles`

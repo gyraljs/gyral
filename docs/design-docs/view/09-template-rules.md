@@ -98,11 +98,11 @@ optional peer dependency.
   An `each` call without a key function is rule 9.
 
 - **`gyral/unused-intent`** (a warning, 0.3.1, gyral-g1r.25): a parser in
-  `define(tag, { intent: { Name: … } })` that no template in the module names with
+  `define()(tag, { intent: { Name: … } })` that no template in the module names with
   `data-intent`. A parser runs only when an element names it, so it is a renamed intent or dead
   code (messages that only come from commands need no parser). A name counts as used when the
-  module mentions it as a property (`i.Name`, a module-level `intents<Msg>()` constant's
-  `r.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal `data-intent` value in an
+  module mentions it as a property (`i.Name`, a module-level `intentsOf<typeof C>()`
+  constant's `r.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal `data-intent` value in an
   `html` or `svg` template.
   - **Why static:** the rule sees every template in the module, including branches that never
     rendered (a dialog's buttons, an error state). A runtime check only knows the templates
@@ -111,7 +111,7 @@ optional peer dependency.
     runtime warning.
   - **Skipped** (no false positives where names may be used elsewhere): a component whose
     view is imported, whose view hands its intents to an imported function, or whose module
-    exports an `intents()` constant; and every component of a module whose templates call or
+    exports an `intentsOf()` constant; and every component of a module whose templates call or
     pass on a function imported from another module (a shared table header that renders
     `data-intent="Sort"`, rows defined elsewhere). Intents named only in `raw()` markup or in
     another module's templates are the remaining blind spot: disable the warning on that line.

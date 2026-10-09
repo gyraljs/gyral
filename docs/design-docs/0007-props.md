@@ -22,7 +22,7 @@ Options: (A) props visible to the view and reducers, (B) a `PropsChanged` messag
 (gyral-czi.5).
 
 ```ts
-define<State, Msg, { readonly userId: string }>('user-card', {
+define<State, Msg, { readonly userId: string }>()('user-card', {
   props: { userId: { type: String } },
   init: (props) => ({ draft: '', loadedFor: props.userId }),
   update: {
@@ -56,7 +56,7 @@ A prop is `undefined` until a parent, an attribute or a hydration seed sets it, 
 said every prop was present. Declarations now have to say how a present value is guaranteed:
 
 ```ts
-define<State, Msg, { readonly label: string; readonly size: number; readonly note?: string }>('x', {
+define<State, Msg, { readonly label: string; readonly size: number; readonly note?: string }>()('x', {
   props: {
     label: { type: String, required: true }, // missing at first render → warning, once
     size: { type: Number, default: 3 },      // ctx.props.size is 3 while the element's is unset

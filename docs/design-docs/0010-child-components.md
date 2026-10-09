@@ -40,12 +40,12 @@ Status: **accepted** (2026-10-04). Bead: gyral-czi.5. Replaces Cycle's `isolate(
 
 `child()` also accepts `() => ChildClass`, resolved when an event arrives. A component that
 contains itself (a folder tree) uses `child(() => Folder, …)` and annotates the constant
-(`const Folder: GyralElementClass<S, M, P, O> = define(…)`) so TypeScript accepts the
+(`const Folder: GyralElementClass<S, M, P, O> = define()(…)`) so TypeScript accepts the
 self-reference. Instance types expose declared props as writable properties.
 
 ## Addendum: stateless children and controlled inputs (gyral-czi.14, 2026-10-04)
 
-- **Stateless children:** `define<Stateless, Msg, Props, Out>(…)` may omit `init`; the types
+- **Stateless children:** `define<Stateless, Msg, Props, Out>()(…)` may omit `init`; the types
   only allow that when `{}` is a valid state. Such a component is a pure view of its props
   that reports changes up with `emit()`.
 - **Controlled inputs:** when the parent owns a value and may clamp or reject a change, bind it
@@ -66,7 +66,7 @@ self-reference. Instance types expose declared props as writable properties.
 ## Addendum: typed emit and the public event name (gyral-c5d.3, gyral-c5d.4, 0.3.1)
 
 - `outputs<O>()` returns `emit` typed by the component's output union, a module-level
-  constant like `intents<Msg>()`: `const emit = outputs<Out>()`. A wrong tag or a missing
+  constant like `intentsOf<typeof C>()`: `const emit = outputs<Out>()`. A wrong tag or a missing
   field fails to compile in the child, not only in the parent's `child()` mapper. It returns
   core's `emit` itself (no run-time cost), and unlike `emit()` it accepts outputs declared as
   interfaces (no index signature needed). `emit()` stays for untyped use.

@@ -83,7 +83,7 @@ For bursty sources: many messages per frame, each in its own task (a WebSocket f
 events, sensors), into a component whose render isn't trivial.
 
 ```ts
-define<State, Msg>('live-chart', {
+define<State, Msg>()('live-chart', {
   // init, intent, update, view …
   renderOnFrame: ['Ticked'],
 });

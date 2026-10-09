@@ -115,7 +115,7 @@ defaults to `false`** in both histories:
   capture.
 
 **Migration:** an app that owns the whole page passes its own router:
-`define(…, { drivers: { router: makeRouter({ captureLinks: true }) }, … })`, as
+`define()(…, { drivers: { router: makeRouter({ captureLinks: true }) }, … })`, as
 `examples/routing-view` and `examples/isomorphic` now do. Tests that click links on a memory
 router add `captureLinks: true`.
 
