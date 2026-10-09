@@ -33,11 +33,6 @@ export interface Props {
   readonly welcome: string | undefined;
 }
 
-const SECRET = new Set(['password', 'confirm']);
-
-const refill = (values: FormFields = {}): FormFields =>
-  Object.fromEntries(Object.entries(values).filter(([key]) => !SECRET.has(key)));
-
 const text = (values: FormFields, key: string): string => {
   const value = values[key];
   return typeof value === 'string' ? value : '';
@@ -46,7 +41,7 @@ const text = (values: FormFields, key: string): string => {
 // Client-side (form()) and server-side (submitForm → 422) rejections arrive the same way.
 const rejected = (s: State, m: IntentRejected): State => ({
   ...s,
-  values: m.values === undefined ? s.values : refill(m.values),
+  values: m.values ?? s.values, // secret fields are never in m.values
   errors: fieldErrors(m.issues),
   pending: undefined,
 });

@@ -12,7 +12,8 @@ const nameIsFree = async (name: string): Promise<boolean> => {
 /**
  * One schema for both paths: the client's `form()` intent and the server's `formAction`.
  * Native constraints in the markup (required, type=email, minlength) catch the easy cases
- * first; this schema adds what HTML can't express.
+ * first; this schema adds what HTML can't express. `password` is secret by its name and
+ * `confirm` is listed: neither is ever sent back in a rejection's sticky values.
  */
 export const RegisterForm = defineForm(
   v.pipeAsync(
@@ -36,4 +37,5 @@ export const RegisterForm = defineForm(
       ['confirm'],
     ),
   ),
+  { secret: ['confirm'] },
 );

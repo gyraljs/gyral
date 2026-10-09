@@ -1,12 +1,7 @@
-// Forms without JavaScript: the server half of ADR 0008. The same `defineForm` schema and the
-// same `validateForm` as the client's `form()` intent, so both paths reject identically.
-import {
-  validateForm,
-  type FieldIssue,
-  type FormDefinition,
-  type IntentRejected,
-} from '@gyral/core';
-import { formDataToObject, formFields } from '@gyral/core/internal';
+// Forms without JavaScript: the server half of ADR 0008. The same `defineForm` definition and
+// the same `definition.validate` as the client's `form()` intent, so both paths reject
+// identically, and neither echoes the definition's secret fields.
+import type { FieldIssue, FormDefinition, FormFields, IntentRejected } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 /** A server-side rejection of a schema-valid submission (see `rejectWith`). */
@@ -79,7 +74,8 @@ function asJson(response: Response): Response {
  * A request handler for a `<form method="post">` that works with JavaScript disabled, and
  * answers the JS path (`submitForm` in `@gyral/http`, `Accept: application/json`) with JSON:
  * valid → the handler's response, a redirect turned into `{ _tag: 'Redirected', location }`;
- * invalid → `422` with the `IntentRejected` (without `values`, so passwords aren't echoed).
+ * invalid → `422` with the `IntentRejected` (without `values`). On the no-JS path `values`
+ * never includes the definition's secret fields (`defineForm(schema, { secret })`).
  */
 export function formAction<Schema extends StandardSchemaV1>(
   definition: FormDefinition<Schema>,
@@ -92,13 +88,13 @@ export function formAction<Schema extends StandardSchemaV1>(
     } catch {
       return new Response('Expected a form submission', { status: 415 });
     }
-    const result = await validateForm(definition, handlers.intent, data);
+    const result = await definition.validate(data, handlers.intent);
     const json = wantsJson(request);
     let rejected: IntentRejected;
     if (result.ok) {
       const answer = await handlers.valid(result.data, request);
       if (answer instanceof Response) return json ? asJson(answer) : answer;
-      const values = formFields(formDataToObject(data));
+      const values = definition.values(data) as FormFields;
       rejected = { _tag: 'IntentRejected', intent: handlers.intent, issues: answer.issues, values };
     } else {
       rejected = result.rejected;

@@ -66,7 +66,7 @@ app.post('/', (c) =>
 );
 ```
 
-- **One validator.** Core's `validateForm(definition, intent, formData)` is what the client's
+- **One validator.** The definition's `validate(formData, intent)` is what the client's
   `form()` parser calls, and what `formAction` calls on the server. Both produce the same
   `IntentRejected`, and only one function turns form data into an object or a rejection.
 - **One reducer.** The server does not compute error state itself. It renders the component
@@ -75,7 +75,7 @@ app.post('/', (c) =>
   `IntentRejected` reducer builds the error state on the server, exactly as it does in the
   browser. The resulting state is seeded (ADR 0012), so hydration resumes from it.
   `initialMessages` is ignored when an element resumes from a seed.
-- **Re-filling.** `IntentRejected.values` (from `form()` and `validateForm`) carries the
+- **Re-filling.** `IntentRejected.values` (from `form()` and `definition.validate`) carries the
   submitted text fields; Files are dropped. The reducer decides what to keep. **Never keep
   passwords**: state is serialized into the page.
 - **Post/Redirect/Get.** On success, `seeOther(url)` returns a 303, so reloading never
@@ -204,4 +204,28 @@ The 0.3.1 export review (gyral-1zd.6) moved `formDataToObject` and `formFields` 
 `formAction`, still needs the submitted values to re-render the form. `formValues(definition,
 formData)` returns exactly what `IntentRejected.values` carries (text values, repeated names and
 `name[]` as arrays, no `File`s), typed by the definition's input keys (`FormValues<Schema>`).
-It's a thin wrapper over the internal functions, so the two paths can't drift.
+It's a thin wrapper over the internal functions, so the two paths can't drift. (It became
+`definition.values(formData)` in the next addendum.)
+
+## Addendum: secret fields, and the helpers fold into the definition (0.3.1)
+
+The 0.3.1 review found `formAction` echoing passwords and card numbers in
+`IntentRejected.values` on the no-JS path; one app stripped them by hand in five places. No
+other framework echoes submitted values automatically: SvelteKit's `fail(400, { values })`,
+React Router's `useActionData` and Astro/Qwik actions return only what the action chooses, and
+browsers never restore a password field. Gyral keeps the convenient automatic echo, but makes it
+safe by default:
+
+- `defineForm(schema, { secret: ['card', 'cvc'] })` lists secret fields; any field whose name
+  contains `password` or `passcode` is secret without being listed.
+- Secret fields never appear in `IntentRejected.values` (client `form()`, no-JS `formAction`,
+  `rejectWith`), in `definition.values()`, or in JSON 422 bodies (which carry no values at all).
+- Development builds warn once for an unlisted field whose name has a secret-looking word
+  (`token`, `secret`, `card`, `cvc`, `cvv`, `ssn`, `pin`); the devtools timeline previews secret
+  fields, and secret `FormData` entries, as `[secret]`.
+
+`validateForm(definition, intent, data)` and `formValues(definition, data)` were two exports for
+what the definition already knows. They became methods: `definition.validate(data, intent?)` and
+`definition.values(data)`, and the internal `formFields`/`formDataToObject` are no longer
+exported (nothing outside core used them once `formAction` called the definition). A bare schema
+still works with `form()`, with only the name-based secret rule.

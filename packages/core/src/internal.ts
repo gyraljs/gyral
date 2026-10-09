@@ -7,7 +7,7 @@ export type { StoreSendInput } from './store.js';
 export { scriptSafeJson } from './script-json.js';
 export { STORE_SEED_ATTRIBUTE } from './store-scope.js';
 export { warnJsonHazard } from './json-safety.js';
-export { formDataToObject, formFields, intentRejectedSchema } from './forms.js';
+export { intentRejectedSchema, isSecretField } from './forms.js';
 export { runInit } from './init.js';
 export { ISLAND_ATTRIBUTE } from './islands.js';
 export {
