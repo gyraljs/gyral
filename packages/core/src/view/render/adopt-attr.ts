@@ -14,6 +14,7 @@ import {
   TEXTAREA,
   textOf,
   TITLE,
+  TOGGLE,
   truthy,
   VALUE,
   type AttrPart,
@@ -44,6 +45,8 @@ export function adoptAttr(part: AttrPart, values: readonly unknown[]): void {
     part.value = v;
     if (kind === VALUE && PLAIN.test((el as HTMLInputElement).type)) part.kind = ATTR;
   } else if (kind === TITLE || kind === TEXTAREA) part.value = textOf(part, v);
+  else if (kind === TOGGLE)
+    part.set(values); // the server can't open a modal: open it now
   else {
     part.value = truthy(v);
     if (kind === STATE && live[name] !== part.value) live[name] = part.value;

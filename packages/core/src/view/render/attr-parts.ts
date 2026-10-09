@@ -12,8 +12,9 @@
 import { DEV } from '#view-dev';
 import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
+import { toggle } from './toggles.js';
 import { nothing, UNSET } from './values.js';
-import { badHook, warnFunctionProp, warnTrue, warnValue } from './warn.js';
+import { badHook, warnFunctionProp, warnToggle, warnTrue, warnValue } from './warn.js';
 
 /** What every part of an instance implements: commit its value(s) from this render's values. */
 export interface Part {
@@ -42,6 +43,8 @@ export const TITLE = 8;
 export const TEXTAREA = 9;
 /** `${hook(…)}` in a start tag. */
 export const HOOK = 10;
+/** `?modal` on `<dialog>`, `?popover-open` on `[popover]`: opened and closed (toggles.ts). */
+export const TOGGLE = 11;
 
 /** Input types whose `value` is a submitted value, not state the user edits. */
 export const PLAIN = /^(checkbox|radio|hidden|button|submit|reset|image|file)$/;
@@ -73,6 +76,7 @@ export function attrKind(el: Element, name: string, bool: boolean): number {
   if (tag === 'input')
     return name === 'checked' ? CHECKED : name === 'indeterminate' ? STATE : BOOL;
   if (tag === 'option' && name === 'selected') return CHECKED;
+  if (name === 'modal' || name === 'popover-open') return TOGGLE;
   return name === 'open' && (tag === 'details' || tag === 'dialog') ? OPEN : BOOL;
 }
 
@@ -168,6 +172,14 @@ export class AttrPart implements Part {
         if (on === this.value) return;
         this.value = on;
         if (el.hasAttribute('open') !== on) el.toggleAttribute('open', on);
+        return;
+      }
+      case TOGGLE: {
+        const on = truthy(v);
+        if (on === this.value) return;
+        this.value = on;
+        if (toggle !== undefined) toggle(el, this.name, on);
+        else if (DEV) warnToggle(el, this.name);
         return;
       }
       case TITLE:

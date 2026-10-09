@@ -9,6 +9,7 @@
 //   - command intents: a string or template whose markup has a `data-intent-command` attribute,
 //     `data-intent-on="command"` or a bound `data-intent-on`, or a string that is exactly "command" (`events: ['command']`, a
 //     `setAttribute`);
+//   - dialog and popover bindings: a template whose markup binds `?modal=` or `?popover-open=`;
 //   - `raw` (its markup is read at run time, so it may hold `data-intent-on="command"`): the
 //     module lists the specifiers through which it may reach a `raw` export, and features.ts
 //     counts it when one of them is a module of `@gyral/core`. Through: a named import of `raw` (any
@@ -19,14 +20,17 @@
 import { children, nodeAt, nodesAt, type Node } from './ast.js';
 
 /** Optional machinery the build adds when a module may use it. */
-export type Feature = 'invokers' | 'transitions' | 'frame' | 'states';
+export type Feature = 'invokers' | 'transitions' | 'frame' | 'states' | 'dialogs';
 
 /** The spec field each spec-field feature is reached through (04, 05). */
 export const FIELDS = {
   transitions: 'viewTransition',
   frame: 'renderOnFrame',
   states: 'states',
-} as const satisfies Readonly<Record<Exclude<Feature, 'invokers'>, string>>;
+} as const satisfies Readonly<Record<Exclude<Feature, 'invokers' | 'dialogs'>, string>>;
+
+/** Markup that binds the dialog or popover state (`?modal=`, `?popover-open=`, view/02). */
+const TOGGLE_BINDING = /\?(?:modal|popover-open)\s*=/i;
 
 /**
  * Markup that makes a root listen for `command` (05 "Intent events"): a `data-intent-command`
@@ -179,6 +183,7 @@ export function writes(facts: ModuleFacts, feature: Feature): boolean {
   if (feature === 'invokers') {
     return facts.texts.some((text) => text === 'command' || INTENT_ON_COMMAND.test(text));
   }
+  if (feature === 'dialogs') return facts.texts.some((text) => TOGGLE_BINDING.test(text));
   const name = FIELDS[feature];
   return facts.names.has(name) || facts.texts.includes(name);
 }

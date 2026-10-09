@@ -41,6 +41,14 @@ export const msg = {
     `.${name}=${H} on <${tag}> binds form state as a property, which never reaches the ` +
     `server and has a second spelling. Write ${write} instead: Gyral keeps it live ` +
     `(view/02-bindings.md, "Live form state").`,
+  toggle: (tag: string, name: string): string =>
+    name === 'modal'
+      ? `modal on <${tag}>: only a <dialog> opens as a modal, and only from ?modal=${H}, which ` +
+        `calls showModal() and close() as the value changes (view/02-bindings.md, "Dialogs and ` +
+        `popovers"). Write <dialog ?modal=${H}>.`
+      : `popover-open on <${tag}>: write ?popover-open=${H} on an element with a popover ` +
+        `attribute; it calls showPopover() and hidePopover() as the value changes ` +
+        `(view/02-bindings.md, "Dialogs and popovers").`,
   // 5
   unquoted: (name: string): string =>
     `${name}=… mixes static text and holes without quotes, which is ambiguous. Quote the ` +
@@ -107,7 +115,7 @@ const FORM_STATE: Record<string, Record<string, string> | undefined> = {
   select: { value: `?selected=${H} on the chosen <option>` },
   option: { selected: `?selected=${H}`, value: `value=${H}` },
   details: { open: `?open=${H}` },
-  dialog: { open: `?open=${H}` },
+  dialog: { open: `?open=${H}`, modal: `?modal=${H}` },
 };
 
 /**

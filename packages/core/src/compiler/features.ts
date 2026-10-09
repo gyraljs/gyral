@@ -34,6 +34,7 @@ const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
   transitions: /\bviewTransition\b/,
   frame: /\brenderOnFrame\b/,
   states: /\bstates\b/,
+  dialogs: /\?(?:modal|popover-open)\s*=/i,
 };
 
 /** Each feature's registration module in core (`src/<name>.ts`, published as `dist/<name>.js`). */
@@ -42,6 +43,7 @@ const REGISTRATION: Readonly<Record<Feature, string>> = {
   transitions: 'use-transitions',
   frame: 'use-frame-lane',
   states: 'use-states',
+  dialogs: 'use-dialogs',
 };
 
 /**
@@ -53,6 +55,7 @@ export const FEATURE_HINTS: Readonly<Record<Feature, RegExp>> = {
   transitions: /viewTransition/,
   frame: /renderOnFrame/,
   states: /states/,
+  dialogs: /modal|popover-open/i,
 };
 
 const PREFIX = 'virtual:gyral-use/';
