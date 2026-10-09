@@ -228,6 +228,10 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - `client(el, args, prev)` runs after the instance's parts have committed, when `args` differ
   from the previous call (shallow `Object.is` per argument). `prev` is `undefined` on the first
   call. During hydration it runs once with the hydrated args (07).
+- `update: 'always'` (0.3.1, gyral-1zd.27) runs `client` on every render that commits the
+  hook's position, even with the same arguments (a skipped `each` row doesn't commit): for a
+  hook that measures or re-applies something each time, without a counter in the model only
+  there to change an argument. The default is `'args'`.
 - `dispose(el, args)` (0.3.1, gyral-c5d.2) is the teardown, with the last arguments `client`
   got, for hooks defined with `defineDisposableHook` (`defineHook` takes none: a development
   error). See "Widgets with a lifecycle" below.
@@ -322,8 +326,45 @@ removes the attribute (also in a multi-attribute).
 - Parts commit in document order. On first render an instance's parts commit **before** the
   instance is inserted, so a child component connects with its props already set.
 - After commit, disposable hooks whose element left the root (or whose position changed) are
-  disposed, then hooks run `client` (in document order), then the scheduler's post-render work
-  (04).
+  disposed, then hooks run `client`, then the scheduler's post-render work (04).
+- **Hooks run once the whole flush has rendered, children first** (0.3.1, gyral-1zd.27). The
+  scheduler renders every dirty host (parents before children, 04) and only then runs their
+  queued `client` calls: the last-rendered component's first, each component's own in document
+  order. So a parent's hook sees the child components it rendered in the same flush, already
+  rendered (measuring a list, scrolling to a child's row), as React's and Vue's effects run
+  child components first. A `render` call outside the scheduler runs its own calls when it
+  returns. ADR 0018 addendum "Hook order".
+
+## Dialogs and popovers
+
+Opening a modal dialog or a popover is state the model owns, written with the platform's
+methods (0.3.1, gyral-1zd.27):
+
+| Element                   | Binding                 | Server writes | Browser does                                                    |
+| ------------------------- | ----------------------- | ------------- | --------------------------------------------------------------- |
+| `<dialog>`                | `?modal=${open}`        | nothing       | `showModal()` when it turns true, `close()` when it turns false |
+| an element with `popover` | `?popover-open=${open}` | nothing       | `showPopover()` / `hidePopover()`                               |
+
+```ts
+view: (s, i) => html`
+  <button type="button" data-intent=${i.Edit}>Edit</button>
+  <dialog ?modal=${s.editing} data-intent-on="close" data-intent=${i.Closed}>…</dialog>
+  <p popover="manual" ?popover-open=${s.saved}>Saved</p>
+`,
+```
+
+- Like live form state, the part writes only when the model's value changes, and then only if
+  the element isn't already open (or closed). A dialog the user closed (Escape, a
+  `form[method=dialog]`) fires `close`: name it in `data-intent-on` so the model hears it, or
+  the next change to `true` is the one that reopens it.
+- The platform returns focus to the element focused before the dialog or popover opened.
+- A modal can't be opened in server HTML: neither binding writes an attribute, and hydration
+  opens what the model says (07). Use `?open` for a non-modal dialog that should show before
+  scripts run.
+- Template rule 4: `?modal` goes only on `<dialog>`, `?popover-open` only on an element with a
+  `popover` attribute, and both only with `?`.
+- The code is registered like a spec feature (05 "Features register themselves"): builds with
+  the preset bundle it only when a module writes either binding.
 
 ## Native primitives
 
@@ -335,3 +376,5 @@ removes the attribute (also in a multi-attribute).
 | Insertion  | `insertBefore` / `before`, `DocumentFragment`                                                        | widely                         |
 | Form state | `.value`, `.checked`, `.selected`, `.indeterminate`, `defaultValue`/`defaultChecked`, `form.reset()` | widely                         |
 | Raw markup | `<template>` + `innerHTML`; Sanitizer API later                                                      | widely; Sanitizer not Baseline |
+| Dialogs    | `HTMLDialogElement.showModal()`/`close()`                                                            | widely                         |
+| Popovers   | `showPopover()`/`hidePopover()`, `:popover-open`; nothing happens without them                       | newly (widely 2027-07)         |

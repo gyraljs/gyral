@@ -1,7 +1,9 @@
 import {
+  call,
   emit,
   focus,
   type AnyDriver,
+  type CallInput,
   type Command,
   type Driver,
   type FocusOptions,
@@ -30,10 +32,11 @@ export function inputsFor<I, M>(
   return commandsFor(commands, driver).map((c) => c.input);
 }
 
-// Core runs emit() and focus() commands itself, with marker drivers it doesn't export: their
+// Core runs emit(), focus() and call() commands itself, with marker drivers it doesn't export: their
 // names come from the public builders, so tests never spell them out.
 const emitDriver = (): Named => emit({ _tag: 'Probe' }).driver;
 const focusDriver = (): Named => focus('*').driver;
+const callDriver = (): Named => call('*', 'x').driver;
 
 /** Anything carrying a component's output union: a `define()` class. */
 export interface WithOutputs {
@@ -75,6 +78,15 @@ export interface FocusTarget extends FocusOptions {
  */
 export function focusTargetsIn(commands: ReadonlyArray<Command<unknown>>): readonly FocusTarget[] {
   return inputsFor<FocusTarget, unknown>(commands, focusDriver());
+}
+
+/**
+ * The element method calls among the commands (`call(selector, method, ...args)`), in order:
+ *
+ *   expect(callsIn(next.commands)).toEqual([{ selector: 'video', method: 'play', args: [] }]);
+ */
+export function callsIn(commands: ReadonlyArray<Command<unknown>>): readonly CallInput[] {
+  return inputsFor<CallInput, unknown>(commands, callDriver());
 }
 
 /** The message a command produces if its driver succeeds with `output`. */

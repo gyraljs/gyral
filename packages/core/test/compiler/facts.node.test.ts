@@ -119,4 +119,16 @@ describe('facts: where raw may come from', () => {
     expect(sources("const m = await import('e');")).toEqual(['e']);
     expect(sources("export { html } from 'f';")).toEqual([]);
   });
+
+  describe('dialogs (?modal, ?popover-open, gyral-1zd.27)', () => {
+    it('counts a template that binds either', () => {
+      expect(uses('html`<dialog ?modal=${open}></dialog>`;', 'dialogs')).toBe(true);
+      expect(uses('html`<p popover ?popover-open=${on}></p>`;', 'dialogs')).toBe(true);
+    });
+    it("doesn't count the words alone", () => {
+      expect(uses("const modal = 'popover-open'; html`<dialog ?open=${x}>`;", 'dialogs')).toBe(
+        false,
+      );
+    });
+  });
 });

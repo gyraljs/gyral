@@ -75,3 +75,35 @@ self-reference. Instance types expose declared props as writable properties.
   component (plain DOM, another library) listens for it on the child or an ancestor in the
   same tree (`bubbles: true`, `composed: false`) and reads `event.detail`. Documented in the
   skill's composition reference and the migration guide's mixed-app note.
+
+## Addendum: outputs reach the direct parent; slotted content is the outer component's (gyral-1zd.27, 0.3.1)
+
+Two ownership gaps surfaced in apps that compose components deeply:
+
+- **Outputs passed the direct parent.** A child's output bubbles (`composed: false`), so with a
+  light-DOM parent it travelled on into the grandparent's tree, where the grandparent's own
+  `data-intent` on the parent host matched it (a custom element's default trigger is the
+  output event). The grandparent then read the grandchild's output as the parent's. Apps guarded
+  every such parser with `event.target === target` checks or marker attributes.
+- **Slotted content belonged to no one.** A form or a child component that the outer template
+  slots into a shadow-DOM card has the card host between it and the outer root, and the
+  ownership walk stopped at any Gyral host. Its intents never fired: a slotted
+  `<form data-intent>` got no `FormData` and no `preventDefault`, so the browser submitted it
+  natively, and a slotted child's outputs were lost.
+
+Decision:
+
+- An output event fires an intent only on the element it was dispatched on (the child host, where
+  the direct parent's `data-intent` sits), never on an ancestor. When the direct parent's parser
+  takes it (returns a message or a promise), the event stops there, so neither an outer
+  component nor a page listener higher up sees it. A parser that declines lets it go on.
+  Non-Gyral parents still listen for `OUTPUT_EVENT` on the child or an ancestor; the event
+  still bubbles until a Gyral parent takes it.
+- The ownership walk stops only at a **light-DOM** Gyral host (it rendered its own children).
+  Children of a shadow-DOM host are the outer template's content, slotted in, so they stay the
+  outer component's: their intents, forms (`FormData`, the cancelled native submit) and child
+  outputs work as anywhere else in its template.
+
+Like React's and Vue's component events (`emit` reaches only the parent that bound the
+handler), an output is a message to one parent, not a broadcast. Tested in
+`core/test/intent-ownership.test.ts`.

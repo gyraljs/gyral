@@ -36,8 +36,11 @@ export { keyed } from './render/keyed.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
 export { defineHook } from './render/hook-part.js';
+export { useToggles } from './render/toggles.js';
+export { applyToggle } from './render/modal.js';
 export { defineDisposableHook } from './render/dispose.js';
 export {
+  flushHooks,
   onHookFailure,
   suspendHooks,
   type DisposableHookSpec,

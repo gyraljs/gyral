@@ -273,6 +273,14 @@ A false positive only bundles the feature. Saves about 0.27 KiB gzip in apps tha
 the three. Client-only builds use the same mechanism for the invoker-command fallback (07
 "Client-only builds").
 
+**Markup bindings (gyral-1zd.27, 0.3.1).** The dialog and popover bindings (`?modal`,
+`?popover-open`, 02 "Dialogs and popovers") are reached through template markup, so the scan
+counts a module whose template text binds `?modal=` or `?popover-open=`, and adds
+`use-dialogs.ts`, which installs the code (`view/render/modal.ts`) in the view layer's slot
+(`view/render/toggles.ts`). Without a build step `spec-features.ts` installs it at load. A
+binding whose code the build left out does nothing, and development builds warn once per
+element.
+
 The view layer does the same with values that carry their own commit code (02, 03): `each`,
 `raw`, `defineHook` (argument comparison, the client queue) and `defineDisposableHook` (disposal
 tracking, view/render/dispose.ts, gyral-c5d.2). A teardown is a function of its own rather than
@@ -420,6 +428,32 @@ rendering takes focus with it (the browser moves focus to the body), so keep foc
 a keyed `each` (a row moves, it isn't recreated) and return a `focus()` command when the focused
 item really goes away (a deleted row: focus its neighbour or the list). Tests:
 `packages/core/test/delegates-focus.test.ts`, `test/view/server-components.node.test.ts`.
+
+## Calling an element's method (gyral-1zd.27, 0.3.1)
+
+`call(selector, method, ...args)` is a command, like `focus()`: after the render it calls
+`method` with `args` on the first element matching `selector` in the component's own tree (its
+shadow root, or its children in light-DOM mode).
+
+```ts
+update: {
+  Start: (s) => [{ ...s, playing: true }, [call('video', 'play')]],
+  Join: (s, m) => [s, [call('room-stage', 'join', m.room)]],
+},
+```
+
+- It replaces two workarounds: a ref to the element (Gyral views keep none) and a request
+  array in the model that a child replays with a cursor. The request stays data, so a model
+  test reads it (`callsIn(next.commands)` in `@gyral/testing`).
+- `args` must be plain data (structured-cloneable; a development error otherwise). The element
+  looks up anything else itself.
+- No matching element, no such method, or a method that throws or rejects is reported through
+  the error channel (ADR 0024, `phase: 'command'`, G0085); the error's `cause` says which.
+- It runs as post-render work with `focus()` (04), in the order the commands were returned.
+- For a child Gyral component, prefer props (state down) and outputs (events up); `call` is for
+  imperative APIs: media, canvases, third-party widgets, a game stage.
+
+Tests: `packages/core/test/call.test.ts`.
 
 ## `ElementInternals`
 

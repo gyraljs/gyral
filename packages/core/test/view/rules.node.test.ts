@@ -91,6 +91,16 @@ describe('template errors (view/09)', () => {
     expect(() => normalize(t`<div hidden=${'until-found'}></div>`)).not.toThrow();
   });
 
+  it('rule 4: dialog and popover state only as ?modal / ?popover-open where they fit', () => {
+    expectRule(t`<dialog modal=${0}></dialog>`, 4, '?modal=${…}');
+    expectRule(t`<dialog .modal=${0}></dialog>`, 4, '?modal=${…}');
+    expectRule(t`<div ?modal=${0}></div>`, 4, 'only a <dialog>');
+    expectRule(t`<div ?popover-open=${0}></div>`, 4, 'popover attribute');
+    expectRule(t`<div popover popover-open=${0}></div>`, 4, '?popover-open=${…}');
+    expect(() => normalize(t`<dialog ?modal=${0}></dialog>`)).not.toThrow();
+    expect(() => normalize(t`<p popover="manual" ?popover-open=${0}></p>`)).not.toThrow();
+  });
+
   it('rule 5: unquoted multi-part attributes, and static text with ? or .', () => {
     expectRule(t`<b class=a${0}></b>`, 5, 'without quotes', 'class="a ${…}"');
     expectRule(t`<b class=${0}a></b>`, 5, 'without quotes');

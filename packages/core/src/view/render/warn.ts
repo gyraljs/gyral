@@ -101,6 +101,16 @@ export function warnImpureRow(row: (...args: never[]) => unknown): void {
 }
 
 /** A hook hole got something other than a hook result. */
+/** `?modal`/`?popover-open` with the bindings' code left out of the build (toggles.ts). */
+export function warnToggle(el: Element, name: string): void {
+  if (warned.has(el)) return;
+  warned.add(el);
+  console.warn(
+    `gyral: ?${name} on <${el.localName}> does nothing: the build left its code out ` +
+      `(${SPEC}/05-element.md "Features register themselves").`,
+  );
+}
+
 export function badHook(value: unknown): never {
   throw new TypeError(
     `gyral: an element hook position (\${…} inside a start tag) got ${describe(value)}. Only ` +

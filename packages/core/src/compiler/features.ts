@@ -35,6 +35,7 @@ const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
   frame: /\brenderOnFrame\b/,
   states: /\bstates\b/,
   subscriptions: /\bsubscriptions\b/,
+  dialogs: /\?(?:modal|popover-open)\s*=/i,
 };
 
 /** Each feature's registration module in core (`src/<name>.ts`, published as `dist/<name>.js`). */
@@ -44,6 +45,7 @@ const REGISTRATION: Readonly<Record<Feature, string>> = {
   frame: 'use-frame-lane',
   states: 'use-states',
   subscriptions: 'use-subscriptions',
+  dialogs: 'use-dialogs',
 };
 
 /**
@@ -56,6 +58,7 @@ export const FEATURE_HINTS: Readonly<Record<Feature, RegExp>> = {
   frame: /renderOnFrame/,
   states: /states/,
   subscriptions: /subscriptions/,
+  dialogs: /modal|popover-open/i,
 };
 
 const PREFIX = 'virtual:gyral-use/';

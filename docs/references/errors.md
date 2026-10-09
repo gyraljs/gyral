@@ -258,3 +258,17 @@ Arguments: `tag`, `lane`.
 > \<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.
 
 Arguments: `tag`.
+
+## Element calls (gyral-1zd.27)
+
+### G0085
+
+> \<{tag}> call("{selector}", "{method}") failed
+
+Arguments: `tag`, `selector`, `method`.
+
+### G0086
+
+> call("{selector}", "{method}"): arguments must be plain data.
+
+Arguments: `selector`, `method`.

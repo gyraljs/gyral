@@ -2,7 +2,15 @@
 export { initial, readerOf, run, step, subscriptionsFor } from './step.js';
 export { sentTo, stepStore, testStore } from './stores.js';
 export type { Ran, RunOptions, StepMessage, Stepped } from './step.js';
-export { commandsFor, focusTargetsIn, inputsFor, outputsIn, reject, resolve } from './commands.js';
+export {
+  callsIn,
+  commandsFor,
+  focusTargetsIn,
+  inputsFor,
+  outputsIn,
+  reject,
+  resolve,
+} from './commands.js';
 export type { FocusTarget, WithOutputs } from './commands.js';
 export { withDrivers } from './drivers.js';
 export { fakeDriver } from './fake.js';

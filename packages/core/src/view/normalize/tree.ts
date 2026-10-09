@@ -208,6 +208,14 @@ export class TreeBuilder implements Sink {
         const fix = formStateFix(tag.name, a.name);
         if (fix !== undefined) this.src.fail(4, msg.formState(tag.name, a.name, fix));
       }
+      // Dialog and popover state is bound with `?`, on the element that can open (02).
+      if (ns === 'html' && (name === 'modal' || name === 'popover-open') && a.kind !== 'prop') {
+        const fits =
+          name === 'modal'
+            ? tag.name === 'dialog'
+            : tag.attrs.some((b) => b.name.toLowerCase() === 'popover');
+        if (a.kind !== 'bool' || !fits) this.src.fail(4, msg.toggle(tag.name, name));
+      }
       if (
         a.kind === 'attr' &&
         ns === 'html' &&

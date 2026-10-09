@@ -42,7 +42,8 @@ export function outputs<O extends Tagged>(): (output: O) => Command<never> {
 
 /**
  * The `gyral-output` event a child dispatches on its host for each output (ADR 0010): `detail`
- * is the output. Bubbles, not composed. A non-Gyral parent listens for `OUTPUT_EVENT`.
+ * is the output. Bubbles, not composed. A non-Gyral parent listens for `OUTPUT_EVENT`. Only the
+ * direct parent's intent on the child host takes it, and once it does the event stops there.
  */
 export type OutputEvent<O extends Tagged = Tagged> = CustomEvent<O>;
 

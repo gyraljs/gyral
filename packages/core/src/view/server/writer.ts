@@ -143,7 +143,10 @@ export class Writer extends Markup {
           break;
         case 'bool':
           // `?indeterminate` has no attribute: it is the property only (02 "Live form state").
-          if (truthy(values[at]) && s.name !== 'indeterminate') this.bare(s.name, opening);
+          // `?modal`/`?popover-open` neither: the browser opens them after hydration (02).
+          if (truthy(values[at]) && !/^(indeterminate|modal|popover-open)$/.test(s.name)) {
+            this.bare(s.name, opening);
+          }
           at++;
           break;
         case 'prop':

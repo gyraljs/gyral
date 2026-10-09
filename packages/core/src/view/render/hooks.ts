@@ -1,7 +1,11 @@
 // Element hooks (view/02-bindings.md "Element hooks", "Commit order"): their types and the
 // queue of client calls. A hook position (attr-parts.ts, kind HOOK) queues itself when its
 // arguments change (shallow `Object.is` per argument, hook-part.ts, which also holds
-// `defineHook`); `render` runs the queued `client` calls after the commit, in document order.
+// `defineHook`), or on every commit with `update: 'always'`. Inside a scheduler flush
+// (`renderBatch`) the queued `client` calls wait until every dirty host has rendered, then run
+// children first, each root's calls in document order (hook-run.ts), so a parent's hook sees its
+// child components rendered (view/02 "Commit order"). A `render` call outside a flush runs its
+// own calls when it returns, in document order.
 // A hook from `defineDisposableHook` also has `dispose`, which runs when the element leaves its
 // render root (Gyral removed it: its part cleared, its instance replaced, its row removed), when
 // the position stops holding the hook, or when the host disconnects; not on moves. That
@@ -21,6 +25,11 @@ export interface HookSpec<A extends readonly unknown[]> {
   server?(args: A): HookAttributes;
   /** Runs after the commit when `args` changed; `prev` is undefined the first time. */
   client(el: Element, args: A, prev: A | undefined): void;
+  /**
+   * When `client` runs again: `'args'` (the default) when an argument changed (`Object.is`),
+   * `'always'` on every render that commits the hook's position (a skipped `each` row doesn't).
+   */
+  readonly update?: 'args' | 'always';
 }
 
 /** A hook with a teardown (`defineDisposableHook`, view/02 "Widgets with a lifecycle"). */
@@ -51,6 +60,8 @@ export interface HookPart {
   kept?: DisposableHookSpec<readonly unknown[]> | undefined;
   keptArgs?: readonly unknown[] | undefined;
   off?: boolean | undefined;
+  /** The render root it was queued for (hook-run.ts: failures, order). */
+  owner?: Node | undefined;
 }
 
 export const isHook = (value: unknown): value is HookResult =>
@@ -91,15 +102,30 @@ export function useDisposal(run: (root: Node, disconnect?: boolean) => boolean):
 export const suspendHooks = (root: Node | undefined): boolean | undefined =>
   disposal?.(root as Node, true);
 
-const queue: HookPart[] = [];
+/** Internal (hook-run.ts): queued client calls. */
+export const queue: HookPart[] = [];
+/** The root being committed, so `queueHook` knows the owner. */
+let current: Node | undefined;
 
-/** Queues `part`'s client call for the end of the render (document order). */
+/** Queues `part`'s client call for the end of the render, or of the flush. */
 export function queueHook(part: HookPart): void {
+  part.owner = current;
   queue.push(part);
 }
 
-/** The queue position before a render, for `runHooks`/`dropHooks`. */
-export const hookMark = (): number => queue.length;
+/** The root being committed (dispose.ts tracks disposable hooks per root). */
+export const committing = (): Node | undefined => current;
+
+/** Internal (hook-run.ts): sets the root being committed (disposal re-queues hooks for it). */
+export function setCommitting(root: Node | undefined): void {
+  current = root;
+}
+
+/** The queue position before a render of `root`, for `runHooks`/`dropHooks`. */
+export function hookMark(root: Node): number {
+  current = root;
+  return queue.length;
+}
 
 /** Where a hook's failure goes (core reports it, ADR 0024); unset, `reportError`. */
 let hookFailed: ((error: unknown, root: Node) => void) | undefined;
@@ -109,31 +135,56 @@ export function onHookFailure(report: (error: unknown, root: Node) => void): voi
   hookFailed = report;
 }
 
+/** Internal (hook-run.ts): where failures go, and the disposal pass. */
+export const hookFailure = (): ((error: unknown, root: Node) => void) => hookFailed ?? reportError;
+export const disposalPass = (): typeof disposal => disposal;
+
 /**
- * Runs the `client` calls queued since `mark`, in document order, after `root` committed. Each
- * hook on its own: one that throws doesn't keep the others from running.
+ * What runs queued client calls (hook-run.ts): ordering, batching across a flush, failures.
+ * Set by `defineHook`/`defineDisposableHook`, so apps without hooks bundle none of it; without
+ * hooks nothing is ever queued.
  */
+export interface HookRunner {
+  /** `root` committed: run its calls now, or note it for the end of the flush. */
+  run(mark: number, root: Node): void;
+  /** A flush starts. */
+  start(): void;
+  /** Runs the calls of every root rendered in the flush so far. */
+  flush(): void;
+  /** A flush ends: runs what's left (or drops it when the flush threw). */
+  end(ok: boolean): void;
+}
+
+let runner: HookRunner | undefined;
+
+/** Internal (hook-part.ts): installs the runner. */
+export function useHookRunner(run: HookRunner): void {
+  runner = run;
+}
+
+/** `root` committed: its queued `client` calls run now, or with the flush's (hook-run.ts). */
 export function runHooks(mark: number, root: Node): void {
-  disposal?.(root); // disposable hooks whose element left `root` dispose first (dispose.ts)
-  try {
-    for (let i = mark; i < queue.length; i++) {
-      const part = queue[i] as HookPart;
-      try {
-        (part.spec as HookSpec<readonly unknown[]>).client(
-          part.el,
-          part.args as readonly unknown[],
-          part.prev,
-        );
-      } catch (error) {
-        (hookFailed ?? reportError)(error, root);
-      }
-    }
-  } finally {
-    queue.length = mark;
-  }
+  current = undefined;
+  runner?.run(mark, root);
+}
+
+/** A flush starts (render.ts `renderBatch`). */
+export function startHooks(): void {
+  runner?.start();
+}
+
+/** Runs the hooks of every root rendered in this flush so far (the scheduler, after each pass). */
+export function flushHooks(): void {
+  runner?.flush();
+}
+
+/** A flush ends. */
+export function endHooks(ok: boolean): void {
+  runner?.end(ok);
 }
 
 /** Forgets the calls queued since `mark` (the render threw). */
 export function dropHooks(mark: number): void {
   queue.length = mark;
+  current = undefined;
 }

@@ -1,7 +1,7 @@
 // The global scheduler (docs/design-docs/view/04-scheduler.md). Every host's render goes
 // through it: reducers run at once, the render waits for one microtask flush shared by the
 // whole page. A flush renders dirty hosts parents first (smallest depth, then marking order),
-// then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
+// then their element hooks (children first, view/02 "Commit order"), then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
 // and loops until nothing is dirty. Messages a spec lists in `renderOnFrame` mark their host in
 // the frame lane instead: it renders in the next animation frame (04 "Frame lane",
 // frame-lane.ts). The frame lane and view transitions come through `#spec-features`, present
@@ -9,7 +9,7 @@
 // (view/ never imports it) and drives the renderer through view/index.ts.
 import { fail } from './errors.js';
 import { frameLane, viewTransitions } from '#spec-features';
-import { DEV, message, renderBatch } from './view/index.js';
+import { DEV, flushHooks, message, renderBatch } from './view/index.js';
 
 /** One host as the scheduler sees it. define() creates one per element. */
 export interface HostTask {
@@ -200,6 +200,7 @@ function flush(): void {
     renderBatch(() => {
       for (let pass = 1; ; pass++) {
         renderAll(counts);
+        flushHooks(); // every dirty host rendered: element hooks run, children first
         if (post.length === 0) return;
         runPost();
         if (dirty.size === 0 && post.length === 0) return;

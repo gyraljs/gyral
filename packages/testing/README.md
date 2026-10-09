@@ -22,7 +22,8 @@ test('increment', () => {
 
 Commands are data: `inputsFor(commands, driver)` lists a driver's inputs,
 `outputsIn(commands, Component)` the outputs sent to the parent (typed by the component's
-output union) and `focusTargetsIn(commands)` the `focus()` requests.
+output union), `focusTargetsIn(commands)` the `focus()` requests and `callsIn(commands)` the
+`call()` requests.
 
 Element tests run in a real browser (Vitest browser mode, not jsdom). `mount()` creates the
 element with its drivers, stores and props set before it connects, waits for the first render,

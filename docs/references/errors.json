@@ -271,5 +271,19 @@
     "message": "<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0080"
+  },
+  {
+    "code": "G0085",
+    "group": "Element calls (gyral-1zd.27)",
+    "message": "<{tag}> call(\"{selector}\", \"{method}\") failed",
+    "arguments": ["tag", "selector", "method"],
+    "url": "https://gyral.dev/errors/#G0085"
+  },
+  {
+    "code": "G0086",
+    "group": "Element calls (gyral-1zd.27)",
+    "message": "call(\"{selector}\", \"{method}\"): arguments must be plain data.",
+    "arguments": ["selector", "method"],
+    "url": "https://gyral.dev/errors/#G0086"
   }
 ]
