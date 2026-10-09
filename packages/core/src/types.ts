@@ -3,7 +3,7 @@ import type { Prop } from './prop.js';
 import type { ChildValue, Styles } from './view/index.js';
 import type { CommandInfo } from './invokers.js';
 import type { HydrateStrategy } from './islands.js';
-import type { DriverOverrides, Next } from './command.js';
+import type { Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
@@ -264,8 +264,6 @@ interface SpecBody<S, M extends Tagged, P, N extends string, I> {
   readonly hydrate?: HydrateStrategy;
   /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
   readonly events?: readonly string[];
-  /** Driver substitutions by name, for every instance (ADR 0006). */
-  readonly drivers?: DriverOverrides;
   /**
    * Stores this component reads with `ctx.read(store)` and writes with `send(store, msg)`.
    * Their changes re-render it (and reach the optional `StoreChanged` reducer). ADR 0013.

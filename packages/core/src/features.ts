@@ -40,7 +40,6 @@ export const features: {
   /** Set by `command()`: a host's command interpreter, resolving drivers by name (ADR 0006). */
   commands?: (
     el: FeatureHost,
-    drivers: DriverOverrides | undefined,
     dispatch: (msg: Msg) => void,
     trace: CommandTrace | undefined,
     failed: CommandFailure,

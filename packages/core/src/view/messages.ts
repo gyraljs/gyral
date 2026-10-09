@@ -39,6 +39,9 @@ export const MESSAGES = {
   40: '{owner}: the onSuccess or onFailure mapper for driver "{driver}" threw; no message was sent.',
   41: '{owner}: driver "{driver}" failed and the command has no onFailure.',
   42: 'gyral: subscription "{name}" failed to unsubscribe',
+  43:
+    '{owner}: no driver provides "{driver}". It is a driver token: provide an implementation ' +
+    'by name with provideDrivers(root, { {driver}: … }) or el.drivers (ADR 0006 "Driver tokens").',
   // Stores
   50:
     '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}] ' +
