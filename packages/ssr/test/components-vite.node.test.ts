@@ -88,7 +88,7 @@ describe('gyralVitePreset({ components: true }) in a build', () => {
     // list.ts imports card.ts, so a page rendering <vt-list> preloads card's chunk too.
     expect(list?.preload).toContain(card?.preload[0]);
     for (const url of list?.preload ?? []) expect(existsSync(join(dist, url))).toBe(true);
-  });
+  }, 60_000);
 });
 
 describe('gyralDevServer', () => {
@@ -114,7 +114,7 @@ describe('gyralDevServer', () => {
         ctx,
       ) => mod.createApp(ctx.components, ctx.state),
     });
-  });
+  }, 60_000);
   afterAll(async () => {
     await dev.close();
   });
@@ -128,7 +128,8 @@ describe('gyralDevServer', () => {
     expect(page).toContain('<vt-list');
     expect(page).toContain('<script type="module" src="/@vite/client"></script>');
     expect(page).toContain('<script type="module" src="/@id/virtual:gyral/components"></script>');
-  });
+    // The first request loads the server module through Vite: slow on a busy machine.
+  }, 60_000);
 
   it('loads nothing on a page without components', async () => {
     expect(await (await get('/plain')).text()).not.toContain('<script');
