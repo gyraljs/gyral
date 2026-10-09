@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { settled } from '@gyral/core';
 import { makeHttpDriver } from '@gyral/http';
+import { mount as mountEl } from '@gyral/testing';
 import '../src/register.js';
 
 const valid = {
@@ -12,10 +13,9 @@ const valid = {
 
 async function mount(answer: () => Response) {
   const fetch = vi.fn(() => Promise.resolve(answer()));
-  const el = document.createElement('gy-register');
-  el.drivers = { http: makeHttpDriver({ fetch, baseUrl: 'http://localhost/' }) };
-  document.body.append(el);
-  await settled();
+  const { el } = await mountEl('gy-register', {
+    drivers: { http: makeHttpDriver({ fetch, baseUrl: 'http://localhost/' }) },
+  });
   const root = el.shadowRoot;
   for (const [name, value] of Object.entries(valid)) {
     const field = root?.querySelector(`input[name=${name}]`);

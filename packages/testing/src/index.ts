@@ -12,4 +12,8 @@ export type { HydratedOptions, MountedSsr, MountSsrOptions } from './ssr.js';
 export { collectErrors } from './errors.js';
 export type { CollectedErrors } from './errors.js';
 export { virtualTime } from './time.js';
+export { mount } from './mount.js';
+export type { Mounted, MountOptions } from './mount.js';
+export { parse } from './parse.js';
+export type { ParseOptions } from './parse.js';
 export type { VirtualTime } from './time.js';

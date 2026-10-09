@@ -91,9 +91,10 @@ describe('search model', () => {
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest';
-import { define, html, settled } from '@gyral/core';
+import { define, html } from '@gyral/core';
 import { get } from '@gyral/http';
 import { fakeHttp } from '@gyral/http/testing';
+import { mount, type Mounted } from '@gyral/testing';
 
 interface State {
   readonly name: string;
@@ -118,24 +119,21 @@ const Who = define<State, Msg>()('test-who', {
     html`<button type="button" data-intent=${i.Load}>Load</button> <output>${s.name}</output>`,
 });
 
+let who: Mounted<InstanceType<typeof Who>> | undefined;
 afterEach(() => {
-  document.body.replaceChildren();
+  who?.dispose();
 });
 
 it('loads the user when clicked', async () => {
   const api = fakeHttp(); // requests wait until the test answers them
-  const el = new Who();
-  el.drivers = { http: api };
-  document.body.append(el);
-  await settled();
+  // Drivers are set before the element connects; mount waits for the first render.
+  who = await mount(Who, { drivers: { http: api } });
 
-  el.shadowRoot?.querySelector('button')?.click();
-  await vi.waitFor(() => {
-    expect(api.requests.map((r) => r.url)).toEqual(['/api/me']);
-  });
+  await who.click('button');
+  expect(api.requests.map((r) => r.url)).toEqual(['/api/me']);
   api.respondNext({ body: { name: 'Ada' } });
   await vi.waitFor(() => {
-    expect(el.shadowRoot?.querySelector('output')?.textContent).toBe('Ada');
+    expect(who?.$('output')?.textContent).toBe('Ada');
   });
 });
 ```
@@ -171,7 +169,20 @@ it('loads the user when clicked', async () => {
   `collected.stop()` and assert on `collected.errors` (`GyralError`s with `component`, `phase`,
   `msg`, `cause`). `step(spec, state, { _tag: 'Errored', phase, error })` tests an `Errored`
   reducer without a DOM.
-- Dispatch input events as the browser does: set `input.value`, then
+- `mount(Component | 'tag', { props, attrs, drivers, stores, light?, parent? })` creates the
+  element, sets drivers and stores before it connects and props before its first render,
+  appends it and awaits `settled()`. It returns `{ el, $, $$, type, click, settled, dispose }`:
+  `$`/`$$` query the shadow root (the light DOM with `light: true`), `type(sel, text)` sets a
+  control's value and fires `input` and `change`, `click(sel)` clicks; both then await
+  `settled()` and throw naming the selector when nothing matches. With a runner's global
+  `afterEach` (Vitest `globals: true`, Jest, Mocha) mounted elements are removed after each
+  test; otherwise call `dispose()` yourself.
+- `parse(Component, 'Intent', { value: '3' }, { props, state, stores })` runs one intent parser
+  without a DOM or casts: the input needs only the fields the parser reads, `state` defaults to
+  the initial state, and the result is typed by the parser (a message, `IntentRejected`, or
+  `undefined` when it ignores or declines the event). Use it for parsers whose decision depends
+  on props or state (which keys a listbox takes over, when Tab leaves a grid).
+- Without `mount`, dispatch input events as the browser does: set `input.value`, then
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 
 ## SSR tests (hydration)

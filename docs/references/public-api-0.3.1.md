@@ -409,10 +409,15 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `HydratedOptions` | type  | supporting type |                                                                                              |
 | `initial`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `inputsFor`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `mount`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `Mounted`         | type  | supporting type |                                                                                              |
+| `MountOptions`    | type  | supporting type |                                                                                              |
 | `MountedSsr`      | type  | supporting type |                                                                                              |
 | `mountSsr`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `MountSsrOptions` | type  | supporting type |                                                                                              |
 | `outputsIn`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `parse`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `ParseOptions`    | type  | supporting type |                                                                                              |
 | `Ran`             | type  | supporting type |                                                                                              |
 | `readerOf`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `reject`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
