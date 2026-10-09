@@ -337,3 +337,26 @@ The plan, as carried out:
   just no longer ships or depends on Lit.
 - The template compiler becomes part of the default toolchain, so templates can be checked and
   prepared at build time; the runtime path keeps "no build step" working.
+
+## Addendum: hook order (gyral-1zd.27, 0.3.1)
+
+Element hooks' `client` calls used to run right after each host's own render, in document order.
+The scheduler renders parents before children (04), so a parent's hook ran before the child
+components it had just given new props had rendered: a hook measuring a list, or scrolling to
+a child's row, saw last render's DOM. Apps worked around it with observers and animation-frame
+loops, and with counters in the model only there to make a hook run again.
+
+Decision:
+
+- Inside a scheduler flush, queued `client` calls wait until every dirty host has rendered, then
+  run **children first**: the last-rendered root's calls first (the scheduler renders by depth,
+  so children render after their parents), each root's own calls in document order. A
+  `render` call outside the scheduler runs its calls when it returns. This is the order React
+  and Vue run effects and `mounted` hooks in: child components first, after the whole commit.
+- `defineHook({ client, update: 'always' })` runs `client` on every render that commits the
+  hook's position, not only when an argument changed.
+- The runner (`view/render/hook-run.ts`) is installed by `defineHook`/`defineDisposableHook`,
+  so apps without hooks bundle none of it. Apps with hooks pay about 0.3 KiB gzip for the
+  batching and ordering (measured on the form examples).
+
+Tested in `core/test/hook-order.test.ts`.

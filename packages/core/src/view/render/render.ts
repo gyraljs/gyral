@@ -1,32 +1,36 @@
 // `render(value, root)`: the client renderer's entry point (view/02-bindings.md "Commit order").
 // The root's child part is cached per root, so later calls update in place. Synchronous: when
-// it returns, the DOM is committed and every element hook's `client` call has run. The
-// scheduler (view/04-scheduler.md) calls it once per dirty host, inside `renderBatch`, so the
-// list dev check's budget (03) is per flush; a call outside a batch gets a budget of its own.
+// it returns, the DOM is committed, and outside a flush every element hook's `client` call has
+// run. The scheduler (view/04-scheduler.md) calls it once per dirty host, inside `renderBatch`,
+// so the list dev check's budget (03) is per flush and hooks run once every host has rendered,
+// children first (hooks.ts); a call outside a batch gets a budget and a hook run of its own.
 // `hydrate(value, root)` (hydrate.ts) makes the same root part from server DOM instead (07).
 import { DEV } from '#view-dev';
 import { ChildPart } from './child-part.js';
 import { resetRowChecks } from './dev-check.js';
-import { dropHooks, hookMark, runHooks } from './hooks.js';
+import { dropHooks, endHooks, hookMark, runHooks, startHooks } from './hooks.js';
 import { listenFor, type SeenMarkup } from './seen.js';
 import type { ChildValue } from './values.js';
 
 const roots = new WeakMap<Node, ChildPart>();
 let batching = false;
 
-/** Runs `fn` (one scheduler flush) with one shared row-check budget for every render in it. */
+/**
+ * Runs `fn` (one scheduler flush) with one shared row-check budget for every render in it, and
+ * element hooks deferred to `flushHooks` (after each pass) and the end of the flush.
+ */
 export function renderBatch(fn: () => void): void {
-  if (!DEV) {
-    fn(); // the budget is a development check: production needs no batch state
-    return;
-  }
-  resetRowChecks();
+  if (DEV) resetRowChecks(); // the budget is a development check
   const outer = batching;
+  startHooks(); // element hooks wait for the flush (hook-run.ts)
+  let ok = false;
   batching = true;
   try {
     fn();
+    ok = true;
   } finally {
     batching = outer;
+    endHooks(ok);
   }
 }
 
@@ -44,7 +48,7 @@ export function render(
     part = new ChildPart(root, null, null, 0, false, 0);
     roots.set(root, part);
   }
-  const mark = hookMark();
+  const mark = hookMark(root);
   if (DEV && !batching) resetRowChecks();
   const outer = listenFor(seen);
   try {

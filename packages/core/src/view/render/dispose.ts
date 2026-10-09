@@ -10,16 +10,20 @@
 // here is bundled unless an app calls `defineDisposableHook` (gyral-c5d.2: `defineHook` has no
 // `dispose`), and nothing runs until such a hook commits.
 import { commitHook } from './hook-part.js';
+import { runner } from './hook-run.js';
 import {
+  committing,
   hookResult,
   queueHook,
   useDisposal,
+  useHookRunner,
   type DisposableHookSpec,
   type HookPart,
   type HookResult,
 } from './hooks.js';
 
-let fresh: HookPart[] = [];
+/** Parts committed since their root's hooks last ran, with that root. */
+let fresh: [HookPart, Node | undefined][] = [];
 const live = new WeakMap<Node, Set<HookPart>>();
 
 const dispose = (p: HookPart): void => {
@@ -32,12 +36,19 @@ const dispose = (p: HookPart): void => {
 function run(root: Node, disconnect?: boolean): boolean {
   let tracked = live.get(root);
   if (disconnect !== true) {
-    for (const p of fresh) {
+    // Inside a flush several roots commit before their hooks run: keep the others' parts.
+    const rest: [HookPart, Node | undefined][] = [];
+    for (const entry of fresh) {
+      const [p, owner] = entry;
+      if (owner !== root) {
+        if (p.el.isConnected) rest.push(entry);
+        continue;
+      }
       if (!root.contains(p.el)) continue; // left over from a render that threw
       if (tracked === undefined) live.set(root, (tracked = new Set()));
       tracked.add(p);
     }
-    fresh = [];
+    fresh = rest;
   }
   if (tracked === undefined) return false;
   for (const p of tracked) {
@@ -62,7 +73,7 @@ function track(part: HookPart): void {
   part.off = false;
   part.kept = (part.spec ?? undefined) as DisposableHookSpec<readonly unknown[]> | undefined;
   part.keptArgs = part.args;
-  fresh.push(part);
+  fresh.push([part, committing()]);
 }
 
 /** Commits a disposable hook, then tracks it for removal and disconnects. */
@@ -80,5 +91,6 @@ function commitTracked(part: HookPart, result: HookResult): void {
 export function defineDisposableHook<A extends readonly unknown[]>(
   spec: DisposableHookSpec<A>,
 ): (...args: A) => HookResult<A> {
+  useHookRunner(runner);
   return (...args) => hookResult(spec, args, commitTracked);
 }

@@ -38,6 +38,7 @@ export { nothing, type ChildValue, type ListResult, type RawResult } from './ren
 export { defineHook } from './render/hook-part.js';
 export { defineDisposableHook } from './render/dispose.js';
 export {
+  flushHooks,
   onHookFailure,
   suspendHooks,
   type DisposableHookSpec,
