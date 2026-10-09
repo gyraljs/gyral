@@ -61,8 +61,8 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
   },
   init: () => ({ children: [], next: 1 }),
   intent: {
-    Add: () => ({ _tag: 'Add' }),
-    Remove: () => ({ _tag: 'Remove' }),
+    Add: true,
+    Remove: true,
     // Lazy source: `Folder` is still being defined here (recursion), so pass a function.
     Child: child(
       () => Folder,

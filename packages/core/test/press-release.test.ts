@@ -147,7 +147,6 @@ describe('press-and-release intents', () => {
     type Set = { readonly _tag: 'Set'; readonly on: boolean };
     const Toggle = define<{ readonly on: boolean }, Set>()('test-capture-toggle', {
       init: () => ({ on: true }),
-      intent: {},
       update: { Set: (_s, m) => ({ on: m.on }) },
       view: (s) => html`<button type="button" ${s.on ? capturePointer() : nothing}>b</button>`,
     });

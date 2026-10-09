@@ -42,7 +42,6 @@ const Seeded = define<State, Msg, Props>()('test-seeded', {
     { title: `init:${p.label ?? ''}`, heard: [], renders: 0 },
     [command(sync, p.label ?? '', { onSuccess: (value) => ({ _tag: 'Heard', value }) })],
   ],
-  intent: {},
   update: { Heard: (s, m) => ({ ...s, heard: [...s.heard, m.value] }) },
   view: (s, _i, { props }) => {
     firstRenderState ??= s;

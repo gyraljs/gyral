@@ -11,7 +11,7 @@ const counter = (tag: string, shadow: boolean, inner = '') =>
   define<State, Msg>()(tag, {
     shadow,
     init: () => ({ hits: 0 }),
-    intent: { Hit: () => ({ _tag: 'Hit' }) },
+    intent: { Hit: true },
     update: { Hit: (s) => ({ hits: s.hits + 1 }) },
     view: (s) =>
       html`<button class="hit" data-intent="Hit">${s.hits}</button>${
@@ -80,7 +80,6 @@ describe('shadow: false (ADR 0014)', () => {
         }
       `,
       init: () => ({ hits: 0 }),
-      intent: {},
       update: { Hit: (s) => s },
       view: () => html`<p>x</p>`,
     });

@@ -70,11 +70,11 @@ export const Editor = define<State, Msg>()('gy-pixel-editor', {
     },
     Pick: ({ value }) =>
       value === 'eraser' || isColor(value) ? { _tag: 'Pick', tool: value } : undefined,
-    Undo: () => ({ _tag: 'Undo' }),
-    Redo: () => ({ _tag: 'Redo' }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Undo: true,
+    Redo: true,
+    Clear: true,
     Scrub: ({ value }) => ({ _tag: 'Scrub', to: Number(value) }),
-    Replay: () => ({ _tag: 'Replay' }),
+    Replay: true,
     // Ctrl/⌘+Z undoes; Ctrl/⌘+Shift+Z or Ctrl+Y redoes.
     Shortcut: ({ event, key }) => {
       if (!(event instanceof KeyboardEvent) || !(event.ctrlKey || event.metaKey)) return;

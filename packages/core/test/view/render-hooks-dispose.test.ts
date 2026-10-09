@@ -182,7 +182,6 @@ describe('dispose: host disconnect and reconnect', () => {
   const row = (n: number) => html`<li id=${`row${String(n)}`} ${h(n)}>${n}</li>`;
   const Widget = define<State, Msg>()('test-hook-dispose', {
     init: () => ({ n: 1, rows: [10, 20] }),
-    intent: {},
     update: { Bump: (s) => ({ ...s, n: s.n + 1 }) },
     view: (s) => html`
       <canvas id="stage" ${h(s.n)} ${plain(0)}></canvas>

@@ -35,7 +35,6 @@ define<State, Msg, Props>()('ssr-card', {
     { title: p.label.toUpperCase(), note: '' },
     [command(load, p.label, { onSuccess: (id) => ({ _tag: 'Loaded', id }) })],
   ],
-  intent: {},
   update: { Loaded: (s) => s, Noted: (s, m) => ({ ...s, note: m.text }) },
   view: (s, _i, { props }) => html`
     <h2>${s.title}</h2>
@@ -51,8 +50,6 @@ define<{ readonly items: readonly string[] }, never, { readonly items: readonly 
   {
     props: { items: prop.value(v.array(v.string()), { required: true }) },
     init: (p) => ({ items: p.items }),
-    intent: {},
-    update: {},
     view: (s) => html`<p>${String(s.items.length)}</p>`,
   },
 );

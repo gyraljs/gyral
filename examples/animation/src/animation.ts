@@ -73,7 +73,7 @@ const target = (run: number) => html`<div class=${run === 0 ? 'target' : 'target
 
 export const Animation = define<State, Msg>()('gy-animation', {
   init: () => ({ runs: 0 }),
-  intent: { Animate: () => ({ _tag: 'Animate' }) },
+  intent: { Animate: true },
   update: { Animate: (s) => ({ runs: s.runs + 1 }) },
   view: (s, i) => html`
     <button type="button" data-intent=${i.Animate}>Animate it!</button>

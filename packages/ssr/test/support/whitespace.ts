@@ -23,7 +23,6 @@ const update = { Rename: (s: State, m: Msg): State => ({ ...s, name: m.name }) }
 
 export const WhitespaceTable = define<State, Msg>()('test-ws-table', {
   init,
-  intent: {},
   update,
   view: (s) => html`
     <p class="greeting">
@@ -58,7 +57,6 @@ export const WhitespaceTable = define<State, Msg>()('test-ws-table', {
 export const WhitespaceLight = define<State, Msg>()('test-ws-light', {
   shadow: false,
   init,
-  intent: {},
   update,
   view: (s) => html`
     <p class="greeting">

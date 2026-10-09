@@ -33,10 +33,9 @@ const button = css`
 `;
 
 /** Header badge: reads the cart and briefly highlights after each change. */
-export const CartBadge = define<{ readonly bumps: number }, never>()('gy-cart-badge', {
+export const CartBadge = define<{ readonly bumps: number }>()('gy-cart-badge', {
   stores: [cart],
   init: () => ({ bumps: 0 }),
-  intent: {},
   update: {
     StoreChanged: (s, m) => (changed(cart, m) === undefined ? s : { bumps: s.bumps + 1 }),
   },
@@ -130,7 +129,7 @@ export const CartPanel = define<Stateless, PanelMsg>()('gy-cart-panel', {
   stores: [cart],
   intent: {
     RemoveLine: ({ value }) => (value ? { _tag: 'RemoveLine', sku: value } : undefined),
-    Empty: () => ({ _tag: 'Empty' }),
+    Empty: true,
   },
   update: {
     RemoveLine: (s, { sku }) => [s, [send(cart, { _tag: 'Remove', sku })]],

@@ -11,7 +11,6 @@ type Msg = { readonly _tag: 'Bump' };
 define<{ readonly n: number }, Msg, { readonly label: string }>()('test-sch-leaf', {
   props: { label: prop.string({ attribute: false, default: '' }) },
   init: () => ({ n: 0 }),
-  intent: {},
   update: { Bump: (s) => ({ n: s.n + 1 }) },
   view: (s, _i, { props }) => {
     log.push(`leaf:${props.label}:${String(s.n)}`);
@@ -21,7 +20,6 @@ define<{ readonly n: number }, Msg, { readonly label: string }>()('test-sch-leaf
 
 const Root = define<{ readonly n: number }, Msg>()('test-sch-root', {
   init: () => ({ n: 0 }),
-  intent: {},
   update: { Bump: (s) => ({ n: s.n + 1 }) },
   view: (s) => {
     log.push(`root:${String(s.n)}`);
@@ -64,7 +62,6 @@ describe('the flush', () => {
     let fail = false;
     const Fragile = define<{ readonly n: number }, Msg>()('test-sch-fragile', {
       init: () => ({ n: 0 }),
-      intent: {},
       update: { Bump: (s) => ({ n: s.n + 1 }) },
       view: (s) => {
         if (fail) throw new Error('boom');
@@ -91,7 +88,6 @@ describe('the flush', () => {
     type M = { readonly _tag: 'Go' } | { readonly _tag: 'Hi' };
     const Ordered = define<{ readonly on: boolean }, M>()('test-sch-order', {
       init: () => [{ on: false }, [focus('button')]],
-      intent: {},
       update: {
         Go: (s) => s,
         Hi: (s) => s,
@@ -125,7 +121,6 @@ describe('the flush', () => {
     const items = Array.from({ length: 150 }, (_, k) => k);
     const Lists = define<{ readonly t: number }, Msg>()('test-sch-lists', {
       init: () => ({ t: 0 }),
-      intent: {},
       update: { Bump: (s) => ({ t: s.t + 1 }) },
       view: (s) =>
         html`<ul data-t=${s.t}>
@@ -151,7 +146,6 @@ describe('the loop guard', () => {
     // Post-render work that sends a message to its own host on every render is a cycle.
     const Loop = define<{ readonly n: number }, P>()('test-sch-loop2', {
       init: () => ({ n: 0 }),
-      intent: {},
       update: { Ping: (s) => ({ n: s.n + 1 }) },
       view: (s) => html`<p>${s.n}</p>`,
       states: (s) => {

@@ -28,7 +28,6 @@ export function errorCases(t: Tracking): void {
     it('is t.reported, renders the error view with no state, and never escapes connectedCallback', async () => {
       const seen: unknown[] = [];
       define<number, Msg>()('err-init', {
-        intent: {},
         init: boom,
         update: { Go: (s) => s, Got: (s) => s, Reset: (s) => s },
         view: (s) => html`<p>${s}</p>`,
@@ -52,7 +51,6 @@ export function errorCases(t: Tracking): void {
 
     it('without an error view leaves the host empty', async () => {
       define<number, Msg>()('err-init-plain', {
-        intent: {},
         init: boom,
         update: { Go: (s) => s, Got: (s) => s, Reset: (s) => s },
         view: (s) => html`<p>${s}</p>`,
@@ -69,7 +67,7 @@ export function errorCases(t: Tracking): void {
       const ok = defineDriver<undefined, number>({ name: 'err-ok', run: () => 5 });
       define<number, Msg>()('err-update', {
         init: () => 1,
-        intent: { Go: () => ({ _tag: 'Go' }) },
+        intent: { Go: true },
         update: {
           Go: boom,
           Got: boom,
@@ -109,7 +107,6 @@ export function errorCases(t: Tracking): void {
     it('a throwing Errored reducer is t.reported once, never sent again', async () => {
       let calls = 0;
       define<number, Msg>()('err-errored', {
-        intent: {},
         init: () => 1,
         update: {
           Go: boom,
@@ -133,7 +130,6 @@ export function errorCases(t: Tracking): void {
       let fails = 1;
       const seen: number[] = [];
       define<number, Msg, { readonly n: number }>()('err-props', {
-        intent: {},
         props: { n: prop.number({ default: 0 }) },
         init: () => 0,
         update: {

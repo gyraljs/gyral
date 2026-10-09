@@ -114,8 +114,26 @@ export const Signup = define<State, Msg>()('my-signup', {
 });
 ```
 
-Never keep passwords in state (or re-fill them from `values`): state is serialized into the
-page.
+Never keep passwords in state: state is serialized into the page. Secret fields never come back
+in `values` anyway: a name containing `password` or `passcode` is secret by itself, and others
+are listed in the definition. Development builds warn about an unlisted field that looks secret
+(`token`, `card`, `cvc`, `pin`, …), and the devtools timeline shows secrets as `[secret]`.
+
+```ts
+import { defineForm } from '@gyral/core';
+import * as v from 'valibot';
+
+const Checkout = defineForm(
+  v.object({
+    email: v.pipe(v.string(), v.email('Enter a valid email address.')),
+    card: v.pipe(v.string(), v.regex(/^\d{16}$/, 'Enter the 16-digit card number.')),
+    cvc: v.pipe(v.string(), v.regex(/^\d{3,4}$/, 'Enter the security code.')),
+  }),
+  { secret: ['card', 'cvc'] },
+);
+// A rejection's values: { email } only, on the JS and the no-JS path alike.
+export { Checkout };
+```
 
 ## What the user typed stays until the model changes
 
@@ -147,7 +165,7 @@ export const Notes = define<State, Msg>()('my-notes', {
   init: () => ({ note: '', formKey: 0 }),
   intent: {
     Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Note: (s, m) => ({ ...s, note: m.value }),
@@ -242,12 +260,12 @@ export async function handle(request: Request): Promise<Response> {
 
 `formAction` puts the submitted values in `IntentRejected.values` for you. A route that checks a
 submission itself (a contact form that also calls a spam filter, say) gets the same values with
-`formValues(definition, formData)`: the text values keyed by the form's fields, repeated names
-as arrays, `File`s left out. Render them back into the form so nothing typed is lost. Never
-write a password back into a page.
+`definition.values(formData)`: the text values keyed by the form's fields, repeated names as
+arrays, `File`s and secret fields left out. Render them back into the form so nothing typed is
+lost. `definition.validate(formData, intent)` is the validation `form()` and `formAction` run.
 
 ```ts
-import { defineForm, formValues, html, type TemplateResult } from '@gyral/core';
+import { defineForm, html, type TemplateResult } from '@gyral/core';
 import * as v from 'valibot';
 
 const Contact = defineForm(
@@ -259,7 +277,7 @@ const Contact = defineForm(
 
 /** The form again, with what was submitted and the server's error. */
 function contactForm(data: FormData, error: string): TemplateResult {
-  const values = formValues(Contact, data);
+  const values = Contact.values(data);
   const text = (value: string | readonly string[] | undefined): string =>
     typeof value === 'string' ? value : '';
   return html`<form method="post">

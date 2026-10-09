@@ -17,8 +17,8 @@ export const Counter = define<State, Msg, Props>()('app-counter', {
   props: { start: prop.number({ default: 0 }) },
   init: (props) => ({ count: props.start }),
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   update: {
     Increment: (s) => ({ count: s.count + 1 }),

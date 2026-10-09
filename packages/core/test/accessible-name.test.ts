@@ -9,8 +9,6 @@ interface Props {
 
 const Named = define<Stateless, never, Props>()('test-named', {
   props: { target: prop.string({ required: true }), fallback: prop.string() },
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) =>
     html`<form aria-label="Sign in form" ${labelledBy(props.target, props.fallback)}>
       <button>Go</button>
@@ -18,9 +16,7 @@ const Named = define<Stateless, never, Props>()('test-named', {
 });
 
 // A shadow wrapper, so the form sits two shadow roots below the page heading.
-define<Stateless, never>()('test-named-outer', {
-  intent: {},
-  update: {},
+define<Stateless>()('test-named-outer', {
   view: () => html`<test-named target="page-title"></test-named>`,
 });
 

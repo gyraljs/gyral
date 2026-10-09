@@ -19,7 +19,7 @@ const Cells = define<Grid, Msg>()('test-parser-state', {
       event.preventDefault();
       return { _tag: 'Next' };
     },
-    Grow: () => ({ _tag: 'Grow' }),
+    Grow: true,
   },
   update: {
     Next: (s) => ({ ...s, cell: s.cell + 1 }),

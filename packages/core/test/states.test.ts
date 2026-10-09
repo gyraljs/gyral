@@ -5,7 +5,7 @@ type Msg = { readonly _tag: 'Toggle' };
 
 const Lamp = define<{ readonly on: boolean }, Msg>()('test-states', {
   init: () => ({ on: false }),
-  intent: { Toggle: () => ({ _tag: 'Toggle' }) },
+  intent: { Toggle: true },
   update: { Toggle: (s) => ({ on: !s.on }) },
   states: (s) => ({ on: s.on, off: !s.on }),
   view: (_s, i) => html`<button data-intent=${i.Toggle}>toggle</button>`,
@@ -16,10 +16,8 @@ const Lamp = define<{ readonly on: boolean }, Msg>()('test-states', {
   `,
 });
 
-const Plain = define<{ readonly n: number }, never>()('test-no-states', {
+const Plain = define<{ readonly n: number }>()('test-no-states', {
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<p>plain</p>`,
 });
 

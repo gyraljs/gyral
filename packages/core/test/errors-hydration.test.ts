@@ -6,13 +6,11 @@ import { define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'X' };
 define<number, Msg>()('err-hy-shadow', {
-  intent: {},
   init: () => 5,
   update: { X: (s) => s },
   view: (s) => html`<p>fresh ${s}</p>`,
 });
 define<number, Msg>()('err-hy-light', {
-  intent: {},
   init: () => 6,
   update: { X: (s) => s },
   view: (s) => html`<p>fresh ${s}</p>`,

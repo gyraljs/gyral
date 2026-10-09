@@ -24,7 +24,6 @@ const echo = () => command(real, 'x', { onSuccess: (text): Msg => ({ _tag: 'Got'
 
 const spec = {
   init: (): State => ({ got: [] }),
-  intent: {},
   update: {
     Go: (s: State) => [s, [echo()]] as const,
     Got: (s: State, m: { readonly text: string }) => ({ got: [...s.got, m.text] }),

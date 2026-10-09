@@ -4,20 +4,14 @@
 import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
 import { define, focus, html, settled, type ShadowOption } from '../src/index.js';
 
-type FieldMsg = never;
-
-define<object, FieldMsg>()('test-df-field', {
+define<object>()('test-df-field', {
   shadow: { delegatesFocus: true },
   init: () => ({}),
-  intent: {},
-  update: {},
   view: () => html`<label>Name <input id="name" /></label>`,
 });
 
-define<object, FieldMsg>()('test-df-plain', {
+define<object>()('test-df-plain', {
   init: () => ({}),
-  intent: {},
-  update: {},
   view: () => html`<label>Name <input id="name" /></label>`,
 });
 
@@ -25,7 +19,7 @@ type Msg = { readonly _tag: 'Edit' };
 
 const Form = define<object, Msg>()('test-df-form', {
   init: () => ({}),
-  intent: { Edit: () => ({ _tag: 'Edit' }) },
+  intent: { Edit: true },
   update: { Edit: (s) => [s, [focus('test-df-field')]] },
   view: (_s, i) => html`
     <button data-intent=${i.Edit}>Edit</button>

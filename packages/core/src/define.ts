@@ -58,7 +58,8 @@ export function define(): <
 ) => GyralElementClass<S, M, P, never, N>;
 export function define<
   S,
-  M extends Tagged,
+  // No messages: `define<State>()` for a pure view (intent and update optional).
+  M extends Tagged = never,
   P extends object = object,
   O extends Tagged = never,
 >(): Definer<S, M, P, O>;

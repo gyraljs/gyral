@@ -32,7 +32,6 @@ const App = define<State, Msg>()('test-memory-app', {
     { route: undefined, seen: [] },
     [listen((location) => ({ _tag: 'Routed', location }))],
   ],
-  intent: {},
   update: {
     Routed: (s, m) => {
       const route = app.match(m.location.href);

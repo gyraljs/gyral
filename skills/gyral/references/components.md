@@ -52,7 +52,7 @@ type Msg = { readonly _tag: 'Bump' };
 export const Stepper = define<State, Msg, Props>()('my-stepper', {
   props,
   init: () => ({ value: 0 }),
-  intent: { Bump: () => ({ _tag: 'Bump' }) },
+  intent: { Bump: true },
   update: {
     Bump: (s, _m, { props: p }) => ({ value: Math.min(s.value + p.step, p.maxValue) }),
   },
@@ -132,8 +132,6 @@ import { define, html, prop, type Stateless } from '@gyral/core';
 
 export const Badge = define<Stateless, never, { readonly text: string }>()('my-badge', {
   props: { text: prop.string({ default: '' }) },
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) => html`<span class="badge">${props.text}</span>`,
 });
 ```
@@ -150,8 +148,6 @@ trusted author code, never user input. Theme through inherited custom properties
 import { css, define, html, type Stateless } from '@gyral/core';
 
 export const Card = define<Stateless, never>()('my-card', {
-  intent: {},
-  update: {},
   view: () => html`<article part="card"><slot></slot></article>`,
   styles: css`
     @layer component {
@@ -182,8 +178,6 @@ import { define, html, type Stateless } from '@gyral/core';
 
 export const AboutPage = define<Stateless, never>()('my-about-page', {
   shadow: false,
-  intent: {},
-  update: {},
   view: () => html`
     <h1>About us</h1>
     <p>Plain children of the element: indexable and styled by the page.</p>
@@ -201,7 +195,7 @@ type Msg = { readonly _tag: 'Start' } | { readonly _tag: 'Done' };
 
 export const Loader = define<State, Msg>()('my-loader', {
   init: () => ({ _tag: 'Idle' }),
-  intent: { Start: () => ({ _tag: 'Start' }) },
+  intent: { Start: true },
   update: {
     Start: () => ({ _tag: 'Loading' }),
     Done: () => ({ _tag: 'Idle' }),
@@ -239,8 +233,6 @@ import { define, html, type Stateless } from '@gyral/core';
 
 // Exported, so the generated file can import its type.
 export const Hello = define<Stateless, never>()('my-hello', {
-  intent: {},
-  update: {},
   view: () => html`<p>Hello</p>`,
 });
 ```

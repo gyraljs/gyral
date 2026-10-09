@@ -26,8 +26,8 @@ type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 export const Counter = define<State, Msg>()('my-counter', {
   init: () => ({ count: 0 }),
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   update: {
     Increment: (s) => ({ count: s.count + 1 }),

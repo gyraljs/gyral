@@ -13,7 +13,7 @@ describe('random commands', () => {
   type Msg = { readonly _tag: 'Roll' } | { readonly _tag: 'Rolled'; readonly n: number };
   const Dice = define<{ readonly rolls: readonly number[] }, Msg>()('test-dice', {
     init: () => ({ rolls: [] }),
-    intent: { Roll: () => ({ _tag: 'Roll' }) },
+    intent: { Roll: true },
     update: {
       Roll: (s) => [s, [randomInt(1, 6, (n) => ({ _tag: 'Rolled', n }))]],
       Rolled: (s, m) => ({ rolls: [...s.rolls, m.n] }),

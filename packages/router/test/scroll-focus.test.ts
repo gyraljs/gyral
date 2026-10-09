@@ -31,7 +31,6 @@ type Msg =
 const Page = define<State, Msg>()('test-scroll-page', {
   shadow: false,
   init: () => [{ route: undefined }, [listen((location) => ({ _tag: 'Routed', location }))]],
-  intent: {},
   update: {
     Routed: (_s, m) => {
       const route = app.match(m.location.href);

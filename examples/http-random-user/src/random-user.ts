@@ -30,7 +30,7 @@ const describeError = (error: HttpError): string => {
 export const RandomUser = define<State, Msg>()('gy-random-user', {
   init: () => ({ _tag: 'Idle' }),
   intent: {
-    GetRandom: () => ({ _tag: 'GetRandom' }),
+    GetRandom: true,
   },
   update: {
     // Randomness is an effect (gyral-czi.10): ask the random driver, so tests can fix it.

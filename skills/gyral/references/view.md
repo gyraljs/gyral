@@ -302,8 +302,6 @@ export const StatusStrip = define<{ readonly services: readonly Service[] }, nev
   'my-status-strip',
   {
     init: () => ({ services: [{ id: 1, status: 'up', name: 'API' }] }),
-    intent: {},
-    update: {},
     view: (s) =>
       html`<svg viewBox="0 0 ${s.services.length * 12} 14" role="img" aria-label="Service status">
         ${each(s.services, (service) => service.id, tile)}
@@ -339,7 +337,7 @@ type Msg = { readonly _tag: 'Next' };
 
 export const Steps = define<State, Msg>()('my-steps', {
   init: () => ({ current: 0 }),
-  intent: { Next: () => ({ _tag: 'Next' }) },
+  intent: { Next: true },
   update: { Next: (s) => ({ current: (s.current + 1) % 3 }) },
   view: (s, i) => html`
     <ol>
@@ -403,7 +401,7 @@ type Msg = { readonly _tag: 'Arrived' };
 
 export const Inbox = define<State, Msg>()('my-inbox', {
   init: () => ({ unread: 0, pulses: 0 }),
-  intent: { Arrived: () => ({ _tag: 'Arrived' }) },
+  intent: { Arrived: true },
   update: { Arrived: (s) => ({ unread: s.unread + 1, pulses: s.pulses + 1 }) },
   view: (s, i) => html`
     <output class="badge" ${replay(s.pulses)}>${s.unread}</output>
@@ -465,7 +463,7 @@ type Msg = { readonly _tag: 'Add' };
 
 export const SceneEditor = define<State, Msg>()('my-scene-editor', {
   init: () => ({ scene: { cubes: 1 } }),
-  intent: { Add: () => ({ _tag: 'Add' }) },
+  intent: { Add: true },
   update: { Add: (s) => ({ scene: { cubes: s.scene.cubes + 1 } }) },
   view: (s, i) => html`
     <my-stage .view=${s.scene}></my-stage>
@@ -521,8 +519,6 @@ import { define, html, labelledBy, type Stateless } from '@gyral/core';
 
 // Page markup: <h1 id="page-title">Checkout</h1> <my-checkout-form></my-checkout-form>
 export const CheckoutForm = define<Stateless, never>()('my-checkout-form', {
-  intent: {},
-  update: {},
   view: () => html`<form ${labelledBy('page-title')}><button>Pay</button></form>`,
 });
 ```
@@ -541,7 +537,7 @@ type Msg = { readonly _tag: 'Next' };
 
 export const Pager = define<State, Msg>()('my-pager', {
   init: () => ({ page: 1 }),
-  intent: { Next: () => ({ _tag: 'Next' }) },
+  intent: { Next: true },
   update: {
     Next: (s) => [{ page: s.page + 1 }, [focus('h2', { preventScroll: true })]],
   },
@@ -569,8 +565,6 @@ import { define, focus, html } from '@gyral/core';
 export const NameField = define<object, never>()('my-name-field', {
   shadow: { delegatesFocus: true },
   init: () => ({}),
-  intent: {},
-  update: {},
   view: () => html`<label>Name <input name="name" /></label>`,
 });
 
@@ -578,7 +572,7 @@ type Msg = { readonly _tag: 'Edit' };
 
 export const Profile = define<object, Msg>()('my-profile', {
   init: () => ({}),
-  intent: { Edit: () => ({ _tag: 'Edit' }) },
+  intent: { Edit: true },
   update: { Edit: (s) => [s, [focus('my-name-field')]] },
   view: (_s, i) => html`
     <button type="button" data-intent=${i.Edit}>Edit name</button>

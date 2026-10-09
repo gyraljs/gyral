@@ -29,11 +29,9 @@ const cart = defineStore<Cart, CartMsg>('send-cart', {
   },
 });
 
-define<{ readonly x: number }, never>()('send-owner', {
+define<{ readonly x: number }>()('send-owner', {
   stores: [cart],
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`<p>${read(cart).owner}:${read(cart).lines.length}</p>`,
 });
 

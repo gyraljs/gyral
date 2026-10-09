@@ -156,7 +156,6 @@ export function handle(request: Request): Response {
 type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
   init: () => [{ path: '/' }, [listen((location) => ({ _tag: 'Routed', location }))]],
-  intent: {},
   update: {
     Routed: (_s, { location }) => [
       { path: location.pathname },
@@ -258,7 +257,6 @@ type Msg = never;
 
 export const ShareButton = define<State, Msg>()('my-share', {
   init: () => ({ enhanced: false }),
-  intent: {},
   update: {
     // Sent once after the first client render: safe to show the JS-only UI now.
     Hydrated: (s) => ({ ...s, enhanced: 'share' in navigator }),

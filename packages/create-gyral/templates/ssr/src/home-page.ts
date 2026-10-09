@@ -6,8 +6,6 @@ import './counter.js';
 // (src/styles.css). Keep widgets like <app-counter> in shadow DOM.
 export const HomePage = define<Stateless, never>()('app-home', {
   shadow: false,
-  intent: {},
-  update: {},
   view: () => html`
     <header>
       <h1>Hello, Gyral</h1>

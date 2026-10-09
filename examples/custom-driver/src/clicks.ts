@@ -40,7 +40,7 @@ export const Clicks = define<State, Msg>()('gy-clicks', {
     ],
   ],
   intent: {
-    Click: () => ({ _tag: 'Click' }),
+    Click: true,
   },
   update: {
     Click: (s) => {
