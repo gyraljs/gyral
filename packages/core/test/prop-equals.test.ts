@@ -1,7 +1,7 @@
 // When a new prop value counts as unchanged (gyral-dyn.27, view/05-element.md "Prop
 // equality"): `prop.json` compares the JSON, `prop.value` uses `Object.is` or its `equals`.
 // A parent that builds a fresh object every render no longer sends PropsChanged every time.
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { define, html, prop, settled, type PropsOf } from '../src/index.js';
 
 interface Range {
@@ -100,5 +100,24 @@ describe('prop equality', () => {
     el.sort = undefined;
     await settled();
     expect(changes).toEqual(['sort', 'sort']);
+  });
+
+  it("prop.json: a value JSON can't encode is always a change, never a throw", async () => {
+    const el = await mount();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const cyclic: Range & { self?: unknown } = { min: 3, max: 4 };
+    cyclic.self = cyclic;
+    expect(() => (el.range = cyclic)).not.toThrow();
+    await settled();
+    expect(changes).toEqual(['range']);
+    expect(() => (el.range = cyclic)).not.toThrow();
+    const big = { min: 1, max: 2, n: 1n };
+    expect(() => (el.range = big)).not.toThrow();
+    expect(() => (el.range = big)).not.toThrow();
+    await settled();
+    expect(changes).toEqual(['range', 'range']);
+    const about = warn.mock.calls.filter(([m]) => String(m).includes("JSON can't encode"));
+    expect(about).toHaveLength(1);
+    warn.mockRestore();
   });
 });

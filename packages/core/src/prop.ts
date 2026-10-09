@@ -14,6 +14,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { features } from './features.js';
 import { propFeature } from './props.js';
+import { DEV } from '#view-dev';
 
 declare const OUTPUT: unique symbol;
 
@@ -110,7 +111,23 @@ interface Options {
 }
 
 /** `prop.json` values are JSON: the same JSON text is the same value. */
-const sameJson = (a: unknown, b: unknown): boolean => JSON.stringify(a) === JSON.stringify(b);
+// `prop.json`'s default `equals`: the same JSON text. A value JSON can't encode (a cycle, a
+// BigInt) is never equal, so the write always lands instead of throwing from the setter.
+let warned = false;
+function sameJson(a: unknown, b: unknown): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch (error) {
+    if (DEV && !warned) {
+      warned = true;
+      console.warn(
+        `prop.json got a value JSON can't encode (${String(error)}); every write of it counts ` +
+          'as a change. Use prop.value for non-JSON values, or pass equals.',
+      );
+    }
+    return false;
+  }
+}
 
 function make(kind: PropKind, opts: Options = {}, schema?: Check): Prop<unknown> {
   features.props = propFeature; // components can declare props now (features.ts)
