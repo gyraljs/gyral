@@ -16,6 +16,7 @@ export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
 export { child, emit, outputs } from './children.js';
 export { focus } from './focus.js';
+export { call, type CallInput } from './call.js';
 export type { FocusOptions } from './focus.js';
 export { invokersSupported } from './invokers.js';
 export type { CommandInfo } from './invokers.js';

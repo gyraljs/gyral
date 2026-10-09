@@ -244,3 +244,17 @@ Arguments: `store`.
 > \<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.
 
 Arguments: `tag`.
+
+## Element calls (gyral-1zd.27)
+
+### G0085
+
+> \<{tag}> call("{selector}", "{method}") failed
+
+Arguments: `tag`, `selector`, `method`.
+
+### G0086
+
+> call("{selector}", "{method}"): arguments must be plain data.
+
+Arguments: `selector`, `method`.

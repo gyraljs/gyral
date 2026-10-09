@@ -257,5 +257,19 @@
     "message": "<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0078"
+  },
+  {
+    "code": "G0085",
+    "group": "Element calls (gyral-1zd.27)",
+    "message": "<{tag}> call(\"{selector}\", \"{method}\") failed",
+    "arguments": ["tag", "selector", "method"],
+    "url": "https://gyral.dev/errors/#G0085"
+  },
+  {
+    "code": "G0086",
+    "group": "Element calls (gyral-1zd.27)",
+    "message": "call(\"{selector}\", \"{method}\"): arguments must be plain data.",
+    "arguments": ["selector", "method"],
+    "url": "https://gyral.dev/errors/#G0086"
   }
 ]

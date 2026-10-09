@@ -82,4 +82,7 @@ export const MESSAGES = {
   78:
     '<{tag}> failed to render on the server; it renders its error view (or nothing) and ' +
     'starts fresh in the browser.',
+  // Element calls (gyral-1zd.27)
+  85: '<{tag}> call("{selector}", "{method}") failed',
+  86: 'call("{selector}", "{method}"): arguments must be plain data.',
 } as const;
