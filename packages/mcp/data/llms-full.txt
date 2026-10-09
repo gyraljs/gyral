@@ -1,4 +1,4 @@
-# Gyral 0.3.1-next.4: complete documentation
+# Gyral 0.3.1-next.5: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -1510,15 +1510,16 @@ in depth.
 
 ## Framework messages
 
-Gyral sends four messages of its own. Their reducers are optional: leave one out and the
+Gyral sends five messages of its own. Their reducers are optional: leave one out and the
 message changes nothing.
 
-| Message          | Sent when                                                                                                                   |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `PropsChanged`   | A declared prop changed after the first render. Has `props` and `prev`. [Props](https://gyral.dev/docs/components/#reacting-to-prop-changes) |
-| `IntentRejected` | Input failed a schema in `form()` or `field()`, or the server rejected a form. [Forms](https://gyral.dev/docs/forms/)                        |
-| `StoreChanged`   | A store the component reads changed. [Shared state](https://gyral.dev/docs/stores/)                                                          |
-| `Hydrated`       | The component is live in the browser, once, after its first render. Has `serverRendered`.                                   |
+| Message          | Sent when                                                                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PropsChanged`   | A declared prop changed after the first render. Has `props` and `prev`. [Props](https://gyral.dev/docs/components/#reacting-to-prop-changes)                   |
+| `IntentRejected` | Input failed a schema in `form()` or `field()`, or the server rejected a form. [Forms](https://gyral.dev/docs/forms/)                                          |
+| `StoreChanged`   | A store the component reads changed. [Shared state](https://gyral.dev/docs/stores/)                                                                            |
+| `Hydrated`       | The component is live in the browser, once, after its first render. Has `serverRendered`.                                                     |
+| `Connected`      | The component was removed, its commands stopped, and it was attached again. [Moves and reconnects](https://gyral.dev/docs/outside-state/#moves-and-reconnects) |
 
 `Hydrated` is the hook for progressive enhancement: render the no-JavaScript version on the
 server and in the first client render (so hydration matches), then switch to the enhanced UI
@@ -3047,24 +3048,54 @@ safe to import on a server.
 
 ### Retries
 
-`retry(driver, { times, delayMs?, backoff? })` from `@gyral/core` returns the same driver, under
-the same name, with failures tried again after the delay (`'fixed'` or `'exponential'`). A
-cancellation (the command switched away, the component disconnected) ends it at once and is
-never retried. Wrap the driver where you choose it, at app setup, in a component's `drivers` or
-in a test, and apps that never retry don't bundle the code:
+`retry(driver, { times, delayMs?, backoff?, jitter?, retryIf? })` from `@gyral/core` returns the
+same driver, under the same name, with failures tried again after the delay (`'fixed'` or
+`'exponential'`). `jitter: true` waits a random time between 0 and that delay, so many clients
+don't retry in step. `retryIf(error)` decides which failures to retry; it receives the
+driver's typed error (its `toError`, else the thrown value), and by default every failure is
+retried. A cancellation (the command switched away, the component removed) ends it at once and
+is never retried. Wrap the driver where you choose it, at app setup, in a component's `drivers`
+or in a test, and apps that never retry don't bundle the code.
+
+For `@gyral/http`, `makeHttpDriver({ timeoutMs })` gives each attempt a deadline: a slower
+attempt fails with `HttpTimeoutError` (`url`, `timeoutMs`), and the retry starts a fresh one.
+`retryableHttpError` retries only what a second try can fix: network errors, timeouts, 408, 429
+and 5xx. It doesn't read `Retry-After`.
 
 ```ts
 // src/main.ts
 import { provideDrivers, retry } from '@gyral/core';
-import { makeHttpDriver } from '@gyral/http';
+import { makeHttpDriver, retryableHttpError } from '@gyral/http';
 
 provideDrivers(document.body, {
-  http: retry(makeHttpDriver({ baseUrl: '/api' }), {
+  http: retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8_000 }), {
     times: 2,
     delayMs: 300,
     backoff: 'exponential',
+    jitter: true,
+    retryIf: retryableHttpError,
   }),
 });
+```
+
+`HttpError` is a union, so a `switch` that handles every case needs one for timeouts:
+
+```ts
+// src/errors.ts
+import type { HttpError } from '@gyral/http';
+
+export const describeError = (e: HttpError): string => {
+  switch (e._tag) {
+    case 'HttpStatusError':
+      return `The server answered ${String(e.status)}.`;
+    case 'HttpNetworkError':
+      return 'You seem to be offline.';
+    case 'HttpTimeoutError':
+      return 'The server took too long to answer.';
+    case 'HttpDecodeError':
+      return 'The server sent something unexpected.';
+  }
+};
 ```
 
 ### A copy button
@@ -3420,7 +3451,9 @@ export const OutsideCounter = define<{ readonly n: number }, Msg>()('my-outside-
   XState's `actor.subscribe(…)`).
 - **Each value goes through the command's `onSuccess`**, like any streaming driver's.
 - **The source is released for you**, once, when the command is switched away, when the
-  component disconnects, and after `fail(error)`. Values emitted after that are ignored.
+  component is removed from the page, and after `fail(error)`. Values emitted after that are
+  ignored. Moving the component doesn't release it (see
+  [Moves and reconnects](#moves-and-reconnects)).
 - **The lane policy defaults to `'switch'`**: issuing the command again replaces the
   subscription. Give each input its own `key` when one component keeps several, such as one per
   chat room.
@@ -3433,6 +3466,52 @@ export const OutsideCounter = define<{ readonly n: number }, Msg>()('my-outside-
 
 For many values per frame (market data, sensors) into a view that takes real work to render,
 list the message in the component's `renderOnFrame`, so it renders once per animation frame.
+
+## Moves and reconnects
+
+Keyed-list libraries and plain DOM code move an element by removing it and inserting it again
+(`appendChild`, `insertBefore`) in the same task. Gyral treats that as a move, so a component's
+subscriptions, timers and requests keep running:
+
+- **A move** (removed and inserted again in one task, including before the first render):
+  nothing stops and no message is sent.
+- **A real removal**: one microtask after the element leaves the page, its commands stop and
+  every subscription is released.
+- **Attached again after a real removal**: the component gets the framework message
+  `Connected { reconnect: true }`. Its reducer is optional; re-issue long-lived commands there.
+  `Connected` is never sent on the first connect (`init` covers that) and never after a move
+  (nothing stopped), so `reconnect` is always `true`. A component without a `Connected`
+  reducer stays stopped.
+
+```ts
+// src/unread-badge.ts
+import { command, define, html, subscription, type Command } from '@gyral/core';
+
+declare const unread: { get(): number; subscribe(listener: () => void): () => void };
+
+const unreadSource = subscription<number>('unread', (emit) => {
+  emit(unread.get());
+  return unread.subscribe(() => emit(unread.get()));
+});
+
+type Msg = { readonly _tag: 'Count'; readonly n: number };
+
+const watch = (): Command<Msg> =>
+  command(unreadSource, undefined, { onSuccess: (n): Msg => ({ _tag: 'Count', n }) });
+
+export const UnreadBadge = define<number, Msg>()('unread-badge', {
+  init: () => [0, [watch()]],
+  intent: {},
+  update: {
+    Count: (_n, m) => m.n,
+    // Removed for real, then attached again: subscribe again.
+    Connected: (n) => [n, [watch()]],
+  },
+  view: (n) => html`<span class="badge">${n}</span>`,
+});
+```
+
+`moveBefore()` keeps everything too, without even the disconnect.
 
 ## A store per page, provided by name
 
@@ -3541,9 +3620,10 @@ writes (`run: (text) => { socket.send(text); }`).
   microtask or a watcher that re-arms in one. No `await Promise.resolve()` loops.
 - **Or fake it**: `fakeDriver('counter')` records the subscription, and `emitNext(value)` pushes
   a value through it.
-- **Releasing is synchronous**: right after `el.remove()`, a real subscription's unsubscribe has
-  run and a fake's `calls[0].signal.aborted` is `true`, so assert without yielding (see
-  [Testing](https://gyral.dev/docs/testing/#fake-drivers-and-commands)).
+- **Releasing takes one microtask**: after `el.remove(); await Promise.resolve();`, a real
+  subscription's unsubscribe has run and a fake's `calls[0].signal.aborted` is `true` (see
+  [Testing](https://gyral.dev/docs/testing/#fake-drivers-and-commands)). To test a move, `append` the element
+  somewhere else in the same task and check that the signal is still not aborted.
 
 ---
 
@@ -4747,6 +4827,15 @@ stay in memory once served (up to a bound; `cache: false` reads them from disk e
 malformed URL is a 400. A path that leads outside `assetsDir`, or a missing file, is a 404 with
 `cache-control: no-store`, so a CDN never caches a miss while a deploy lands. Pass
 `staticDir: false` if nothing is prerendered, so page requests don't look for a file first.
+A single `Range` request (`bytes=0-1023`) gets `206 Partial Content` with that slice, so an
+imported video or audio file can seek; every asset says `accept-ranges: bytes`. A range past the
+end is a 416, and several ranges or a malformed header get the whole file.
+
+Served under a path, with Vite's `base: '/app/'`? Pass the same base to `productionServer`:
+`productionServer({ distDir, createApp, base: '/app/' })` puts it in front of the entry,
+preload and stylesheet URLs and serves assets at `/app/assets/`. For a static build, pass it to
+the manifest helpers as their last argument:
+`clientAssetsFromManifest(path, entry, [], { base: '/app/' })`.
 
 After a deploy, tabs opened before it still ask for the old release's chunks. To keep serving
 them, point `assetsDir` at a volume that keeps every release's files, or use `assetHandler`
@@ -5272,12 +5361,14 @@ export const testDrivers: DriverOverrides = {
 };
 ```
 
-Removing an element interrupts its commands synchronously: when `el.remove()` returns, every
-running command's `signal.aborted` is `true` and its `abort` listeners have run, and no later
-result is dispatched. Assert right after `remove()`, with no need to yield. Only cleanup a
-driver runs after an `await` (a `finally` once its promise settles) happens later; yield with
-`await Promise.resolve()` (or `await clock.advance(0)` under `virtualTime()`) if you need to
-observe that.
+Removing an element stops its commands one microtask later, so that a move (removed and
+inserted again in the same task) keeps them running. After `el.remove(); await
+Promise.resolve();`, every running command's `signal.aborted` is `true`, its `abort` listeners
+have run, and no later result is dispatched. Cleanup a driver runs after an `await` (a
+`finally` once its promise settles) happens later still; yield again (or
+`await clock.advance(0)` under `virtualTime()`) to observe it. To test a component that is
+attached again after a real removal, step its `Connected` reducer:
+`step(spec, state, { _tag: 'Connected', reconnect: true })`.
 
 ## Virtual time
 
@@ -5286,6 +5377,29 @@ observe that.
 timer; `restore()` puts the real clock back. It patches the platform, not Gyral, so it covers
 debounces, `periodic`, driver timeouts and retry delays alike. Advance the clock, then
 `await settled()` before you assert on the DOM.
+
+It also works in a Vitest **node** project, where there is no `requestAnimationFrame` to fake,
+so driver and polling tests that need no DOM can use it:
+
+```ts
+// test/poll.node.test.ts
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { virtualTime, type VirtualTime } from '@gyral/testing';
+
+let time: VirtualTime;
+beforeEach(() => {
+  time = virtualTime();
+});
+afterEach(() => time.restore());
+
+it('polls every 30 s', async () => {
+  const seen: number[] = [];
+  const id = setInterval(() => seen.push(Date.now()), 30_000);
+  await time.advance(90_000);
+  clearInterval(id);
+  expect(seen).toHaveLength(3);
+});
+```
 
 ## SSR and hydration tests
 
@@ -6135,6 +6249,9 @@ don't bundle them ([Effects](https://gyral.dev/docs/effects/#retries)):
   `provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
   `submitForm(…, { csrf: { token } })` stays for a token the app already holds. Development
   builds warn once when a `POST` goes out without the token while the page has the `<meta>`.
+- **`HttpError` has a timeout case.** `makeHttpDriver({ timeoutMs })` fails a slow attempt with
+  `HttpTimeoutError`, so a `switch` over `HttpError` that handles every case needs a branch for
+  it ([Retries](https://gyral.dev/docs/effects/#retries)).
 
 ## Stricter checks inside `<svg>`
 
@@ -6235,6 +6352,13 @@ These keep compiling but behave differently. Check each against your app and its
   [inline styles](https://gyral.dev/docs/styling/#inline-styles-under-a-strict-csp)). Declarations the browser
   doesn't understand are dropped. Compare computed styles, or the value with its trailing
   semicolon.
+- **Removing a component stops its commands one microtask later.** A component that is removed
+  and inserted again in the same task (a keyed list reordering rows, `appendChild` of an
+  attached element) is a move: its subscriptions, timers and requests keep running, where 0.3.0
+  stopped them for good. A test that checks a command was aborted right after `el.remove()`
+  awaits one microtask first (`await Promise.resolve()`). A component removed for real and
+  attached later can re-issue its watches from the new `Connected` message
+  ([Moves and reconnects](https://gyral.dev/docs/outside-state/#moves-and-reconnects)).
 - **`match()` returns `path` too**, the route's canonical path: `{ name, params, path }`. A test
   that compares a whole match with `toEqual` needs the new field. Servers can redirect to it
   ([One URL per page](https://gyral.dev/docs/routing/#one-url-per-page)).
@@ -6323,7 +6447,10 @@ dependency.
 - Router: a canonical `path` from `match()`, [scroll and focus](https://gyral.dev/docs/routing/#scroll-and-focus)
   after a navigation, with `scroll` and `focusReset` options, and the
   [head model](https://gyral.dev/docs/routing/#the-head) with `setHead()`.
-- `retry(driver, policy)` and `csrfFromMeta` on the driver ([Effects](https://gyral.dev/docs/effects/#retries)).
+- `retry(driver, policy)` with `jitter` and `retryIf`, `makeHttpDriver({ timeoutMs })` with
+  `retryableHttpError`, and `csrfFromMeta` on the driver ([Effects](https://gyral.dev/docs/effects/#retries)).
+- [Moves keep commands running](https://gyral.dev/docs/outside-state/#moves-and-reconnects), and the framework
+  message `Connected` for a component attached again after a real removal.
 - Server: opt-in [hashes for server-rendered `style` attributes](https://gyral.dev/docs/server-rendering/#content-security-policy)
   (`renderPage({ csp: { styleAttributes: 'hash' } })`), and a
   [Trusted Types](https://gyral.dev/docs/server-rendering/#trusted-types) policy named `gyral`.
@@ -6332,9 +6459,11 @@ dependency.
   `productionServer`), safer asset serving with `assetHandler`, and `toNodeListener` from
   `@gyral/ssr/node` for Node's `http` module ([Deploying](https://gyral.dev/docs/deploying/#node)), which
   passes the handler [the client's address](https://gyral.dev/docs/deploying/#the-clients-address).
+  `assetHandler` answers single `Range` requests, so media can seek, and `productionServer`
+  takes Vite's `base`.
 - Testing: [`renderOnServer`](https://gyral.dev/docs/testing/#server-markup-on-demand) for hydration tests with
-  real server markup, `outputsIn` and `focusTargetsIn`, `fakeDriver(name, run)`, and drivers
-  that go into `el.drivers` with no cast.
+  real server markup, `outputsIn` and `focusTargetsIn`, `fakeDriver(name, run)`, drivers
+  that go into `el.drivers` with no cast, and `virtualTime()` in Vitest node projects.
 - [Development errors that name the template's file, line and column](https://gyral.dev/docs/views/#checked-before-it-runs),
   under Vite exactly, elsewhere from the stack trace.
 - `registryVersion()` from `@gyral/core/server`: `renderPage({ csp })` now rebuilds its header
@@ -6763,7 +6892,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1-next.4, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.1-next.5, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -7197,7 +7326,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/core`](#g
 | [`raw`](#core-raw) | Trusted markup from your own code (Markdown output, JSON-LD), parsed in a child hole and re-parsed only when the string changes. |
 | [`redirectedTo`](#core-redirectedto) | The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. |
 | [`resetDocumentStores`](#core-resetdocumentstores) | Tests only: forget the document default so each test starts clean. |
-| [`retry`](#core-retry) | The same driver (same name, so substitution by name still works), with `run` retried when it rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with `backoff: 'exponential'`). |
+| [`retry`](#core-retry) | The same driver (same name, so substitution by name still works), with `run` retried when it rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with `backoff: 'exponential'`; a random part of it with `jitter`), and only for failures `retryIf` accepts. |
 | [`runInit`](#core-runinit) | Runs a spec's `init`, or starts from `{}` when a stateless component omits it. |
 | [`scriptSafeJson`](#core-scriptsafejson) | JSON for an inline `<script type="application/json">`: `</script>` and friends escaped. |
 | [`send`](#core-send) | A command that sends `msg` to the component's instance of `store`. |
@@ -7224,7 +7353,8 @@ Captures the pointer on the element when it is pressed (`setPointerCapture`), so
   data-intent-on="pointerdown pointerup pointercancel">
 ```
 
-A hook rather than built into intents, so only apps that use it bundle it.
+A hook rather than built into intents, so only apps that use it bundle it. Disposable: a
+position that stops holding it (`${held ? capturePointer() : nothing}`) removes the listener.
 
 #### `changed`
 
@@ -7608,18 +7738,21 @@ Tests only: forget the document default so each test starts clean.
 #### `retry`
 
 ```ts
-function retry<I, O, E>(driver: Driver<I, O, E>, policy: RetryPolicy): Driver<I, O, E>;
+function retry<I, O, E>(driver: Driver<I, O, E>, policy: RetryPolicy<E>): Driver<I, O, E>;
 ```
 
 The same driver (same name, so substitution by name still works), with `run` retried when it
 rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with
-`backoff: 'exponential'`). An abort (the command switched away, the component disconnected)
-ends it at once and is never retried. Wrap where the driver is chosen: app setup, a
-component's `drivers`, or a test fake.
+`backoff: 'exponential'`; a random part of it with `jitter`), and only for failures
+`retryIf` accepts. An abort (the command switched away, the component disconnected) ends it
+at once and is never retried. Wrap where the driver is chosen: app setup, a component's
+`drivers`, or a test fake.
 
 
 ```ts
-const api = retry(makeHttpDriver({ baseUrl: '/api' }), { times: 2, delayMs: 300 });
+const api = retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
+  times: 3, delayMs: 300, backoff: 'exponential', jitter: true, retryIf: retryableHttpError,
+});
 const feed = retry(subscription('feed', connect), { times: Infinity, delayMs: 1000 });
 ```
 
@@ -7913,6 +8046,7 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`CommandTraceEvent`](#core-commandtraceevent) | What the interpreter reports about one command (ADR 0006 lanes and policies). |
 | [`ComponentSpec`](#core-componentspec) | A component spec. |
 | [`Concurrency`](#core-concurrency) | How commands in the same lane interact. |
+| [`Connected`](#core-connected) | Framework message: the host is back in the document after it was really detached (view/05 "Lifecycle"). |
 | [`CssValue`](#core-cssvalue) | A `css` interpolation: inserted as written (another `css` value inserts its text). |
 | [`Ctx`](#core-ctx) | Read-only context handed to every reducer and to the view (ADR 0007, 0013). |
 | [`Definer`](#core-definer) | The second call of `define()`: takes the tag and the spec, infers the intent names. |
@@ -7963,6 +8097,7 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`RawResult`](#core-rawresult) | Trusted markup for a child hole: what `raw(html)` returns. |
 | [`RetryPolicy`](#core-retrypolicy) | How `retry(driver, policy)` retries a rejected run (retry.ts). |
 | [`SeedCheck`](#core-seedcheck) | The result of checking a seed against a store's schema. |
+| [`ShadowOption`](#core-shadowoption) | `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM. |
 | [`Stateless`](#core-stateless) | State of a component that keeps none (a pure view of its props). |
 | [`Store`](#core-store) |  |
 | [`StoreChanged`](#core-storechanged) | Framework message: a store this component reads changed (ADR 0013). |
@@ -8120,6 +8255,24 @@ type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';
 ```
 
 How commands in the same lane interact. See ADR 0006 for the table.
+
+#### `Connected`
+
+```ts
+interface Connected {
+    readonly _tag: 'Connected';
+    /** Always `true`: `Connected` is only sent when a stopped host is attached again. */
+    readonly reconnect: true;
+}
+```
+
+Framework message: the host is back in the document after it was really detached (view/05
+"Lifecycle"). Disconnecting stops a host's commands one microtask later, so a move (a
+disconnect and connect in the same task, as `appendChild`/`insertBefore` reorders do) keeps
+them running and sends nothing. Only a host that stayed detached long enough for its commands
+to stop receives `Connected` when it is attached again; re-issue long-lived commands (a
+`subscription()`, a periodic timer) from its reducer. Never sent on the first connect: `init`
+covers that.
 
 #### `CssValue`
 
@@ -8764,16 +8917,23 @@ Trusted markup for a child hole: what `raw(html)` returns.
 #### `RetryPolicy`
 
 ```ts
-interface RetryPolicy {
+interface RetryPolicy<E = unknown> {
     /** Retries after the first failure. */
     readonly times: number;
     /** Delay before each retry (the base delay for exponential backoff). Default 0. */
     readonly delayMs?: number;
     readonly backoff?: 'fixed' | 'exponential';
+    /** Full jitter: wait a random time between 0 and the computed delay, so clients spread out. */
+    readonly jitter?: boolean;
+    /**
+     * Which failures to retry, given the driver's typed error (its `toError`, else the thrown
+     * value). Default: every failure. For `@gyral/http`, `retryableHttpError`.
+     */
+    readonly retryIf?: (error: E) => boolean;
 }
 ```
 
-How `retry(driver, policy)` retries a rejected run (retry.ts).
+How `retry(driver, policy)` retries a rejected run (retry.ts). `E`: the driver's error.
 
 #### `SeedCheck`
 
@@ -8788,6 +8948,19 @@ type SeedCheck<S> = {
 ```
 
 The result of checking a seed against a store's schema.
+
+#### `ShadowOption`
+
+```ts
+type ShadowOption = boolean | {
+    readonly delegatesFocus?: boolean;
+};
+```
+
+`spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
+`delegatesFocus: true`: focusing the host, or clicking a non-focusable part of it, focuses its
+first focusable element, and `:focus` matches the host while focus is inside; the server
+writes `shadowrootdelegatesfocus` on the declarative shadow root (view/05-element.md "Focus").
 
 #### `Stateless`
 
@@ -9015,6 +9188,7 @@ type Update<S, M extends Tagged, P = object> = {
     readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
     readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
     readonly Hydrated?: Reducer<S, M, Hydrated, P>;
+    readonly Connected?: Reducer<S, M, Connected, P>;
 };
 ```
 
@@ -9470,6 +9644,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/http`](#g
 | [`get`](#http-get) |  |
 | [`makeHttpDriver`](#http-makehttpdriver) |  |
 | [`request`](#http-request) | A command that performs `req` with the `http` driver (or its substitute). |
+| [`retryableHttpError`](#http-retryablehttperror) | The failures worth retrying: network errors, timeouts, 408, 429 and 5xx. |
 | [`submitForm`](#http-submitform) | Sends a form submission to the server (usually after `form()` validated it in the browser, which passes the raw `FormData`). |
 
 #### `csrfFromMeta`
@@ -9502,6 +9677,16 @@ function request<O = unknown, MS = never, MF = MS>(req: Omit<HttpRequest, 'schem
 ```
 
 A command that performs `req` with the `http` driver (or its substitute).
+
+#### `retryableHttpError`
+
+```ts
+const retryableHttpError: (error: HttpError) => boolean
+```
+
+The failures worth retrying: network errors, timeouts, 408, 429 and 5xx. Pass it as
+`retry(…, { retryIf: retryableHttpError })`. A 4xx other than 408/429 means the request
+itself is wrong, and decoding errors won't change on a retry. `Retry-After` isn't read.
 
 #### `submitForm`
 
@@ -9575,6 +9760,11 @@ interface HttpDriverOptions {
     readonly baseUrl?: string;
     readonly fetch?: typeof fetch;
     readonly concurrency?: Concurrency;
+    /**
+     * Aborts a request that takes longer than this, failing with `HttpTimeoutError`. Applies per
+     * attempt: under `retry(…)` each attempt gets the full time. Default: no limit.
+     */
+    readonly timeoutMs?: number;
 }
 ```
 
@@ -9595,6 +9785,12 @@ type HttpError = {
     readonly _tag: 'HttpNetworkError';
     readonly url: string;
     readonly message: string;
+}
+/** The attempt took longer than the driver's `timeoutMs`. */
+ | {
+    readonly _tag: 'HttpTimeoutError';
+    readonly url: string;
+    readonly timeoutMs: number;
 } | {
     readonly _tag: 'HttpDecodeError';
     readonly url: string;
@@ -10606,22 +10802,25 @@ with `cache-control: public, max-age=31536000, immutable`, `content-type` by ext
 `content-length` and `x-content-type-options: nosniff`. Paths that are not under `dir` after
 decoding (`..`, encoded slashes leading out) or have a dot segment (`.hidden`) are refused;
 a malformed escape is a 400. Misses are 404 with `cache-control: no-store`, so a CDN never
-keeps a miss for a file the next deploy brings. Other methods get 405.
+keeps a miss for a file the next deploy brings. Other methods get 405. A single-range
+`Range` request gets a 206 with that slice (media seeking: Safari won't play video without
+it); several ranges get the whole file. Hashed files never change, so `If-Range` isn't needed.
 
 #### `clientAssets`
 
 ```ts
-function clientAssets(manifest: ViteManifest, entry: string, also?: readonly string[]): ClientAssets;
+function clientAssets(manifest: ViteManifest, entry: string, also?: readonly string[], options?: ManifestOptions): ClientAssets;
 ```
 
 `ClientAssets` for `entry`, from a manifest already in memory. `also`: manifest keys of
 modules the page will import lazily (a route's module, by source path such as
 `src/routes/product.ts`), preloaded too, each with its static imports, after the entry's.
+`options.base`: Vite's `base`, which every URL starts with (the manifest's paths omit it).
 
 #### `clientAssetsFromManifest`
 
 ```ts
-function clientAssetsFromManifest(manifestPath: string, entry: string, also?: readonly string[]): Promise<ClientAssets>;
+function clientAssetsFromManifest(manifestPath: string, entry: string, also?: readonly string[], options?: ManifestOptions): Promise<ClientAssets>;
 ```
 
 `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also`
@@ -10630,7 +10829,7 @@ as for `clientAssets`.
 #### `clientEntryFromManifest`
 
 ```ts
-function clientEntryFromManifest(manifestPath: string, entry: string): Promise<string>;
+function clientEntryFromManifest(manifestPath: string, entry: string, options?: ManifestOptions): Promise<string>;
 ```
 
 The URL of a built entry chunk (e.g. `src/entry-client.ts` → `/assets/entry-client-Ab12.js`),
@@ -10692,6 +10891,7 @@ Cache policy for production serving.
 | [`ClientAssets`](#ssr-static-clientassets) | What a server-rendered page loads: the client entry, the modules to preload, the CSS. |
 | [`FetchApp`](#ssr-static-fetchapp) | Anything with a fetch handler: a Hono app, or a plain function. |
 | [`ManifestChunk`](#ssr-static-manifestchunk) | One chunk of Vite's `.vite/manifest.json` (the fields serving uses). |
+| [`ManifestOptions`](#ssr-static-manifestoptions) | Where the build is served: Vite's `base` (default `/`), which the manifest's paths omit. |
 | [`PageAssets`](#ssr-static-pageassets) | The page-level parts of `ClientAssets`, named as `renderPage` takes them. |
 | [`PrerenderedPage`](#ssr-static-prerenderedpage) |  |
 | [`PrerenderOptions`](#ssr-static-prerenderoptions) |  |
@@ -10790,6 +10990,17 @@ interface ManifestChunk {
 
 One chunk of Vite's `.vite/manifest.json` (the fields serving uses).
 
+#### `ManifestOptions`
+
+```ts
+interface ManifestOptions {
+    /** Vite's `base`, e.g. `/app/` (a missing trailing slash is added). Default `/`. */
+    readonly base?: string;
+}
+```
+
+Where the build is served: Vite's `base` (default `/`), which the manifest's paths omit.
+
 #### `PageAssets`
 
 ```ts
@@ -10846,6 +11057,11 @@ interface ProductionOptions<Env = unknown> {
      * page requests don't look for files first.
      */
     readonly staticDir?: string | false;
+    /**
+     * Vite's `base` when the build is served under a path (e.g. `/app/`): the entry, preload and
+     * stylesheet URLs start with it, and assets are served at `<base>assets/`. Default `/`.
+     */
+    readonly base?: string;
     /** Keep served assets in memory (`assetHandler`'s `cache`). Default `true`. */
     readonly cache?: boolean | {
         readonly maxBytes: number;
@@ -11076,7 +11292,7 @@ function step<S, M extends Tagged, P>(spec: ComponentSpec<S, M, P>, state: NoInf
 ```
 
 Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
-`IntentRejected`, `StoreChanged`, `Hydrated`) without a reducer leave state unchanged, as in
+`IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`) without a reducer leave state unchanged, as in
 the element. `stores` are the instances `ctx.read()` sees.
 
 #### `stepStore`
@@ -11114,7 +11330,8 @@ function virtualTime(): VirtualTime;
 Replaces timers and `Date` with a virtual clock (ADR 0006, "Testing"). It patches the
 platform rather than Gyral's runtime, so it covers drivers, debounces and retry delays
 alike and does not depend on how the interpreter is implemented. Microtasks stay real,
-so promises and the runtime keep working.
+so promises and the runtime keep working. Animation frames are faked only where they exist,
+so model and driver tests can use it in a Node project.
 
 #### `withDrivers`
 
@@ -11283,7 +11500,7 @@ interface RunOptions<S, P> {
 #### `StepMessage`
 
 ```ts
-type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated;
+type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected;
 ```
 
 Any message `update` accepts: the component's own, or a framework message.
@@ -12195,6 +12412,8 @@ const describeError = (error: HttpError): string => {
       return `The server answered ${String(error.status)} ${error.statusText}.`;
     case 'HttpNetworkError':
       return 'Could not reach the server. Check your connection.';
+    case 'HttpTimeoutError':
+      return 'The server took too long to answer.';
     case 'HttpDecodeError':
       return 'The server sent a user we could not read.';
   }
