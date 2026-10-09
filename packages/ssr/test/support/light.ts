@@ -12,7 +12,7 @@ const item = (tag: string, shadow: boolean) =>
   define<ItemState, ItemMsg, object, Bump>()(tag, {
     shadow,
     init: () => ({ count: 0 }),
-    intent: { Inc: () => ({ _tag: 'Inc' }) },
+    intent: { Inc: true },
     update: { Inc: (s) => [{ count: s.count + 1 }, [emit({ _tag: 'Bumped', by: tag })]] },
     view: (s) => html`<button class="inc" data-intent="Inc">${tag} ${s.count}</button>`,
   });
@@ -37,7 +37,7 @@ export const LightPage = define<PageState, PageMsg>()('test-light-page', {
   init: () => ({ more: 0, bumps: [], hydrated: false }),
   states: (s) => ({ live: s.hydrated }),
   intent: {
-    More: () => ({ _tag: 'More' }),
+    More: true,
     // Outputs from either child kind (child() would accept only one class).
     Bumped: ({ detail }) => {
       const by = (detail as Partial<Bump> | undefined)?.by;

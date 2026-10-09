@@ -27,7 +27,6 @@ const meter = (tag: string, count: number) =>
       { n: 0 },
       [command(burst(tag, count), undefined, { onSuccess: (n): Msg => ({ _tag: 'Progress', n }) })],
     ],
-    intent: {},
     update: { Progress: (_s, m) => ({ n: m.n }) },
     view: (s) => html`<progress max="500" value=${s.n}></progress>`,
   });

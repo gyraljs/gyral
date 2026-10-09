@@ -9,7 +9,7 @@ type Msg =
 
 const Loader = define<{ readonly status: string }, Msg>()('test-http-loader', {
   init: () => ({ status: 'idle' }),
-  intent: { Load: () => ({ _tag: 'Load' }) },
+  intent: { Load: true },
   update: {
     Load: () => [
       { status: 'loading' },

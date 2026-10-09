@@ -20,8 +20,8 @@ export const Demo = define<State, Msg>()('gy-devtools-demo', {
   init: () => ({ count: 0, saving: false }),
   stores: [tally],
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Save: () => ({ _tag: 'Save' }),
+    Increment: true,
+    Save: true,
   },
   update: {
     Increment: (s) => [{ ...s, count: s.count + 1 }, [send(tally, { _tag: 'Add' })]],

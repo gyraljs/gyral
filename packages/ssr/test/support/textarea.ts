@@ -18,7 +18,7 @@ export const Note = define<State, Msg>()('test-note', {
   init: () => ({ message: 'Hello </textarea><b>x</b> & "q"', invalid: false }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', text: value ?? '' }),
-    Reset: () => ({ _tag: 'Reset' }),
+    Reset: true,
   },
   update: {
     Typed: (s, m) => ({ ...s, message: m.text }),

@@ -167,7 +167,7 @@ export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump
       items: prop.value(v.array(v.string()), { default: [] }), // property only
     },
     init: () => ({ value: 0 }),
-    intent: { Bump: () => ({ _tag: 'Bump' }) },
+    intent: { Bump: true },
     update: { Bump: (s, _m, { props }) => ({ value: s.value + props.step }) },
     view: (s, i, { props }) =>
       html`<button type="button" data-intent=${i.Bump}>${props.label}: ${s.value}</button>

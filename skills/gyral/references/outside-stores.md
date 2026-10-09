@@ -44,7 +44,7 @@ const add = (by: number): Command<Msg> =>
 
 export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter', {
   init: () => [{ n: 0 }, [watchCounter()]],
-  intent: { Add: () => ({ _tag: 'Add' }) },
+  intent: { Add: true },
   update: {
     Counted: (_s, m) => ({ n: m.n }),
     Add: (s) => [s, [add(1)]],
@@ -138,14 +138,12 @@ const watchMailbox = (): Command<Msg> =>
 
 export const UnreadBadge = define<Mailbox, Msg>()('my-unread-badge', {
   init: () => [feed.getState(), [watchMailbox()]],
-  intent: {},
   update: { Updated: (_s, m) => m.mailbox },
   view: (s) => html`<span class="badge" aria-label="Unread messages">${s.unread}</span>`,
 });
 
 export const Sidebar = define<Mailbox, Msg>()('my-sidebar', {
   init: () => [feed.getState(), [watchMailbox()]],
-  intent: {},
   update: { Updated: (_s, m) => m.mailbox },
   view: (s) =>
     html`<nav aria-label="Folders">
@@ -307,7 +305,6 @@ const watch = (): Command<Msg> =>
 
 export const UnreadBadge = define<number, Msg>()('unread-badge', {
   init: () => [0, [watch()]],
-  intent: {},
   update: {
     Count: (_n, m) => m.n,
     Connected: (n) => [n, [watch()]], // attached again after a real removal

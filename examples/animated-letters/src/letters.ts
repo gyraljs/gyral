@@ -49,7 +49,6 @@ export const AnimatedLetters = define<State, Msg>()('gy-animated-letters', {
     { letters: ['A', 'G', 'L', 'R', 'Y'].map((key) => ({ key, leaving: false })) },
     [letterKeys<Msg>((letter) => ({ _tag: 'Key', letter }))],
   ],
-  intent: {},
   update: {
     Key: (s, m) => toggle(s, m.letter),
     // Ignore a stale timer if the letter came back while it was shrinking.

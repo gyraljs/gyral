@@ -13,13 +13,11 @@ interface State {
 
 const spec = {
   init: () => ({ text: 'client' }),
-  intent: {},
-  update: {},
   view: (s: State) => html`<p>${s.text}</p>`,
 };
-define<State, never>()('test-co-shadow', spec);
-define<State, never>()('test-co-light', { ...spec, shadow: false });
-define<State, never>()('test-co-plain', spec);
+define<State>()('test-co-shadow', spec);
+define<State>()('test-co-light', { ...spec, shadow: false });
+define<State>()('test-co-plain', spec);
 
 const seed = `${SEED_ATTRIBUTE}='{"state":{"text":"server"},"props":{}}'`;
 

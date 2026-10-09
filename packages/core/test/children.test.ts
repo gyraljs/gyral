@@ -42,9 +42,9 @@ const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: It
     props: { item: prop.value(itemSchema, { required: true }) },
     init: () => ({ pokes: 0 }),
     intent: {
-      Toggle: () => ({ _tag: 'Toggle' }),
-      Remove: () => ({ _tag: 'Remove' }),
-      Poke: () => ({ _tag: 'Poke' }),
+      Toggle: true,
+      Remove: true,
+      Poke: true,
     },
     update: {
       Toggle: (s, _m, { props }) => [s, [emit({ _tag: 'Toggled', done: !props.item.done })]],
@@ -73,7 +73,7 @@ const TestList = define<{ readonly items: readonly Item[] }, ListMsg>()('test-li
   }),
   intent: {
     Item: child(TestItem, (out, el) => ({ _tag: 'Item', id: el.item.id, out })),
-    Reverse: () => ({ _tag: 'Reverse' }),
+    Reverse: true,
   },
   update: {
     Item: (s, { id, out }) => {
@@ -190,8 +190,8 @@ describe('child() with a lazy source', () => {
       props: { nodeId: prop.string({ required: true }) },
       init: () => ({ kids: [] }),
       intent: {
-        Add: () => ({ _tag: 'Add' }),
-        Remove: () => ({ _tag: 'Remove' }),
+        Add: true,
+        Remove: true,
         Child: child(
           () => Tree,
           (_out, el) => ({ _tag: 'Child', id: el.nodeId }),

@@ -10,19 +10,15 @@ const cart = defineStore<Cart, { readonly _tag: 'Noop' }>('provider-cart', {
   update: { Noop: (s) => s },
 });
 
-define<{ readonly x: number }, never>()('ssr-owner', {
+define<{ readonly x: number }>()('ssr-owner', {
   stores: [cart],
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`<p>${read(cart).owner}</p>`,
 });
 
 // A component whose shadow DOM contains a provider: scoping must cross the shadow boundary.
-define<{ readonly x: number }, never>()('ssr-island', {
+define<{ readonly x: number }>()('ssr-island', {
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: () =>
     html`<gyral-stores .instances=${[cart.instance({ owner: 'shadow' })]}
       ><ssr-owner></ssr-owner

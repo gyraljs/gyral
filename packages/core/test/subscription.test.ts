@@ -90,7 +90,6 @@ const Probe = define<State, Msg>()('test-subscription-probe', {
       }),
     ],
   ],
-  intent: {},
   update: {
     Count: (s, m) => ({ ...s, n: m.n }),
     Room: (s, m) => ({ ...s, lines: [...s.lines, m.line] }),
@@ -201,7 +200,6 @@ const Moves = define<{ readonly n: number }, { readonly _tag: 'Moved'; readonly 
       { n: -1 },
       [command(movesDriver, undefined, { onSuccess: (n) => ({ _tag: 'Moved' as const, n }) })],
     ],
-    intent: {},
     update: { Moved: (_s, m) => ({ n: m.n }) },
     view: (s) => html`<output>${s.n}</output>`,
   },

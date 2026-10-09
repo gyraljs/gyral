@@ -15,7 +15,6 @@ type Msg =
 
 const Results = define<State, Msg>()('test-focus-wait', {
   init: () => ({ step: 0 }),
-  intent: {},
   update: {
     Search: (s) => [{ ...s, step: 1 }, [focus('#first', { wait: true })]],
     Arrive: (s) => ({ ...s, step: s.step + 1 }),

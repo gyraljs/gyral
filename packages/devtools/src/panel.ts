@@ -70,11 +70,11 @@ export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boole
   props: { open: prop.boolean() },
   init: (props) => initialPanel(props.open),
   intent: {
-    Toggle: () => ({ _tag: 'Toggle' }),
+    Toggle: true,
     Filter: ({ value }) => ({ _tag: 'Filter', text: value ?? '' }),
     Kind: ({ value, checked }) =>
       isKind(value) ? { _tag: 'Kind', kind: value, on: checked === true } : undefined,
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Received: (s, m) => receive(s, m.events),

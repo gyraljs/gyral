@@ -29,7 +29,6 @@ const work = defineDriver<string, string, string>({
 
 const Fx = define<State, Msg>()('test-fx', {
   init: () => [{ log: [] }, [command(work, 'init', { onSuccess: (v) => ({ _tag: 'Done', v }) })]],
-  intent: {},
   update: {
     Go: (s, m) => [
       s,

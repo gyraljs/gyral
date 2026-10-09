@@ -15,9 +15,7 @@ const view = () =>
     <b>b</b>
     <i>i</i>`;
 
-const Styled = define<Stateless, never>()('test-styled', {
-  intent: {},
-  update: {},
+const Styled = define<Stateless>()('test-styled', {
   view,
   // A plain string (shared with the document), a shared css value and a nested one.
   styles: [
@@ -33,9 +31,7 @@ const Styled = define<Stateless, never>()('test-styled', {
   ],
 });
 
-const Other = define<Stateless, never>()('test-styled-other', {
-  intent: {},
-  update: {},
+const Other = define<Stateless>()('test-styled-other', {
   view,
   styles: shared,
 });

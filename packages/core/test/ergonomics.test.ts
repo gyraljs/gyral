@@ -8,7 +8,7 @@ type BadgeMsg = { readonly _tag: 'Pick' };
 // Stateless: no init, a pure view of its props that only reports up.
 const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>()('test-badge', {
   props: { label: prop.string({ required: true }) },
-  intent: { Pick: () => ({ _tag: 'Pick' }) },
+  intent: { Pick: true },
   update: { Pick: (s, _m, { props }) => [s, [emit({ _tag: 'Picked', value: props.label })]] },
   view: (_s, i, { props }) =>
     html`<button
@@ -49,9 +49,7 @@ describe('ergonomics', () => {
 
   it('still requires init when {} is not a valid state', () => {
     // @ts-expect-error: `init` is required for components with state
-    define<{ readonly n: number }, never>()('test-needs-init', {
-      intent: {},
-      update: {},
+    define<{ readonly n: number }>()('test-needs-init', {
       view: () => html``,
     });
   });

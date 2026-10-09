@@ -165,7 +165,7 @@ export const Notes = define<State, Msg>()('my-notes', {
   init: () => ({ note: '', formKey: 0 }),
   intent: {
     Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Note: (s, m) => ({ ...s, note: m.value }),

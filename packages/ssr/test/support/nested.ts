@@ -26,7 +26,7 @@ export const NestChild = define<ChildState, ChildMsg, object, ChildOut>()('test-
     { count: 0, heard: [], hydrated: undefined },
     [command(echo, 'child-ready', { onSuccess: (value) => ({ _tag: 'Heard', value }) })],
   ],
-  intent: { Inc: () => ({ _tag: 'Inc' }) },
+  intent: { Inc: true },
   update: {
     Inc: (s) => [{ ...s, count: s.count + 1 }, [emit({ _tag: 'Bumped', count: s.count + 1 })]],
     Heard: (s, m) => ({ ...s, heard: [...s.heard, m.value] }),
@@ -45,7 +45,7 @@ type ParentMsg = { readonly _tag: 'Click' } | { readonly _tag: 'Child'; readonly
 export const NestParent = define<ParentState, ParentMsg>()('test-nest-parent', {
   init: () => ({ clicks: 0, bumps: [] }),
   intent: {
-    Click: () => ({ _tag: 'Click' }),
+    Click: true,
     Child: child(NestChild, (out) => ({ _tag: 'Child', count: out.count })),
   },
   update: {

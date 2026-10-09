@@ -26,7 +26,7 @@ type Msg = { readonly _tag: 'Inc' };
 define<{ readonly n: number }, Msg>()('test-ssr-counter', {
   hydrate: 'idle',
   init: () => ({ n: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) },
+  intent: { Inc: true },
   update: { Inc: (s) => ({ n: s.n + 1 }) },
   view: (s, i) => html`<button data-intent=${i.Inc}>${s.n}</button>`,
 });

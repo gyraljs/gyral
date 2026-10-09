@@ -10,9 +10,7 @@ import { mount } from './render-helpers.js';
 const handler = (): void => undefined;
 const other = (): void => undefined;
 
-define<Stateless, never>()('test-fn-prop', {
-  intent: {},
-  update: {},
+define<Stateless>()('test-fn-prop', {
   view: () => html`<p>x</p>`,
 });
 

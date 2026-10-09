@@ -12,7 +12,6 @@ const log = defineDriver<string, undefined>({ name: 'log', run: () => undefined 
 
 const Picker = define<{ readonly id: number }, Msg, object, Out>()('test-commands-picker', {
   init: () => ({ id: 0 }),
-  intent: {},
   update: {
     Pick: (s, m) => [
       { id: m.id },
