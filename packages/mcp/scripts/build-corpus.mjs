@@ -23,8 +23,8 @@ const ENTRIES = [
   ['http', ['.', './testing']],
   ['router', ['.']],
   ['time', ['.', './delay']],
-  ['ssr', ['.', './static']],
-  ['testing', ['.', './arbitraries']],
+  ['ssr', ['.', './static', './node']],
+  ['testing', ['.', './arbitraries', './vitest']],
   ['devtools', ['.']],
 ];
 
