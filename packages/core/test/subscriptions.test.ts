@@ -95,7 +95,7 @@ const Plain = define<State, Msg>()('test-subs-plain', {
 });
 
 /** A parent rendering a Badge, for the nested cases. */
-const Panel = define<object, never>()('test-subs-panel', {
+const Panel = define<object>()('test-subs-panel', {
   init: () => ({}),
   view: () => html`<test-subs-badge></test-subs-badge>`,
 });
