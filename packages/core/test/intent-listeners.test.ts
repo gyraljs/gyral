@@ -1,5 +1,5 @@
 // A component root listens only for the events its intents can fire on (gyral-g1r.20,
-// view/05-element.md "Intent events"): the default triggers, spec.events, and the
+// view/05-element.md "Intent events"): the default triggers and the
 // `data-intent-on` values of the templates it renders (all intent events when one is bound).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -22,10 +22,9 @@ interface State {
 type Msg = { readonly _tag: 'Open' } | { readonly _tag: 'Hit'; readonly type: string };
 type View = (s: State, i: IntentNames<'Open' | 'Hit'>) => ChildValue;
 
-const component = (tag: string, view: View, events?: readonly string[]) =>
+const component = (tag: string, view: View) =>
   define<State, Msg>()(tag, {
     init: () => ({ open: false, on: 'keyup', log: [] }),
-    ...(events === undefined ? {} : { events }),
     intent: {
       Open: true,
       Hit: ({ event }) => ({ _tag: 'Hit', type: event.type }),
@@ -51,7 +50,6 @@ const Later = component(
               <p data-intent=${i.Hit} data-intent-on="focusin">x</p>`
           : nothing
       }`,
-  ['pointerup'],
 );
 
 const Bound = component(
@@ -93,7 +91,7 @@ describe('intent listeners (gyral-g1r.20)', () => {
 
   it('adds the events of a template when it first renders, and they fire', async () => {
     const el = await mount(Later);
-    expect(added).toEqual([...DEFAULT_EVENTS, 'pointerup']);
+    expect(added).toEqual([...DEFAULT_EVENTS]);
     (el as unknown as { send(m: Msg): void }).send({ _tag: 'Open' });
     await settled();
     const field = input(el);

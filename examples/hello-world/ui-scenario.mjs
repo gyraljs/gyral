@@ -1,3 +1,8 @@
 export default {
-  steps: [{ fill: { label: 'Name' }, value: 'Ada' }, { wait: 100 }],
+  steps: [
+    { fill: { label: 'First name' }, value: 'Ada' },
+    { fill: { label: 'Last name' }, value: 'Lovelace' },
+    { check: { label: 'Formal greeting' } },
+    { wait: 100 },
+  ],
 };

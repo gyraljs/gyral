@@ -60,8 +60,8 @@ describe('gyral MCP server over stdio', () => {
     expect((await call('get_api', { symbol: 'renderPage' })).text).toContain(
       "import { renderPage } from '@gyral/ssr';",
     );
-    expect((await call('list_examples')).text).toContain('**counter**');
-    expect((await call('get_example', { name: 'counter' })).text).toContain('src/counter.ts');
+    expect((await call('list_examples')).text).toContain('**hello-world**');
+    expect((await call('get_example', { name: 'hello-world' })).text).toContain('src/hello.ts');
     expect((await call('scaffold_component', { tag: 'todo-list', kind: 'basic' })).text).toContain(
       "define<State, Msg>()('todo-list'",
     );

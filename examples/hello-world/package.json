@@ -2,12 +2,15 @@
   "name": "@gyral-examples/hello-world",
   "private": true,
   "type": "module",
-  "description": "A name field echoed into a greeting as you type.",
+  "description": "Text inputs and a checkbox: a greeting derived from the model as you type.",
   "scripts": {
     "dev": "vite",
     "build": "vite build"
   },
   "dependencies": {
     "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
   }
 }

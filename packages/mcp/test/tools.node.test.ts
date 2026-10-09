@@ -121,16 +121,16 @@ describe('api', () => {
 
 describe('examples', () => {
   it('lists every example with a description', () => {
-    expect(corpus.examples.length).toBeGreaterThanOrEqual(20);
-    expect(listExamples(corpus.examples)).toContain('**counter**: Counter.');
+    expect(corpus.examples.length).toBeGreaterThanOrEqual(19);
+    expect(listExamples(corpus.examples)).toContain('**hello-world**: Hello world.');
   });
 
   it('returns the component source', () => {
-    const counter = findExample(corpus.examples, 'counter');
-    if (counter === undefined) throw new Error('expected the counter example');
-    expect(counter.components.map((f) => f.path)).toEqual(['src/counter.ts']);
-    expect(counter.otherFiles).toContain('src/main.ts');
-    expect(formatExample(counter)).toContain("define<State, Msg>()('gy-counter'");
+    const hello = findExample(corpus.examples, 'hello-world');
+    if (hello === undefined) throw new Error('expected the hello-world example');
+    expect(hello.components.map((f) => f.path)).toEqual(['src/hello.ts']);
+    expect(hello.otherFiles).toContain('src/main.ts');
+    expect(formatExample(hello)).toContain("define<State, Msg>()('gy-hello'");
   });
 });
 

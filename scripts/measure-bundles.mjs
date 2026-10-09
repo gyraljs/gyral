@@ -5,8 +5,8 @@
 //   pnpm size --json          → machine-readable output
 //   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json (all chunks
 //                               under "budgets", the initial chunk under "initial")
-//   pnpm size --client-only   → also build the selected examples client-only (rows "<name>
-//                               (clientOnly)", gyralVitePreset({ clientOnly: true }))
+//   pnpm size --client-only   → also build the server-rendered examples client-only (rows
+//                               "<name> (clientOnly)", gyralVitePreset({ clientOnly: true }))
 // Each example is built once with Vite in production mode and the Gyral preset (its template
 // compiler and the gyral-compiled condition, view/01-templates.md), all chunks concatenated:
 // budgets measure what apps built with the preset ship. The `initial` column is what a page
@@ -15,8 +15,9 @@
 // `gzip`; a client-only app never fetches the hydration chunk (view/07-hydration.md). The "view" row builds
 // scripts/size/view-entry.js (render, html, compiled, each, raw, nothing, defineHook) with the
 // `gyral-compiled` condition, so the runtime template preparer is left out; its budget is the
-// top-level "view" key. The rows in CLIENT_ONLY are always built client-only too (view/07
-// "Client-only builds"), with budgets of their own.
+// top-level "view" key. An example with no server (no `server/` directory) is built client-only
+// (gyralVitePreset({ clientOnly: true }), view/07 "Client-only builds"): that is how such an
+// app ships, without the hydration chunk it would never fetch (gyral-1zd.24).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
@@ -33,8 +34,6 @@ const args = process.argv.slice(2);
 const json = args.includes('--json');
 const check = args.includes('--check');
 const clientOnly = args.includes('--client-only');
-/** Examples whose client-only build is always measured and budgeted (gyral-c5d.11). */
-const CLIENT_ONLY = ['hello-world'];
 const CLIENT_ONLY_SUFFIX = ' (clientOnly)';
 const wanted = args.filter((a) => !a.startsWith('--'));
 const BUDGET_FILE = 'scripts/size-budget.json';
@@ -117,7 +116,9 @@ const examples = readdirSync('examples', { withFileTypes: true })
   .filter((e) => e.isDirectory() && (wanted.length === 0 || wanted.includes(e.name)))
   .map((e) => ({ name: e.name, root: resolve('examples', e.name) }))
   .map((e) => ({ ...e, entry: entryOf(e.root) }))
-  .filter((e) => e.entry !== undefined);
+  .filter((e) => e.entry !== undefined)
+  // No server: the app is client-only, and is measured the way it ships.
+  .map((e) => (existsSync(join(e.root, 'server')) ? e : { ...e, options: { clientOnly: true } }));
 
 const budgetFile = JSON.parse(readFileSync(BUDGET_FILE, 'utf8'));
 const budgets = { ...budgetFile.budgets, view: budgetFile.view };
@@ -125,7 +126,7 @@ const initialBudgets = budgetFile.initial;
 const VIEW_CONDITIONS = ['gyral-compiled', 'module', 'browser', 'production'];
 const targets = [...examples];
 for (const e of examples) {
-  if (clientOnly || CLIENT_ONLY.includes(e.name)) {
+  if (clientOnly && e.options === undefined) {
     targets.push({ ...e, name: e.name + CLIENT_ONLY_SUFFIX, options: { clientOnly: true } });
   }
 }

@@ -129,36 +129,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
-  examples/bmi:
-    dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      valibot:
-        specifier: 1.5.0
-        version: 1.5.0(typescript@6.0.3)
-
   examples/bmi-nested:
-    dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-    devDependencies:
-      '@gyral/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
-
-  examples/checkbox:
-    dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-    devDependencies:
-      '@gyral/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
-
-  examples/counter:
     dependencies:
       '@gyral/core':
         specifier: workspace:*
@@ -197,7 +168,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
-  examples/hello-lastname:
+  examples/hello-world:
     dependencies:
       '@gyral/core':
         specifier: workspace:*
@@ -206,12 +177,6 @@ importers:
       '@gyral/testing':
         specifier: workspace:*
         version: link:../../packages/testing
-
-  examples/hello-world:
-    dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../../packages/core
 
   examples/http-random-user:
     dependencies:

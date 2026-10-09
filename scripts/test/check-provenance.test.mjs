@@ -16,7 +16,7 @@ describe('check-provenance (ADR 0018 clean room)', () => {
       'packages/create-gyral/templates/ssr/src/counter.ts',
       'packages/core/package.json',
       'packages/core/README.md',
-      'examples/counter/src/counter.ts',
+      'examples/hello-world/src/hello.ts',
       'examples/isomorphic/server/app.ts',
       'scripts/smoke-prod.mjs',
       'scripts/test/eslint-guardrails.test.mjs',

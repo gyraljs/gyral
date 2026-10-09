@@ -106,8 +106,9 @@ untouched):
   10-20 B gzip in every app).
 
 Tested in `core/test/client-only.client-only.test.ts` (the `browser-client-only` Vitest project)
-and `core/test/compiler/client-only.node.test.ts` (builds); `pnpm size` measures
-`hello-world (clientOnly)` with a budget of its own (`--client-only` adds the other examples).
+and `core/test/compiler/client-only.node.test.ts` (builds); `pnpm size` builds every
+example without a server client-only, the way such an app ships (gyral-1zd.24; `--client-only`
+adds client-only rows for the server-rendered ones).
 
 ## Each component hydrates on its own
 

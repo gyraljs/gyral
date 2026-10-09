@@ -80,7 +80,7 @@ pnpm install
 pnpm exec playwright install chromium
 pnpm check                                   # the full gate
 pnpm examples                                # run every example; index at http://localhost:5100
-pnpm --filter @gyral-examples/counter dev    # run an example
+pnpm --filter @gyral-examples/hello-world dev    # run an example
 pnpm ci:local                                # run CI locally (Docker + gh act)
 ```
 
