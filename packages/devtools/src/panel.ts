@@ -1,6 +1,7 @@
 // <gyral-devtools>: the in-page panel (ADR 0017). A Gyral component itself; install.ts filters
 // its own events out of the stream so it never watches itself.
-import { define, devtoolsEnabled, each, html, nothing, prop } from '@gyral/core';
+import { define, each, html, nothing, prop } from '@gyral/core';
+import { devtoolsEnabled } from '@gyral/core/internal';
 import {
   componentLabel,
   initialPanel,

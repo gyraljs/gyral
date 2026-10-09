@@ -3,7 +3,7 @@
 // Static over the module, so intents rendered conditionally count as used; components whose
 // intent names may be used in another module are skipped.
 import { describe } from 'vitest';
-import { unusedIntentRule } from '../../src/eslint/index.js';
+import { unusedIntentRule } from '../../src/eslint/unused-intent-rule.js';
 import { tester, tsTester } from './helpers.js';
 
 const IMPORT = "import { define, html, intentsOf, each } from '@gyral/core';\n";

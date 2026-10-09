@@ -1,13 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  define,
-  findInScope,
-  html,
-  labelledBy,
-  prop,
-  settled,
-  type Stateless,
-} from '../src/index.js';
+import { define, html, labelledBy, prop, settled, type Stateless } from '../src/index.js';
+import { findInScope } from '../src/hooks/labelled-by.js';
 
 interface Props {
   readonly target: string;

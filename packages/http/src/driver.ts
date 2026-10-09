@@ -1,4 +1,5 @@
-import { devtoolsEnabled as DEV, type Concurrency, type Driver } from '@gyral/core';
+import { type Concurrency, type Driver } from '@gyral/core';
+import { devtoolsEnabled as DEV } from '@gyral/core/internal';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

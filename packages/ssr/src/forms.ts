@@ -1,13 +1,12 @@
 // Forms without JavaScript: the server half of ADR 0008. The same `defineForm` schema and the
 // same `validateForm` as the client's `form()` intent, so both paths reject identically.
 import {
-  formDataToObject,
-  formFields,
   validateForm,
   type FieldIssue,
   type FormDefinition,
   type IntentRejected,
 } from '@gyral/core';
+import { formDataToObject, formFields } from '@gyral/core/internal';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 /** A server-side rejection of a schema-valid submission (see `rejectWith`). */

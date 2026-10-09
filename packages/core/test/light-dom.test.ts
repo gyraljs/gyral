@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { css, define, html, isLightComponent, settled } from '../src/index.js';
+import { css, define, html, settled } from '../src/index.js';
+import { isLightComponent } from '../src/light-dom.js';
 
 type Msg = { readonly _tag: 'Hit' };
 interface State {

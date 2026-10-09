@@ -3,7 +3,7 @@
 // about. Expected messages come from normalize() itself, so they can't drift apart.
 import { RuleTester } from 'eslint';
 import { describe } from 'vitest';
-import { templateRule } from '../../src/eslint/index.js';
+import { templateRule } from '../../src/eslint/template-rule.js';
 import { runtimeMessage, spanOf, tester, tsTester } from './helpers.js';
 
 const IMPORT = "import { html } from '@gyral/core';\n";

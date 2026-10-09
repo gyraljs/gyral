@@ -5,8 +5,8 @@ import type { Command } from '@gyral/core';
 import { time, type Frame } from './driver.js';
 import { timer, type Lane } from './timer.js';
 
-export { makeTime, time } from './driver.js';
-export type { Frame, TimeDriver, TimeInput, TimeOptions, TimeOutput } from './driver.js';
+export { time } from './driver.js';
+export type { Frame, TimeDriver, TimeInput, TimeOutput } from './driver.js';
 export type { Lane } from './timer.js';
 
 /** Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`). */

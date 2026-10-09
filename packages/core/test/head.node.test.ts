@@ -1,6 +1,7 @@
 // ADR 0019 "Keys, dedupe and order": the pure normalizer both halves of the head model share.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { headEntries, type Head, type HeadLink, type HeadMeta } from '../src/index.js';
+import { type Head, type HeadLink, type HeadMeta } from '../src/index.js';
+import { headEntries } from '../src/internal.js';
 
 const keys = (head: Head) => headEntries(head).map((e) => e.key);
 

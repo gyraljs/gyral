@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, defineStore, html, send, settled, StoreRegistry } from '../src/index.js';
+import { define, defineStore, html, send, settled } from '../src/index.js';
+import { StoreRegistry } from '../src/server.js';
 
 interface Log {
   readonly events: readonly string[];

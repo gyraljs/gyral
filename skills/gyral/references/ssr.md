@@ -428,7 +428,9 @@ components.md.
 
 Create store instances **per request** and pass them to `renderPage({ stores })`; the page
 carries one store seed the client restores before components hydrate. Give stores a `schema`
-to validate that seed in the browser.
+to validate that seed in the browser. To give part of a page its own instances, wrap it in a
+`<gyral-stores>` element (`STORES_ELEMENT` is its tag name); the server renders it with its
+own seed.
 
 ## Preloads under a service worker
 

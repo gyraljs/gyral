@@ -81,6 +81,8 @@ describe('search model', () => {
   `'@gyral/emit'`: they are core internals.
 - Stores: `stepStore(store, state, msg)`, `testStore(store, initial?)` (an instance to pass in
   `stores`), `sentTo(commands, store)` (messages a reducer sends to a store).
+- Calling a parser directly: parsers take `(input, ctx)`. Build the `ctx` with
+  `{ props, read: readerOf(stores) }`; `readerOf([])` when the component reads no stores.
 - Pure update functions make property tests easy: `@gyral/testing/arbitraries` builds
   fast-check arbitraries.
 

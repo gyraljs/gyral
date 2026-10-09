@@ -2,21 +2,23 @@
 // `server` template written with core's `html`, never hydrated. The page-level store seed
 // (ADR 0013) and global styles go into its head as `raw()` markup.
 import {
-  HEAD_ATTRIBUTE,
-  headEntries,
   html,
   nothing,
   raw,
-  scriptSafeJson,
-  STORE_SEED_ATTRIBUTE,
-  StoreRegistry,
-  warnJsonHazard,
   type AnyStoreInstance,
   type ChildValue,
   type GyralError,
   type Head,
-  type HeadEntry,
 } from '@gyral/core';
+import { StoreRegistry } from '@gyral/core/server';
+import {
+  HEAD_ATTRIBUTE,
+  headEntries,
+  scriptSafeJson,
+  STORE_SEED_ATTRIBUTE,
+  warnJsonHazard,
+  type HeadEntry,
+} from '@gyral/core/internal';
 import type { CspOptions } from './csp.js';
 
 export interface RenderOptions {

@@ -210,8 +210,8 @@ use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval
 
 **Delay-only apps (gyral-c5d.15, 0.3.1):** the driver is one `switch` over its inputs, so
 `delay` alone bundles `periodic` and `animationFrames` too. `@gyral/time/delay` exports `delay`
-and `debounce` with the same signatures and lanes over a delay-only driver (`delayTime`,
-`makeDelayTime()`), also named `time` and taking the same input, so substitution, `inputsFor`
+and `debounce` with the same signatures and lanes over a delay-only driver (`delayTime`;
+the `makeTime`/`makeDelayTime` factories are internal since 0.3.1), also named `time` and taking the same input, so substitution, `inputsFor`
 and virtual time work unchanged and either driver can stand in for the other. About 0.15 KiB
 gzip less (the delay-only examples, measured). The main entry is unchanged.
 

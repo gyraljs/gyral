@@ -3,7 +3,8 @@
 // attributes, text and position already match is not touched, so the first navigation after
 // hydration adopts the server's elements and writes nothing. Bundled only by apps that call
 // setHead(), which puts `applyHead` in internal/head-slot.ts.
-import { HEAD_ATTRIBUTE, headEntries, type Head, type HeadEntry } from '@gyral/core';
+import { type Head } from '@gyral/core';
+import { HEAD_ATTRIBUTE, headEntries, type HeadEntry } from '@gyral/core/internal';
 
 let warned = false;
 

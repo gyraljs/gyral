@@ -1,13 +1,6 @@
 // Testing helpers for stores (Gyral ADR 0013).
-import {
-  STORE_SEND,
-  type Command,
-  type Next,
-  type Store,
-  type StoreInstance,
-  type StoreSendInput,
-  type Tagged,
-} from '@gyral/core';
+import { type Command, type Next, type Store, type StoreInstance, type Tagged } from '@gyral/core';
+import { STORE_SEND, type StoreSendInput } from '@gyral/core/internal';
 import { normalise, type Stepped } from './step.js';
 
 /**

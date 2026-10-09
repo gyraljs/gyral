@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
-import { intentRejectedSchema, redirectedTo, type IntentRejected } from '../src/index.js';
+import { redirectedTo, type IntentRejected } from '../src/index.js';
+import { intentRejectedSchema } from '../src/internal.js';
 
 const validate = (value: unknown) => intentRejectedSchema['~standard'].validate(value);
 
