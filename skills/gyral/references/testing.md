@@ -153,10 +153,10 @@ it('loads the user when clicked', async () => {
   or `fakeDriver`, is assignable to `AnyDriver`. Never write `as AnyDriver`. Type a driver map
   as `DriverOverrides` (or `Record<string, AnyDriver>`), not
   `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
-- Removing an element interrupts its commands **synchronously**: right after `el.remove()`,
-  every running call's `signal.aborted` is `true` and its `abort` listeners have run; assert
-  without yielding. Only cleanup a driver runs after an `await` needs a yield
-  (`await Promise.resolve()`).
+- Removing an element stops its commands **one microtask later** (a move in the same task keeps
+  them): after `el.remove(); await Promise.resolve();` every running call's `signal.aborted`
+  is `true` and its `abort` listeners have run. Test reconnects by removing, awaiting a turn and
+  appending again: the component gets `Connected { reconnect: true }`.
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
   fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
   `reply(status, body)`, `failNext()`.
