@@ -53,8 +53,8 @@ export class HostModel<S, P> implements LocalHost {
   #interpreter: Interpreter<Tagged | IntentRejected> | undefined;
   /** Commands kept while disconnected (init's, before the first connect); undefined once connected. */
   #pending: Cmd[] | undefined = [];
-  /** The scheduled stop of a disconnected host's commands; cleared by a reconnect (a move). */
-  #stopping: object | undefined;
+  /** Connected to the document (a pending stop checks it, so a move cancels the stop). */
+  #on = false;
   /** Commands were stopped while detached: the next connect sends `Connected`. */
   #stopped = false;
 
@@ -163,7 +163,7 @@ export class HostModel<S, P> implements LocalHost {
    * "Lifecycle"). Returns true if store instances were bound.
    */
   connect(): boolean {
-    this.#stopping = undefined; // a move: the commands never stopped
+    this.#on = true; // a move: the pending stop finds the host connected and does nothing
     // The nearest <gyral-stores> may differ after a move.
     const rebound = (this.#spec.stores?.length ?? 0) > 0 && this.stores().connect();
     const pending = this.#pending ?? [];
@@ -185,11 +185,9 @@ export class HostModel<S, P> implements LocalHost {
   disconnect(): void {
     this.#binding?.disconnect();
     this.#pending ??= [];
-    const token = {};
-    this.#stopping = token;
+    this.#on = false;
     queueMicrotask(() => {
-      if (this.#stopping !== token) return;
-      this.#stopping = undefined;
+      if (this.#on) return;
       this.#interpreter?.dispose();
       this.#interpreter = undefined;
       this.#stopped = true;
