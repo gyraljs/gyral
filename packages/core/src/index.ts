@@ -41,9 +41,9 @@ export type {
 } from './store.js';
 export { STORE_SEND } from './store.js';
 // Store scoping: used by @gyral/ssr (server scope + page seed) and @gyral/testing.
+export { scriptSafeJson } from './script-json.js';
 export {
   resetDocumentStores,
-  scriptSafeJson,
   STORE_SEED_ATTRIBUTE,
   StoreRegistry,
   STORES_ELEMENT,

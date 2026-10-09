@@ -73,16 +73,6 @@ export function withStoreScope<T>(registry: StoreRegistry, fn: () => T): T {
   }
 }
 
-/** JSON for an inline `<script type="application/json">`: `</script>` and friends escaped. */
-export function scriptSafeJson(value: unknown): string {
-  return JSON.stringify(value)
-    .replaceAll('<', '\\u003c')
-    .replaceAll('>', '\\u003e')
-    .replaceAll('&', '\\u0026')
-    .replaceAll(' ', '\\u2028')
-    .replaceAll(' ', '\\u2029');
-}
-
 let documentRegistry: StoreRegistry | undefined;
 
 function parseSeeds(

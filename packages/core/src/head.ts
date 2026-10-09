@@ -2,7 +2,7 @@
 // server's page shell (@gyral/ssr `page()`) and the router's `setHead()`. Types and a pure
 // normalizer only, no DOM, so both halves agree on keys, order and duplicates.
 import { DEV } from '#view-dev';
-import { scriptSafeJson } from './store-scope.js';
+import { scriptSafeJson } from './script-json.js';
 
 /** A JSON value: what a JSON-LD block holds. */
 export type JsonValue =
