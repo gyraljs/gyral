@@ -22,7 +22,15 @@ import { children, nodeAt, nodesAt, type Node } from './ast.js';
 
 /** Optional machinery the build adds when a module may use it. */
 export type Feature =
-  'invokers' | 'transitions' | 'frame' | 'states' | 'subscriptions' | 'dialogs' | 'disposal';
+  | 'invokers'
+  | 'transitions'
+  | 'frame'
+  | 'states'
+  | 'subscriptions'
+  | 'dialogs'
+  | 'disposal'
+  | 'errorView'
+  | 'errored';
 
 /** The spec field each spec-field feature is reached through (04, 05). */
 export const FIELDS = {
@@ -31,6 +39,8 @@ export const FIELDS = {
   states: 'states',
   subscriptions: 'subscriptions',
   disposal: 'dispose',
+  errorView: 'error',
+  errored: 'Errored',
 } as const satisfies Readonly<Record<Exclude<Feature, 'invokers' | 'dialogs'>, string>>;
 
 /** Markup that binds the dialog or popover state (`?modal=`, `?popover-open=`, view/02). */

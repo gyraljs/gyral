@@ -131,4 +131,20 @@ describe('facts: where raw may come from', () => {
       );
     });
   });
+
+  describe('features reached by a key or a message name (gyral-1zd.24, gyral-1zd.17)', () => {
+    it('counts a hook spec that names dispose', () => {
+      expect(uses('defineHook({ client() {}, dispose() {} });', 'disposal')).toBe(true);
+      expect(uses('defineHook({ client() {} });', 'disposal')).toBe(false);
+    });
+    it('counts an error view and an Errored reducer', () => {
+      expect(uses('define()("x", { view, error: () => html`oops` });', 'errorView')).toBe(true);
+      expect(uses('const update = { Errored: (s) => s };', 'errored')).toBe(true);
+      expect(uses('const update = { Saved: (s) => s };', 'errored')).toBe(false);
+    });
+    it("doesn't count the words in comments", () => {
+      expect(uses('// dispose, error, Errored\nexport const x = 1;', 'disposal')).toBe(false);
+      expect(uses('// Errored\nexport const x = 1;', 'errored')).toBe(false);
+    });
+  });
 });

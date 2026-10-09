@@ -37,6 +37,8 @@ const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
   subscriptions: /\bsubscriptions\b/,
   dialogs: /\?(?:modal|popover-open)\s*=/i,
   disposal: /\bdispose\b/,
+  errorView: /\berror\b/,
+  errored: /\bErrored\b/,
 };
 
 /** Each feature's registration module in core (`src/<name>.ts`, published as `dist/<name>.js`). */
@@ -48,6 +50,8 @@ const REGISTRATION: Readonly<Record<Feature, string>> = {
   subscriptions: 'use-subscriptions',
   dialogs: 'use-dialogs',
   disposal: 'use-disposal',
+  errorView: 'use-error-view',
+  errored: 'use-errored',
 };
 
 /**
@@ -62,6 +66,8 @@ export const FEATURE_HINTS: Readonly<Record<Feature, RegExp>> = {
   subscriptions: /subscriptions/,
   dialogs: /modal|popover-open/i,
   disposal: /dispose/,
+  errorView: /error/,
+  errored: /Errored/,
 };
 
 const PREFIX = 'virtual:gyral-use/';

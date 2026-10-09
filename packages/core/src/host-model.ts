@@ -18,7 +18,7 @@ import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
 import { noteActivity, requestTransition } from './scheduler.js';
-import { subscriptions as subscriptionSet } from '#spec-features';
+import { errored, subscriptions as subscriptionSet } from '#spec-features';
 import type { Subscriptions } from './subscriptions.js';
 import type { AnyStore } from './store.js';
 import type { ComponentSpec, Ctx, IntentRejected, ParserCtx, Tagged } from './types.js';
@@ -127,14 +127,10 @@ export class HostModel<S, P> implements LocalHost {
    */
   fail(cause: unknown, phase: ErrorPhase, text: string, msg?: string): GyralError {
     const error = fail(cause, phase, text, { host: this.el, tag: this.tag, msg });
-    if (
-      !this.#erroring &&
-      (phase === 'update' || phase === 'parse' || phase === 'command') &&
-      this.#reducers['Errored'] !== undefined
-    ) {
+    if (!this.#erroring && errored !== undefined && this.#reducers['Errored'] !== undefined) {
       this.#erroring = true;
       try {
-        this.dispatch({ _tag: 'Errored', phase, error } as Tagged);
+        errored((msg) => this.dispatch(msg), phase, error);
       } finally {
         this.#erroring = false;
       }

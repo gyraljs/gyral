@@ -287,9 +287,13 @@ reports instead of throwing, a driver failure without `onFailure` is an error, a
   8.5 → 9.2 KiB initial; hello-world 8.6 → 9.3, above ADR 0018's 9.0 KiB target), more than the
   +0.2–0.3 estimated above: the catches, `fail()`, `GyralError` and the event, the init/view
   fallback and the `Errored` dispatch are all in every app. The budgets were raised with that
-  reason. Follow-up: registering `spec.error` and `Errored` as spec-field features (view/05
-  "Features register themselves") would leave them out of apps that don't name them, an
-  estimated 0.15–0.2 KiB.
+  reason. Follow-up done (gyral-1zd.17, owner decision R1): `spec.error` and `Errored` register
+  as spec-field features (view/05 "Features register themselves", `error-view.ts`,
+  `use-error-view.ts`, `use-errored.ts`), so a compiled build bundles the fallback view only
+  when a module names `error` and the `Errored` dispatch only when one names `Errored`.
+  Measured: 77 to 102 B gzip less per app that names neither (counter −81 B, register −96 B);
+  apps that name `error` anywhere (an HTTP error, say) keep the fallback code. The channel
+  itself (`fail()`, `GyralError`, the boundary event) stays in every app.
 - **Tests:** `packages/core/test/errors-cases.ts` and `errors-cases-more.ts` (run by `errors.test.ts`
   and `errors.prod.test.ts`), `errors-hydration.test.ts`, `packages/ssr/test/errors.node.test.ts`,
   `packages/testing/test/errors.test.ts`, and the devtools model test.

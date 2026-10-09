@@ -27,7 +27,7 @@ import {
   POST_STATES,
   type HostTask,
 } from './scheduler.js';
-import { checkSpecFeatures, customStates } from '#spec-features';
+import { checkSpecFeatures, customStates, errorView } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
 import {
@@ -38,7 +38,6 @@ import {
   render,
   sheetsFor,
   suspendHooks,
-  type ChildValue,
   type Markup,
 } from './view/index.js';
 
@@ -324,16 +323,10 @@ export function elementClass<S, M extends Tagged, P>(
      * throws too is reported and changes nothing.
      */
     #fallback(root: ShadowRoot | HTMLElement, error: GyralError, state: S | undefined): void {
-      if (spec.error === undefined) return;
-      try {
-        const view: ChildValue = spec.error(error, state);
-        if (this.#hydrating) {
-          this.#hydrating = false;
-          root.replaceChildren();
-        }
-        render(view, root, this.#seen);
-      } catch (cause) {
-        fail(cause, 'view', message(31, tag), { host: this, tag });
+      if (spec.error === undefined || errorView === undefined) return;
+      const view = (failure: GyralError, at: never): unknown => spec.error?.(failure, at);
+      if (errorView(view, root, error, state, this.#hydrating, this.#seen, this, tag)) {
+        this.#hydrating = false;
       }
     }
 

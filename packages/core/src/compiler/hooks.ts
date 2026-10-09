@@ -100,7 +100,16 @@ const CANT_FOLLOW =
 export function createCompiler(settings: CompilerSettings): CompilerHooks {
   const { sources } = settings;
   const features = createFeatures(
-    ['transitions', 'frame', 'states', 'subscriptions', 'dialogs', 'disposal'],
+    [
+      'transitions',
+      'frame',
+      'states',
+      'subscriptions',
+      'dialogs',
+      'disposal',
+      'errorView',
+      'errored',
+    ],
     settings.ownEntry,
   );
   /** Per environment (client, ssr, …): Vite may build them with one plugin instance. */

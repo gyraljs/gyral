@@ -273,6 +273,14 @@ A false positive only bundles the feature. Saves about 0.27 KiB gzip in apps tha
 the three. Client-only builds use the same mechanism for the invoker-command fallback (07
 "Client-only builds").
 
+**Keys and message names (gyral-1zd.24, gyral-1zd.17, 0.3.1).** Three more pieces register
+the same way, counted by a name a module writes: hook disposal (`dispose`, a key of
+`defineHook`'s spec: `use-disposal.ts`), the error fallback view (`error`, a spec field:
+`use-error-view.ts`) and the `Errored` framework message (`Errored`, a reducer key:
+`use-errored.ts`). An unfilled slot degrades without failing: a hook's `dispose` never runs, a
+failure leaves the root as it was, no `Errored` is sent; development builds warn for the first
+two. The error view and `Errored` save about 80-100 B gzip in apps that name neither.
+
 **Markup bindings (gyral-1zd.27, 0.3.1).** The dialog and popover bindings (`?modal`,
 `?popover-open`, 02 "Dialogs and popovers") are reached through template markup, so the scan
 counts a module whose template text binds `?modal=` or `?popover-open=`, and adds

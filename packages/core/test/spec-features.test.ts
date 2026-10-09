@@ -15,6 +15,20 @@ describe('#spec-features', () => {
     expect(full.viewTransitions).toBeTypeOf('function');
     expect(full.frameLane).toBeTypeOf('object');
     expect(full.customStates).toBeTypeOf('function');
+    expect(full.errorView).toBeTypeOf('function');
+    expect(full.errored).toBeTypeOf('function');
+  });
+
+  it('leaves the error view and Errored out of compiled builds until a module names them', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(used.errorView).toBeUndefined();
+    expect(used.errored).toBeUndefined();
+    used.checkSpecFeatures('x-card', { error: () => 'oops' });
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/<x-card> declares error/);
+    used.useErrorView(full.errorView ?? (() => false));
+    used.useErrored(full.errored ?? (() => undefined));
+    expect(used.errorView).toBe(full.errorView);
+    expect(used.errored).toBe(full.errored);
   });
 
   it('starts empty in compiled builds and warns in development about unfilled fields', () => {

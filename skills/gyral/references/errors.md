@@ -11,7 +11,8 @@ driver) and `cause` (what was thrown). The channel, in order:
 2. a bubbling, composed, cancelable `ErrorEvent('error')` is dispatched on the failing host, so
    an ancestor can catch it (a **boundary**) and claim it with `preventDefault()`;
 3. the component's own fallback runs: `spec.error` for `init`/view failures, the optional
-   `Errored` reducer for update, parse and command failures;
+   `Errored` reducer for update, parse and command failures (with the Vite preset each is
+   bundled only when your source names `error` or `Errored`);
 4. unless claimed, `reportError(error)`: `window`'s `error` event and monitoring tools see it.
 
 | Phase       | What threw                                                                 | What happens                                                                             |

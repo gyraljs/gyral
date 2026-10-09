@@ -11,6 +11,8 @@ export let viewTransitions: typeof Full.viewTransitions;
 export let frameLane: typeof Full.frameLane;
 export let customStates: typeof Full.customStates;
 export let subscriptions: typeof Full.subscriptions;
+export let errorView: typeof Full.errorView;
+export let errored: typeof Full.errored;
 
 export const useViewTransitions = ((run) => {
   viewTransitions = run;
@@ -24,6 +26,12 @@ export const useCustomStates = ((sync) => {
 export const useSubscriptions = ((make) => {
   subscriptions = make;
 }) satisfies typeof Full.useSubscriptions;
+export const useErrorView = ((view) => {
+  errorView = view;
+}) satisfies typeof Full.useErrorView;
+export const useErrored = ((send) => {
+  errored = send;
+}) satisfies typeof Full.useErrored;
 
 /** Development: a spec field whose machinery the build left out (define(), element.ts). */
 export const checkSpecFeatures = ((tag: string, spec: object): void => {
@@ -33,6 +41,7 @@ export const checkSpecFeatures = ((tag: string, spec: object): void => {
     renderOnFrame: frameLane,
     states: customStates,
     subscriptions,
+    error: errorView,
   };
   for (const [field, slot] of Object.entries(slots)) {
     if (!(field in spec) || slot !== undefined) continue;
