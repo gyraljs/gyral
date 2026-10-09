@@ -153,7 +153,7 @@ describe('a real Vite build with CSS', () => {
               page({
                 title: 't',
                 body: html`<p></p>`,
-                scripts: [clientEntry],
+                scripts: clientEntry === undefined ? [] : [clientEntry],
                 modulepreload,
                 stylesheets,
               }),

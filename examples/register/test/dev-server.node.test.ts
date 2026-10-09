@@ -1,15 +1,12 @@
 // gyral-abk: the dev server re-loads the app module per request; registered emails must
-// survive that, or the duplicate-email check never fires in dev.
+// survive that, or the duplicate-email check never fires in dev. gyralDevServer creates the
+// state once and hands it to every per-request app, as this does.
 import { expect, it } from 'vitest';
-import { devFetch } from '../../shared/dev-fetch.js';
-import * as appModule from '../server/app.js';
+import { createApp, createState } from '../server/app.js';
 
-const handle = devFetch(
-  // Stands in for vite.ssrLoadModule; every request still builds a new app from the module.
-  () => Promise.resolve(appModule),
-  (mod) => mod.createState(),
-  (mod, state) => mod.createApp({ clientEntry: '/src/entry-client.ts', state }),
-);
+const state = createState();
+// Every request builds a new app, as the dev server does after a reload.
+const handle = (request: Request) => createApp({ state }).fetch(request);
 
 const register = () =>
   handle(

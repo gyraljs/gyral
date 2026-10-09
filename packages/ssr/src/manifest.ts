@@ -3,6 +3,8 @@
 // entry, the modules to preload with it and the stylesheets to link. Exported from
 // `@gyral/ssr/static`.
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import type { ComponentAssets, ComponentModule } from './components.js';
 
 /** One chunk of Vite's `.vite/manifest.json` (the fields serving uses). */
 export interface ManifestChunk {
@@ -143,4 +145,62 @@ export async function clientAssetsFromManifest(
   const manifest = await readManifest(manifestPath);
   entryChunk(manifest, entry, manifestPath);
   return clientAssets(manifest, entry, also, options);
+}
+
+/** What the Vite preset (`components: true`) writes next to the manifest. */
+interface ComponentsManifest {
+  /** The loader chunk (its file, as in the Vite manifest). */
+  readonly loader: string;
+  /** The loader's static imports (files). */
+  readonly loaderImports?: readonly string[];
+  /** Tag → the Vite manifest key of the module that defines it. */
+  readonly modules: Readonly<Record<string, string>>;
+}
+
+/** The file the preset writes, next to `.vite/manifest.json`. */
+export const COMPONENTS_MANIFEST = 'gyral-components.json';
+
+/**
+ * `renderPage({ components })` for a production build made with
+ * `gyralVitePreset({ components: true })`, from the manifests in memory: each tag's module with
+ * its imports, Gyral's hydration chunk and its CSS, and the loader.
+ */
+export function componentAssets(
+  manifest: ViteManifest,
+  components: ComponentsManifest,
+  options: ManifestOptions = {},
+): ComponentAssets {
+  const base = basePath(options.base);
+  const modules = new Map<string, ComponentModule>();
+  for (const [tag, key] of Object.entries(components.modules)) {
+    const assets = clientAssets(manifest, key, [], options);
+    modules.set(tag, {
+      preload: assets.modulepreload.length === 0 ? [assets.entry] : assets.modulepreload,
+      stylesheets: assets.css,
+    });
+  }
+  return {
+    loader: base + components.loader,
+    modules,
+    preload: (components.loaderImports ?? []).map((file) => base + file),
+  };
+}
+
+/**
+ * `componentAssets` read from a client build directory (`dist/client`): its
+ * `.vite/manifest.json` and the preset's `.vite/gyral-components.json`. Undefined when the
+ * build wasn't made with `components: true`.
+ */
+export async function componentsFromManifest(
+  clientDir: string,
+  options: ManifestOptions = {},
+): Promise<ComponentAssets | undefined> {
+  let text: string;
+  try {
+    text = await readFile(join(clientDir, '.vite', COMPONENTS_MANIFEST), 'utf8');
+  } catch {
+    return undefined;
+  }
+  const manifest = await readManifest(join(clientDir, '.vite', 'manifest.json'));
+  return componentAssets(manifest, JSON.parse(text) as ComponentsManifest, options);
 }

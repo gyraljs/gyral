@@ -19,6 +19,7 @@ import {
   warnJsonHazard,
   type HeadEntry,
 } from '@gyral/core/internal';
+import { attr, COMPONENTS_MARK, type ComponentAssets } from './components.js';
 import type { CspOptions } from './csp.js';
 
 export interface RenderOptions {
@@ -40,6 +41,12 @@ export interface RenderOptions {
    * first, so it throws before any byte is sent and the route can answer with an error page.
    */
   readonly onError?: ((error: GyralError) => void) | 'throw';
+  /**
+   * Automatic component loading: the page links the client modules of exactly the components
+   * it rendered (their preload links and the loader), after the body, and nothing when it
+   * rendered none. `productionServer` and `gyralDevServer` hand it to `createApp`.
+   */
+  readonly components?: ComponentAssets;
 }
 
 /**
@@ -110,9 +117,6 @@ export function documentStyles(styles: string | readonly string[] | undefined): 
   return raw(sheets.map((css) => `<style>${styleSafe(css)}</style>`).join(''));
 }
 
-const attr = (value: string): string =>
-  value.replace(/[&"<>]/g, (c) => `&#${String(c.charCodeAt(0))};`);
-
 /** The managed head elements (ADR 0019), each marked with its key. JSON-LD is script-safe. */
 export function headMarkup(entries: readonly HeadEntry[]): ChildValue {
   if (entries.length === 0) return nothing;
@@ -147,7 +151,7 @@ export function page(options: PageOptions): ChildValue {
         ]}
       </head>
       <body>
-        ${body}
+        ${body}${options.components === undefined ? nothing : raw(COMPONENTS_MARK)}
       </body>
     </html>`;
 }

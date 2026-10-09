@@ -2,19 +2,20 @@ import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html, nothing } from '@gyral/core';
 import type { IntentRejected } from '@gyral/core';
-import { formAction, rejectWith, renderPage, seeOther } from '@gyral/ssr';
+import { formAction, rejectWith, renderPage, seeOther, type ComponentAssets } from '@gyral/ssr';
 import '../src/register.js'; // registers <gy-register> so the server can render it
 import { RegisterForm } from '../src/schema.js';
 
 export interface AppOptions {
-  /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
-  readonly clientEntry: string;
-  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
-  readonly modulepreload?: readonly string[];
+  /**
+   * The components' client modules (dev: from gyralDevServer; prod: from productionServer):
+   * each page loads exactly the components it rendered. Tests leave it out.
+   */
+  readonly components?: ComponentAssets | undefined;
   /**
    * Registered accounts. The dev server re-creates the app on every request (to follow source
-   * edits), so it creates this once with createState() and passes it in (examples/shared/
-   * dev-fetch.ts); otherwise each app starts its own.
+   * edits), so it creates this once with createState() and passes it in (gyralDevServer's
+   * `state`); otherwise each app starts its own.
    */
   readonly state?: RegisterState;
 }
@@ -57,8 +58,7 @@ function view(options: AppOptions, { welcome, rejected }: View, status = 200): R
           .initialMessages=${rejected === undefined ? [] : [rejected]}
         ></gy-register>
       </main>`,
-      scripts: [options.clientEntry],
-      modulepreload: options.modulepreload ?? [],
+      ...(options.components === undefined ? {} : { components: options.components }),
     },
     { status },
   );

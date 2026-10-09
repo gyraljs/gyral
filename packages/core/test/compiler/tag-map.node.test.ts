@@ -4,10 +4,10 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { tagMapSource, tagsIn, writeTagMap } from '../../src/compiler/tag-map.js';
+import { componentsIn, tagMapSource, writeTagMap } from '../../src/compiler/tag-map.js';
 
-describe('tagsIn', () => {
-  it('finds exported two-call define() components, with or without type arguments', () => {
+describe('componentsIn', () => {
+  it('finds two-call define() components, exported or not, with or without type arguments', () => {
     const code = [
       "export const Counter = define<State, Msg>()('app-counter', {",
       'export const Badge = define()("x-badge", {',
@@ -16,10 +16,12 @@ describe('tagsIn', () => {
       "customElements.define('plain-el', PlainEl);",
       "export const Old = define<S, M>('one-call', {",
     ].join('\n');
-    expect(tagsIn(code, '/app/src/a.ts')).toEqual([
+    expect(componentsIn(code, '/app/src/a.ts')).toEqual([
       { tag: 'app-counter', name: 'Counter', file: '/app/src/a.ts' },
       { tag: 'x-badge', name: 'Badge', file: '/app/src/a.ts' },
       { tag: 'my-table', name: 'Table', file: '/app/src/a.ts' },
+      // Not exported: discovered (component loading needs it) but without a name (no typing).
+      { tag: 'not-exported', name: undefined, file: '/app/src/a.ts' },
     ]);
   });
 });

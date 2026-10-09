@@ -10,12 +10,14 @@ import {
   renderToString as renderString,
   type StyleValues,
 } from '@gyral/core/server';
+import { COMPONENTS_MARK, componentTail } from './components.js';
 import { checkPolicy, policyAtRender, policyWithAttributes } from './csp.js';
 import { page, type PageOptions, type RenderOptions } from './page.js';
 
 export { page, type PageOptions, type RenderOptions } from './page.js';
+export type { ComponentAssets, ComponentModule } from './components.js';
 export { contentSecurityPolicy, type CspDirectives, type CspOptions } from './csp.js';
-export { formAction, rejectWith, seeOther } from './forms.js';
+export { formAction, rejectWith, seeOther, wantsJson } from './forms.js';
 export type { FormActionHandlers, FormReject } from './forms.js';
 
 const rethrow = (error: unknown): never => {
@@ -31,13 +33,39 @@ const coreOptions = ({ dev, onError }: RenderOptions) => ({
 });
 
 /**
+ * With `components`: the set core fills with the rendered tags, and the function that puts
+ * their tail in place of the page's mark (the mark comes after the body, so every tag is known
+ * by then).
+ */
+function componentsOf(options: RenderOptions) {
+  const { components } = options;
+  if (components === undefined) return undefined;
+  const tags = new Set<string>();
+  const dev = options.dev ?? development;
+  return {
+    tags,
+    fill: (chunk: string): string =>
+      chunk.includes(COMPONENTS_MARK)
+        ? chunk.replace(COMPONENTS_MARK, () => componentTail(components, tags, dev))
+        : chunk,
+  };
+}
+
+/**
  * Renders to a complete string (tests, caching, static generation), with this request's stores
  * in scope (ADR 0013).
  */
 export function renderToString(value: ChildValue, options: RenderOptions = {}): Promise<string> {
   const registry = new StoreRegistry(options.stores ?? []);
+  const loading = componentsOf(options);
   return new Promise((resolve) => {
-    resolve(withStoreScope(registry, () => renderString(value, coreOptions(options))));
+    const html = withStoreScope(registry, () =>
+      renderString(value, {
+        ...coreOptions(options),
+        ...(loading === undefined ? {} : { tags: loading.tags }),
+      }),
+    );
+    resolve(loading === undefined ? html : loading.fill(html));
   });
 }
 
@@ -54,15 +82,22 @@ export function renderToStream(
 ): ReadableStream<Uint8Array> {
   const registry = new StoreRegistry(options.stores ?? []);
   const encoder = new TextEncoder();
+  const loading = componentsOf(options);
   let chunks: Iterator<string> | undefined;
   return new ReadableStream<Uint8Array>({
     pull(controller) {
       const step = withStoreScope(registry, () => {
-        chunks ??= render(value, coreOptions(options))[Symbol.iterator]();
+        chunks ??= render(value, {
+          ...coreOptions(options),
+          ...(loading === undefined ? {} : { tags: loading.tags }),
+        })[Symbol.iterator]();
         return chunks.next();
       });
       if (step.done === true) controller.close();
-      else controller.enqueue(encoder.encode(step.value));
+      else
+        controller.enqueue(
+          encoder.encode(loading === undefined ? step.value : loading.fill(step.value)),
+        );
     },
     cancel() {
       chunks?.return?.();
@@ -97,13 +132,16 @@ export function renderPage(options: PageOptions, init: ResponseInit = {}): Respo
     const values: StyleValues | undefined = hashing ? new Map() : undefined;
     const registry = new StoreRegistry(options.stores ?? []);
     const dev = options.dev ?? development;
-    const body = withStoreScope(registry, () =>
+    const loading = componentsOf(options);
+    const html = withStoreScope(registry, () =>
       renderString(page(options), {
         ...coreOptions(options),
         dev,
         ...(values === undefined ? {} : { styleAttributes: values }),
+        ...(loading === undefined ? {} : { tags: loading.tags }),
       }),
     );
+    const body = loading === undefined ? html : loading.fill(html);
     if (values !== undefined && typeof csp === 'object') {
       headers.set(
         'content-security-policy',

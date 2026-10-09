@@ -9,7 +9,7 @@
 // file may be closed by then, and would reject a dynamic import(). Public: the preset,
 // gyralTemplateCompiler and gyralClientOnly (docs/references/public-api-0.3.1.md); the other
 // plugins and constants here are internal.
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -236,7 +236,7 @@ function gyralDependents(root: string): string[] {
  * out of externalization in server environments: Vite resolves them with its conditions
  * (`development` in dev), and they all share one copy of core. `vite build` is unaffected.
  */
-function gyralDevServer(): Plugin {
+function gyralDevSsr(): Plugin {
   let root = process.cwd();
   return {
     name: 'gyral:dev-server',
@@ -312,49 +312,17 @@ export interface ElementTypesOptions {
 
 /**
  * Writes `HTMLElementTagNameMap` entries for every exported `define()` component (a
- * `.gyral/elements.d.ts` to gitignore and include in tsconfig): at the start of a build, dev
- * server or test run, and again when a source file changes. Nothing is written for a project
- * without components.
+ * `.gyral/elements.d.ts` to gitignore and include in tsconfig) at the start of a build, dev
+ * server or test run, and again when a source file changes. ./compiler/tag-map imports Node
+ * built-ins only, so Node's require loads it, from TypeScript source too: no module runner,
+ * which may be closed by the time a build starts (see loadCompiler).
  */
 function gyralElementTypes(options: ElementTypesOptions): Plugin {
-  let root = process.cwd();
-  // ./compiler/tag-map imports Node built-ins only, so Node's own require loads it, from
-  // TypeScript source too (type stripping): no module runner, which may be closed by the time
-  // a build starts (see loadCompiler).
-  type TagMap = typeof import('./compiler/tag-map.js');
-  let tagMap: TagMap | undefined;
-  const regenerate = (): void => {
-    const source = import.meta.url.endsWith('.ts')
-      ? './compiler/tag-map.ts'
-      : './compiler/tag-map.js';
-    tagMap ??= createRequire(import.meta.url)(source) as TagMap;
-    const { scanTags, writeTagMap } = tagMap;
-    const settings = { root, ...options };
-    const out = join(root, options.out ?? '.gyral/elements.d.ts');
-    if (scanTags(settings).length === 0 && !existsSync(out)) return;
-    writeTagMap(settings);
-  };
-  const isSource = (file: string): boolean =>
-    /\.(?:ts|tsx|mts)$/.test(file) &&
-    (options.dirs ?? ['src']).some((dir) => file.startsWith(join(root, dir)));
-  return {
-    name: 'gyral:element-types',
-    configResolved(config) {
-      root = config.root;
-    },
-    buildStart() {
-      regenerate();
-    },
-    watchChange(id) {
-      if (isSource(id)) regenerate();
-    },
-    configureServer(server) {
-      const changed = (file: string): void => {
-        if (isSource(file)) regenerate();
-      };
-      server.watcher.on('add', changed).on('change', changed).on('unlink', changed);
-    },
-  };
+  const source = import.meta.url.endsWith('.ts')
+    ? './compiler/tag-map.ts'
+    : './compiler/tag-map.js';
+  const tagMap = createRequire(import.meta.url)(source) as typeof import('./compiler/tag-map.js');
+  return tagMap.elementTypesPlugin(options);
 }
 
 export interface GyralViteOptions {
@@ -372,6 +340,19 @@ export interface GyralViteOptions {
    * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
    */
   readonly clientOnly?: boolean;
+  /**
+   * Automatic component loading (ADR 0016 addendum): every component defined under `include`
+   * gets a client module the build splits out, and a loader (`virtual:gyral/components`, added
+   * to the client build's input) imports a tag's module once that tag is in the page.
+   * `renderPage({ components })` then links exactly the components a page rendered, so pages
+   * need no client entry of their own and no side-effect imports. Default off.
+   */
+  readonly components?: boolean | ComponentsOptions;
+}
+
+export interface ComponentsOptions {
+  /** Directories (relative to Vite's root) whose modules' `define()` tags are found. Default `['src']`. */
+  readonly include?: readonly string[];
 }
 
 export interface GyralViteConfig {
@@ -393,9 +374,48 @@ export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig
       ...(options.clientOnly === true ? [gyralClientOnly()] : []),
       gyralTemplateCompiler(options.compiler),
       gyralTemplateLocations(options.compiler),
-      gyralDevServer(),
+      gyralDevSsr(),
+      ...(options.components === undefined || options.components === false
+        ? []
+        : [gyralComponents(options.components === true ? {} : options.components)]),
       ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
     ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
+  };
+}
+
+type Hook = (this: unknown, ...args: unknown[]) => unknown;
+
+/**
+ * Automatic component loading (`gyralVitePreset({ components })`): a shell whose hooks run
+ * ./compiler/components.ts, loaded on the first hook (`config`) like the compiler.
+ */
+function gyralComponents(options: ComponentsOptions): Plugin {
+  let impl: Plugin | undefined;
+  const run = (name: keyof Plugin) =>
+    function (this: unknown, ...args: unknown[]): unknown {
+      const hook = impl?.[name] as Hook | undefined;
+      return hook?.call(this, ...args) ?? null;
+    };
+  const hook = <K extends keyof Plugin>(name: K) => run(name) as NonNullable<Plugin[K]>;
+  return {
+    name: 'gyral:components',
+    api: {
+      tags: (): ReadonlyMap<string, string> =>
+        (impl?.api as { tags?: () => ReadonlyMap<string, string> } | undefined)?.tags?.() ??
+        new Map(),
+    },
+    async config(...args) {
+      const components =
+        await loadCompiler<typeof import('./compiler/components.js')>('components');
+      impl = components.createComponents(options);
+      return run('config').apply(this, args) as undefined;
+    },
+    configResolved: hook('configResolved'),
+    buildStart: hook('buildStart'),
+    resolveId: hook('resolveId'),
+    load: hook('load'),
+    configureServer: hook('configureServer'),
+    generateBundle: hook('generateBundle'),
   };
 }

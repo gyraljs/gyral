@@ -1,15 +1,18 @@
-// Generated element typings (gyral-1zd.25): every `export const X = define…()('tag', …)` in an
-// app's sources becomes an `HTMLElementTagNameMap` entry, so apps stop hand-writing
-// `declare global { interface HTMLElementTagNameMap { … } }` blocks. Read with a scan of the
-// source text, not a type check: the two-call `define` is recognised by its shape, and only
-// exported components are listed (the typing imports their class).
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+// Component discovery and generated element typings (gyral-1zd.22, gyral-1zd.25). One scan of
+// an app's sources for two-call `define<…>()('tag', …)` calls, read from the source text (not a
+// type check), shared by automatic component loading (./components.ts) and the typings: every
+// exported component becomes an `HTMLElementTagNameMap` entry, so apps stop hand-writing
+// `declare global { interface HTMLElementTagNameMap { … } }` blocks. Node built-ins only, so
+// ../vite.ts loads it with Node's require, from TypeScript source too.
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
+import type { Plugin } from 'vite';
+import type { ElementTypesOptions } from '../vite.js';
 
 export interface TagMapOptions {
   /** Project root; `dirs` and `out` are relative to it. */
   readonly root: string;
-  /** Source directories to scan (recursively, .ts/.tsx/.mts files). Default `['src']`. */
+  /** Source directories to scan, recursively. Default `['src']`. */
   readonly dirs?: readonly string[];
   /** The declaration file to write. Default `.gyral/elements.d.ts`. */
   readonly out?: string;
@@ -21,40 +24,65 @@ export interface TagEntry {
   readonly name: string;
 }
 
-// `export const Name = define<…>()('tag'` and `export const Name = define()('tag'`. Type
-// arguments may nest angle brackets and parentheses, so they are skipped lazily up to `>()(`.
-const DEFINE =
-  /export\s+const\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*define\s*(?:<[\s\S]*?>)?\s*\(\s*\)\s*\(\s*(['"`])([a-z][a-z0-9._-]*-[a-z0-9._-]*)\2/g;
+/** One `define()`d component: its tag, the file defining it and, if exported, its binding. */
+export interface Discovered {
+  readonly tag: string;
+  /** Absolute path of the defining module. */
+  readonly file: string;
+  /** `X` in `export const X = define…`; undefined for a component that isn't exported. */
+  readonly name: string | undefined;
+}
 
-const SOURCE = /\.(?:ts|tsx|mts)$/;
-const SKIP = /\.(?:test|spec|d)\.(?:ts|tsx|mts)$/;
+/**
+ * A two-call `define<…>()('tag'`, optionally as `export const Name = …`: the generics (lazy,
+ * so nested `<…>` extend it), the empty call, then a string tag with a hyphen.
+ * `customElements.define(` doesn't match.
+ */
+const DEFINE_TAG =
+  /(?:export\s+const\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*)?(?<![.\w$])define\s*(?:<[\s\S]*?>)?\s*\(\s*\)\s*\(\s*(['"`])([a-z][a-z0-9._-]*-[a-z0-9._-]*)\2/g;
+const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
+const SKIPPED = /\.(?:test|spec|d)\.[cm]?[jt]sx?$/;
 
 /** The components defined in one module's source text. */
-export function tagsIn(code: string, file: string): TagEntry[] {
+export function componentsIn(code: string, file: string): Discovered[] {
   if (!code.includes('define')) return [];
-  const out: TagEntry[] = [];
-  for (const m of code.matchAll(DEFINE)) {
-    out.push({ tag: m[3] as string, name: m[1] as string, file });
+  const out: Discovered[] = [];
+  for (const m of code.matchAll(DEFINE_TAG)) {
+    out.push({ tag: m[3] as string, file, name: m[1] });
   }
   return out;
 }
 
-function walk(dir: string, files: string[]): void {
-  if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry.startsWith('.')) continue;
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) walk(path, files);
-    else if (SOURCE.test(entry) && !SKIP.test(entry)) files.push(path);
-  }
+/** Every component under `dirs` (relative to `root`), in file then source order. */
+export function discoverComponents(root: string, dirs: readonly string[]): Discovered[] {
+  const found: Discovered[] = [];
+  const walk = (dir: string): void => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) walk(path);
+        continue;
+      }
+      if (!SOURCE_FILE.test(entry.name) || SKIPPED.test(entry.name)) continue;
+      found.push(...componentsIn(readFileSync(path, 'utf8'), path));
+    }
+  };
+  for (const dir of dirs) walk(resolve(root, dir));
+  return found;
 }
 
-/** Every exported component under `dirs`, sorted by tag. */
+/** Every exported component under `dirs` (default `['src']`), sorted by tag. */
 export function scanTags(options: TagMapOptions): TagEntry[] {
-  const files: string[] = [];
-  for (const dir of options.dirs ?? ['src']) walk(join(options.root, dir), files);
-  const entries = files.flatMap((file) => tagsIn(readFileSync(file, 'utf8'), file));
-  return entries.sort((a, b) => (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0));
+  const entries = discoverComponents(options.root, options.dirs ?? ['src']).flatMap((c) =>
+    c.name === undefined ? [] : [{ tag: c.tag, file: c.file, name: c.name }],
+  );
+  return entries.sort((x, y) => (x.tag < y.tag ? -1 : x.tag > y.tag ? 1 : 0));
 }
 
 /** The import specifier for `file` from `outFile`: relative, `.js` for TypeScript sources. */
@@ -95,4 +123,37 @@ export function writeTagMap(options: TagMapOptions): { entries: TagEntry[]; writ
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, text);
   return { entries, written: true };
+}
+
+/** The preset's `gyral:element-types` plugin (`gyralVitePreset({ types })`). */
+export function elementTypesPlugin(options: ElementTypesOptions): Plugin {
+  let root = process.cwd();
+  const regenerate = (): void => {
+    const settings = { root, ...options };
+    const out = join(root, options.out ?? '.gyral/elements.d.ts');
+    // A project without components gets no file.
+    if (scanTags(settings).length === 0 && !existsSync(out)) return;
+    writeTagMap(settings);
+  };
+  const isSource = (file: string): boolean =>
+    /\.(?:ts|tsx|mts)$/.test(file) &&
+    (options.dirs ?? ['src']).some((dir) => file.startsWith(join(root, dir)));
+  return {
+    name: 'gyral:element-types',
+    configResolved(config) {
+      root = config.root;
+    },
+    buildStart() {
+      regenerate();
+    },
+    watchChange(id) {
+      if (isSource(id)) regenerate();
+    },
+    configureServer(server) {
+      const changed = (file: string): void => {
+        if (isSource(file)) regenerate();
+      };
+      server.watcher.on('add', changed).on('change', changed).on('unlink', changed);
+    },
+  };
 }
