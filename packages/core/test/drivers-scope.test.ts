@@ -9,6 +9,7 @@ import {
   settled,
   type AnyDriver,
 } from '../src/index.js';
+import { collectErrors } from './collect-errors.js';
 
 const real = defineDriver<string, string>({ name: 'echo', run: (s) => `real:${s}` });
 const fake = (label: string): AnyDriver =>
@@ -39,10 +40,29 @@ define<State, Msg>()('test-drivers-parent', {
   ...spec,
   view: () => html`<test-drivers-leaf></test-drivers-leaf>`,
 });
-const WithSpec = define<State, Msg>()('test-drivers-spec', {
+// A component whose driver is a token: it has no implementation until a provider names one.
+const echoToken = defineDriver<string, string>('echo-token');
+const TokenUser = define<State, Msg>()('test-drivers-token', {
   ...spec,
+  update: {
+    Go: (s: State) =>
+      [s, [command(echoToken, 'x', { onSuccess: (text) => ({ _tag: 'Got', text }) })]] as const,
+    Got: spec.update.Got,
+  },
   view: () => html``,
-  drivers: { echo: fake('spec') },
+});
+// Fire-and-forget: a command with no handlers answers with nothing.
+const logged: string[] = [];
+const log = defineDriver<string, undefined>({
+  name: 'log',
+  run: (line) => {
+    logged.push(line);
+  },
+});
+const Logger = define<State, Msg>()('test-drivers-logger', {
+  ...spec,
+  update: { Go: (s: State) => [s, [command(log, 'hello')]] as const, Got: spec.update.Got },
+  view: () => html``,
 });
 
 type GyralEl = HTMLElement & {
@@ -76,7 +96,7 @@ describe('tree-scoped driver overrides (gyral-czi.35)', () => {
     expect(await goOn(leaf)).toEqual(['tree:x']);
   });
 
-  it('resolves el.drivers, then the provider, then spec.drivers, then the command’s driver', async () => {
+  it('resolves el.drivers, then the nearest provider, then the command’s own driver', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     const plain = new Leaf();
@@ -84,9 +104,9 @@ describe('tree-scoped driver overrides (gyral-czi.35)', () => {
     expect(await goOn(plain)).toEqual(['real:x']);
 
     provideDrivers(root, { echo: fake('tree') });
-    const withSpec = new WithSpec();
-    root.append(withSpec);
-    expect(await goOn(withSpec)).toEqual(['tree:x']);
+    const provided = new Leaf();
+    root.append(provided);
+    expect(await goOn(provided)).toEqual(['tree:x']);
 
     const own = new Leaf();
     own.drivers = { echo: fake('own') };
@@ -94,10 +114,44 @@ describe('tree-scoped driver overrides (gyral-czi.35)', () => {
     expect(await goOn(own)).toEqual(['own:x']);
   });
 
-  it('falls through to spec.drivers when no provider has the driver', async () => {
-    const withSpec = new WithSpec();
-    document.body.append(withSpec);
-    expect(await goOn(withSpec)).toEqual(['spec:x']);
+  it('runs a driver token only with an implementation from a provider or el.drivers', async () => {
+    const root = document.createElement('div');
+    provideDrivers(root, {
+      'echo-token': defineDriver<string, string>({ name: 'echo-token', run: (s) => `tok:${s}` }),
+    });
+    const viaProvider = new TokenUser();
+    root.append(viaProvider);
+    document.body.append(root);
+    expect(await goOn(viaProvider)).toEqual(['tok:x']);
+
+    const viaOwn = new TokenUser();
+    viaOwn.drivers = {
+      'echo-token': defineDriver<string, string>({ name: 'echo-token', run: (s) => `own:${s}` }),
+    };
+    document.body.append(viaOwn);
+    expect(await goOn(viaOwn)).toEqual(['own:x']);
+  });
+
+  it('reports G0043, naming the driver and component, when nothing provides a token', async () => {
+    const errors = collectErrors();
+    try {
+      const orphan = new TokenUser();
+      document.body.append(orphan);
+      expect(await goOn(orphan)).toEqual([]);
+      expect(errors.errors).toHaveLength(1);
+      expect(errors.errors[0]?.phase).toBe('command');
+      expect(errors.text()).toMatch(/<test-drivers-token>: no driver provides "echo-token"/);
+    } finally {
+      errors.stop();
+    }
+  });
+
+  it('runs a command with no handlers and sends no message', async () => {
+    logged.length = 0;
+    const el = new Logger();
+    document.body.append(el);
+    expect(await goOn(el)).toEqual([]);
+    expect(logged).toEqual(['hello']);
   });
 
   it('lets an outer provider supply drivers an inner one lacks; <gyral-drivers> works too', async () => {

@@ -154,6 +154,10 @@ it('loads the user when clicked', async () => {
   or `fakeDriver`, is assignable to `AnyDriver`. Never write `as AnyDriver`. Type a driver map
   as `DriverOverrides` (or `Record<string, AnyDriver>`), not
   `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
+- A driver token (`defineDriver<I, O, E>('session')`) has no implementation: a test supplies
+  one by name like any fake (`el.drivers = { session: fakeDriver('session', (move) => …) }`,
+  `withDrivers`, `mountSsr`). A token nothing provides is reported as G0043; catch it with
+  `collectErrors()` when that is what the test checks.
 - Removing an element stops its commands **one microtask later** (a move in the same task keeps
   them): after `el.remove(); await Promise.resolve();` every running call's `signal.aborted`
   is `true` and its `abort` listeners have run. Test reconnects by removing, awaiting a turn and

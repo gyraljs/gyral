@@ -106,16 +106,12 @@ export const chart: ChartDriver = makeChartDriver('#clicks-chart');
 
 /** Redraws the chart. Only the latest drawing matters, so the lane switches. */
 export function drawChart(data: ChartData): Command<never> {
-  return command<ChartInput, number | undefined, unknown, never>(
-    chart,
-    { _tag: 'Draw', data },
-    { onSuccess: () => undefined, key: 'chart:draw', concurrency: 'switch' },
-  );
+  return command(chart, { _tag: 'Draw', data }, { key: 'chart:draw', concurrency: 'switch' });
 }
 
 /** Streams clicked bar indexes as messages until the component disconnects. */
 export function chartClicks<M>(toMsg: (bar: number) => M | undefined): Command<M> {
-  return command<ChartInput, number | undefined, unknown, M>(
+  return command(
     chart,
     { _tag: 'Clicks' },
     {

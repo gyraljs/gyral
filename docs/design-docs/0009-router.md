@@ -114,9 +114,10 @@ defaults to `false`** in both histories:
 - `navigate()`, `back()` and `listen()` are unaffected: routing commands still work without
   capture.
 
-**Migration:** an app that owns the whole page passes its own router:
-`define()(…, { drivers: { router: makeRouter({ captureLinks: true }) }, … })`, as
-`examples/routing-view` and `examples/isomorphic` now do. Tests that click links on a memory
+**Migration:** an app that owns the whole page passes its own router, once at its entry:
+`provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) })`, as
+`examples/routing-view` and `examples/isomorphic` do (0.3.0 used the spec's `drivers` field,
+removed in 0.3.1; ADR 0006). Tests that click links on a memory
 router add `captureLinks: true`.
 
 ## Addendum: capture only while listening (gyral-ud5.10, 2026-10-05)

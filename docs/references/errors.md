@@ -117,6 +117,12 @@ Arguments: `owner`, `driver`.
 
 Arguments: `name`.
 
+### G0043
+
+> {owner}: no driver provides "{driver}". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers (ADR 0006 "Driver tokens").
+
+Arguments: `owner`, `driver`.
+
 ## Stores
 
 ### G0050
