@@ -24,7 +24,17 @@ export interface ServerRenderOptions {
    * (ADR 0020). The markup is the same with or without it.
    */
   readonly styleAttributes?: StyleValues;
+  /**
+   * Hears each component whose `init` or view threw (ADR 0024; core's `GyralError`): the page
+   * goes on with that component's error view, or nothing. Default `console.error`. Throwing
+   * from it ends the render with that error.
+   */
+  readonly onError?: (error: unknown) => void;
 }
+
+const logError = (error: unknown): void => {
+  console.error(error);
+};
 
 function push(stack: Item[], items: readonly Item[]): void {
   for (let i = items.length - 1; i >= 0; i--) stack.push(items[i] as Item);
@@ -38,13 +48,14 @@ function push(stack: Item[], items: readonly Item[]): void {
 export function* render(value: ChildValue, options: ServerRenderOptions = {}): Iterable<string> {
   const dev = options.dev ?? DEV;
   const styles = options.styleAttributes;
+  const onError = options.onError ?? logError;
   const root = new Writer(dev, undefined, styles);
   root.child(value, undefined, ROOT);
   const stack: Item[] = [];
   push(stack, root.done());
   for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
     if (typeof item === 'string') yield item;
-    else push(stack, expand(item, dev, styles));
+    else push(stack, expand(item, dev, styles, onError));
   }
 }
 

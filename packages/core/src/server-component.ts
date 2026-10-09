@@ -6,6 +6,7 @@
 // starts them after hydration, ADR 0012), then `initialMessages` through their reducers.
 // `ctx.read` uses the nearest `<gyral-stores>` provider's registry, else the request's.
 import { splitNext, type Next } from './command.js';
+import { GyralError, type ErrorPhase } from './errors.js';
 import { makeSeed } from './hydration.js';
 import { runInit } from './init.js';
 import { intentNames } from './intent.js';
@@ -25,6 +26,8 @@ import type { AnyStore, StoreRef } from './store.js';
 import type { ComponentSpec, Ctx, IntentNames, Tagged } from './types.js';
 import {
   DEV,
+  message,
+  nothing,
   registerServerComponent,
   serverComponent as registered,
   styleTexts,
@@ -81,6 +84,20 @@ export function serverComponent<S, M extends Tagged, P>(
       const registry = scope instanceof StoreRegistry ? scope : serverScopeFor(tag, any);
       return registry.get(any).state as T; // Sound: the ref carries this store's state type.
     };
+  /**
+   * The rendering of a component that threw (ADR 0024): its error view (or nothing, also when
+   * the error view throws), no seed, and the GyralError the renderer reports.
+   */
+  const failed = (phase: ErrorPhase, cause: unknown, state: S | undefined): ServerRendering => {
+    const error = new GyralError(phase, message(78, tag), cause, tag);
+    let view: ServerRendering['view'] = nothing;
+    try {
+      if (spec.error !== undefined) view = spec.error(error, state);
+    } catch {
+      view = nothing; // the error view failed too: the host stays empty
+    }
+    return { view, seed: { props: {} }, failed: error };
+  };
   return {
     tag,
     light: isLight(spec),
@@ -95,17 +112,28 @@ export function serverComponent<S, M extends Tagged, P>(
       }
       const props = readProps(values, table) as P; // Sound: exactly the declared props.
       const ctx = { props, read: reader(input.scope) } as Ctx<object>;
-      const [initial] = splitNext(runInit(spec, props));
-      let state = initial;
-      for (const msg of (input.initialMessages ?? []) as Tagged[]) {
-        const reducer = reducers[msg._tag];
-        if (reducer !== undefined) [state] = splitNext(reducer(state, msg, ctx));
+      let initial: S;
+      let state: S;
+      try {
+        [initial] = splitNext(runInit(spec, props));
+        state = initial;
+        for (const msg of (input.initialMessages ?? []) as Tagged[]) {
+          const reducer = reducers[msg._tag];
+          if (reducer !== undefined) [state] = splitNext(reducer(state, msg, ctx));
+        }
+      } catch (cause) {
+        return failed('init', cause, undefined);
       }
-      return {
-        view: spec.view(state, intentNames as IntentNames<string>, ctx as Ctx<P>),
-        seed: makeSeed(tag, state, initial, carried),
-      };
+      try {
+        return {
+          view: spec.view(state, intentNames as IntentNames<string>, ctx as Ctx<P>),
+          seed: makeSeed(tag, state, initial, carried),
+        };
+      } catch (cause) {
+        return failed('view', cause, state);
+      }
     },
+    fallback: (cause) => failed('view', cause, undefined),
   };
 }
 

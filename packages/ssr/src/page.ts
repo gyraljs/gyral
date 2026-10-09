@@ -13,6 +13,7 @@ import {
   warnJsonHazard,
   type AnyStoreInstance,
   type ChildValue,
+  type GyralError,
   type Head,
   type HeadEntry,
 } from '@gyral/core';
@@ -29,6 +30,14 @@ export interface RenderOptions {
    * `@gyral/core` resolves with the `development` condition (Vite's dev server, Vitest).
    */
   readonly dev?: boolean;
+  /**
+   * A component whose `init` or view throws (ADR 0024): by default the page goes on with that
+   * component's error view (or an empty host the browser starts fresh) and the `GyralError` is
+   * logged with `console.error`. A function hears each failure instead (logging, monitoring).
+   * `'throw'` ends the render with the failure instead; `renderPage` then renders the whole page
+   * first, so it throws before any byte is sent and the route can answer with an error page.
+   */
+  readonly onError?: ((error: GyralError) => void) | 'throw';
 }
 
 /**

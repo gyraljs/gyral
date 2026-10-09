@@ -15,6 +15,12 @@ export interface ServerRendering {
    * unless it equals `init(props)`'s state. JSON-serializable.
    */
   readonly seed: { readonly state?: unknown; readonly props: Readonly<Record<string, unknown>> };
+  /**
+   * Set when `init` or the view threw (ADR 0024): `view` is the component's error view (or
+   * nothing), the host is marked `data-gyral-error` with no seed, and the renderer reports this
+   * value (core's `GyralError`, opaque here) through its `onError` option.
+   */
+  readonly failed?: unknown;
 }
 
 /** The input of one server render, gathered from the start tag (06 "Components"). */
@@ -46,6 +52,8 @@ export interface ServerComponent {
   readonly hydrate: 'load' | 'idle' | 'visible' | 'interaction';
   /** Parses props (validated as in the browser), runs `init` (commands dropped) and the view. */
   render(input: ServerRenderInput): ServerRendering;
+  /** The error rendering for a view value that failed while being written (ADR 0024). */
+  fallback?(cause: unknown): ServerRendering;
 }
 
 const components = new Map<string, ServerComponent>();
