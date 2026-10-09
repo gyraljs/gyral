@@ -3,7 +3,7 @@
 // keeps the pointer on the element, so the release arrives wherever it happens.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import { capturePointer, define, html, settled } from '../src/index.js';
+import { capturePointer, define, html, nothing, settled } from '../src/index.js';
 
 type Dir = 'left' | 'right';
 interface State {
@@ -141,5 +141,37 @@ describe('press-and-release intents', () => {
     await userEvent.keyboard('{ArrowLeft>3}{/ArrowLeft}');
     await settled();
     expect(el.state.log).toEqual(['ArrowLeft:down', 'ArrowLeft:up']);
+  });
+
+  it('a toggled capturePointer() adds one listener and removes it when the position drops it', async () => {
+    type Set = { readonly _tag: 'Set'; readonly on: boolean };
+    const Toggle = define<{ readonly on: boolean }, Set>()('test-capture-toggle', {
+      init: () => ({ on: true }),
+      intent: {},
+      update: { Set: (_s, m) => ({ on: m.on }) },
+      view: (s) => html`<button type="button" ${s.on ? capturePointer() : nothing}>b</button>`,
+    });
+    const el = new Toggle() as HTMLElement & { send(m: Set): void };
+    const added = vi.spyOn(Element.prototype, 'addEventListener');
+    const removed = vi.spyOn(Element.prototype, 'removeEventListener');
+    document.body.append(el);
+    await settled();
+    const button = el.shadowRoot?.querySelector('button');
+    if (!(button instanceof HTMLElement)) throw new Error('button');
+    const onButton = (spy: typeof added) =>
+      spy.mock.contexts.filter((ctx) => ctx === button).length;
+    const capture = vi.spyOn(Element.prototype, 'setPointerCapture');
+    for (const on of [false, true, false, true]) {
+      el.send({ _tag: 'Set', on });
+      await settled();
+    }
+    expect(onButton(added)).toBe(3);
+    expect(onButton(removed)).toBe(2);
+    button.dispatchEvent(pointer('pointerdown'));
+    expect(capture).toHaveBeenCalledTimes(1);
+    el.send({ _tag: 'Set', on: false });
+    await settled();
+    button.dispatchEvent(pointer('pointerdown'));
+    expect(capture).toHaveBeenCalledTimes(1);
   });
 });

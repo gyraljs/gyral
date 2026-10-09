@@ -296,7 +296,9 @@ capture, provided by the `capturePointer()` element hook (02 "Element hooks"): i
 naming `pointerdown` and `pointerup` because built in it cost every app about 35 B gzip; as a
 hook only apps that use it bundle it, and the capture is visible in the markup. List support
 itself costs about 25 B. Capture is not set for synthetic events (the pointer isn't active:
-the call throws and is ignored).
+the call throws and is ignored). It is a disposable hook (02 "Widgets with a lifecycle"): a
+position that stops holding it (`${held ? capturePointer() : nothing}`) removes its listener,
+and adding it again never adds a second one.
 
 Two consequences parsers must know (gyral-dyn.16):
 
