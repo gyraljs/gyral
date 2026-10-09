@@ -6,7 +6,9 @@
 // runner. The compiler is a plugin applied in `vite build` only, so dev servers and test runs
 // keep the runtime template path; its implementation (./compiler/) loads on the first build
 // hook, with `require` (Node loads ES modules with it too): a module runner that loaded this
-// file may be closed by then, and would reject a dynamic import().
+// file may be closed by then, and would reject a dynamic import(). Public: the preset,
+// gyralTemplateCompiler and gyralClientOnly (docs/references/public-api-0.3.1.md); the other
+// plugins and constants here are internal.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
@@ -33,15 +35,15 @@ export interface TemplateCompilerOptions {
 }
 
 /** Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3). */
-export const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
+const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
 
 /** The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). */
-export const COMPILED_CONDITION = 'gyral-compiled';
+const COMPILED_CONDITION = 'gyral-compiled';
 /** The client's resolve condition in client-only builds (view/07 "Client-only builds"). */
-export const CLIENT_ONLY_CONDITION = 'gyral-client-only';
+const CLIENT_ONLY_CONDITION = 'gyral-client-only';
 /** Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser). */
-export const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
-export const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
+const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
+const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
 
 /**
  * Adds `condition` (default `gyral-compiled`) to an environment, on top of the app's
@@ -160,7 +162,7 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
  * `file:line:col` (./compiler/locate.ts, loaded on the first hook). `vite build` compiles
  * templates instead.
  */
-export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
+function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
   let hooks: LocatorHooks | undefined;
   const ready = (): LocatorHooks => {
     if (hooks === undefined) throw new Error('gyral: the template locator is not loaded yet');
@@ -189,7 +191,7 @@ export function gyralTemplateLocations(options: TemplateCompilerOptions = {}): P
  * Gyral's packages: the dev server runs them through Vite, never Node (view/06). The feature
  * scan's scope (./compiler/scope.ts) uses the same pattern.
  */
-export const GYRAL_PACKAGES = /^@gyral\//;
+const GYRAL_PACKAGES = /^@gyral\//;
 
 type Manifest = Partial<Record<'dependencies' | 'devDependencies' | 'peerDependencies', object>>;
 
@@ -213,7 +215,7 @@ function installed(root: string, name: string): Manifest | undefined {
  * The app's direct dependencies that depend on a Gyral package (a design system, say). They
  * import `@gyral/core`, so they must share the copy the dev server runs.
  */
-export function gyralDependents(root: string): string[] {
+function gyralDependents(root: string): string[] {
   const app = manifest(join(root, 'package.json'));
   const names = Object.keys({ ...app?.dependencies, ...app?.devDependencies });
   return names.filter((name) => {
@@ -234,7 +236,7 @@ export function gyralDependents(root: string): string[] {
  * out of externalization in server environments: Vite resolves them with its conditions
  * (`development` in dev), and they all share one copy of core. `vite build` is unaffected.
  */
-export function gyralDevServer(): Plugin {
+function gyralDevServer(): Plugin {
   let root = process.cwd();
   return {
     name: 'gyral:dev-server',

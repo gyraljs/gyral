@@ -40,4 +40,3 @@ configs.recommended = {
 };
 
 export default plugin;
-export { rowPurityRule, templateRule, unusedIntentRule };

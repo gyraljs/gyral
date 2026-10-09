@@ -3,12 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveConfig, type UserConfig } from 'vite';
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_TEMPLATE_SOURCES,
-  GYRAL_PACKAGES,
-  gyralDependents,
-  gyralVitePreset,
-} from '../src/vite.js';
+import { gyralVitePreset } from '../src/vite.js';
+
+/** Gyral's packages, as the dev-server plugin keeps them out of SSR externalization. */
+const GYRAL_PACKAGES = /^@gyral\//;
 
 const noExternal = async (
   command: 'build' | 'serve',
@@ -38,10 +36,6 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(compiler?.enforce).toBe('pre');
   });
 
-  it("compiles @gyral/core's html by default (ADR 0018, Phase 3)", () => {
-    expect(DEFAULT_TEMPLATE_SOURCES).toEqual(['@gyral/core']);
-  });
-
   it('pre-bundles nothing by default, and extra modules without duplicates', () => {
     expect(gyralVitePreset().optimizeDeps.include).toEqual([]);
     expect(gyralVitePreset()).not.toHaveProperty('resolve'); // nothing to dedupe since Lit left
@@ -54,8 +48,6 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(serve['ssr']).toEqual([GYRAL_PACKAGES]);
     expect(serve['client']).toEqual([]);
     expect((await noExternal('build', { environments: { ssr: {} } }))['ssr']).toEqual([]);
-    expect(GYRAL_PACKAGES.test('@gyral/core')).toBe(true);
-    expect(GYRAL_PACKAGES.test('gyral-ish')).toBe(false);
   });
 
   it("keeps the app's own noExternal", async () => {
@@ -65,8 +57,8 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
   });
 });
 
-describe('gyralDependents()', () => {
-  it("lists the app's dependencies that depend on a Gyral package", () => {
+describe("the dev server and the app's Gyral-based dependencies", () => {
+  it("also keeps the app's dependencies that depend on a Gyral package out of externalization", async () => {
     const root = mkdtempSync(join(tmpdir(), 'gyral-dependents-'));
     const pkg = (dir: string, manifest: object): void => {
       mkdirSync(join(root, dir), { recursive: true });
@@ -80,8 +72,9 @@ describe('gyralDependents()', () => {
       pkg('node_modules/ds', { peerDependencies: { '@gyral/core': '*' } });
       pkg('node_modules/kit', { dependencies: { '@gyral/router': '*' } });
       pkg('node_modules/plain', { dependencies: { other: '*' } });
-      expect(gyralDependents(root)).toEqual(['ds', 'kit']);
-      expect(gyralDependents(join(root, 'nowhere'))).toEqual([]);
+      expect((await noExternal('serve', { root }))['ssr']).toEqual([GYRAL_PACKAGES, 'ds', 'kit']);
+      const nowhere = join(root, 'nowhere');
+      expect((await noExternal('serve', { root: nowhere }))['ssr']).toEqual([GYRAL_PACKAGES]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

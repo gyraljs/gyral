@@ -3,12 +3,11 @@
 // server, Vitest), which keeps the runtime path.
 import { defaultClientConditions, defaultServerConditions, resolveConfig } from 'vite';
 import { describe, expect, it } from 'vitest';
-import {
-  CLIENT_CONDITIONS,
-  COMPILED_CONDITION,
-  gyralVitePreset,
-  SERVER_CONDITIONS,
-} from '../../src/vite.js';
+import { gyralVitePreset } from '../../src/vite.js';
+
+const COMPILED_CONDITION = 'gyral-compiled';
+const CLIENT_CONDITIONS = [...defaultClientConditions];
+const SERVER_CONDITIONS = defaultServerConditions.filter((c) => c !== 'browser');
 
 const conditions = async (
   command: 'build' | 'serve',
@@ -24,11 +23,6 @@ const conditions = async (
 };
 
 describe('gyral-compiled condition', () => {
-  it("mirrors Vite's default conditions", () => {
-    expect(CLIENT_CONDITIONS).toEqual([...defaultClientConditions]);
-    expect(SERVER_CONDITIONS).toEqual(defaultServerConditions.filter((c) => c !== 'browser'));
-  });
-
   it('is added to every environment in build, keeping the defaults', async () => {
     const envs = await conditions('build', { environments: { ssr: {} } });
     expect(envs['client']).toEqual([...CLIENT_CONDITIONS, COMPILED_CONDITION]);

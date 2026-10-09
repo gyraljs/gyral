@@ -2,16 +2,15 @@
 // builds", gyral-c5d.11): the browser bundle has no hydration code, and the invoker-command
 // fallback's import() only when a module may make a root listen for `command`
 // (compiler/features.ts). Without the option nothing changes.
-import { resolveConfig } from 'vite';
+import { defaultClientConditions, defaultServerConditions, resolveConfig } from 'vite';
 import { describe, expect, it } from 'vitest';
-import {
-  CLIENT_CONDITIONS,
-  CLIENT_ONLY_CONDITION,
-  COMPILED_CONDITION,
-  gyralVitePreset,
-  SERVER_CONDITIONS,
-} from '../../src/vite.js';
+import { gyralVitePreset } from '../../src/vite.js';
 import { buildApp, CORE, VIEW } from './fixture.js';
+
+const COMPILED_CONDITION = 'gyral-compiled';
+const CLIENT_ONLY_CONDITION = 'gyral-client-only';
+const CLIENT_CONDITIONS = [...defaultClientConditions];
+const SERVER_CONDITIONS = defaultServerConditions.filter((c) => c !== 'browser');
 
 /** A component whose view is `markup` (an html template body) and whose spec adds `extra`. */
 const component = (markup: string, extra = ''): Record<string, string> => ({
