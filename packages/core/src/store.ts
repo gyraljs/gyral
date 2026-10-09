@@ -185,7 +185,12 @@ function createInstance<S, M extends Tagged>(
         DEVTOOLS_ENABLED ? devCommands(() => `store:${store.name}`) : undefined,
         (cause, code, driver) => {
           const owner = `store "${store.name}"`;
-          const text = code === 40 ? message(40, owner, driver) : message(41, owner, driver);
+          const text =
+            code === 40
+              ? message(40, owner, driver)
+              : code === 41
+                ? message(41, owner, driver)
+                : message(43, owner, driver);
           fail(cause, 'command', text, { msg: driver });
         },
       );

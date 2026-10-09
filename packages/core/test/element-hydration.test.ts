@@ -15,7 +15,7 @@ let propsChanged = 0;
 const spec = {
   props: { label: prop.string({ default: '' }) },
   init: (): State => ({ count: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) as const },
+  intent: { Inc: true as const },
   update: {
     Inc: (s: State) => ({ count: s.count + 1 }),
     PropsChanged: (s: State) => {

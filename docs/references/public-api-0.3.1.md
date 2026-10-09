@@ -78,6 +78,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `Driver`               | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DriverContext`        | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `DriverOverrides`      | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
+| `DriverToken`          | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DRIVERS_ELEMENT`      | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `each`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `emit`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |

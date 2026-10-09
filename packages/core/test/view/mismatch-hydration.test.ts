@@ -119,7 +119,7 @@ describe('what each build detects', () => {
 type Msg = { readonly _tag: 'Inc' };
 const counter = {
   init: () => ({ n: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) as const },
+  intent: { Inc: true as const },
   update: { Inc: (s: { n: number }) => ({ n: s.n + 1 }) },
   view: (s: { n: number }) => html`<button data-intent="Inc">n ${s.n}</button>`,
 };

@@ -17,7 +17,7 @@ export function timer<I, O, M>(
   lane: Lane,
   defaults: Required<Lane>,
 ): Command<M> {
-  return command<I, O, unknown, M>(driver, input, {
+  return command(driver, input, {
     onSuccess: toMsg,
     key: lane.key ?? defaults.key,
     concurrency: lane.concurrency ?? defaults.concurrency,

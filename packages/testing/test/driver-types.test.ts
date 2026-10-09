@@ -53,7 +53,7 @@ const Search = define<{ readonly query: string }, Msg>()('test-driver-types-sear
   init: () => [
     { query: '' },
     [
-      command<undefined, string | null, unknown, Msg>(savedQuery, undefined, {
+      command(savedQuery, undefined, {
         onSuccess: (query) => (query === null ? undefined : { _tag: 'Restored', query }),
       }),
     ],
@@ -131,5 +131,59 @@ describe('fakeDriver(name, run)', () => {
     expectTypeOf(fake).toEqualTypeOf<FakeDriver<string, number, unknown>>();
     // @ts-expect-error: run returns a number
     fakeDriver<string, string>('length', (text: string) => text.length);
+  });
+});
+
+// A driver token (ADR 0006 "Driver tokens"): typed commands, no implementation of its own.
+interface Move {
+  readonly card: number;
+}
+const game = defineDriver<Move, number, string>('game');
+type GameMsg = { readonly _tag: 'Turn'; readonly turn: number } | { readonly _tag: 'Lost' };
+const Table = define<{ readonly turn: number }, GameMsg>()('test-driver-types-table', {
+  init: () => [
+    { turn: 0 },
+    [
+      command(
+        game,
+        { card: 7 },
+        {
+          onSuccess: (turn) => ({ _tag: 'Turn', turn }),
+          onFailure: () => ({ _tag: 'Lost' }),
+        },
+      ),
+    ],
+  ],
+  update: { Turn: (_s, m) => ({ turn: m.turn }), Lost: (s) => s },
+  view: (s) => html`<p>${s.turn}</p>`,
+});
+
+describe('driver tokens', () => {
+  it('are typed drivers that a fake supplies by name, with no cast', async () => {
+    expectTypeOf(game).toEqualTypeOf<Driver<Move, number, string>>();
+    expectTypeOf(game).toExtend<AnyDriver>();
+    const fake = fakeDriver<Move, number, string>('game', (move) => move.card * 2);
+    const el = new Table();
+    el.drivers = { game: fake };
+    document.body.append(el);
+    await settled();
+    expect(el.state.turn).toBe(14);
+    expect(fake.inputs).toEqual([{ card: 7 }]);
+  });
+
+  it('take a fake from withDrivers like any other driver', async () => {
+    const root = document.createElement('div');
+    const stop = withDrivers(root, { game: fakeDriver('game', (move: Move) => move.card) });
+    const el = new Table();
+    root.append(el);
+    document.body.append(root);
+    await settled();
+    expect(el.state.turn).toBe(7);
+    stop();
+  });
+
+  it('type the command input from the token', () => {
+    // @ts-expect-error: a Move has a numeric card
+    command(game, { card: 'seven' });
   });
 });

@@ -1,5 +1,5 @@
 import { css, define, html, prop } from '@gyral/core';
-import { listen, makeRouter, setHead, type RouteLocation } from '@gyral/router';
+import { listen, setHead, type RouteLocation } from '@gyral/router';
 import { pageHead, site, titles } from './routes.js';
 
 export interface Props {
@@ -43,8 +43,6 @@ const content = (path: string) => {
 
 export const App = define<State, Msg, Props>()('gy-iso-app', {
   props: { path: prop.string() },
-  // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
-  drivers: { router: makeRouter({ captureLinks: true }) },
   // Same on server and client. The server never runs commands; after hydration the client
   // runs init's listen(), which streams the current location and every navigation (ADR 0012).
   init: (props) => [
