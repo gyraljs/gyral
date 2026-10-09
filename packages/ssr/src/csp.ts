@@ -12,7 +12,7 @@ import {
   styleHashSync,
   type StyleValues,
 } from '@gyral/core/internal/server';
-import { styleList, styleSafe } from './page.js';
+import { scriptList, scriptSafe, styleList, styleSafe } from './page.js';
 
 /** CSP directives by name: a source list, as one string or a list of sources. */
 export type CspDirectives = Readonly<Record<string, string | readonly string[]>>;
@@ -28,6 +28,13 @@ export interface CspOptions {
    * `renderPage({ csp })` it defaults to the page's own `styles`.
    */
   readonly styles?: string | readonly string[];
+  /**
+   * The page's inline head scripts, exactly as passed to `page({ headScripts })`, allowed in
+   * `script-src` by hash (a `script-src` given in `directives` is kept and the hashes appended;
+   * without one it is `'self'` plus the hashes). In `renderPage({ csp })` it defaults to the
+   * page's own `headScripts`.
+   */
+  readonly scripts?: string | readonly string[];
   /**
    * `'hash'` (`renderPage` only, ADR 0020): allow the `style` attributes the page writes by
    * hash, in `style-src-attr` with `'unsafe-hashes'`, so they apply on first paint under a
@@ -49,6 +56,7 @@ const sources = (value: string | readonly string[]): readonly string[] =>
   typeof value === 'string' ? value.split(/\s+/).filter((s) => s !== '') : value;
 
 type PageStyles = string | readonly string[] | undefined;
+type PageScripts = string | readonly string[] | undefined;
 
 const ATTR = 'style-src-attr';
 
@@ -61,13 +69,23 @@ function build(
   styles: PageStyles,
   components: ReadonlyMap<string, string>,
   attributes: readonly string[] = [],
+  scripts?: PageScripts,
 ): string {
   const page = styleList(styles).map((css) => styleHashSync(styleSafe(css)));
   const hashes = [...new Set([...[...components.values()].map(styleHashSync), ...page])];
   const style = [...sources(directives['style-src'] ?? "'self'"), ...hashes];
+  const inline = [...new Set(scriptList(scripts).map((js) => styleHashSync(scriptSafe(js))))];
   const policy: [name: string, sources: readonly string[]][] = Object.entries(directives)
-    .filter(([name]) => name !== 'style-src' && (name !== ATTR || attributes.length === 0))
+    .filter(
+      ([name]) =>
+        name !== 'style-src' &&
+        (name !== ATTR || attributes.length === 0) &&
+        (name !== 'script-src' || inline.length === 0),
+    )
     .map(([name, value]) => [name, sources(value)]);
+  if (inline.length > 0) {
+    policy.push(['script-src', [...sources(directives['script-src'] ?? "'self'"), ...inline]]);
+  }
   policy.push(['style-src', style]);
   if (attributes.length > 0) {
     const given = sources(directives[ATTR] ?? []);
@@ -85,10 +103,15 @@ function build(
  * attributes, hand-written `<style>` in `head`) are not covered.
  */
 export function contentSecurityPolicy(options: CspOptions = {}): Promise<string> {
-  return Promise.resolve(build(options.directives ?? {}, options.styles, componentStyles()));
+  return Promise.resolve(
+    build(options.directives ?? {}, options.styles, componentStyles(), [], options.scripts),
+  );
 }
 
-const cache = new WeakMap<CspOptions, { version: number; styles: unknown; header: string }>();
+const cache = new WeakMap<
+  CspOptions,
+  { version: number; styles: unknown; scripts: unknown; header: string }
+>();
 
 /**
  * `renderPage({ csp: options })`: the header built at render time, cached per options object
@@ -96,13 +119,20 @@ const cache = new WeakMap<CspOptions, { version: number; styles: unknown; header
  * `registryVersion()`) or the page styles do. The page's `styles` are hashed unless `options`
  * has its own.
  */
-export function policyAtRender(options: CspOptions, pageStyles: PageStyles): string {
+export function policyAtRender(
+  options: CspOptions,
+  pageStyles: PageStyles,
+  pageScripts?: PageScripts,
+): string {
   const version = registryVersion();
   const styles = options.styles ?? pageStyles;
+  const scripts = options.scripts ?? pageScripts;
   const known = cache.get(options);
-  if (known?.version === version && known.styles === styles) return known.header;
-  const header = build(options.directives ?? {}, styles, componentStyles());
-  cache.set(options, { version, styles, header });
+  if (known?.version === version && known.styles === styles && known.scripts === scripts) {
+    return known.header;
+  }
+  const header = build(options.directives ?? {}, styles, componentStyles(), [], scripts);
+  cache.set(options, { version, styles, scripts, header });
   return header;
 }
 
@@ -129,6 +159,7 @@ export function policyWithAttributes(
   pageStyles: PageStyles,
   values: StyleValues,
   dev: boolean,
+  pageScripts?: PageScripts,
 ): string {
   const directives = options.directives ?? {};
   const given = sources(directives[ATTR] ?? []);
@@ -157,7 +188,8 @@ export function policyWithAttributes(
     list = list.slice(0, max);
   }
   const styles = options.styles ?? pageStyles;
-  return build(directives, styles, componentStyles(), list.map(styleHashSync));
+  const scripts = options.scripts ?? pageScripts;
+  return build(directives, styles, componentStyles(), list.map(styleHashSync), scripts);
 }
 
 const warned = new Set<string>();

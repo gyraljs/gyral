@@ -141,4 +141,24 @@ describe('a policy built before a component registered (development)', () => {
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
   });
+
+  it('allows the page head scripts in script-src by hash (gyral-1zd.26)', async () => {
+    const theme = "document.documentElement.dataset.theme = 'dark';";
+    const sha = (text: string) => `'sha256-${createHash('sha256').update(text).digest('base64')}'`;
+    const res = renderPage({ title: 't', body: html`<p>x</p>`, headScripts: theme, csp: {} });
+    const header = res.headers.get('content-security-policy') ?? '';
+    expect(header).toContain(`script-src 'self' ${sha(theme)}`);
+    const kept = renderPage({
+      title: 't',
+      body: html`<p>x</p>`,
+      headScripts: theme,
+      csp: { directives: { 'script-src': "'self' https://cdn.example" } },
+    });
+    expect(kept.headers.get('content-security-policy')).toContain(
+      `script-src 'self' https://cdn.example ${sha(theme)}`,
+    );
+    expect(await contentSecurityPolicy({ scripts: theme })).toContain(sha(theme));
+    const none = renderPage({ title: 't', body: html`<p>x</p>`, csp: {} });
+    expect(none.headers.get('content-security-policy')).not.toContain('script-src');
+  });
 });

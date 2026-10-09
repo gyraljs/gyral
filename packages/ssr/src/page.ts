@@ -77,6 +77,13 @@ export interface PageOptions extends RenderOptions, Head {
   /** Module scripts to load, e.g. the client entry. */
   readonly scripts?: readonly string[];
   /**
+   * Inline classic scripts written early in the head, after the managed head entries and
+   * before any stylesheet, so they run before the page paints (a theme script that sets
+   * `data-theme` from storage, say). Trusted code only. A `</script` inside the text is escaped.
+   * `renderPage({ csp })` allows them in `script-src` by hash.
+   */
+  readonly headScripts?: string | readonly string[];
+  /**
    * Modules to fetch early with `<link rel="modulepreload">`, written before `scripts`: in
    * production, `clientAssetsFromManifest()`'s `modulepreload` (the entry's static imports and
    * the hydration chunk), so hydration doesn't wait for extra round trips.
@@ -101,6 +108,20 @@ export function storeSeed(stores: readonly AnyStoreInstance[]): ChildValue {
   }
   const json = scriptSafeJson(snapshot);
   return raw(`<script type="application/json" ${STORE_SEED_ATTRIBUTE}>${json}</script>`);
+}
+
+/** The texts of `page({ headScripts })`. */
+export const scriptList = (scripts: string | readonly string[] | undefined): readonly string[] =>
+  scripts === undefined ? [] : typeof scripts === 'string' ? [scripts] : scripts;
+
+/** `</script` (any case) would end the element; `<\/script` is the same text to JavaScript. */
+export const scriptSafe = (js: string): string => js.replace(/<\/(script)/gi, '<\\/$1');
+
+/** `<script>` elements for `page({ headScripts })`. */
+function headScriptMarkup(scripts: string | readonly string[] | undefined): ChildValue {
+  const list = scriptList(scripts);
+  if (list.length === 0) return nothing;
+  return raw(list.map((js) => `<script>${scriptSafe(js)}</script>`).join(''));
 }
 
 /** `</style` (any case) would end the element; `<\/style` is the same text to CSS. */
@@ -142,7 +163,7 @@ export function page(options: PageOptions): ChildValue {
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${title}</title>
-        ${headMarkup(headEntries(options))}
+        ${headMarkup(headEntries(options))}${headScriptMarkup(options.headScripts)}
         ${sheets.map((href) => html`<link rel="stylesheet" href=${href} />`)}
         ${documentStyles(styles)}${extraHead ?? nothing}${storeSeed(stores)}
         ${[

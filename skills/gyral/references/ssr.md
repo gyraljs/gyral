@@ -165,6 +165,11 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 });
 ```
 
+- A `meta` entry may carry `media` (one `theme-color` per color scheme: both are kept), and a
+  `links` entry any attribute (`type`, `sizes`, `hreflang`, `crossorigin`, …).
+- `renderPage({ headScripts })` writes inline scripts right after the managed entries and
+  before any stylesheet, so a theme script runs before the page paints; `renderPage({ csp })`
+  allows them in `script-src` by hash. Trusted code only.
 - Later `meta`/`links` entries win over earlier ones with the same name or attributes, so
   `meta: [...siteDefaults, ...pageMeta]` merges defaults. `charset`, `viewport`, `http-equiv`
   and `stylesheet`/`preload`/`modulepreload`/`canonical` links are refused there: they belong

@@ -79,19 +79,20 @@ export function renderPage(options: PageOptions, init: ResponseInit = {}): Respo
     if (values !== undefined && typeof csp === 'object') {
       headers.set(
         'content-security-policy',
-        policyWithAttributes(csp, options.styles, values, dev),
+        policyWithAttributes(csp, options.styles, values, dev, options.headScripts),
       );
     } else if (csp !== undefined && !headers.has('content-security-policy')) {
       if (typeof csp === 'string' && dev) checkPolicy(csp);
       headers.set(
         'content-security-policy',
-        typeof csp === 'string' ? csp : policyAtRender(csp, options.styles),
+        typeof csp === 'string' ? csp : policyAtRender(csp, options.styles, options.headScripts),
       );
     }
     return new Response(body, { ...init, headers });
   }
   if (csp !== undefined && !headers.has('content-security-policy')) {
-    const header = typeof csp === 'string' ? csp : policyAtRender(csp, options.styles);
+    const header =
+      typeof csp === 'string' ? csp : policyAtRender(csp, options.styles, options.headScripts);
     if (typeof csp === 'string' && (options.dev ?? development)) checkPolicy(csp);
     headers.set('content-security-policy', header);
   }

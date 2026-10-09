@@ -262,3 +262,16 @@ is enforced); the first `Routed` after hydration writes nothing to `<head>`; a c
 navigation away and back leaves the server's managed head for that URL
 (`examples/isomorphic/test/head.test.ts`). `mountSsr` copies the managed head right after
 `<title>`, so app tests can check the same.
+
+## Addendum: attributes and early scripts (gyral-1zd.26, 2026-10-09)
+
+Apps wrote theme-color meta and their theme script by hand in `extraHead`, because `HeadMeta`
+had no `media` and `page()` put stylesheets before anything an app could add. Now:
+
+- `HeadMeta` takes an optional `media`; entries with different `media` are different keys, so
+  `theme-color` for light and dark both stay. `HeadLink` already wrote any attribute it carries.
+- `page()`/`renderPage({ headScripts })` writes inline classic scripts after the managed entries
+  and before stylesheets and `styles`, escaping `</script`. `renderPage({ csp })` (and
+  `contentSecurityPolicy({ scripts })`) adds their SHA-256 hashes to `script-src`, keeping a
+  `script-src` the app gives, else `'self'`. They are server-only: `setHead()` doesn't touch
+  them.

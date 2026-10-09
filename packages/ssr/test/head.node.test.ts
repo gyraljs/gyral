@@ -79,4 +79,21 @@ describe('page() and the head model', () => {
   it('writes no managed elements for a title-only page', async () => {
     expect(await headOf({ title: 't', body })).not.toContain('data-gyral-head');
   });
+
+  it('writes head scripts after the managed entries and before stylesheets (gyral-1zd.26)', async () => {
+    const theme = "document.documentElement.dataset.theme = localStorage.getItem('t') ?? 'light';";
+    const head = await headOf({
+      title: 't',
+      body,
+      description: 'd',
+      headScripts: [theme, 'var s = "</script>";'],
+      stylesheets: ['/app.css'],
+      styles: 'p{}',
+    });
+    const at = (needle: string) => head.indexOf(needle);
+    expect(at('name="description"')).toBeLessThan(at(theme));
+    expect(at(theme)).toBeLessThan(at('rel="stylesheet"'));
+    expect(at(theme)).toBeLessThan(at('<style>'));
+    expect(head).toContain('var s = "<\\/script>";');
+  });
 });

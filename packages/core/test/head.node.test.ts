@@ -113,4 +113,40 @@ describe('headEntries', () => {
     headEntries({ title: 't', canonical: 'https://example.com/about' });
     expect(warn).not.toHaveBeenCalled();
   });
+
+  it('keeps one meta entry per media query, and writes media (gyral-1zd.26)', () => {
+    const entries = headEntries({
+      title: 't',
+      meta: [
+        { name: 'theme-color', content: '#fff', media: '(prefers-color-scheme: light)' },
+        { name: 'theme-color', content: '#000', media: '(prefers-color-scheme: dark)' },
+        { name: 'theme-color', content: '#111', media: '(prefers-color-scheme: dark)' },
+      ],
+    });
+    expect(entries.map((e) => e.attributes)).toEqual([
+      [
+        ['name', 'theme-color'],
+        ['content', '#fff'],
+        ['media', '(prefers-color-scheme: light)'],
+      ],
+      [
+        ['name', 'theme-color'],
+        ['content', '#111'],
+        ['media', '(prefers-color-scheme: dark)'],
+      ],
+    ]);
+  });
+
+  it('writes any attribute a link entry carries', () => {
+    const [entry] = headEntries({
+      title: 't',
+      links: [{ rel: 'icon', href: '/i.svg', type: 'image/svg+xml', sizes: 'any' }],
+    });
+    expect(entry?.attributes).toEqual([
+      ['rel', 'icon'],
+      ['href', '/i.svg'],
+      ['type', 'image/svg+xml'],
+      ['sizes', 'any'],
+    ]);
+  });
 });

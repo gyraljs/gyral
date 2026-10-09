@@ -8,12 +8,18 @@ import { scriptSafeJson } from './script-json.js';
 export type JsonValue =
   string | number | boolean | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
 
-/** `<meta name content>`, or `<meta property content>` (Open Graph uses `property`). */
+/**
+ * `<meta name content>`, or `<meta property content>` (Open Graph uses `property`). `media`
+ * makes one entry per media query (`theme-color` for light and dark).
+ */
 export type HeadMeta =
-  | { readonly name: string; readonly content: string }
-  | { readonly property: string; readonly content: string };
+  | { readonly name: string; readonly content: string; readonly media?: string }
+  | { readonly property: string; readonly content: string; readonly media?: string };
 
-/** A metadata `<link>`: `alternate` (with `hreflang`), `icon`, `manifest`, `prev`/`next`, … */
+/**
+ * A metadata `<link>`: `alternate` (with `hreflang`), `icon` (with `sizes`, `type`), `manifest`
+ * (with `crossorigin`), `prev`/`next`, … Any other attribute is written as given.
+ */
 export interface HeadLink {
   readonly rel: string;
   readonly href: string;
@@ -95,10 +101,11 @@ export function headEntries(head: Head): readonly HeadEntry[] {
     out.delete(key);
     out.set(key, text === undefined ? { key, tag, attributes } : { key, tag, attributes, text });
   };
-  const meta = (attr: string, name: string, content: string): void => {
-    add(`${attr}:${name}`, 'meta', [
+  const meta = (attr: string, name: string, content: string, media?: string): void => {
+    add(media === undefined ? `${attr}:${name}` : `${attr}:${name}|${media}`, 'meta', [
       [attr, name],
       ['content', content],
+      ...(media === undefined ? [] : [['media', media] as const]),
     ]);
   };
   if (head.description !== undefined) meta('name', 'description', head.description);
@@ -112,7 +119,7 @@ export function headEntries(head: Head): readonly HeadEntry[] {
   const typed = new Set(out.keys());
   for (const m of head.meta ?? []) {
     const [attr, name] = 'name' in m ? ['name', m.name] : ['property', m.property];
-    if (!typed.has(`${attr}:${name}`)) meta(attr, name, m.content);
+    if (!typed.has(`${attr}:${name}`)) meta(attr, name, m.content, m.media);
   }
   for (const link of head.links ?? []) {
     const attributes = Object.entries(link);
