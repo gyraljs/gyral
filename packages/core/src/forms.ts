@@ -209,10 +209,10 @@ export function form<Schema extends StandardSchemaV1, M>(
     if (formData === undefined) return undefined;
     const toParsed = (r: FormResult<Out<Schema>>): Parsed<M> =>
       r.ok ? toMsg(r.data, formData) : r.rejected;
-    const result =
-      '_tag' in definition
-        ? definition.validate(formData, input.name)
-        : validate(definition, [], input.name, formData);
+    const result = ('_tag' in definition ? definition : defineForm(definition)).validate(
+      formData,
+      input.name,
+    );
     return result instanceof Promise ? result.then(toParsed) : toParsed(result);
   };
 }
