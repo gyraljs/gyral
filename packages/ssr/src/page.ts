@@ -1,7 +1,15 @@
 // The server-only document shell (ADR 0012 decision 4, view/06-server.md "API"): `page()` is a
 // `server` template written with core's `html`, never hydrated. The page-level store seed
 // (ADR 0013) and global styles go into its head as `raw()` markup.
-import { html, nothing, raw, type AnyStoreInstance, type ChildValue, type Head } from '@gyral/core';
+import {
+  html,
+  nothing,
+  raw,
+  type AnyStoreInstance,
+  type ChildValue,
+  type GyralError,
+  type Head,
+} from '@gyral/core';
 import { StoreRegistry } from '@gyral/core/server';
 import {
   HEAD_ATTRIBUTE,
@@ -24,6 +32,14 @@ export interface RenderOptions {
    * `@gyral/core` resolves with the `development` condition (Vite's dev server, Vitest).
    */
   readonly dev?: boolean;
+  /**
+   * A component whose `init` or view throws (ADR 0024): by default the page goes on with that
+   * component's error view (or an empty host the browser starts fresh) and the `GyralError` is
+   * logged with `console.error`. A function hears each failure instead (logging, monitoring).
+   * `'throw'` ends the render with the failure instead; `renderPage` then renders the whole page
+   * first, so it throws before any byte is sent and the route can answer with an error page.
+   */
+  readonly onError?: ((error: GyralError) => void) | 'throw';
 }
 
 /**

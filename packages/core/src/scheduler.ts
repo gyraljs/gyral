@@ -7,6 +7,7 @@
 // frame-lane.ts). The frame lane and view transitions come through `#spec-features`, present
 // unless a compiled build found no module naming them (gyral-c5d.12). It lives outside view/
 // (view/ never imports it) and drives the renderer through view/index.ts.
+import { fail } from './errors.js';
 import { frameLane, viewTransitions } from '#spec-features';
 import { DEV, message, renderBatch } from './view/index.js';
 
@@ -124,7 +125,7 @@ export function defer(fn: () => void): void {
     try {
       fn();
     } catch (error) {
-      console.error(message(30), error);
+      fail(error, 'command', message(30));
     } finally {
       deferred -= 1;
       settle();
@@ -169,7 +170,7 @@ function renderAll(counts: Map<HostTask, number>): void {
     try {
       task.render();
     } catch (error) {
-      console.error(message(31, task.tag), error);
+      fail(error, 'view', message(31, task.tag), { tag: task.tag });
     }
   }
 }
@@ -181,7 +182,7 @@ function runPost(): void {
     try {
       task.run();
     } catch (error) {
-      console.error(message(32), error);
+      fail(error, 'view', message(32));
     }
   }
 }
@@ -215,7 +216,7 @@ function flush(): void {
   if (failure === undefined) {
     settle();
   } else if (!DEV) {
-    console.error(failure); // production: log and drop the rest, so the page doesn't freeze
+    fail(failure, 'view', failure.message); // production: report and drop the rest, so the page doesn't freeze
     settle();
   } else if (quiet !== null) {
     const waiting = quiet;

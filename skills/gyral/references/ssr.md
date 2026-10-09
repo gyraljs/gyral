@@ -73,6 +73,13 @@ and `renderToStream(value, { stores })`. Head content the head model doesn't cov
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
 
+**A component that throws** (its `init` or view) renders its `error` view, or nothing, marked
+`data-gyral-error` and without a seed; the rest of the page renders and the browser starts that
+component fresh (ADR 0024, `errors.md`). `renderPage({ onError })` hears each `GyralError`
+(default `console.error`). `onError: 'throw'` renders the page to a string first and throws
+before any byte is sent: catch it and answer with your error page. Data loading happens before
+`renderPage`, so the route handler already owns the error page for its own failures.
+
 ### One URL per page: redirect to the canonical path
 
 The router ignores one trailing slash, so `/products/x/` matches the same route as `/products/x`.

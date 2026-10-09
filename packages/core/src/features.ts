@@ -4,7 +4,7 @@
 // machinery. An app that never calls one doesn't bundle what it registers. No module does this
 // at load time: bundlers keep `sideEffects: false` and tree-shake as usual.
 import type { DriverOverrides } from './command.js';
-import type { Interpreter } from './internal/interpreter.js';
+import type { CommandFailure, Interpreter } from './internal/interpreter.js';
 import type { PropFeature } from './props.js';
 import type { AnyStore, StoreOverrides, StoreRef, StoreSendInput } from './store.js';
 import type { CommandTrace } from './devtools-events.js';
@@ -43,6 +43,7 @@ export const features: {
     drivers: DriverOverrides | undefined,
     dispatch: (msg: Msg) => void,
     trace: CommandTrace | undefined,
+    failed: CommandFailure,
   ) => Interpreter<Msg>;
   /** Set by `defineStore()`: binds a host to the stores it declares (ADR 0013). */
   stores?: (

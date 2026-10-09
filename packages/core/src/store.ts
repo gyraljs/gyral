@@ -9,6 +9,7 @@ import {
   type DriverOverrides,
   type Next,
 } from './command.js';
+import { fail } from './errors.js';
 import { features, type LocalHost } from './features.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { noteActivity } from './scheduler.js';
@@ -182,6 +183,11 @@ function createInstance<S, M extends Tagged>(
           if (msg._tag !== 'IntentRejected') instance.send(msg as M);
         },
         DEVTOOLS_ENABLED ? devCommands(() => `store:${store.name}`) : undefined,
+        (cause, code, driver) => {
+          const owner = `store "${store.name}"`;
+          const text = code === 40 ? message(40, owner, driver) : message(41, owner, driver);
+          fail(cause, 'command', text, { msg: driver });
+        },
       );
       interpreter.run(cmd);
     }
@@ -201,10 +207,27 @@ function createInstance<S, M extends Tagged>(
         return;
       }
       const prev = state;
-      const [next, commands] = splitNext(reducer(prev, msg));
+      let result: Next<S, M>;
+      try {
+        result = reducer(prev, msg);
+      } catch (cause) {
+        // A store reducer that throws changes nothing (ADR 0024).
+        fail(cause, 'store', message(76, store.name, msg._tag), { msg: msg._tag });
+        return;
+      }
+      const [next, commands] = splitNext(result);
       state = next;
       if (DEVTOOLS_ENABLED) devStore(store.name, msg, prev, next);
-      if (!Object.is(next, prev)) for (const listener of [...listeners]) listener(next, prev);
+      if (!Object.is(next, prev)) {
+        // Each subscriber on its own: one that throws doesn't keep the others stale (ADR 0024).
+        for (const listener of [...listeners]) {
+          try {
+            listener(next, prev);
+          } catch (cause) {
+            fail(cause, 'store', message(77, store.name), { msg: msg._tag });
+          }
+        }
+      }
       run(commands);
     },
     subscribe(listener) {

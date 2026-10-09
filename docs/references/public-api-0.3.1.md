@@ -71,7 +71,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `Definer`              | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `defineStore`          | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `DevComponentRef`      | type  | supporting type |                                                                                                        |
-| `DevEvent`             | type  | documented      | [design-docs/0017-devtools.md](../design-docs/0017-devtools.md)                                        |
+| `DevEvent`             | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `DEVTOOLS_GLOBAL`      | value | documented      | [design-docs/0017-devtools.md](../design-docs/0017-devtools.md)                                        |
 | `DevtoolsHook`         | type  | supporting type |                                                                                                        |
 | `DisposableHookSpec`   | type  | supporting type |                                                                                                        |
@@ -81,6 +81,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `DRIVERS_ELEMENT`      | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `each`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `emit`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `Errored`              | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `ErrorPhase`           | type  | documented      | [design-docs/0024-errors.md](../design-docs/0024-errors.md)                                            |
 | `field`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `fieldErrors`          | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `FieldIssue`           | type  | supporting type |                                                                                                        |
@@ -94,6 +96,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `FormValue`            | type  | supporting type |                                                                                                        |
 | `GyralElement`         | type  | supporting type |                                                                                                        |
 | `GyralElementClass`    | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
+| `GyralError`           | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                           |
 | `Head`                 | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
 | `HeadLink`             | type  | documented      | [design-docs/0019-head-model.md](../design-docs/0019-head-model.md)                                    |
 | `HeadMeta`             | type  | documented      | [design-docs/0019-head-model.md](../design-docs/0019-head-model.md)                                    |
@@ -389,6 +392,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export            | Kind  | Status          | Documented in                                                                                |
 | ----------------- | ----- | --------------- | -------------------------------------------------------------------------------------------- |
+| `CollectedErrors` | type  | supporting type |                                                                                              |
+| `collectErrors`   | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                 |
 | `commandsFor`     | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
 | `FakeCall`        | type  | supporting type |                                                                                              |
 | `fakeDriver`      | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |

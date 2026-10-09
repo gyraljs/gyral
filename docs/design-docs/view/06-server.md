@@ -112,6 +112,17 @@ nested components again) when it reaches one. So:
 
 ### Errors (Phase 4)
 
+**A component that throws** (ADR 0024): its `init`, its initial messages or its view. The
+component renders `spec.error(failure, state)` (or nothing, also when that throws too) and its
+start tag gets `data-gyral-error` instead of a seed; the browser starts it fresh rather than
+hydrating it. The rest of the page renders. The render's `onError(error)` option hears each
+`GyralError` (default `console.error`); throwing from it ends the render with that error.
+`@gyral/ssr`'s `onError: 'throw'` renders `renderPage` to a string first, so it throws before any
+byte is sent.
+
+The renderer's own errors below throw when they are in the page itself; inside a component's
+view they make that component fail as above.
+
 Always (the markup would be wrong otherwise):
 
 - a `Promise` in any hole (child, attribute, text content);

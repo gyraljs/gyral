@@ -9,5 +9,7 @@ export { fakeDriver } from './fake.js';
 export type { FakeCall, FakeDriver, FakeOptions, FakeRun } from './fake.js';
 export { hydrated, mountSsr } from './ssr.js';
 export type { HydratedOptions, MountedSsr, MountSsrOptions } from './ssr.js';
+export { collectErrors } from './errors.js';
+export type { CollectedErrors } from './errors.js';
 export { virtualTime } from './time.js';
 export type { VirtualTime } from './time.js';

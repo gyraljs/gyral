@@ -2,8 +2,13 @@
 // tag (light mark, seed, island attributes), then its view, inside a declarative shadow root
 // with the component's CSS (08 "Server") or as light-DOM children (ADR 0014). The parent's
 // children of a shadow component follow in the parent's walk, after the `<template>`.
-import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from '../attributes.js';
-import type { ServerComponent } from '../registry.js';
+import {
+  ERROR_ATTRIBUTE,
+  ISLAND_ATTRIBUTE,
+  LIGHT_ATTRIBUTE,
+  SEED_ATTRIBUTE,
+} from '../attributes.js';
+import type { ServerComponent, ServerRendering } from '../registry.js';
 import { escapeSeed, styleSafe } from './escape.js';
 import { ROOT, Writer, type Deferred, type Item, type StyleValues } from './writer.js';
 
@@ -22,17 +27,41 @@ export function styleText(component: ServerComponent): string {
   return text;
 }
 
-/** Writes a deferred component; nested components are deferred again. */
+/**
+ * Writes a deferred component; nested components are deferred again. A component that fails
+ * (ADR 0024) writes its error view instead, marked `data-gyral-error`, and `onError` hears it.
+ */
 export function expand(
   { component, input }: Deferred,
   dev: boolean,
   styles: StyleValues | undefined,
+  onError: (error: unknown) => void,
 ): Item[] {
-  const { view, seed } = component.render(input);
-  const w = new Writer(dev, input.scope, styles);
+  let rendering = component.render(input);
+  let items: Item[];
+  try {
+    items = write(component, input.scope, rendering, dev, styles);
+  } catch (cause) {
+    if (component.fallback === undefined || rendering.failed !== undefined) throw cause;
+    rendering = component.fallback(cause);
+    items = write(component, input.scope, rendering, dev, styles);
+  }
+  if (rendering.failed !== undefined) onError(rendering.failed);
+  return items;
+}
+
+function write(
+  component: ServerComponent,
+  scope: unknown,
+  { view, seed, failed }: ServerRendering,
+  dev: boolean,
+  styles: StyleValues | undefined,
+): Item[] {
+  const w = new Writer(dev, scope, styles);
   let tail = component.light ? ` ${LIGHT_ATTRIBUTE}` : '';
   // Single-quoted, so the JSON's double quotes stay raw (ADR 0012).
-  tail += ` ${SEED_ATTRIBUTE}='${escapeSeed(JSON.stringify(seed))}'`;
+  if (failed === undefined) tail += ` ${SEED_ATTRIBUTE}='${escapeSeed(JSON.stringify(seed))}'`;
+  else tail += ` ${ERROR_ATTRIBUTE}`;
   if (component.hydrate !== 'load') {
     tail += ` defer-hydration ${ISLAND_ATTRIBUTE}="${component.hydrate}"`;
   }

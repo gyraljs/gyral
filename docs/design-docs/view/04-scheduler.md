@@ -36,9 +36,11 @@ update maps or completion promises.
    hosts dirty, loop again within the same flush.
 6. Resolve waiting `settled()` promises.
 
-**Errors:** a view or reducer that throws is logged with its tag, its previous DOM stays, and the
-flush continues with the other hosts. Post-render work that throws is logged the same way. A
-development `HydrationMismatch` (07) is such an error: the host keeps the server's DOM.
+**Errors:** a host whose view throws is reported for that host (05 "Errors", ADR 0024): it
+renders its `error` view or keeps its previous DOM, and the flush continues with the other
+hosts. Reducers never throw into the flush (a failed reducer changes nothing). Post-render work
+that throws is reported the same way. A development `HydrationMismatch` (07) is such a failure:
+without an `error` view the host keeps the server's DOM.
 
 Outputs a child sends to its parent (`emit`, ADR 0010) are dispatched in a microtask, outside the
 child's render; the scheduler counts them as pending work, so `settled()` waits for them and for
@@ -47,8 +49,8 @@ the parent render they cause.
 **Loop guard:** more than 10 renders of one host, or 100 passes, in one flush means a cycle (two
 components feeding each other props or messages). Development throws, naming the tags involved:
 waiting `settled()` promises reject with the error, or, when nothing waits, it is thrown from the
-flush (an uncaught error). Production logs the error (without the explanation) and drops the
-remaining work, so the page doesn't freeze.
+flush (an uncaught error). Production reports the error (`reportError`, without the explanation)
+and drops the remaining work, so the page doesn't freeze.
 
 ## Post-render queue
 

@@ -348,3 +348,12 @@ never retried. `RetryPolicy` keeps its shape. Apps that never call `retry` don't
 The `retry` field in the `Driver` interface and the subscription options above describe 0.3.0.
 On the http driver, a CSRF token from a `<meta>` is configured only through the driver's
 `headers` (`csrfFromMeta`); `HttpRequest.csrf` is gone.
+
+## Addendum: failures go through one channel (ADR 0024, 0.3.1)
+
+A driver failure with no `onFailure` is reported as an error (G0041), not a warning, and a
+throwing `onSuccess`/`onFailure` mapper is reported (G0040) and sends nothing; both send
+`Errored` to the component (phase `command`). A reducer that throws for a command's result is an
+update failure (G0073): the state is unchanged and the reducer's commands don't run. Store
+commands report the same way, without a component. See ADR 0024 for the channel itself
+(`GyralError`, the boundary event, `reportError`).

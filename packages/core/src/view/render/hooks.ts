@@ -101,17 +101,32 @@ export function queueHook(part: HookPart): void {
 /** The queue position before a render, for `runHooks`/`dropHooks`. */
 export const hookMark = (): number => queue.length;
 
-/** Runs the `client` calls queued since `mark`, in document order, after `root` committed. */
+/** Where a hook's failure goes (core reports it, ADR 0024); unset, `reportError`. */
+let hookFailed: ((error: unknown, root: Node) => void) | undefined;
+
+/** Internal (core's element.ts): reports hook failures. */
+export function onHookFailure(report: (error: unknown, root: Node) => void): void {
+  hookFailed = report;
+}
+
+/**
+ * Runs the `client` calls queued since `mark`, in document order, after `root` committed. Each
+ * hook on its own: one that throws doesn't keep the others from running.
+ */
 export function runHooks(mark: number, root: Node): void {
   disposal?.(root); // disposable hooks whose element left `root` dispose first (dispose.ts)
   try {
     for (let i = mark; i < queue.length; i++) {
       const part = queue[i] as HookPart;
-      (part.spec as HookSpec<readonly unknown[]>).client(
-        part.el,
-        part.args as readonly unknown[],
-        part.prev,
-      );
+      try {
+        (part.spec as HookSpec<readonly unknown[]>).client(
+          part.el,
+          part.args as readonly unknown[],
+          part.prev,
+        );
+      } catch (error) {
+        (hookFailed ?? reportError)(error, root);
+      }
     }
   } finally {
     queue.length = mark;

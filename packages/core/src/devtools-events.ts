@@ -50,6 +50,15 @@ export type DevEvent = { readonly at: number } & (
     }
   | ({ readonly kind: 'command'; readonly owner: string } & CommandTraceEvent)
   | {
+      /** A failure Gyral caught (ADR 0024): `component` is absent for stores and shared work. */
+      readonly kind: 'error';
+      readonly component?: DevComponentRef;
+      readonly phase: string;
+      readonly msg?: string;
+      readonly message: string;
+      readonly error: unknown;
+    }
+  | {
       readonly kind: 'store';
       readonly store: string;
       readonly msg: Tagged;

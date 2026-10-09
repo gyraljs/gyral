@@ -75,7 +75,7 @@ Arguments: none.
 
 ### G0031
 
-> \<{tag}> failed to render; its previous DOM stays.
+> \<{tag}> view failed; it shows its error view, or its previous DOM stays.
 
 Arguments: `tag`.
 
@@ -101,15 +101,15 @@ Arguments: `rounds`.
 
 ### G0040
 
-> gyral: command mapper threw
+> {owner}: the onSuccess or onFailure mapper for driver "{driver}" threw; no message was sent.
 
-Arguments: none.
+Arguments: `owner`, `driver`.
 
 ### G0041
 
-> gyral: unhandled failure from driver "{driver}"
+> {owner}: driver "{driver}" failed and the command has no onFailure.
 
-Arguments: `driver`.
+Arguments: `owner`, `driver`.
 
 ### G0042
 
@@ -200,3 +200,41 @@ Arguments: none.
 > gyral: this page's Trusted Types policy list does not allow the policy "gyral", so templates are parsed from plain strings, which works only while Trusted Types are not enforced. Add `trusted-types gyral` to the Content-Security-Policy.
 
 Arguments: none.
+
+## Errors (ADR 0024)
+
+### G0073
+
+> \<{tag}> update for "{message}" failed; the state is unchanged.
+
+Arguments: `tag`, `message`.
+
+### G0074
+
+> \<{tag}> init failed; it shows its error view, or stays empty.
+
+Arguments: `tag`.
+
+### G0075
+
+> \<{tag}> element hook failed; the other hooks still ran.
+
+Arguments: `tag`.
+
+### G0076
+
+> store "{store}": update for "{message}" failed; the state is unchanged.
+
+Arguments: `store`, `message`.
+
+### G0077
+
+> store "{store}": a subscriber failed; the other subscribers were still notified.
+
+Arguments: `store`.
+
+### G0078
+
+> \<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.
+
+Arguments: `tag`.

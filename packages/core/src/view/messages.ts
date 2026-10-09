@@ -25,7 +25,7 @@ export const MESSAGES = {
     '(view/05-element.md).',
   // Scheduling
   30: 'gyral: a deferred callback failed',
-  31: '<{tag}> failed to render; its previous DOM stays.',
+  31: '<{tag}> view failed; it shows its error view, or its previous DOM stays.',
   32: 'gyral: post-render work failed',
   33:
     'gyral: rendering did not settle in one flush (a cycle between {tags}). Components are ' +
@@ -36,8 +36,8 @@ export const MESSAGES = {
     'emitting without pause, or components (or drivers) are feeding each other messages in a ' +
     'cycle.',
   // Commands
-  40: 'gyral: command mapper threw',
-  41: 'gyral: unhandled failure from driver "{driver}"',
+  40: '{owner}: the onSuccess or onFailure mapper for driver "{driver}" threw; no message was sent.',
+  41: '{owner}: driver "{driver}" failed and the command has no onFailure.',
   42: 'gyral: subscription "{name}" failed to unsubscribe',
   // Stores
   50:
@@ -70,4 +70,13 @@ export const MESSAGES = {
     'gyral: this page\'s Trusted Types policy list does not allow the policy "gyral", so ' +
     'templates are parsed from plain strings, which works only while Trusted Types are not ' +
     'enforced. Add `trusted-types gyral` to the Content-Security-Policy.',
+  // Errors (ADR 0024)
+  73: '<{tag}> update for "{message}" failed; the state is unchanged.',
+  74: '<{tag}> init failed; it shows its error view, or stays empty.',
+  75: '<{tag}> element hook failed; the other hooks still ran.',
+  76: 'store "{store}": update for "{message}" failed; the state is unchanged.',
+  77: 'store "{store}": a subscriber failed; the other subscribers were still notified.',
+  78:
+    '<{tag}> failed to render on the server; it renders its error view (or nothing) and ' +
+    'starts fresh in the browser.',
 } as const;

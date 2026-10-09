@@ -5,6 +5,7 @@
 import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
 import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
+import { fail, type GyralError } from './errors.js';
 import { HostModel, type ModelCommand } from './host-model.js';
 import { hydrationCode, takeSeed, whenHydrationLoads } from '#hydration-loader';
 import {
@@ -29,9 +30,25 @@ import {
 import { checkSpecFeatures, customStates } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
-import { DEV, render, sheetsFor, suspendHooks, type Markup } from './view/index.js';
+import {
+  DEV,
+  ERROR_ATTRIBUTE,
+  message,
+  onHookFailure,
+  render,
+  sheetsFor,
+  suspendHooks,
+  type ChildValue,
+  type Markup,
+} from './view/index.js';
 
 const DEFER = 'defer-hydration';
+
+// A hook that throws is reported for the host owning the render root (ADR 0024).
+onHookFailure((error, root) => {
+  const host = root instanceof ShadowRoot ? root.host : (root as Element);
+  fail(error, 'hook', message(75, host.localName), { host, tag: host.localName });
+});
 
 type Bag = Record<string, unknown>;
 /** The element class for `spec` (not yet registered); define() types it for the spec. */
@@ -218,8 +235,11 @@ export function elementClass<S, M extends Tagged, P>(
       sheets ??= light ? [] : sheetsFor(spec.styles);
       // Rendering fresh: a shadow root without a seed (hand-written DSD) or a server-rendered
       // host whose hydration code failed to load starts empty.
+      // A host that failed on the server (ADR 0024) starts fresh: its content is a fallback.
+      const failedOnServer = this.hasAttribute(ERROR_ATTRIBUTE);
+      if (failedOnServer) this.removeAttribute(ERROR_ATTRIBUTE);
       if (!this.#hydrating) {
-        if (!light || this.#serverRendered) root.replaceChildren();
+        if (!light || this.#serverRendered || failedOnServer) root.replaceChildren();
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       this.#listen(DEFAULT_EVENTS);
@@ -250,11 +270,24 @@ export function elementClass<S, M extends Tagged, P>(
       }
       this.#stale = false;
       this.#model.syncProps(names);
-      const view = spec.view(this.state, intentNames as IntentNames<string>, this.#model.ctx());
-      if (this.#hydrating) {
-        hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
-        this.#hydrating = false;
-      } else render(view, root, this.#seen);
+      const failure = this.#model.failure;
+      if (failure !== undefined) {
+        // init threw (ADR 0024): the error view, once; nothing else runs for this host.
+        if (!this.#rendered) this.#fallback(root, failure, undefined);
+        this.#rendered = true;
+        return;
+      }
+      try {
+        const view = spec.view(this.state, intentNames as IntentNames<string>, this.#model.ctx());
+        if (this.#hydrating) {
+          hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
+          this.#hydrating = false;
+        } else render(view, root, this.#seen);
+      } catch (cause) {
+        const error = this.#model.fail(cause, 'view', message(31, tag));
+        this.#fallback(root, error, this.state);
+        return; // the first-render steps wait for a render that succeeds
+      }
       const states = spec.states;
       const sync = customStates;
       if (states !== undefined && sync !== undefined) {
@@ -277,6 +310,24 @@ export function elementClass<S, M extends Tagged, P>(
         afterRender(POST_INIT, () => {
           this.#model.run(commands);
         });
+      }
+    }
+
+    /**
+     * Renders `spec.error` (ADR 0024). Without one the root keeps what it shows; a fallback that
+     * throws too is reported and changes nothing.
+     */
+    #fallback(root: ShadowRoot | HTMLElement, error: GyralError, state: S | undefined): void {
+      if (spec.error === undefined) return;
+      try {
+        const view: ChildValue = spec.error(error, state);
+        if (this.#hydrating) {
+          this.#hydrating = false;
+          root.replaceChildren();
+        }
+        render(view, root, this.#seen);
+      } catch (cause) {
+        fail(cause, 'view', message(31, tag), { host: this, tag });
       }
     }
 

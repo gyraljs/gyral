@@ -236,7 +236,10 @@ export function handleIntent<M>(
   root: Node,
   parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
   tag: string,
-  model: { ctx(): ParserCtx<unknown> },
+  model: {
+    ctx(): ParserCtx<unknown>;
+    fail(cause: unknown, phase: 'parse', text: string, msg?: string): unknown;
+  },
   deliver: (msg: Tagged | undefined) => void,
 ): void {
   for (let input: IntentInput | undefined; (input = readIntent(event, root, input?.target));) {
@@ -246,12 +249,18 @@ export function handleIntent<M>(
       console.warn(message(11, tag, name));
       return;
     }
-    const result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
-    if (result instanceof Promise) {
-      return void result.then(deliver, (error: unknown) => {
-        console.error(message(12, tag, name), error);
-      });
+    // A parser that throws or rejects is reported (ADR 0024) and sends nothing.
+    const failed = (cause: unknown): void => {
+      model.fail(cause, 'parse', message(12, tag, name), name);
+    };
+    let result: Tagged | undefined | Promise<Tagged | undefined>;
+    try {
+      result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
+    } catch (cause) {
+      failed(cause);
+      return;
     }
+    if (result instanceof Promise) return void result.then(deliver, failed);
     if (result !== undefined) {
       deliver(result);
       return;

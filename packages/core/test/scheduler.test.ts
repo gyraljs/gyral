@@ -1,6 +1,7 @@
 // The global scheduler (docs/design-docs/view/04-scheduler.md): marking, the flush (parents
 // first, one render per host), the post-render queue, errors and the loop guard.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { collectErrors } from './collect-errors.js';
 import { define, each, focus, html, prop, settled, type Hydrated } from '../src/index.js';
 
 const log: string[] = [];
@@ -58,8 +59,8 @@ describe('the flush', () => {
     expect(log).toEqual(['root:2', 'leaf:r2:1']);
   });
 
-  it('isolates a host whose view throws: logged with its tag, previous DOM kept', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('isolates a host whose view throws: reported with its tag, previous DOM kept', async () => {
+    const reported = collectErrors();
     let fail = false;
     const Fragile = define<{ readonly n: number }, Msg>()('test-sch-fragile', {
       init: () => ({ n: 0 }),
@@ -78,7 +79,9 @@ describe('the flush', () => {
     bad.send({ _tag: 'Bump' });
     root.send({ _tag: 'Bump' });
     await settled();
-    expect(String(error.mock.calls[0]?.[0])).toContain('<test-sch-fragile> failed to render');
+    reported.stop();
+    expect(reported.errors[0]?.component).toBe('test-sch-fragile');
+    expect(reported.errors[0]?.phase).toBe('view');
     expect(bad.shadowRoot?.querySelector('b')?.textContent).toBe('0');
     expect(log).toContain('root:1');
   });

@@ -1,3 +1,4 @@
+import type { GyralError } from './errors.js';
 import type { Prop } from './prop.js';
 import type { ChildValue, Styles } from './view/index.js';
 import type { CommandInfo } from './invokers.js';
@@ -91,6 +92,18 @@ export interface Connected {
   readonly reconnect: true;
 }
 
+/**
+ * Framework message (ADR 0024): an update, an intent parser or a command of this component
+ * failed. The failure was reported (`reportError`, or claimed by an ancestor's boundary) and
+ * changed nothing; reduce it to show an error state or to reset. A failure while reducing
+ * `Errored` is reported and not sent again.
+ */
+export interface Errored {
+  readonly _tag: 'Errored';
+  readonly phase: 'update' | 'parse' | 'command';
+  readonly error: GyralError;
+}
+
 /** One validation problem. `path` is dot-joined and matches the field's `name`. */
 export interface FieldIssue {
   readonly path: string;
@@ -164,6 +177,7 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
   readonly Connected?: Reducer<S, M, Connected, P>;
+  readonly Errored?: Reducer<S, M, Errored, P>;
 };
 
 /**
@@ -224,6 +238,12 @@ interface SpecBody<S, M extends Tagged, P, N extends string, I> {
    * for a recursive component, still accepts it.)
    */
   view(state: S, intents: IntentNames<N>, ctx: Ctx<P>): ChildValue;
+  /**
+   * What to show when `init` or the view throws (ADR 0024): `state` is `undefined` when `init`
+   * threw. Without it, a failed first render leaves the host empty and a failed later render
+   * keeps its previous DOM. A fallback that throws too is reported and the previous DOM stays.
+   */
+  error?(failure: GyralError, state: S | undefined): ChildValue;
   /**
    * Shadow-root styles: `css` values, plain CSS strings, or arrays of them, nested freely.
    * Each maps to one shared `CSSStyleSheet`. Ignored (with a warning) when `shadow: false`.
