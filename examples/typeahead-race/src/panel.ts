@@ -73,7 +73,6 @@ export const Panel = define<State, Msg, Props>()('gy-search-panel', {
     mode: prop.string({ schema: modeSchema, default: 'naive' }),
   },
   init: () => ({ results: undefined, requests: [] }),
-  intent: {},
   update: {
     Found: (s, m) => found(s, m.results),
     PropsChanged: typed,

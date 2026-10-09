@@ -23,7 +23,7 @@ const TodoEl = define<Todo, Msg>()('test-todo', {
     },
     Draft: ({ value }) => ({ _tag: 'Draft', text: value ?? '' }),
     Toggle: ({ checked }) => ({ _tag: 'Toggle', done: checked === true }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Add: (s, m) => ({ ...s, items: [...s.items, m.text] }),
@@ -46,7 +46,7 @@ const TodoEl = define<Todo, Msg>()('test-todo', {
 
 define<{ readonly n: number }, { readonly _tag: 'Clear' }>()('test-child', {
   init: () => ({ n: 0 }),
-  intent: { Clear: () => ({ _tag: 'Clear' }) },
+  intent: { Clear: true },
   update: { Clear: (s) => ({ n: s.n + 1 }) },
   view: (s, i) => html`<button data-intent=${i.Clear}>${s.n}</button>`,
 });

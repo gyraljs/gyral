@@ -14,7 +14,7 @@ interface Props {
 export const Counter = define<State, Msg, Props>()('test-server-counter', {
   props: { start: prop.number(), label: prop.string() },
   init: (p) => ({ count: p.start ?? 0 }),
-  intent: { Increment: () => ({ _tag: 'Increment' }) },
+  intent: { Increment: true },
   update: { Increment: (s) => ({ count: s.count + 1 }) },
   styles: css`
     output {

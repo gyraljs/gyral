@@ -57,7 +57,7 @@ const refresh = () =>
 
 export const OrderList = define<State, Msg>()('order-list', {
   init: () => [{ _tag: 'Ready', orders: [] }, [refresh()]],
-  intent: { Refresh: () => ({ _tag: 'Refresh' }) },
+  intent: { Refresh: true },
   update: {
     Refresh: (s) => [s, [refresh()]],
     Loaded: (_s, m) => ({ _tag: 'Ready', orders: m.orders }),
@@ -102,7 +102,7 @@ export const Dashboard = define<State, Msg>()('my-dashboard', {
       console.info('widget failed in', error.phase);
       return { _tag: 'WidgetFailed' };
     },
-    Retry: () => ({ _tag: 'Retry' }),
+    Retry: true,
   },
   update: {
     WidgetFailed: (s) => ({ ...s, failed: true }),

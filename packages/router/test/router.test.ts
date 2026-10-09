@@ -26,7 +26,6 @@ const toRouted = (location: RouteLocation): Msg => ({ _tag: 'Routed', location }
 
 const App = define<State, Msg>()('test-router-app', {
   init: () => [{ route: undefined, seen: [] }, [listen(toRouted)]],
-  intent: {},
   update: {
     Routed: (s, m) => ({
       route: app.match(m.location.href),

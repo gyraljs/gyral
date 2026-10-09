@@ -108,7 +108,7 @@ const queueOf = (tag: string) =>
         command(motion, undefined, { onSuccess: (reduce): Msg => ({ _tag: 'Motion', reduce }) }),
       ],
     ],
-    intent: { Start: () => ({ _tag: 'Start' }), Wait: () => ({ _tag: 'Wait' }) },
+    intent: { Start: true, Wait: true },
     update: {
       QueueChanged: (s, m) =>
         autoAdvances(m.steps) ? [{ ...s, steps: m.steps }, [step()]] : { ...s, steps: m.steps },
@@ -197,7 +197,6 @@ const echo = defineDriver<number, number>({ name: 'echo', run: (n) => n + 1 });
 type EchoMsg = { readonly _tag: 'Echo'; readonly n: number };
 const Echo = define<{ readonly n: number }, EchoMsg>()('test-quiet-echo', {
   init: () => ({ n: 0 }),
-  intent: {},
   update: {
     Echo: (_s, m) => [
       { n: m.n },
@@ -250,7 +249,7 @@ const Panel = define<{ readonly open: boolean; readonly mounted: number }, Panel
       { open: true, mounted: -1 },
       [command(watchMounted, undefined, { onSuccess: (n): PanelMsg => ({ _tag: 'Mounted', n }) })],
     ],
-    intent: { Close: () => ({ _tag: 'Close' }) },
+    intent: { Close: true },
     update: {
       Close: (s) => ({ ...s, open: false }),
       Mounted: (s, m) => ({ ...s, mounted: m.n }),

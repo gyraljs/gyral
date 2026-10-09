@@ -96,8 +96,6 @@ describe('inferred intent names', () => {
   it('infers the state, messages and props when define() gets no type arguments', () => {
     const Badge = define()('test-names-inferred', {
       props: { count: prop.number({ default: 1 }) },
-      intent: {},
-      update: {},
       view: (_s, i, { props }) => {
         expectTypeOf<keyof typeof i>().toEqualTypeOf<never>();
         return html`<b>${props.count}</b>`;

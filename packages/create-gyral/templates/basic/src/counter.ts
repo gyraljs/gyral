@@ -12,8 +12,8 @@ export const Counter = define<State, Msg>()('app-counter', {
   init: () => ({ count: 0 }),
   // Intent: DOM events on elements marked with data-intent become messages.
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   // Update: pure functions from (state, message) to the next state.
   update: {

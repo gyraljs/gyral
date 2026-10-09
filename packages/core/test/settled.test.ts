@@ -11,7 +11,6 @@ const Kid = define<{ readonly grown: number }, KidMsg, { readonly label: string 
   {
     props: { label: prop.string({ attribute: false, default: '' }) },
     init: () => ({ grown: 0 }),
-    intent: {},
     update: {
       Grow: (s) => [{ grown: s.grown + 1 }, [emit({ _tag: 'Grown', size: s.grown + 1 })]],
     },

@@ -90,9 +90,8 @@ describe('pure stepping', () => {
       state: s0,
       commands: [],
     });
-    const Live = define<{ readonly live: boolean }, never>()('test-hydrated-step', {
+    const Live = define<{ readonly live: boolean }>()('test-hydrated-step', {
       init: () => ({ live: false }),
-      intent: {},
       update: { Hydrated: (s, m) => ({ ...s, live: m.serverRendered }) },
       view: () => html`<p>live</p>`,
     });
@@ -244,7 +243,6 @@ describe('virtualTime', () => {
       { fired: 0 },
       [command(delay, { ms: 60_000 }, { onSuccess: () => ({ _tag: 'Fire' }) })],
     ],
-    intent: {},
     update: { Fire: (s) => ({ fired: s.fired + 1 }) },
     view: (s) => html`${s.fired}`,
   });

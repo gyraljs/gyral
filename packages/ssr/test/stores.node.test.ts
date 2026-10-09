@@ -12,11 +12,9 @@ const cart = defineStore<Cart, { readonly _tag: 'Add'; readonly sku: string }>('
   update: { Add: (s, m) => ({ ...s, lines: [...s.lines, m.sku] }) },
 });
 
-define<{ readonly x: number }, never>()('ssr-badge', {
+define<{ readonly x: number }>()('ssr-badge', {
   stores: [cart],
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`<p>${read(cart).owner}:${read(cart).lines.length}</p>`,
 });
 

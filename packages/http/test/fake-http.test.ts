@@ -18,7 +18,6 @@ interface State {
 
 const Loader = define<State, Msg>()('test-fake-http', {
   init: () => ({ count: undefined, error: undefined }),
-  intent: {},
   update: {
     Load: (s) => [
       s,

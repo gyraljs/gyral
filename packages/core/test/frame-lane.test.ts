@@ -11,7 +11,6 @@ const Ticker = define<{ readonly ticks: number; readonly bumps: number }, Msg>()
   'test-frame-ticker',
   {
     init: () => ({ ticks: 0, bumps: 0 }),
-    intent: {},
     update: {
       Tick: (s) => ({ ...s, ticks: s.ticks + 1 }),
       Bump: (s) => ({ ...s, bumps: s.bumps + 1 }),
@@ -106,10 +105,8 @@ describe('renderOnFrame', () => {
     });
     const seen: number[] = [];
     // A reader whose store-driven renders wait for the frame, and a writer elsewhere.
-    const Reader = define<Record<string, never>, never>()('test-frame-reader', {
+    const Reader = define<Record<string, never>>()('test-frame-reader', {
       stores: [counter],
-      intent: {},
-      update: {},
       renderOnFrame: ['StoreChanged'],
       view: (_s, _i, { read }) => {
         seen.push(read(counter).n);
@@ -118,7 +115,6 @@ describe('renderOnFrame', () => {
     });
     const Writer = define<Record<string, never>, CounterMsg>()('test-frame-writer', {
       stores: [counter],
-      intent: {},
       update: { Add: (s) => [s, [send(counter, { _tag: 'Add' })]] },
       view: () => html`<i></i>`,
     });

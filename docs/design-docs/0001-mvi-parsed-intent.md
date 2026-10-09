@@ -161,6 +161,18 @@ filtering. Async parsers can't decline. It is a behavior change for code that re
 inner `undefined` hiding the event from an outer intent; such code returns a no-op message or
 checks `event.target` in the outer parser.
 
+## Addendum: tag-only intents and optional tables (gyral-1zd.20, 2026-10-09, 0.3.1; decided by the user)
+
+Audits of seven apps found about 40 parsers that only return their own tag and 52 empty
+`intent: {}` / `update: {}` tables. Elm names the message itself (`onClick Deal`) and Hyperapp
+an action (`onclick: Deal`); neither needs a function for a message without data. Gyral keeps
+closures out of views, so the equivalent sits in the parser table: `Deal: true` means
+`() => ({ _tag: 'Deal' })`. It is allowed only for a variant with no field besides `_tag`, and
+only under a key that is a message tag (an inferred intent name must still say what it sends).
+`intent` is optional, and `update` is optional when the component has no messages; with
+messages, `update` stays required and exhaustive. Runtime cost: one comparison in the intent
+dispatcher.
+
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 
 `spec.viewTransition?: (prev, next, msg) => boolean` decides, per state change, whether the

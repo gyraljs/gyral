@@ -11,8 +11,6 @@ const props = {
 
 const Owner = define<Stateless, never, PropsOf<typeof props>>()('test-prop-null', {
   props,
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) =>
     html`<p>${props.owner ?? 'nobody'}</p>
       <i>${props.reviewer ?? 'nobody'}</i>`,

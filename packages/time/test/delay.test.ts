@@ -18,7 +18,6 @@ interface State {
 
 const Toast = define<State, Msg>()('test-delay-only', {
   init: () => ({ fired: [] }),
-  intent: {},
   update: {
     Fired: (s, m) => ({ fired: [...s.fired, m.label] }),
     Typed: (s, m) => [s, [debounce(300, { _tag: 'Fired', label: m.text })]],

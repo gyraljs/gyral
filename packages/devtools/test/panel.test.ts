@@ -6,7 +6,7 @@ import { mountDevtools, type MountedDevtools } from '../src/index.js';
 type Msg = { readonly _tag: 'Inc' };
 const Probe = define<{ readonly n: number }, Msg>()('test-devtools-target', {
   init: () => ({ n: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) },
+  intent: { Inc: true },
   update: { Inc: (s) => ({ n: s.n + 1 }) },
   view: (s, i) => html`<button data-intent=${i.Inc}>Inc ${s.n}</button>`,
 });

@@ -15,10 +15,8 @@ const directive = (policy: string, name: string) =>
     ?.split(' ')
     .slice(1);
 
-define<{ readonly n: number }, never>()('sah-box', {
+define<{ readonly n: number }>()('sah-box', {
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<p style="color: red">box</p>`,
 });
 

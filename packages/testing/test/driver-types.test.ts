@@ -58,7 +58,6 @@ const Search = define<{ readonly query: string }, Msg>()('test-driver-types-sear
       }),
     ],
   ],
-  intent: {},
   update: { Restored: (_s, m) => ({ query: m.query }) },
   view: (s) => html`<output>${s.query}</output>`,
 });
@@ -155,7 +154,6 @@ const Table = define<{ readonly turn: number }, GameMsg>()('test-driver-types-ta
       ),
     ],
   ],
-  intent: {},
   update: { Turn: (_s, m) => ({ turn: m.turn }), Lost: (s) => s },
   view: (s) => html`<p>${s.turn}</p>`,
 });
