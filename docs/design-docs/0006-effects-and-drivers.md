@@ -357,3 +357,47 @@ throwing `onSuccess`/`onFailure` mapper is reported (G0040) and sends nothing; b
 update failure (G0073): the state is unchanged and the reducer's commands don't run. Store
 commands report the same way, without a component. See ADR 0024 for the channel itself
 (`GyralError`, the boundary event, `reportError`).
+
+## Addendum: one override rule, driver tokens, commands without handlers (0.3.1)
+
+**One override rule.** The spec's `drivers` field is gone. A command's driver resolves by name
+from the element's own `el.drivers`, then the nearest provider (`provideDrivers`,
+`<gyral-drivers>`), then the command's own driver. Three override sources were one too many:
+the audits found the spec field repeated on eleven components of one app, where a single
+`provideDrivers` at the entry was meant. Apps configure drivers once at the entry
+(`provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) })`). Stores keep
+`StoreSpec.drivers` and `instance.drivers`: they live outside the element tree, so providers
+can't reach them.
+
+**Driver tokens.** `defineDriver<I, O, E>('session')`, or `defineDriver({ name, toError })`
+without `run`, returns a typed token: commands built from it are typed by `I`, `O` and `E`,
+and it runs only when `el.drivers` or a provider supplies a driver of that name. Nothing
+providing it is a programming error, reported through the error channel as G0043 (phase
+`command`) naming the driver and the component; it never reaches `onFailure`. This replaces
+the placeholder drivers apps wrote (a `run` that throws "not configured"), whose meaning
+depended on which module happened to load first, and the `as AnyDriver` casts around them.
+
+| Framework            | Service lookup                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| React, Preact, Solid | `createContext<T>(default)`: a typed token, provided by an ancestor, read with `useContext` |
+| Vue                  | `provide(key, value)` / `inject(key)` with a typed `InjectionKey<T>`                        |
+| Lit                  | `@lit/context`: `createContext<T>(key)`, provider and consumer controllers                  |
+| Angular              | `InjectionToken<T>` resolved through the injector hierarchy                                 |
+| Gyral                | `defineDriver<I, O, E>(name)`: a typed token, provided by an ancestor or `el.drivers`       |
+
+Gyral's lookup is by name rather than object identity, so a fake in a test (`fakeDriver`,
+`withDrivers`, `mountSsr`) needs no import of the token; commands stay plain data.
+
+**Commands without handlers.** Every field of `CommandHandlers` is optional. `command(log,
+line)` is a `Command<never>`: it answers with nothing, and a failure is reported (G0041). The
+message type parameters are `const`, so `onSuccess: (n) => ({ _tag: 'Loaded', n })` infers the
+literal tag and no type arguments are needed:
+
+```ts
+// 0.3.0
+command<string, void, unknown, Msg>(log, line, { onSuccess: () => undefined });
+command<string, number, Error, Msg>(fetchCount, q, { onSuccess: (n) => ({ _tag: 'Loaded', n }) });
+// 0.3.1
+command(log, line);
+command(fetchCount, q, { onSuccess: (n) => ({ _tag: 'Loaded', n }) });
+```
