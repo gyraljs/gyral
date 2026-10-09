@@ -30,6 +30,11 @@ export interface ServerRenderOptions {
    * from it ends the render with that error.
    */
   readonly onError?: (error: unknown) => void;
+  /**
+   * Collects the tag of every Gyral component the render writes, in document order, so a page
+   * can load exactly those components' client modules (automatic component loading).
+   */
+  readonly tags?: Set<string>;
 }
 
 const logError = (error: unknown): void => {
@@ -49,13 +54,17 @@ export function* render(value: ChildValue, options: ServerRenderOptions = {}): I
   const dev = options.dev ?? DEV;
   const styles = options.styleAttributes;
   const onError = options.onError ?? logError;
+  const tags = options.tags;
   const root = new Writer(dev, undefined, styles);
   root.child(value, undefined, ROOT);
   const stack: Item[] = [];
   push(stack, root.done());
   for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
     if (typeof item === 'string') yield item;
-    else push(stack, expand(item, dev, styles, onError));
+    else {
+      tags?.add(item.component.tag);
+      push(stack, expand(item, dev, styles, onError));
+    }
   }
 }
 

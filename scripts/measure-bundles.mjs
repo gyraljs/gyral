@@ -41,14 +41,24 @@ const BUDGET_FILE = 'scripts/size-budget.json';
 /** A bundle this far under its budget should get a lower budget (the ratchet). */
 const SLACK_KIB = 0.5;
 
-/** The browser entry of an example: its index.html, or a client entry for SSR examples. */
+/**
+ * The browser entry of an example: its index.html, or a client entry for SSR examples. An SSR
+ * example built with `gyralVitePreset({ components: true })` has none: the preset adds its
+ * loader (`COMPONENTS`).
+ */
 function entryOf(dir) {
   if (existsSync(join(dir, 'index.html'))) return join(dir, 'index.html');
   const client = join(dir, 'src', 'entry-client.ts');
-  return existsSync(client) ? client : undefined;
+  if (existsSync(client)) return client;
+  const config = join(dir, 'vite.config.ts');
+  return existsSync(config) && /components:\s*true/.test(readFileSync(config, 'utf8'))
+    ? COMPONENTS
+    : undefined;
 }
+const COMPONENTS = 'components';
 
 async function bundleBytes(root, entry, conditions, presetOptions = {}) {
+  if (entry === COMPONENTS) presetOptions = { ...presetOptions, components: true };
   const preset = presetModule.gyralVitePreset(presetOptions);
   const output = await build({
     root,
@@ -57,7 +67,12 @@ async function bundleBytes(root, entry, conditions, presetOptions = {}) {
     mode: 'production',
     plugins: preset.plugins,
     resolve: conditions === undefined ? preset.resolve : { ...preset.resolve, conditions },
-    build: { write: false, minify: true, modulePreload: false, rollupOptions: { input: entry } },
+    build: {
+      write: false,
+      minify: true,
+      modulePreload: false,
+      rollupOptions: entry === COMPONENTS ? {} : { input: entry },
+    },
   });
   const outputs = Array.isArray(output) ? output : [output];
   const chunks = outputs.flatMap((o) => o.output).filter((chunk) => chunk.type === 'chunk');
@@ -66,12 +81,17 @@ async function bundleBytes(root, entry, conditions, presetOptions = {}) {
     min: raw.length,
     gzip: gzipSync(raw, { level: 9 }).length,
     brotli: brotliCompressSync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length,
-    initial: gzipSync(Buffer.from(initialCode(chunks)), { level: 9 }).length,
+    initial: gzipSync(Buffer.from(initialCode(chunks, entry === COMPONENTS)), { level: 9 }).length,
   };
 }
 
-/** The entry chunks and everything they import statically, in output order. */
-function initialCode(chunks) {
+/**
+ * The entry chunks and everything they import statically, in output order. With automatic
+ * component loading, what a page rendering every component preloads: the loader, each
+ * component's module (the loader's dynamic imports) and core's hydration chunk, with their
+ * static imports.
+ */
+function initialCode(chunks, components = false) {
   const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
   const wanted = new Set();
   const visit = (chunk) => {
@@ -79,7 +99,14 @@ function initialCode(chunks) {
     wanted.add(chunk);
     for (const name of chunk.imports) visit(byName.get(name));
   };
-  for (const chunk of chunks) if (chunk.isEntry) visit(chunk);
+  for (const chunk of chunks) {
+    if (!chunk.isEntry) continue;
+    visit(chunk);
+    if (components) for (const name of chunk.dynamicImports) visit(byName.get(name));
+  }
+  if (components) {
+    for (const chunk of chunks) if (/hydration-client/.test(chunk.fileName)) visit(chunk);
+  }
   return chunks
     .filter((chunk) => wanted.has(chunk))
     .map((chunk) => chunk.code)
@@ -135,7 +162,8 @@ if (json) {
   }
   console.log(
     'Sizes in KiB. gzip/brotli: all chunks; initial: gzip of the entry and its static imports ' +
-      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
+      '(no lazy chunks; a components build: the loader, every component module and the ' +
+      'hydration chunk). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
       'also caps `initial`.',
   );
 }

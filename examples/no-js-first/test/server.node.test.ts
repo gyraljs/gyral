@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createApp, sampleReplies } from '../server/app.js';
 
 const fresh = () => {
-  const app = createApp({ clientEntry: '/src/entry-client.ts' });
+  const app = createApp({});
   return {
     get: (path: string) => app.fetch(new Request(`http://localhost${path}`)),
     post: (fields: Record<string, string>) =>
@@ -42,7 +42,7 @@ describe('no-js-first server (JavaScript off)', () => {
 
   it('keeps replies across apps that share them (the dev server makes one per request)', async () => {
     const replies = sampleReplies();
-    const appFor = () => createApp({ clientEntry: '/src/entry-client.ts', replies });
+    const appFor = () => createApp({ replies });
     await appFor().fetch(
       new Request('http://localhost/', {
         method: 'POST',

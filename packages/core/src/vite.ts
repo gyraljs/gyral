@@ -236,7 +236,7 @@ function gyralDependents(root: string): string[] {
  * out of externalization in server environments: Vite resolves them with its conditions
  * (`development` in dev), and they all share one copy of core. `vite build` is unaffected.
  */
-function gyralDevServer(): Plugin {
+function gyralDevSsr(): Plugin {
   let root = process.cwd();
   return {
     name: 'gyral:dev-server',
@@ -312,6 +312,19 @@ export interface GyralViteOptions {
    * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
    */
   readonly clientOnly?: boolean;
+  /**
+   * Automatic component loading (ADR 0016 addendum): every component defined under `include`
+   * gets a client module the build splits out, and a loader (`virtual:gyral/components`, added
+   * to the client build's input) imports a tag's module once that tag is in the page.
+   * `renderPage({ components })` then links exactly the components a page rendered, so pages
+   * need no client entry of their own and no side-effect imports. Default off.
+   */
+  readonly components?: boolean | ComponentsOptions;
+}
+
+export interface ComponentsOptions {
+  /** Directories (relative to Vite's root) whose modules' `define()` tags are found. Default `['src']`. */
+  readonly include?: readonly string[];
 }
 
 export interface GyralViteConfig {
@@ -333,8 +346,47 @@ export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig
       ...(options.clientOnly === true ? [gyralClientOnly()] : []),
       gyralTemplateCompiler(options.compiler),
       gyralTemplateLocations(options.compiler),
-      gyralDevServer(),
+      gyralDevSsr(),
+      ...(options.components === undefined || options.components === false
+        ? []
+        : [gyralComponents(options.components === true ? {} : options.components)]),
     ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
+  };
+}
+
+type Hook = (this: unknown, ...args: unknown[]) => unknown;
+
+/**
+ * Automatic component loading (`gyralVitePreset({ components })`): a shell whose hooks run
+ * ./compiler/components.ts, loaded on the first hook (`config`) like the compiler.
+ */
+function gyralComponents(options: ComponentsOptions): Plugin {
+  let impl: Plugin | undefined;
+  const run = (name: keyof Plugin) =>
+    function (this: unknown, ...args: unknown[]): unknown {
+      const hook = impl?.[name] as Hook | undefined;
+      return hook?.call(this, ...args) ?? null;
+    };
+  const hook = <K extends keyof Plugin>(name: K) => run(name) as NonNullable<Plugin[K]>;
+  return {
+    name: 'gyral:components',
+    api: {
+      tags: (): ReadonlyMap<string, string> =>
+        (impl?.api as { tags?: () => ReadonlyMap<string, string> } | undefined)?.tags?.() ??
+        new Map(),
+    },
+    async config(...args) {
+      const components =
+        await loadCompiler<typeof import('./compiler/components.js')>('components');
+      impl = components.createComponents(options);
+      return run('config').apply(this, args) as undefined;
+    },
+    configResolved: hook('configResolved'),
+    buildStart: hook('buildStart'),
+    resolveId: hook('resolveId'),
+    load: hook('load'),
+    configureServer: hook('configureServer'),
+    generateBundle: hook('generateBundle'),
   };
 }

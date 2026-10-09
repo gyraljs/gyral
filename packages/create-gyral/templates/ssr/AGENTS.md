@@ -19,7 +19,9 @@ This file tells coding agents how the project works.
 - `src/home-page.ts`: the page, a light-DOM component (`shadow: false`) styled by
   `src/styles.css`.
 - `src/counter.ts`: a widget in shadow DOM (`styles` inside).
-- `src/entry-client.ts`: browser entry: imports the components (hydration is built in).
+- No browser entry: `gyralVitePreset({ components: true })` gives every component under `src/`
+  its own client module, and `renderPage({ components })` loads exactly the ones a page
+  rendered (hydration is built in). Keep components under `src/`.
 - `server/app.ts`: renders each page with `renderPage`. Add a route there, and its path to
   `staticPaths` to prerender it. `server/app.test.ts` tests the rendered HTML. Pages send a
   `Content-Security-Policy` whose `style-src` lists style hashes (`renderPage({ csp })`):

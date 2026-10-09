@@ -238,10 +238,49 @@ through one policy named `gyral`, created on first use. Under
 (`'trusted-types': 'gyral'`, plus your own). The policy trusts its input as the app's own HTML,
 so `raw()` still never takes user input.
 
-## Client entry
+## Loading components on the client
+
+**Automatically (recommended).** Turn on `components` in the Vite preset and pass the
+`components` your server gets to `renderPage`: each page then loads exactly the components it
+rendered (their modules, preloaded, and a small loader), and a page that rendered none loads no
+JavaScript. No client entry, no per-page flags, no side-effect imports for the client; the
+server still imports the components it renders.
 
 ```text
-// src/entry-client.ts — no hydration import: core hydrates each component on its own.
+// vite.config.ts
+export default defineConfig({
+  ...gyralVitePreset({ components: true }), // finds define()'d tags under src/
+  build: { outDir: 'dist/client', emptyOutDir: true },
+});
+```
+
+```ts
+import { html } from '@gyral/core';
+import { renderPage, type ComponentAssets } from '@gyral/ssr';
+
+// `components` comes from gyralDevServer (dev), productionServer or componentsFromManifest
+// (production); tests leave it out.
+export const createApp = (components?: ComponentAssets) => ({
+  fetch: (_request: Request) =>
+    renderPage({
+      title: 'Home',
+      body: html`<my-home></my-home>`,
+      ...(components === undefined ? {} : { components }),
+    }),
+});
+```
+
+Keep component modules under `src/` (the `include` option changes that). A component rendered
+inside another component's shadow root loads with it: its module imports theirs. For app-wide
+setup (`provideDrivers` at the page), keep a small client entry and pass it in `scripts`
+alongside `components`. A rendered tag no client module defines is a development warning.
+
+**With a client entry.** Without `components`, the page loads one entry you write, which
+imports the components (no hydration import: core hydrates each component on its own), and you
+pass it as `scripts` (and `modulepreload`/`stylesheets` in production, below):
+
+```text
+// src/entry-client.ts
 import './components/greeting.js';
 ```
 
@@ -277,7 +316,7 @@ import { renderPage } from '@gyral/ssr';
 import { clientAssetsFromManifest, prerender, productionServer } from '@gyral/ssr/static';
 
 interface AppOptions {
-  readonly clientEntry: string;
+  readonly clientEntry: string | undefined;
   readonly modulepreload?: readonly string[];
   readonly stylesheets?: readonly string[];
 }
@@ -287,7 +326,7 @@ const createApp = ({ clientEntry, modulepreload = [], stylesheets = [] }: AppOpt
     renderPage({
       title: 'Home',
       body: html`<my-home></my-home>`,
-      scripts: [clientEntry],
+      scripts: clientEntry === undefined ? [] : [clientEntry],
       modulepreload, // <link rel="modulepreload"> for the entry's imports and the hydration chunk
       stylesheets, // <link rel="stylesheet"> for the hashed CSS the client entry imports
     }),
@@ -315,7 +354,10 @@ export const server = await productionServer({ distDir: dist, createApp });
 ```
 
 `prerender` fails the build on any non-200 page. Mount `server.fetch` in your HTTP server.
-`productionServer` passes `{ clientEntry, modulepreload, stylesheets }` to `createApp`.
+`productionServer` passes `{ clientEntry, modulepreload, stylesheets, components }` to
+`createApp`: with the preset's `components` on, pass `components` to `renderPage` (and
+`componentsFromManifest(join(dist, 'client'))` in the prerender step) instead of the entry;
+`clientEntry` is then undefined when the build has no entry.
 Hydration code loads lazily (only pages with server-rendered components need it); passing
 `modulepreload` on to `renderPage` lets the browser fetch it together with the entry instead of
 a round trip later. A page whose route module is imported lazily spreads
@@ -391,20 +433,110 @@ import { productionServer } from '@gyral/ssr/static';
 const app = await productionServer({
   distDir: join(process.cwd(), 'dist'),
   staticDir: false, // nothing prerendered: every page renders per request
-  createApp: ({ clientEntry, modulepreload, stylesheets }) => ({
+  // With gyralVitePreset({ components: true }): each page loads the components it rendered.
+  // With a client entry instead: scripts: [clientEntry], plus modulepreload and stylesheets.
+  createApp: ({ components, stylesheets }) => ({
     fetch: (_request: Request) =>
       renderPage({
         title: 'Home',
         body: html`<my-home></my-home>`,
-        scripts: [clientEntry],
-        modulepreload,
         stylesheets,
+        ...(components === undefined ? {} : { components }),
       }),
   }),
 });
 
 // origin: the public origin request URLs are built on (default: the Host header).
 createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
+
+## Development server
+
+`gyralDevServer` (from `@gyral/ssr/node`, Vite loaded on first use) is the whole dev server:
+Vite serves client modules, CSS and HMR; every other request loads the server module through
+Vite (edits show at once) and streams the app's response. `state` is created once from the
+first module, so in-memory data survives reloads; a render error answers 500 with Vite's error
+overlay.
+
+```ts
+import { gyralDevServer, type DevApp } from '@gyral/ssr/node';
+import type { ComponentAssets } from '@gyral/ssr';
+
+interface AppModule {
+  readonly createApp: (components: ComponentAssets | undefined, db: Map<string, string>) => DevApp;
+}
+
+const { url } = await gyralDevServer({
+  entry: '/server/app.ts', // loaded per request
+  state: () => new Map<string, string>(), // kept across reloads
+  app: (mod: AppModule, { components, state }) => mod.createApp(components, state),
+  // port (default PORT or 5173), hmrPort, origin, vite: { …more Vite settings }
+});
+console.log(`Dev server: ${url}`);
+```
+
+## Request layer
+
+Gyral renders pages, answers forms and serves builds, but leaves routing, middleware, cookies
+and error pages to a fetch router (ADR 0026). Hono is the usual choice; any
+`(request) => Response` router works, since every Gyral server function takes and returns web
+`Request`/`Response`:
+
+```text
+const app = new Hono();
+app.use(securityHeaders);                     // middleware: yours or Hono's
+app.get('/', () => renderPage({ … }));
+app.post('/notes', formAction(NoteForm, { intent: 'Save', valid: save }));
+app.notFound(() => renderPage({ title: 'Not found', … }, { status: 404 }));
+createServer(toNodeListener(app.fetch)).listen(3000);
+```
+
+The seams Gyral provides:
+
+- **JSON-only form endpoints.** Leave out `formAction`'s `invalid` when only `submitForm` calls
+  the endpoint: every rejection is then the JSON 422.
+- **`wantsJson(request)`**: the rule `formAction` answers by (`Accept: application/json`
+  without `text/html`), for your own routes that serve both a page and JSON.
+- **`productionServer({ onResponse })`** sees every response (assets, prerendered pages, the
+  app's) before it goes out: add security headers, a CSP for files from disk, or cookies.
+
+```ts
+import { wantsJson } from '@gyral/ssr';
+import { productionServer } from '@gyral/ssr/static';
+
+export const server = await productionServer({
+  distDir: 'dist',
+  createApp: () => ({
+    fetch: (request) =>
+      wantsJson(request) ? Response.json({ ok: true }) : new Response('<p>ok</p>'),
+  }),
+  onResponse: (response) => {
+    const headers = new Headers(response.headers);
+    headers.set('x-content-type-options', 'nosniff');
+    headers.set('referrer-policy', 'same-origin');
+    return new Response(response.body, { status: response.status, headers });
+  },
+});
+```
+
+**Cookies.** Set them on the `Response` a Gyral function returns (`seeOther(url)` and
+`renderPage(…)` give you one: `response.headers.append('set-cookie', …)`), in your router's
+middleware after the handler ran, or in `onResponse`. `formAction` keeps a valid answer's
+`set-cookie` headers on the JSON path too.
+
+**CSRF without tokens.** Browsers send `Sec-Fetch-Site` (and `Origin` on posts): reject
+cross-site writes in middleware, and keep `csrfFromMeta` on the client only if you also use
+tokens.
+
+```ts
+/** A cross-site POST, PUT, PATCH or DELETE: answer 403 before your handler runs. */
+export function crossSiteWrite(request: Request): boolean {
+  if (request.method === 'GET' || request.method === 'HEAD') return false;
+  const site = request.headers.get('sec-fetch-site');
+  if (site !== null) return site !== 'same-origin' && site !== 'none';
+  const origin = request.headers.get('origin');
+  return origin !== null && origin !== new URL(request.url).origin;
+}
 ```
 
 ## Islands: hydrate later

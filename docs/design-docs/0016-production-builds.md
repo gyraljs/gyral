@@ -171,3 +171,56 @@ Tests: `packages/ssr/test/node.node.test.ts`, on a real server: streamed request
 building (origin, `//` targets, absolute-form), a `renderPage` response, `HEAD`, separate
 cookies, a paused client holding the producer back and a disconnect cancelling it, 500s,
 mid-body failures, a bad `Host`, the connection info argument.
+
+## Addendum: automatic component loading (gyral-1zd.22, 2026-10-09)
+
+Decision O10 of the API surface assessment. Pages used to load components through a client
+entry the app kept by hand, plus a per-page flag deciding whether to include it; the server, the
+CSP step and the entry each needed side-effect imports. A forgotten flag or import failed
+silently (a component that never hydrated, or a CSP violation). Astro's islands are the model:
+the page loads exactly the components it rendered.
+
+- **Build.** `gyralVitePreset({ components: true })` (include: `['src']` by default) finds every
+  two-call `define<…>()('tag', …)` in the app's source files (test files and
+  `customElements.define` excluded) and adds a loader, `virtual:gyral/components`, to the client
+  build's input. The loader holds a `tag → () => import(module)` table, so each component module
+  becomes its own chunk. The build writes `.vite/gyral-components.json` next to Vite's manifest:
+  the loader's file and each tag's manifest key.
+- **Render.** Core's server render collects the tag of every component it writes (`tags`
+  option, server only). `renderPage({ components })` writes the tail after the body, where
+  every tag is known: the rendered components' modules with their static imports and Gyral's
+  hydration chunk as `modulepreload` links (deduplicated), their hashed CSS, and the loader. A
+  page that rendered no component gets no script at all. A rendered tag the manifest doesn't
+  know is a development warning. The CSP header still lists every registered component's
+  `<style>` hash: the header goes out before the body is rendered.
+- **Client.** The loader imports a tag's module the first time that tag is in the document, now
+  or after a later mutation (one `querySelector` per pending tag, once per microtask), and
+  never twice. Components rendered inside a component's shadow root load with it, because its
+  module imports theirs (the existing convention). `hydrate:` strategies are unchanged: they
+  decide when a loaded component hydrates.
+- **Serving.** `componentsFromManifest(clientDir)` reads a build; `productionServer` hands
+  `components` to `createApp` and no longer needs a client entry. An app that also needs
+  app-wide setup (`provideDrivers`) keeps a small entry and passes it in `scripts`; both work
+  together.
+- **Size.** The loader is 0.37 KiB gzip with one component before minification (less once minified), plus one table row per component. A components build costs +0.1 to +0.2 KiB gzip
+  in all chunks against the same app with a hand-written entry (chunk boundaries); the
+  examples' `initial` figure for such a build counts what a page rendering every component
+  preloads (the loader, each module and the hydration chunk), so it is higher than an entry's
+  static graph.
+- **Migrating an app.** Turn `components` on, delete the client entry (or keep it for setup
+  only), pass `components` from `productionServer`/`gyralDevServer`/`componentsFromManifest` to
+  `renderPage`, and drop per-page island flags and client-side side-effect imports. The server
+  still imports the components it renders.
+
+## Addendum: development server (gyral-1zd.22, 2026-10-09)
+
+Decision M8. Every SSR app wrote its own development server (seven copies across the audited
+apps and examples, some buffering whole pages). `gyralDevServer({ entry, app, state?, port?,
+hmrPort?, origin?, vite? })` in `@gyral/ssr/node` (it builds on `toNodeListener`, and Vite is an
+optional peer loaded on first use): Vite in middleware mode serves client modules, CSS and HMR;
+any other request loads the server module through `ssrLoadModule` (edits show at once) and
+streams the app's response. `state` is created once from the first module, so in-memory data
+survives reloads. A render error answers 500 with Vite's error overlay and the source-mapped
+stack. With the preset's `components`, the app gets `components` for development (the loader
+from source and Vite's client). It lives in `@gyral/ssr/node` rather than `@gyral/core/vite`
+because it is a server, not build configuration, and needs the Node adapter.

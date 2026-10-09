@@ -37,15 +37,21 @@ export interface FormActionHandlers<T> {
     request: Request,
   ) => Response | FormReject | Promise<Response | FormReject>;
   /**
-   * Invalid submission: re-render the page with the component's `.initialMessages` set to
-   * `[rejected]`, typically with status 422. The component's own `IntentRejected` reducer
-   * turns it into state, so the errors render through the same view as with JavaScript.
+   * Invalid submission without JavaScript: re-render the page with the component's
+   * `.initialMessages` set to `[rejected]`, typically with status 422. The component's own
+   * `IntentRejected` reducer turns it into state, so the errors render through the same view as
+   * with JavaScript. Leave it out for an endpoint only `submitForm` calls: every rejection is
+   * then the JSON 422.
    */
-  readonly invalid: (rejected: IntentRejected, request: Request) => Response | Promise<Response>;
+  readonly invalid?: (rejected: IntentRejected, request: Request) => Response | Promise<Response>;
 }
 
-/** `submitForm` (and any fetch asking for JSON) gets JSON; a browser form post gets HTML. */
-const wantsJson = (request: Request): boolean => {
+/**
+ * Whether the request asks for JSON rather than a page (`Accept: application/json` without
+ * `text/html`): `submitForm` and other fetch calls do, a browser's form post doesn't. The rule
+ * `formAction` answers by; for your own routes that serve both.
+ */
+export const wantsJson = (request: Request): boolean => {
   const accept = request.headers.get('accept') ?? '';
   return accept.includes('application/json') && !accept.includes('text/html');
 };
@@ -93,7 +99,7 @@ export function formAction<Schema extends StandardSchemaV1>(
     } else {
       rejected = result.rejected;
     }
-    if (json) {
+    if (json || handlers.invalid === undefined) {
       const { _tag, intent, issues } = rejected;
       return Response.json({ _tag, intent, issues }, { status: 422 });
     }

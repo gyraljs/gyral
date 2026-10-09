@@ -219,6 +219,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                    | Kind  | Status          | Documented in                                                           |
 | ------------------------- | ----- | --------------- | ----------------------------------------------------------------------- |
+| `ComponentsOptions`       | type  | supporting type |                                                                         |
 | `gyralClientOnly`         | value | documented      | [design-docs/view/07-hydration.md](../design-docs/view/07-hydration.md) |
 | `gyralTemplateCompiler`   | value | documented      | [consumer-setup.md](consumer-setup.md)                                  |
 | `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)              |
@@ -340,6 +341,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                  | Kind  | Status          | Documented in                                                                               |
 | ----------------------- | ----- | --------------- | ------------------------------------------------------------------------------------------- |
+| `ComponentAssets`       | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
+| `ComponentModule`       | type  | supporting type |                                                                                             |
 | `contentSecurityPolicy` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `CspDirectives`         | type  | supporting type |                                                                                             |
 | `CspOptions`            | type  | documented      | [design-docs/0020-style-attribute-hashes.md](../design-docs/0020-style-attribute-hashes.md) |
@@ -354,6 +357,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `renderToStream`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `renderToString`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 | `seeOther`              | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                  |
+| `wantsJson`             | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                      |
 
 ### `@gyral/ssr/static`
 
@@ -368,6 +372,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `ClientAssets`             | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
 | `clientAssetsFromManifest` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
 | `clientEntryFromManifest`  | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
+| `componentsFromManifest`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
 | `FetchApp`                 | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
 | `ManifestChunk`            | type  | documented      | [design-docs/0016-production-builds.md](../design-docs/0016-production-builds.md) |
 | `ManifestOptions`          | type  | supporting type |                                                                                   |
@@ -385,7 +390,12 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                | Kind  | Status          | Documented in                                                          |
 | --------------------- | ----- | --------------- | ---------------------------------------------------------------------- |
+| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
+| `DevServer`           | type  | supporting type |                                                                        |
+| `DevServerContext`    | type  | supporting type |                                                                        |
+| `DevServerOptions`    | type  | supporting type |                                                                        |
 | `FetchHandler`        | type  | supporting type |                                                                        |
+| `gyralDevServer`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
 | `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
 | `NodeListener`        | type  | supporting type |                                                                        |
 | `NodeListenerOptions` | type  | supporting type |                                                                        |
