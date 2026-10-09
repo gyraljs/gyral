@@ -288,7 +288,8 @@ const createApp = ({ clientEntry, modulepreload = [], stylesheets = [] }: AppOpt
     }),
 });
 
-// Build step (after `vite build` with build.manifest: true into dist/client):
+// Build step (after `vite build` with build.manifest: true into dist/client). Served under a
+// path (Vite's `base: '/app/'`)? Pass the same base as a 4th argument: `[], { base: '/app/' }`.
 const dist = join(process.cwd(), 'dist');
 const assets = await clientAssetsFromManifest(
   join(dist, 'client', '.vite', 'manifest.json'),

@@ -8,7 +8,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { assetHandler, cacheHeaders, fileResponse, readOrUndefined } from './assets.js';
-import { clientAssets, entryChunk, readManifest } from './manifest.js';
+import { basePath, clientAssets, entryChunk, readManifest } from './manifest.js';
 
 export {
   assetHandler,
@@ -21,6 +21,7 @@ export {
   clientAssetsFromManifest,
   clientEntryFromManifest,
   type ClientAssets,
+  type ManifestOptions,
   type ManifestChunk,
   type ViteManifest,
 } from './manifest.js';
@@ -95,6 +96,11 @@ export interface ProductionOptions<Env = unknown> {
    * page requests don't look for files first.
    */
   readonly staticDir?: string | false;
+  /**
+   * Vite's `base` when the build is served under a path (e.g. `/app/`): the entry, preload and
+   * stylesheet URLs start with it, and assets are served at `<base>assets/`. Default `/`.
+   */
+  readonly base?: string;
   /** Keep served assets in memory (`assetHandler`'s `cache`). Default `true`. */
   readonly cache?: boolean | { readonly maxBytes: number };
   /**
@@ -144,8 +150,9 @@ export async function productionServer<Env = unknown>(
   const entry = options.entry ?? 'src/entry-client.ts';
   const manifest = await readManifest(manifestPath);
   entryChunk(manifest, entry, manifestPath);
+  const where = options.base === undefined ? {} : { base: options.base };
   const pageAssets = (modules: readonly string[]): PageAssets => {
-    const { modulepreload, css } = clientAssets(manifest, entry, modules);
+    const { modulepreload, css } = clientAssets(manifest, entry, modules, where);
     return { modulepreload, stylesheets: css };
   };
   const cached = new Map<string, PageAssets>();
@@ -160,10 +167,11 @@ export async function productionServer<Env = unknown>(
   };
   const serveAsset = assetHandler({
     dir: options.assetsDir ?? join(clientDir, 'assets'),
+    prefix: `${basePath(options.base)}assets/`,
     ...(options.cache === undefined ? {} : { cache: options.cache }),
   });
   const app = options.createApp({
-    clientEntry: clientAssets(manifest, entry).entry,
+    clientEntry: clientAssets(manifest, entry, [], where).entry,
     ...assets([]),
     assets,
     preload: (modules) => assets(modules).modulepreload,

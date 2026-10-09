@@ -19,6 +19,16 @@ export async function readManifest(manifestPath: string): Promise<ViteManifest> 
   return JSON.parse(await readFile(manifestPath, 'utf8')) as ViteManifest;
 }
 
+/** Where the build is served: Vite's `base` (default `/`), which the manifest's paths omit. */
+export interface ManifestOptions {
+  /** Vite's `base`, e.g. `/app/` (a missing trailing slash is added). Default `/`. */
+  readonly base?: string;
+}
+
+/** The URL prefix for `base`: always starts and ends with `/`. */
+export const basePath = (base = '/'): string =>
+  `${base.startsWith('/') ? '' : '/'}${base}${base.endsWith('/') ? '' : '/'}`;
+
 export function entryChunk(manifest: ViteManifest, entry: string, where: string): ManifestChunk {
   const chunk = manifest[entry];
   if (chunk === undefined) throw new Error(`${entry} is not an entry in ${where}`);
@@ -32,8 +42,11 @@ export function entryChunk(manifest: ViteManifest, entry: string, where: string)
 export async function clientEntryFromManifest(
   manifestPath: string,
   entry: string,
+  options: ManifestOptions = {},
 ): Promise<string> {
-  return `/${entryChunk(await readManifest(manifestPath), entry, manifestPath).file}`;
+  return (
+    basePath(options.base) + entryChunk(await readManifest(manifestPath), entry, manifestPath).file
+  );
 }
 
 /** What a server-rendered page loads: the client entry, the modules to preload, the CSS. */
@@ -67,12 +80,15 @@ const HYDRATION_MODULE =
  * `ClientAssets` for `entry`, from a manifest already in memory. `also`: manifest keys of
  * modules the page will import lazily (a route's module, by source path such as
  * `src/routes/product.ts`), preloaded too, each with its static imports, after the entry's.
+ * `options.base`: Vite's `base`, which every URL starts with (the manifest's paths omit it).
  */
 export function clientAssets(
   manifest: ViteManifest,
   entry: string,
   also: readonly string[] = [],
+  options: ManifestOptions = {},
 ): ClientAssets {
+  const base = basePath(options.base);
   const root = entryChunk(manifest, entry, 'the Vite manifest');
   const seen = new Set<string>([entry]);
   const urls: string[] = [];
@@ -85,8 +101,8 @@ export function clientAssets(
       seen.add(key);
       add(imported, true);
     }
-    if (self) urls.push(`/${chunk.file}`);
-    for (const file of chunk.css ?? []) css.add(`/${file}`);
+    if (self) urls.push(base + chunk.file);
+    for (const file of chunk.css ?? []) css.add(base + file);
   };
   add(root, false);
   const loaded = [...seen].flatMap((key) => manifest[key]?.dynamicImports ?? []);
@@ -103,7 +119,7 @@ export function clientAssets(
     seen.add(key);
     add(lazy, true);
   }
-  const url = `/${root.file}`;
+  const url = base + root.file;
   // When anything is preloaded, the entry itself comes first: with route chunks added (`also`)
   // it would otherwise queue behind them on HTTP/1.1's six connections and start later than
   // with no preloads at all (found in gyral-shop).
@@ -122,8 +138,9 @@ export async function clientAssetsFromManifest(
   manifestPath: string,
   entry: string,
   also: readonly string[] = [],
+  options: ManifestOptions = {},
 ): Promise<ClientAssets> {
   const manifest = await readManifest(manifestPath);
   entryChunk(manifest, entry, manifestPath);
-  return clientAssets(manifest, entry, also);
+  return clientAssets(manifest, entry, also, options);
 }
