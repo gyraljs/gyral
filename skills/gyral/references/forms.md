@@ -242,3 +242,36 @@ export async function handle(request: Request): Promise<Response> {
   })(request);
 }
 ```
+
+### Re-filling a form your own route validates
+
+`formAction` puts the submitted values in `IntentRejected.values` for you. A route that checks a
+submission itself (a contact form that also calls a spam filter, say) gets the same values with
+`formValues(definition, formData)`: the text values keyed by the form's fields, repeated names
+as arrays, `File`s left out. Render them back into the form so nothing typed is lost. Never
+write a password back into a page.
+
+```ts
+import { defineForm, formValues, html, type TemplateResult } from '@gyral/core';
+import * as v from 'valibot';
+
+const Contact = defineForm(
+  v.object({
+    email: v.pipe(v.string(), v.email('Enter a valid email address.')),
+    message: v.pipe(v.string(), v.nonEmpty('Write a message.')),
+  }),
+);
+
+/** The form again, with what was submitted and the server's error. */
+function contactForm(data: FormData, error: string): TemplateResult {
+  const values = formValues(Contact, data);
+  const text = (value: string | readonly string[] | undefined): string =>
+    typeof value === 'string' ? value : '';
+  return html`<form method="post">
+    <input name="email" type="email" value=${text(values.email)} />
+    <textarea name="message">${text(values.message)}</textarea>
+    <p role="alert">${error}</p>
+    <button>Send</button>
+  </form>`;
+}
+```

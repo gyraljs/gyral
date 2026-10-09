@@ -42,8 +42,16 @@ export { resetDocumentStores, STORES_ELEMENT } from './store-scope.js';
 export { DRIVERS_ELEMENT, provideDrivers } from './drivers-scope.js';
 export { jsonHazard } from './json-safety.js';
 export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
-export { defineForm, field, fieldErrors, form, redirectedTo, validateForm } from './forms.js';
-export type { FormDefinition, FormRedirected, FormResult, FormValue } from './forms.js';
+export {
+  defineForm,
+  field,
+  fieldErrors,
+  form,
+  formValues,
+  redirectedTo,
+  validateForm,
+} from './forms.js';
+export type { FormDefinition, FormRedirected, FormResult, FormValue, FormValues } from './forms.js';
 export { invalid } from './hooks/invalid.js';
 export { capturePointer } from './hooks/capture-pointer.js';
 export { labelledBy } from './hooks/labelled-by.js';

@@ -94,6 +94,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `FormRedirected`       | type  | supporting type |                                                                                                        |
 | `FormResult`           | type  | supporting type |                                                                                                        |
 | `FormValue`            | type  | supporting type |                                                                                                        |
+| `formValues`           | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
+| `FormValues`           | type  | supporting type |                                                                                                        |
 | `GyralElement`         | type  | supporting type |                                                                                                        |
 | `GyralElementClass`    | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `GyralError`           | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                           |

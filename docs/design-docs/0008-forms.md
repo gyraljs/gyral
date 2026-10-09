@@ -196,3 +196,12 @@ Lit).
 `provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
 `csrf: { token }` still sends a token the app already holds. Development builds warn once when a
 non-GET request goes out without the token while the page has a CSRF `<meta>`.
+
+## Addendum: `formValues` for routes that validate on their own (0.3.1)
+
+The 0.3.1 export review (gyral-1zd.6) moved `formDataToObject` and `formFields` to
+`@gyral/core/internal`. A server route that validates a submission itself, not through
+`formAction`, still needs the submitted values to re-render the form. `formValues(definition,
+formData)` returns exactly what `IntentRejected.values` carries (text values, repeated names and
+`name[]` as arrays, no `File`s), typed by the definition's input keys (`FormValues<Schema>`).
+It's a thin wrapper over the internal functions, so the two paths can't drift.

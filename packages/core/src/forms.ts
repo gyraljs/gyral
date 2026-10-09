@@ -74,6 +74,28 @@ export function formFields(data: Readonly<Record<string, FormValue>>): FormField
   return out;
 }
 
+/**
+ * A form's submitted text values, keyed by the definition's fields, for re-rendering the form
+ * with what was typed (sticky fields), e.g. a server route that validates on its own. The same
+ * shape as `IntentRejected.values`: repeated names (and `name[]`) are arrays, `File`s are left
+ * out (a file input can't be re-filled). Don't put passwords back into a page.
+ */
+export type FormValues<Schema extends StandardSchemaV1> =
+  StandardSchemaV1.InferInput<Schema> extends Readonly<Record<string, unknown>>
+    ? {
+        readonly [K in keyof StandardSchemaV1.InferInput<Schema> & string]?:
+          string | readonly string[];
+      }
+    : FormFields;
+
+/** The submitted text values of `data`, keyed by `definition`'s fields. */
+export function formValues<Schema extends StandardSchemaV1>(
+  _definition: FormDefinition<Schema> | Schema,
+  data: FormData,
+): FormValues<Schema> {
+  return formFields(formDataToObject(data)) as FormValues<Schema>;
+}
+
 const schemaOf = <Schema extends StandardSchemaV1>(
   definition: FormDefinition<Schema> | Schema,
 ): Schema => ('_tag' in definition ? definition.schema : definition);
