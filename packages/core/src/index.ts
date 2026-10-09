@@ -24,6 +24,7 @@ export type { ChildSource, OutputEvent, OutputSource, OutputsOf } from './childr
 export { define } from './define.js';
 export { intentsOf, OUTPUT_EVENT } from './intent.js';
 export { settled } from './settled.js';
+export { GyralError, type ErrorPhase } from './errors.js';
 export { changed, defineStore, send } from './store.js';
 export type {
   AnyStore,
@@ -99,6 +100,7 @@ export type {
   ParserFor,
   PropDeclarations,
   Connected,
+  Errored,
   Hydrated,
   PropsChanged,
   ShadowOption,

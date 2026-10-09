@@ -4,6 +4,7 @@
 // `onSuccess`, and the source is released when the command is switched away or its component
 // disconnects. A standalone module: apps that don't import it don't bundle it.
 import type { Concurrency, Driver } from './command.js';
+import { fail } from './errors.js';
 import { message } from './view/index.js';
 
 /** How to stop listening: a function, or an object with `unsubscribe()` (RxJS, XState). */
@@ -33,7 +34,7 @@ const release = (name: string, stop: Unsubscribe | undefined): void => {
     if (typeof stop === 'function') stop();
     else stop.unsubscribe();
   } catch (error) {
-    console.error(message(42, name), error);
+    fail(error, 'subscribe', message(42, name), { msg: name });
   }
 };
 

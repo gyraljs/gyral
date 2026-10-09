@@ -2,8 +2,8 @@
 // command lanes. No DOM access, so it is tested without a browser.
 import type { DevComponentRef, DevEvent } from '@gyral/core';
 
-export type RowKind = 'component' | 'update' | 'command' | 'store';
-export const ROW_KINDS: readonly RowKind[] = ['update', 'command', 'store', 'component'];
+export type RowKind = 'component' | 'update' | 'command' | 'store' | 'error';
+export const ROW_KINDS: readonly RowKind[] = ['update', 'command', 'store', 'component', 'error'];
 
 export interface Row {
   readonly seq: number;
@@ -125,6 +125,14 @@ function toRow(event: DevEvent, seq: number): Row {
         who: event.owner,
         what: `${event.phase} ${event.driver}`,
         detail: `lane ${event.lane}, ${event.policy}`,
+      };
+    case 'error':
+      return {
+        ...base,
+        kind: 'error',
+        who: event.component === undefined ? 'gyral' : componentLabel(event.component),
+        what: `${event.phase} failed${event.msg === undefined ? '' : ` (${event.msg})`}`,
+        detail: event.error instanceof Error ? String(event.error) : preview(event.error),
       };
   }
 }

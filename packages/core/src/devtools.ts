@@ -8,6 +8,7 @@ import {
   type DevEvent,
   type DevtoolsHook,
 } from './devtools-events.js';
+import type { GyralError } from './errors.js';
 import type { Tagged } from './types.js';
 
 export const DEVTOOLS_ENABLED: boolean = true;
@@ -78,6 +79,21 @@ export function devMismatch(element: Element, tag: string, message: string): voi
 
 export function devStore(store: string, msg: Tagged, prev: unknown, next: unknown): void {
   emit(() => ({ kind: 'store', store, msg, prev, next, at: now() }));
+}
+
+/** A failure `fail()` reported (ADR 0024); `element` is the failing host, if any. */
+export function devError(element: Element | undefined, error: GyralError): void {
+  emit(() => ({
+    kind: 'error',
+    ...(element === undefined
+      ? {}
+      : { component: ref(element, error.component ?? element.localName) }),
+    phase: error.phase,
+    ...(error.msg === undefined ? {} : { msg: error.msg }),
+    message: error.message,
+    error: error.cause,
+    at: now(),
+  }));
 }
 
 /** A command tracer for one owner (`<tag>#id` or `store:name`). */

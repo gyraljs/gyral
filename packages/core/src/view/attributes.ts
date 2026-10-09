@@ -7,3 +7,8 @@ export const SEED_ATTRIBUTE = 'data-gyral-seed';
 export const LIGHT_ATTRIBUTE = 'data-gyral-light';
 /** A deferred island's strategy (07 "Islands"), next to `defer-hydration`. */
 export const ISLAND_ATTRIBUTE = 'data-gyral-hydrate';
+/**
+ * Marks a host whose `init` or view threw on the server (ADR 0024): it carries its error view
+ * (or nothing) and no seed, and the client starts it fresh instead of hydrating.
+ */
+export const ERROR_ATTRIBUTE = 'data-gyral-error';

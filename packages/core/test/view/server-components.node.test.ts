@@ -171,7 +171,13 @@ describe('components (06 "Components")', () => {
 
 describe('host attributes', () => {
   it('are spelled the same by the server renderer and the client', () => {
-    expect({ ...written }).toEqual({ SEED_ATTRIBUTE, LIGHT_ATTRIBUTE, ISLAND_ATTRIBUTE });
+    // ERROR_ATTRIBUTE: the client reads view/'s constant itself (element.ts, ADR 0024).
+    expect({ ...written }).toEqual({
+      SEED_ATTRIBUTE,
+      LIGHT_ATTRIBUTE,
+      ISLAND_ATTRIBUTE,
+      ERROR_ATTRIBUTE: 'data-gyral-error',
+    });
   });
 });
 

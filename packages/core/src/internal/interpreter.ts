@@ -3,7 +3,6 @@ import type { AnyDriver, Command, Concurrency, DriverOverrides } from '../comman
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
-import { message } from '../view/index.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
 // latest task per key. Interruption is `controller.abort()`,
@@ -24,6 +23,12 @@ interface Task {
 
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
 type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
+
+/**
+ * Reports a failure to the owner (ADR 0024): `40` a mapper threw, `41` a driver failed and the
+ * command has no `onFailure`. The owner builds the message and reports it.
+ */
+export type CommandFailure = (cause: unknown, code: 40 | 41, driver: string) => void;
 
 /** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
 const aborted = (signal: AbortSignal): Promise<never> => {
@@ -52,14 +57,24 @@ const attempt = (
     aborted(signal),
   ]);
 
-/** Maps a result to a message and dispatches it; a throwing mapper is logged, not fatal. */
-const deliver = <M>(map: () => M | undefined, dispatch: (msg: M) => void): void => {
+/**
+ * Maps a result to a message and dispatches it. A throwing mapper is reported (ADR 0024) and
+ * sends nothing; the reducer's own failures are the owner's (dispatch reports them).
+ */
+const deliver = <M>(
+  map: () => M | undefined,
+  dispatch: (msg: M) => void,
+  failed: CommandFailure,
+  driver: string,
+): void => {
+  let msg: M | undefined;
   try {
-    const msg = map();
-    if (msg !== undefined) dispatch(msg);
+    msg = map();
   } catch (defect) {
-    console.error(message(40), defect);
+    failed(defect, 40, driver);
+    return;
   }
+  if (msg !== undefined) dispatch(msg);
 };
 
 async function execute<M>(
@@ -68,10 +83,12 @@ async function execute<M>(
   signal: AbortSignal,
   dispatch: (msg: M) => void,
   report: Report,
+  failed: CommandFailure,
 ): Promise<void> {
   let settled = false;
+  const name = driver.name;
   const emit = (output: unknown): void => {
-    if (!settled && !signal.aborted) deliver(() => cmd.onSuccess(output), dispatch);
+    if (!settled && !signal.aborted) deliver(() => cmd.onSuccess(output), dispatch, failed, name);
   };
   if (DEVTOOLS_ENABLED && report !== undefined) {
     signal.addEventListener(
@@ -91,23 +108,24 @@ async function execute<M>(
     const error = driver.toError === undefined ? cause : driver.toError(cause);
     if (DEVTOOLS_ENABLED) report?.('failed', error);
     if (cmd.onFailure === undefined) {
-      console.warn(message(41, driver.name), error);
+      failed(error, 41, name);
       return;
     }
     const onFailure = cmd.onFailure;
-    deliver(() => onFailure(error), dispatch);
+    deliver(() => onFailure(error), dispatch, failed, name);
     return;
   }
   if (signal.aborted) return;
   settled = true;
   if (DEVTOOLS_ENABLED) report?.('settled', output);
-  deliver(() => cmd.onSuccess(output), dispatch);
+  deliver(() => cmd.onSuccess(output), dispatch, failed, name);
 }
 
 export function makeInterpreter<M>(
   resolve: (driver: AnyDriver) => AnyDriver,
   dispatch: (msg: M) => void,
-  trace?: CommandTrace,
+  trace: CommandTrace | undefined,
+  failed: CommandFailure,
 ): Interpreter<M> {
   const reporter = (driver: string, lane: string, policy: Concurrency, input: unknown): Report =>
     trace === undefined
@@ -141,7 +159,7 @@ export function makeInterpreter<M>(
     const body = async (): Promise<void> => {
       if (after !== undefined) await after.done;
       if (!controller.signal.aborted) {
-        await execute(driver, cmd, controller.signal, guardedDispatch, report);
+        await execute(driver, cmd, controller.signal, guardedDispatch, report, failed);
       }
     };
     task.done = body().finally(() => {
@@ -195,6 +213,7 @@ export const hostInterpreter = <M>(
   drivers: DriverOverrides | undefined,
   dispatch: (msg: M) => void,
   trace: CommandTrace | undefined,
+  failed: CommandFailure,
 ): Interpreter<M> =>
   makeInterpreter(
     (driver) =>
@@ -204,4 +223,5 @@ export const hostInterpreter = <M>(
       driver,
     dispatch,
     trace,
+    failed,
   );

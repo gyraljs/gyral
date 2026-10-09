@@ -37,6 +37,7 @@ export { nothing, type ChildValue, type ListResult, type RawResult } from './ren
 export { defineHook } from './render/hook-part.js';
 export { defineDisposableHook } from './render/dispose.js';
 export {
+  onHookFailure,
   suspendHooks,
   type DisposableHookSpec,
   type HookAttributes,
@@ -52,7 +53,12 @@ export {
   type StyleSource,
   type Styles,
 } from './styles.js';
-export { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from './attributes.js';
+export {
+  ERROR_ATTRIBUTE,
+  ISLAND_ATTRIBUTE,
+  LIGHT_ATTRIBUTE,
+  SEED_ATTRIBUTE,
+} from './attributes.js';
 export {
   registerServerComponent,
   registerServerProvider,

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { collectErrors } from './collect-errors.js';
 import {
   changed,
   command,
@@ -198,17 +199,15 @@ describe('components and stores (ADR 0013)', () => {
   });
 
   it('rejects reading a store the spec does not declare', async () => {
-    // The view throws; the scheduler logs it with the tag and carries on (view/04 "Errors").
-    const errors: unknown[][] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args);
+    // The view throws; it is reported with the tag and the page carries on (ADR 0024).
+    const reported = collectErrors();
     try {
       document.body.append(document.createElement('test-undeclared'));
       await settled();
     } finally {
-      console.error = original;
+      reported.stop();
     }
-    expect(String(errors[0]?.[0])).toContain('<test-undeclared> failed to render');
-    expect(String(errors[0]?.[1])).toMatch(/without declaring it/);
+    expect(reported.errors[0]?.component).toBe('test-undeclared');
+    expect(String(reported.errors[0]?.cause)).toMatch(/without declaring it/);
   });
 });

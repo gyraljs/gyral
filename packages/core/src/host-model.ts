@@ -13,6 +13,7 @@ import {
   type LocalHost,
   type StoreLink,
 } from './features.js';
+import { fail, type ErrorPhase, type GyralError } from './errors.js';
 import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
@@ -57,6 +58,10 @@ export class HostModel<S, P> implements LocalHost {
   #on = false;
   /** Commands were stopped while detached: the next connect sends `Connected`. */
   #stopped = false;
+  /** `init` threw (ADR 0024): the host shows its error view, or stays empty. */
+  #failure: GyralError | undefined;
+  /** Handling `Errored`: a failure now is reported, never sent again (no loops). */
+  #erroring = false;
 
   constructor(host: ModelHost, spec: ComponentSpec<S, Tagged, P>) {
     this.#host = host;
@@ -83,14 +88,53 @@ export class HostModel<S, P> implements LocalHost {
     return this.#model !== undefined;
   }
 
+  /** Set when `init` threw; the host has no state then. */
+  get failure(): GyralError | undefined {
+    return this.#failure;
+  }
+
   /** The current state, running `init` (and `initialMessages`) on first read. */
   state(initialMessages: readonly Tagged[] = []): S {
     if (this.#model === undefined) {
       this.#seen = this.#host.props();
-      this.apply(runInit(this.#spec, this.#seen as P));
+      const next = this.#init();
+      if (next === undefined) return undefined as S; // init threw: `failure` says so
+      this.apply(next);
       for (const msg of initialMessages) this.dispatch(msg, false);
     }
     return (this.#model as { value: S }).value;
+  }
+
+  /** `init(props)`, or undefined after reporting its failure (ADR 0024). */
+  #init(): Next<S, Tagged> | undefined {
+    try {
+      return runInit(this.#spec, this.#seen as P);
+    } catch (cause) {
+      this.#failure = this.fail(cause, 'init', message(74, this.tag));
+      this.#model = { value: undefined as S };
+      return undefined;
+    }
+  }
+
+  /**
+   * Reports a failure of this host (ADR 0024) and, for a failed update, parse or command, sends
+   * `Errored` to its optional reducer. A failure while handling `Errored` is only reported.
+   */
+  fail(cause: unknown, phase: ErrorPhase, text: string, msg?: string): GyralError {
+    const error = fail(cause, phase, text, { host: this.el, tag: this.tag, msg });
+    if (
+      !this.#erroring &&
+      (phase === 'update' || phase === 'parse' || phase === 'command') &&
+      this.#reducers['Errored'] !== undefined
+    ) {
+      this.#erroring = true;
+      try {
+        this.dispatch({ _tag: 'Errored', phase, error } as Tagged);
+      } finally {
+        this.#erroring = false;
+      }
+    }
+    return error;
   }
 
   hasReducer(tag: string): boolean {
@@ -103,39 +147,56 @@ export class HostModel<S, P> implements LocalHost {
    */
   resume(seed: Seed): readonly Cmd[] {
     this.#seen = this.#host.props();
-    const [initial, commands] = splitNext(runInit(this.#spec, this.#seen as P));
+    const next = this.#init();
+    if (next === undefined) return [];
+    const [initial, commands] = splitNext(next);
     // Sound: the seed is this component's own state, written by the server.
     this.#model = { value: 'state' in seed ? (seed.state as S) : initial };
     return commands;
   }
 
-  /** PropsChanged when props differ from the last ones seen (`Object.is` per prop). */
+  /**
+   * PropsChanged when props differ from the last ones seen (`Object.is` per prop). A reducer
+   * that throws leaves them unseen, so the next render sends PropsChanged again (ADR 0024).
+   */
   syncProps(names: readonly string[]): void {
     const prev = this.#seen;
-    if (prev === undefined) return;
+    if (prev === undefined || this.#failure !== undefined) return;
     const props = this.#host.props();
     if (names.every((name) => Object.is(props[name], prev[name]))) return;
-    this.#seen = props;
-    this.dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
+    if (this.dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false)) this.#seen = props;
   }
 
-  dispatch(msg: Tagged, schedule = true): void {
+  /**
+   * Runs `msg`'s reducer. A reducer that throws changes nothing (no state, no commands): the
+   * failure is reported (ADR 0024) and dispatch returns false.
+   */
+  dispatch(msg: Tagged, schedule = true): boolean {
     noteActivity(); // settled() keeps waiting while messages arrive (04)
     const reducer = this.#reducers[msg._tag];
     if (reducer === undefined) {
       // Framework messages have optional reducers; props and stores stay readable as context.
-      if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged') {
+      if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged' && msg._tag !== 'Errored') {
         console.warn(message(10, this.#host.tag, msg._tag));
       }
-      return;
+      return true;
     }
+    if (this.#failure !== undefined) return false;
     const prev = this.state();
-    this.apply(reducer(prev, msg, this.ctx() as Ctx<object>));
-    const next = this.state();
-    if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, next);
-    if (!schedule) return;
-    if (this.#spec.viewTransition?.(prev, next, msg) === true) requestTransition();
+    let next: Next<S, Tagged>;
+    try {
+      next = reducer(prev, msg, this.ctx() as Ctx<object>);
+    } catch (cause) {
+      this.fail(cause, 'update', message(73, this.tag, msg._tag), msg._tag);
+      return false;
+    }
+    this.apply(next);
+    const state = this.state();
+    if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, state);
+    if (!schedule) return true;
+    if (this.#spec.viewTransition?.(prev, state, msg) === true) requestTransition();
     this.#host.invalidate(this.#onFrame(msg._tag));
+    return true;
   }
 
   apply(next: Next<S, Tagged> | Next<S, Tagged | IntentRejected>): void {
@@ -207,6 +268,11 @@ export class HostModel<S, P> implements LocalHost {
         this.dispatch(msg);
       },
       DEVTOOLS_ENABLED ? devCommands(() => devOwner(el, this.tag)) : undefined,
+      (cause, code, driver) => {
+        const owner = `<${this.tag}>`;
+        const text = code === 40 ? message(40, owner, driver) : message(41, owner, driver);
+        this.fail(cause, 'command', text, driver);
+      },
     ));
   }
 

@@ -86,6 +86,25 @@ describe('panel model (ADR 0017)', () => {
     expect(visibleRows({ ...s, kinds: ['store'] })).toHaveLength(1);
   });
 
+  it('shows failures as error rows (ADR 0024)', () => {
+    const s = receive(initialPanel(), [
+      {
+        kind: 'error',
+        component: comp(1),
+        phase: 'update',
+        msg: 'Add',
+        message: '<x-card> update for "Add" failed',
+        error: new Error('boom'),
+        at,
+      },
+      { kind: 'error', phase: 'store', message: 'store failed', error: 'x', at },
+    ]);
+    expect(s.rows.map((r) => `${r.kind}:${r.who}:${r.what}:${r.detail}`)).toEqual([
+      'error:<x-card>#1:update failed (Add):Error: boom',
+      'error:gyral:store failed:"x"',
+    ]);
+  });
+
   it('keeps at most MAX_ROWS rows', () => {
     const many: DevEvent[] = Array.from({ length: MAX_ROWS + 10 }, (_, i) => ({
       kind: 'store',

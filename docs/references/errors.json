@@ -72,7 +72,7 @@
   {
     "code": "G0031",
     "group": "Scheduling",
-    "message": "<{tag}> failed to render; its previous DOM stays.",
+    "message": "<{tag}> view failed; it shows its error view, or its previous DOM stays.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0031"
   },
@@ -100,15 +100,15 @@
   {
     "code": "G0040",
     "group": "Commands",
-    "message": "gyral: command mapper threw",
-    "arguments": [],
+    "message": "{owner}: the onSuccess or onFailure mapper for driver \"{driver}\" threw; no message was sent.",
+    "arguments": ["owner", "driver"],
     "url": "https://gyral.dev/errors/#G0040"
   },
   {
     "code": "G0041",
     "group": "Commands",
-    "message": "gyral: unhandled failure from driver \"{driver}\"",
-    "arguments": ["driver"],
+    "message": "{owner}: driver \"{driver}\" failed and the command has no onFailure.",
+    "arguments": ["owner", "driver"],
     "url": "https://gyral.dev/errors/#G0041"
   },
   {
@@ -208,5 +208,47 @@
     "message": "gyral: this page's Trusted Types policy list does not allow the policy \"gyral\", so templates are parsed from plain strings, which works only while Trusted Types are not enforced. Add `trusted-types gyral` to the Content-Security-Policy.",
     "arguments": [],
     "url": "https://gyral.dev/errors/#G0072"
+  },
+  {
+    "code": "G0073",
+    "group": "Errors (ADR 0024)",
+    "message": "<{tag}> update for \"{message}\" failed; the state is unchanged.",
+    "arguments": ["tag", "message"],
+    "url": "https://gyral.dev/errors/#G0073"
+  },
+  {
+    "code": "G0074",
+    "group": "Errors (ADR 0024)",
+    "message": "<{tag}> init failed; it shows its error view, or stays empty.",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0074"
+  },
+  {
+    "code": "G0075",
+    "group": "Errors (ADR 0024)",
+    "message": "<{tag}> element hook failed; the other hooks still ran.",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0075"
+  },
+  {
+    "code": "G0076",
+    "group": "Errors (ADR 0024)",
+    "message": "store \"{store}\": update for \"{message}\" failed; the state is unchanged.",
+    "arguments": ["store", "message"],
+    "url": "https://gyral.dev/errors/#G0076"
+  },
+  {
+    "code": "G0077",
+    "group": "Errors (ADR 0024)",
+    "message": "store \"{store}\": a subscriber failed; the other subscribers were still notified.",
+    "arguments": ["store"],
+    "url": "https://gyral.dev/errors/#G0077"
+  },
+  {
+    "code": "G0078",
+    "group": "Errors (ADR 0024)",
+    "message": "<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0078"
   }
 ]
