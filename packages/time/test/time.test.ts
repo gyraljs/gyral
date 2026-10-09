@@ -24,7 +24,6 @@ interface State {
 const Clock = define<State, Msg>()('test-clock', {
   init: () => ({ period: 1000, ticks: [], fired: [], deltas: [] }),
   subscriptions: (s) => [every(s.period, (now) => ({ _tag: 'Tick', now }))],
-  intent: {},
   update: {
     Tick: (s, m) => ({ ...s, ticks: [...s.ticks, m.now] }),
     Fired: (s, m) => ({ ...s, fired: [...s.fired, m.label] }),

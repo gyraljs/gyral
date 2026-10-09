@@ -46,7 +46,7 @@ const load = () =>
 
 export const Profile = define<State, Msg>()('my-profile', {
   init: () => [{ _tag: 'Loading' }, [load()]],
-  intent: { Reload: () => ({ _tag: 'Reload' }) },
+  intent: { Reload: true },
   update: {
     Reload: () => [{ _tag: 'Loading' }, [load()]],
     Got: (_s, m) => ({ _tag: 'Loaded', user: m.user }),
@@ -111,7 +111,7 @@ export const Room = define<State, Msg, { room: string }>()('my-room', {
     // restarts when the room prop changes
     command(roomFeed, p.room, { onSuccess: (text): Msg => ({ _tag: 'Said', text }) }),
   ],
-  intent: { Pause: () => ({ _tag: 'Pause' }) },
+  intent: { Pause: true },
   update: {
     Routed: (s) => s,
     Poll: (s) => s,

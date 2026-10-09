@@ -66,7 +66,9 @@ export function elementClass<S, M extends Tagged, P>(
   const attrs = new Map<string, string>();
   const light = isLight(spec);
   let sheets: CSSStyleSheet[] | undefined;
-  const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
+  const parsers = (spec.intent ?? {}) as Readonly<
+    Record<string, IntentParser<M> | true | undefined>
+  >;
   const model = spec as unknown as ComponentSpec<S, Tagged, P>;
   if (DEV) checkSpecFeatures(tag, spec);
 

@@ -102,7 +102,7 @@ type Msg = { readonly _tag: 'Load' } | { readonly _tag: 'Got'; readonly name: st
 
 const Who = define<State, Msg>()('test-who', {
   init: () => ({ name: '' }),
-  intent: { Load: () => ({ _tag: 'Load' }) },
+  intent: { Load: true },
   update: {
     Load: (s) => [
       s,

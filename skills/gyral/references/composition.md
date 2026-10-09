@@ -74,7 +74,7 @@ interface ItemProps {
 export const Item = define<object, ItemMsg, ItemProps, ItemOut>()('my-item', {
   props: { item: prop.value(ItemData, { required: true }) },
   init: () => ({}),
-  intent: { Remove: () => ({ _tag: 'Remove' }) },
+  intent: { Remove: true },
   update: { Remove: (s) => [s, [emit({ _tag: 'Removed' })]] },
   view: (_s, i, { props }) => html`
     ${props.item.label} <button type="button" data-intent=${i.Remove}>Remove</button>
@@ -136,7 +136,7 @@ const emit = outputs<RatingOut>();
 
 export const Rating = define<object, { readonly _tag: 'Rate' }, object, RatingOut>()('my-rating', {
   init: () => ({}),
-  intent: { Rate: () => ({ _tag: 'Rate' }) },
+  intent: { Rate: true },
   update: { Rate: (s) => [s, [emit({ _tag: 'Rated', stars: 5 })]] },
   view: (_s, i) => html`<button type="button" data-intent=${i.Rate}>★★★★★</button>`,
 });
@@ -195,7 +195,7 @@ export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>(
   props: { sku: prop.string({ required: true }) },
   stores: [cart],
   init: () => ({ bumped: false }),
-  intent: { Buy: () => ({ _tag: 'Buy' }) },
+  intent: { Buy: true },
   update: {
     Buy: (s, _m, { props }) => [s, [send(cart, { _tag: 'Add', sku: props.sku })]],
     StoreChanged: (s, m) => {

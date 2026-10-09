@@ -13,7 +13,6 @@ const update = { Say: (s: State, m: Msg): State => ({ ...s, message: m.text, lab
 
 export const EmptyText = define<State, Msg>()('test-empty-text', {
   init,
-  intent: {},
   update,
   view: (s) =>
     html`<p class="msg">${s.message}</p>
@@ -23,7 +22,6 @@ export const EmptyText = define<State, Msg>()('test-empty-text', {
 export const EmptyLight = define<State, Msg>()('test-empty-light', {
   shadow: false,
   init,
-  intent: {},
   update,
   view: (s) => html`<p class="msg">${s.message}</p>`,
 });

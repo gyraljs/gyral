@@ -58,7 +58,7 @@ export const RoutingView = define<State, Msg>()('gy-routing-view', {
   // One subscription: the current location now, then every change (ADR 0009, ADR 0025).
   subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   intent: {
-    Back: () => ({ _tag: 'Back' }),
+    Back: true,
   },
   update: {
     Routed: (_s, { location }) => {

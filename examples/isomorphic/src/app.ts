@@ -48,7 +48,6 @@ export const App = define<State, Msg, Props>()('gy-iso-app', {
   // The server never runs commands; after hydration the client subscribes to the location,
   // which streams the current one and every navigation (ADR 0012, ADR 0025).
   subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
-  intent: {},
   update: {
     // pageHead() also renders the server's head: one source for both (ADR 0019). The first
     // Routed after hydration finds the server's head already matching and writes nothing.

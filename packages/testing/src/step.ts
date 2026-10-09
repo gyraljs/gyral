@@ -93,7 +93,7 @@ export function step<S, M extends Tagged, P>(
   stores: readonly AnyStoreInstance[] = [],
 ): Stepped<S, M> {
   // Sound: the reducer is looked up by the message's own tag.
-  const reducers = spec.update as unknown as Readonly<
+  const reducers = (spec.update ?? {}) as unknown as Readonly<
     Record<string, AnyReducer<S, M, P> | undefined>
   >;
   const reducer = reducers[msg._tag];

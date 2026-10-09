@@ -197,6 +197,40 @@ For a second trigger on the same control, put the second intent on a wrapper ele
 bubble to it: here, `keydown` from the input), or on the control itself with a per-event
 attribute (`data-intent-keydown=${i.Cancel}`, above).
 
+### `true`: an intent that sends its own tag
+
+When a message carries nothing but its tag, write `true` instead of a parser. `Key: true` sends
+`{ _tag: 'Key' }`:
+
+```ts
+import { define, html } from '@gyral/core';
+
+type Msg = { readonly _tag: 'Next' } | { readonly _tag: 'Page'; readonly page: number };
+
+export const Pager = define<{ readonly page: number }, Msg>()('my-pager', {
+  init: () => ({ page: 1 }),
+  intent: {
+    Next: true,
+    Page: ({ value }) => ({ _tag: 'Page', page: Number(value) }),
+  },
+  update: {
+    Next: (s) => ({ page: s.page + 1 }),
+    Page: (_s, m) => ({ page: m.page }),
+  },
+  view: (s, i) => html`
+    <button data-intent=${i.Next}>Next</button>
+    <input type="number" value=${s.page} data-intent=${i.Page} />
+  `,
+});
+```
+
+`true` is allowed only for a message tag whose variant has no other field, optional ones
+included; anywhere else the type error names the rule (`TrueOnlyForFieldlessMessage`). In a spec
+object declared on its own (not inline in `define()`), TypeScript widens `true` to `boolean`:
+write `true as const` there, or keep the parser. A component with no messages needs neither
+`intent` nor `update` (`define<State>()(tag, { init, view })`); one with messages still needs
+an `update` that covers every tag.
+
 ### Declining: `undefined` passes the event outward
 
 Lookup starts at the element that was hit and goes outward, and the nearest element with an

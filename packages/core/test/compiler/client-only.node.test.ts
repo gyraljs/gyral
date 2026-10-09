@@ -19,7 +19,7 @@ const component = (markup: string, extra = ''): Record<string, string> => ({
     import { html } from ${JSON.stringify(VIEW)};
     export const C = define()('x-c', {
       init: () => ({}),
-      intent: { Run: () => ({ _tag: 'Run' }) },
+      intent: { Run: true },
       update: { Run: (s) => s },
       view: (_s, i) => html\`${markup}\`,
       ${extra}

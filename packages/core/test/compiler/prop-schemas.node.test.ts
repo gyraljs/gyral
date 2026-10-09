@@ -20,8 +20,6 @@ const component = (props: string, extra = ''): Record<string, string> => ({
     export const C = define()('x-c', {
       props: { ${props} },
       init: () => ({}),
-      intent: {},
-      update: {},
       view: () => html\`<p>hi</p>\`,
     });
   `,

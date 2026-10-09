@@ -71,8 +71,11 @@ export class HostModel<S, P> implements LocalHost {
     this.tag = host.tag;
     this.root = host.root;
     this.#spec = spec;
-    // Sound: dispatch() only calls the reducer whose key equals msg._tag.
-    this.#reducers = spec.update as unknown as Readonly<Record<string, Reducer<S> | undefined>>;
+    // Sound: dispatch() only calls the reducer whose key equals msg._tag. A component without
+    // messages may have no `update` (its spec type is widened to Tagged here).
+    this.#reducers = ((spec as { readonly update?: object }).update ?? {}) as unknown as Readonly<
+      Record<string, Reducer<S> | undefined>
+    >;
   }
 
   /** The store binding, created on first use. Only reached once `defineStore()` has run. */

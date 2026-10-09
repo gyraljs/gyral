@@ -40,7 +40,7 @@ export const Clicks = define<State, Msg>()('gy-clicks', {
     chartClicks((bar) => ({ _tag: 'Inspect', bar })),
   ],
   intent: {
-    Click: () => ({ _tag: 'Click' }),
+    Click: true,
   },
   update: {
     Click: (s) => {

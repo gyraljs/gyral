@@ -13,7 +13,6 @@ const Ticker = define<State, Msg, { channel: string }>()('test-subs-for', {
   init: () => ({ live: true }),
   subscriptions: (s, p) =>
     s.live ? [command(feed, p.channel, { onSuccess: (n): Msg => ({ _tag: 'Value', n }) })] : [],
-  intent: {},
   update: { Value: (s) => s },
   view: () => html``,
 });
@@ -29,7 +28,6 @@ describe('subscriptionsFor', () => {
   it('a spec without subscriptions gives none', () => {
     const Plain = define<State, Msg>()('test-subs-for-plain', {
       init: () => ({ live: true }),
-      intent: {},
       update: { Value: (s) => s },
       view: () => html``,
     });

@@ -68,7 +68,6 @@ const update = {
 const Badge = define<State, Msg>()('test-subs-badge', {
   init: () => ({ n: -1, live: true, channel: 'inbox', noise: 0 }),
   subscriptions: (s) => (s.live ? [watch(s.channel)] : []),
-  intent: {},
   update,
   view: (s) => html`<output>${s.n}</output>`,
 });
@@ -83,7 +82,6 @@ const PropBadge = define<{ readonly n: number }, CountMsg, { channel: string }>(
     subscriptions: (_s, p) => [
       command(unreadDriver, p.channel, { onSuccess: (n): CountMsg => ({ _tag: 'Count', n }) }),
     ],
-    intent: {},
     update: { Count: (s, m) => ({ ...s, n: m.n }) },
     view: (s) => html`<output>${s.n}</output>`,
   },
@@ -92,7 +90,6 @@ const PropBadge = define<{ readonly n: number }, CountMsg, { channel: string }>(
 /** Starts its watch from init (not a subscription): a real removal ends it for good. */
 const Plain = define<State, Msg>()('test-subs-plain', {
   init: () => [{ n: -1, live: true, channel: 'inbox', noise: 0 }, [watch('inbox')]],
-  intent: {},
   update,
   view: (s) => html`<output>${s.n}</output>`,
 });
@@ -100,8 +97,6 @@ const Plain = define<State, Msg>()('test-subs-plain', {
 /** A parent rendering a Badge, for the nested cases. */
 const Panel = define<object, never>()('test-subs-panel', {
   init: () => ({}),
-  intent: {},
-  update: {},
   view: () => html`<test-subs-badge></test-subs-badge>`,
 });
 
@@ -260,7 +255,6 @@ describe('subscriptions', () => {
     const Twice = define<State, Msg>()('test-subs-twice', {
       init: () => ({ n: -1, live: true, channel: 'inbox', noise: 0 }),
       subscriptions: () => [watch('inbox'), watch('alerts')],
-      intent: {},
       update,
       view: (s) => html`${s.n}`,
     });
@@ -275,7 +269,6 @@ describe('subscriptions', () => {
     const Both = define<State, Msg>()('test-subs-both', {
       init: () => ({ n: -1, live: true, channel: 'inbox', noise: 0 }),
       subscriptions: () => [watch('inbox', 'a'), watch('alerts', 'b')],
-      intent: {},
       update,
       view: (s) => html`${s.n}`,
     });
@@ -293,7 +286,6 @@ describe('subscriptions', () => {
         if (s.noise > 0) throw new Error('boom');
         return [watch('inbox')];
       },
-      intent: {},
       update,
       view: (s) => html`${s.n}`,
     });

@@ -23,7 +23,6 @@ const Counter = define<
     tags: prop.value(strings, { default: [] }),
   },
   init: (p) => ({ count: p.start }),
-  intent: {},
   update: { Add: (s, m) => ({ count: s.count + m.n }) },
   view: (s, _i, { props }) => html`<p>${s.count} ${props.tags.join(',')}</p>`,
   styles: css`
@@ -33,11 +32,9 @@ const Counter = define<
   `,
 });
 
-const Light = define<Stateless, never>()('test-node-light', {
+const Light = define<Stateless>()('test-node-light', {
   shadow: false,
   hydrate: 'visible',
-  intent: {},
-  update: {},
   view: () => html`<p></p>`,
 });
 

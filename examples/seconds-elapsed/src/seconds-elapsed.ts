@@ -17,7 +17,6 @@ export const duration = (seconds: number): string => `PT${String(seconds)}S`;
 export const SecondsElapsed = define<State, Msg>()('gy-seconds-elapsed', {
   init: () => ({ since: undefined, seconds: 0 }),
   subscriptions: () => [every(1000, (now) => ({ _tag: 'Tick', now }))],
-  intent: {},
   update: {
     Tick: (s, m) => {
       const since = s.since ?? m.now;

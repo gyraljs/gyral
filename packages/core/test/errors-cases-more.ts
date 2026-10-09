@@ -21,7 +21,6 @@ export function moreErrorCases(t: Tracking): void {
   describe('views', () => {
     it('a later render that throws renders the error view with the current state', async () => {
       define<number, Msg>()('err-view', {
-        intent: {},
         init: () => 1,
         update: { Go: (s) => s + 1, Got: (s) => s, Reset: () => 1 },
         view: (s) => (s === 2 ? boom() : html`<p>${s}</p>`),
@@ -39,13 +38,11 @@ export function moreErrorCases(t: Tracking): void {
 
     it('without an error view keeps the previous DOM; a throwing error view changes nothing', async () => {
       define<number, Msg>()('err-view-plain', {
-        intent: {},
         init: () => 1,
         update: { Go: (s) => s + 1, Got: (s) => s, Reset: (s) => s },
         view: (s) => (s === 2 ? boom() : html`<p>${s}</p>`),
       });
       define<number, Msg>()('err-view-twice', {
-        intent: {},
         init: () => 1,
         update: { Go: (s) => s + 1, Got: (s) => s, Reset: (s) => s },
         view: (s) => (s === 2 ? boom() : html`<p>${s}</p>`),
@@ -72,7 +69,6 @@ export function moreErrorCases(t: Tracking): void {
       const bad = defineHook<[]>({ client: boom });
       const good = defineHook<[]>({ client: () => ran.push('good') });
       define<number, Msg>()('err-hook', {
-        intent: {},
         init: () => 1,
         update: { Go: (s) => s, Got: (s) => s, Reset: (s) => s },
         view: () =>
@@ -94,7 +90,6 @@ export function moreErrorCases(t: Tracking): void {
       });
       const ok = defineDriver<undefined, number>({ name: 'err-ok2', run: () => 5 });
       define<number, Msg>()('err-command', {
-        intent: {},
         init: () => [
           1,
           [
@@ -124,7 +119,6 @@ export function moreErrorCases(t: Tracking): void {
       });
       const reader = (name: string, explode: boolean): string => {
         define<number, Msg>()(name, {
-          intent: {},
           init: () => 0,
           stores: [counter],
           update: {
@@ -172,7 +166,6 @@ export function moreErrorCases(t: Tracking): void {
     it('a parent catches a child\'s failure with data-intent-on="error", claims it and re-mounts the child', async () => {
       let failing = true;
       define<number, Msg>()('err-child', {
-        intent: {},
         init: () => (failing ? boom() : 1),
         update: { Go: (s) => s, Got: (s) => s, Reset: (s) => s },
         view: (s) => html`<p>child ${s}</p>`,
@@ -221,7 +214,6 @@ export function moreErrorCases(t: Tracking): void {
 
     it('an unclaimed failure reaches window once, from reportError', async () => {
       define<number, Msg>()('err-once', {
-        intent: {},
         init: () => 1,
         update: { Go: boom, Got: (s) => s, Reset: (s) => s },
         view: (s) => html`<p>${s}</p>`,
@@ -251,7 +243,6 @@ export function moreErrorCases(t: Tracking): void {
       g[DEVTOOLS_GLOBAL] = { emit: (e: DevEvent) => events.push(e) };
       try {
         define<number, Msg>()('err-devtools', {
-          intent: {},
           init: () => 1,
           update: { Go: boom, Got: (s) => s, Reset: (s) => s },
           view: (s) => html`<p>${s}</p>`,

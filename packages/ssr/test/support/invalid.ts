@@ -13,7 +13,7 @@ const taken = (): Readonly<Record<string, readonly string[]>> => ({ email: ['Ema
 
 export const Signup = define<State, Msg>()('test-invalid-form', {
   init: () => ({ errors: taken(), saves: 0 }),
-  intent: { Save: () => ({ _tag: 'Save' }) },
+  intent: { Save: true },
   update: {
     Save: (s) => ({ ...s, saves: s.saves + 1 }),
     Reject: (s) => ({ ...s, errors: taken() }), // a new array: invalid() applies it again

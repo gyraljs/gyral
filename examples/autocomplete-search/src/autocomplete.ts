@@ -98,7 +98,7 @@ export const Autocomplete = define<State, Msg>()('gy-autocomplete', {
       if (key === 'ArrowDown' || key === 'ArrowUp') event.preventDefault(); // keep the caret
       return { _tag: 'Key', key };
     },
-    Blurred: () => ({ _tag: 'Blurred' }),
+    Blurred: true,
     Pick: ({ target }) => {
       const index = Number(target.getAttribute('data-index'));
       return Number.isInteger(index) ? { _tag: 'Pick', index } : undefined;

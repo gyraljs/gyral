@@ -23,8 +23,6 @@ const VIEW = new URL('../../core/src/view/index.ts', import.meta.url).href;
 // gets the declarative shadow root and paints it without the component being defined.
 recordSpec('sah-card', {
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<p style="color: rgb(0, 128, 0)">card</p>`,
 });
 

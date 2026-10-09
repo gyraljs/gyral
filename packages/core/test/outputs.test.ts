@@ -25,7 +25,7 @@ const Picker = define<object, PickerMsg, { readonly label: string }, PickerOut>(
   init: () => ({}),
   intent: {
     Pick: ({ value }) => ({ _tag: 'Pick', id: Number(value) }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Pick: (s, m) => [s, [emitPicker({ _tag: 'Picked', id: m.id })]],

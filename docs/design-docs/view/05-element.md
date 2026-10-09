@@ -397,6 +397,11 @@ that variant; any other key may return any message and has no reducer. The view'
 `intentsOf<typeof C>()` offer exactly those keys, so markup and rows name them the same way,
 and a name with no parser fails to compile.
 
+A parser-table entry may be `true` instead of a function (gyral-1zd.20, 0.3.1): the runtime
+dispatches `{ _tag: name }` for it. The types allow it only for a message tag whose variant has
+no field besides `_tag`. `intent` is optional, and `update` is optional when the component has
+no messages (`define<State>()`); with messages it stays required and exhaustive.
+
 ## Focus (gyral-dyn.26, 0.3.1)
 
 `shadow: { delegatesFocus: true }` in the spec attaches the shadow root with that option, and

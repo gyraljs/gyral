@@ -234,7 +234,7 @@ export function listenForIntents(
 export function handleIntent<M>(
   event: Event,
   root: Node,
-  parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
+  parsers: Readonly<Record<string, IntentParser<M> | true | undefined>>,
   tag: string,
   model: {
     ctx(): ParserCtx<unknown>;
@@ -255,7 +255,11 @@ export function handleIntent<M>(
     };
     let result: Tagged | undefined | Promise<Tagged | undefined>;
     try {
-      result = parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>;
+      // `true`: the intent sends its own tag (types allow it only for field-less variants).
+      result =
+        parser === true
+          ? { _tag: name }
+          : (parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>);
     } catch (cause) {
       failed(cause);
       return;

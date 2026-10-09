@@ -27,7 +27,7 @@ const component = (tag: string, view: View, events?: readonly string[]) =>
     init: () => ({ open: false, on: 'keyup', log: [] }),
     ...(events === undefined ? {} : { events }),
     intent: {
-      Open: () => ({ _tag: 'Open' }),
+      Open: true,
       Hit: ({ event }) => ({ _tag: 'Hit', type: event.type }),
     },
     update: {

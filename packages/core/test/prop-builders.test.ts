@@ -20,8 +20,6 @@ type Props = PropsOf<typeof props>;
 
 const Shop = define<Stateless, never, Props>()('test-prop-shop', {
   props,
-  intent: {},
-  update: {},
   view: (_s, _i, { props: p }) =>
     html`<p>
       ${p.label}|${p.minPrice}|${String(p.open)}|${p.sort}|${p.filters?.tags.join('+') ?? '-'}|${p.items.join(',')}|${p.note ?? '-'}
@@ -49,8 +47,6 @@ describe('prop builders', () => {
   it('infers P from the builders when define() gets no type arguments (types)', () => {
     const Inferred = define()('test-prop-inferred', {
       props: { count: prop.number({ default: 1 }), title2: prop.string() },
-      intent: {},
-      update: {},
       view: (_s, _i, { props: p }) => {
         expectTypeOf(p.count).toEqualTypeOf<number>();
         expectTypeOf(p.title2).toEqualTypeOf<string | undefined>();
@@ -116,8 +112,6 @@ describe('prop builders', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const Trimmed = define()('test-prop-trim', {
       props: { name: prop.string({ schema: v.pipe(v.string(), v.trim()) }) },
-      intent: {},
-      update: {},
       view: () => html`<p></p>`,
     });
     const el = new Trimmed();
@@ -129,8 +123,6 @@ describe('prop builders', () => {
   it('rejects asynchronous schemas', () => {
     const Async = define()('test-prop-async', {
       props: { code: prop.string({ schema: v.pipeAsync(v.string()) }) },
-      intent: {},
-      update: {},
       view: () => html`<p></p>`,
     });
     const el = new Async();
@@ -144,8 +136,6 @@ describe('prop builders', () => {
     const Point = v.object({ x: v.number() });
     const Plot = define()('test-prop-identity', {
       props: { at: prop.value(Point) },
-      intent: {},
-      update: {},
       view: () => html`<p></p>`,
     });
     const el = new Plot();
@@ -178,8 +168,6 @@ describe('prop builders', () => {
     }>();
     const Booth = define()('test-prop-guard', {
       props: guarded,
-      intent: {},
-      update: {},
       view: (_s, _i, { props: p }) =>
         html`<p>${p.seat?.row ?? '-'}${p.seat?.n ?? ''}|${p.picks.join(',')}</p>`,
     });
@@ -208,8 +196,6 @@ describe('prop builders', () => {
     document.body.append(el);
     const Late = define()('test-prop-late', {
       props: { label: prop.string({ default: '?' }) },
-      intent: {},
-      update: {},
       view: (_s, _i, { props: p }) => html`<p>${p.label}</p>`,
     });
     await settled();
