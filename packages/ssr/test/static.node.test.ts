@@ -82,7 +82,7 @@ describe('@gyral/ssr/static (gyral-4k7.3)', () => {
     });
     const server = await productionServer({
       distDir: dist,
-      createApp: ({ clientEntry }) => echo(clientEntry),
+      createApp: ({ clientEntry }) => echo(clientEntry ?? ''),
     });
     const get = (path: string, method = 'GET') =>
       server.fetch(new Request(new URL(path, 'http://x'), { method }));

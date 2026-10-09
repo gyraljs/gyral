@@ -8,7 +8,14 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { assetHandler, cacheHeaders, fileResponse, readOrUndefined } from './assets.js';
-import { basePath, clientAssets, entryChunk, readManifest } from './manifest.js';
+import type { ComponentAssets } from './components.js';
+import {
+  basePath,
+  clientAssets,
+  componentsFromManifest,
+  readManifest,
+  type ViteManifest,
+} from './manifest.js';
 
 export {
   assetHandler,
@@ -20,6 +27,7 @@ export {
   clientAssets,
   clientAssetsFromManifest,
   clientEntryFromManifest,
+  componentsFromManifest,
   type ClientAssets,
   type ManifestOptions,
   type ManifestChunk,
@@ -83,7 +91,11 @@ export async function prerender(options: PrerenderOptions): Promise<readonly Pre
 export interface ProductionOptions<Env = unknown> {
   /** Build output: `client/` (Vite, with `.vite/manifest.json`) and `static/` (prerendered). */
   readonly distDir: string;
-  /** The client entry as named in the Vite manifest. Default `src/entry-client.ts`. */
+  /**
+   * The client entry as named in the Vite manifest. Default `src/entry-client.ts`. A build made
+   * with `gyralVitePreset({ components: true })` may have none: pages then load components
+   * through `components` alone.
+   */
   readonly entry?: string;
   /**
    * The directory served at `/assets/`. Default `<distDir>/client/assets`; point it at a
@@ -111,6 +123,11 @@ export interface ProductionOptions<Env = unknown> {
    * (`clientAssets`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
    */
   readonly createApp: (options: AppAssets) => FetchApp<Env>;
+  /**
+   * Sees every response before it goes out (built assets, prerendered pages and the app's), to
+   * add headers such as a CSP or security headers, or cookies. Return the response to send.
+   */
+  readonly onResponse?: (response: Response, request: Request) => Response | Promise<Response>;
 }
 
 /** The page-level parts of `ClientAssets`, named as `renderPage` takes them. */
@@ -121,7 +138,13 @@ export interface PageAssets {
 
 /** What `productionServer` hands `createApp`: the built entry and what pages link with it. */
 export interface AppAssets extends PageAssets {
-  readonly clientEntry: string;
+  /** The built client entry's URL; undefined when the build has none (components only). */
+  readonly clientEntry: string | undefined;
+  /**
+   * For `renderPage({ components })` when the build was made with
+   * `gyralVitePreset({ components: true })`: each page links exactly the components it rendered.
+   */
+  readonly components: ComponentAssets | undefined;
   /** `modulepreload` and `stylesheets` with `modules` added (cached per list). */
   readonly assets: (modules: readonly string[]) => PageAssets;
   /** `assets(modules).modulepreload`. */
@@ -147,13 +170,19 @@ export async function productionServer<Env = unknown>(
       ? undefined
       : resolve(options.staticDir ?? join(options.distDir, 'static'));
   const manifestPath = join(clientDir, '.vite', 'manifest.json');
-  const entry = options.entry ?? 'src/entry-client.ts';
   const manifest = await readManifest(manifestPath);
-  entryChunk(manifest, entry, manifestPath);
   const where = options.base === undefined ? {} : { base: options.base };
+  const components = await componentsFromManifest(clientDir, where);
+  const entry = entryOf(manifest, options.entry, components !== undefined, manifestPath);
   const pageAssets = (modules: readonly string[]): PageAssets => {
-    const { modulepreload, css } = clientAssets(manifest, entry, modules, where);
-    return { modulepreload, stylesheets: css };
+    if (entry !== undefined) {
+      const { modulepreload, css } = clientAssets(manifest, entry, modules, where);
+      return { modulepreload, stylesheets: css };
+    }
+    const [first, ...rest] = modules;
+    if (first === undefined) return { modulepreload: [], stylesheets: [] };
+    const { entry: url, modulepreload, css } = clientAssets(manifest, first, rest, where);
+    return { modulepreload: modulepreload.length === 0 ? [url] : modulepreload, stylesheets: css };
   };
   const cached = new Map<string, PageAssets>();
   const assets = (modules: readonly string[]): PageAssets => {
@@ -171,32 +200,54 @@ export async function productionServer<Env = unknown>(
     ...(options.cache === undefined ? {} : { cache: options.cache }),
   });
   const app = options.createApp({
-    clientEntry: clientAssets(manifest, entry, [], where).entry,
+    clientEntry: entry === undefined ? undefined : clientAssets(manifest, entry, [], where).entry,
+    components,
     ...assets([]),
     assets,
     preload: (modules) => assets(modules).modulepreload,
   });
+  const { onResponse } = options;
+  const respond = async (request: Request, env: Env | undefined): Promise<Response> => {
+    const asset = await serveAsset(request);
+    if (asset !== undefined) return asset;
+    const read = request.method === 'GET' || request.method === 'HEAD';
+    if (read && staticDir !== undefined) {
+      const page = await readOrUndefined(staticFileFor(staticDir, new URL(request.url).pathname));
+      if (page !== undefined) {
+        return fileResponse(
+          request.method,
+          page,
+          'text/html; charset=utf-8',
+          cacheHeaders.revalidate,
+        );
+      }
+    }
+    const response = await app.fetch(request, env);
+    if (response.headers.has('cache-control')) return response;
+    const headers = new Headers(response.headers);
+    headers.set('cache-control', cacheHeaders.dynamic['cache-control']);
+    return new Response(response.body, { status: response.status, headers });
+  };
   return {
     fetch: async (request, env) => {
-      const asset = await serveAsset(request);
-      if (asset !== undefined) return asset;
-      const read = request.method === 'GET' || request.method === 'HEAD';
-      if (read && staticDir !== undefined) {
-        const page = await readOrUndefined(staticFileFor(staticDir, new URL(request.url).pathname));
-        if (page !== undefined) {
-          return fileResponse(
-            request.method,
-            page,
-            'text/html; charset=utf-8',
-            cacheHeaders.revalidate,
-          );
-        }
-      }
-      const response = await app.fetch(request, env);
-      if (response.headers.has('cache-control')) return response;
-      const headers = new Headers(response.headers);
-      headers.set('cache-control', cacheHeaders.dynamic['cache-control']);
-      return new Response(response.body, { status: response.status, headers });
+      const response = await respond(request, env);
+      return onResponse === undefined ? response : onResponse(response, request);
     },
   };
+}
+
+/**
+ * The manifest key of the client entry: the one named, else `src/entry-client.ts` when the
+ * manifest has it; none for a components-only build. A named entry that's missing is an error.
+ */
+function entryOf(
+  manifest: ViteManifest,
+  named: string | undefined,
+  components: boolean,
+  where: string,
+): string | undefined {
+  const entry = named ?? 'src/entry-client.ts';
+  if (manifest[entry] !== undefined) return entry;
+  if (named === undefined && components) return undefined;
+  throw new Error(`${entry} is not an entry in ${where}`);
 }
