@@ -12,6 +12,8 @@ import type { FeatureHost } from '../features.js';
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
   readonly run: (cmd: Command<M>) => void;
+  /** Aborts the running task of `lane`, if any (subscriptions.ts: a subscription that left). */
+  readonly cancel: (lane: string) => void;
   readonly dispose: () => void;
 }
 
@@ -194,6 +196,10 @@ export function makeInterpreter<M>(
     );
   };
 
+  const cancel = (lane: string): void => {
+    lanes.get(lane)?.controller.abort();
+  };
+
   const dispose = (): void => {
     active = false;
     for (const task of all) task.controller.abort();
@@ -201,7 +207,7 @@ export function makeInterpreter<M>(
     lanes.clear();
   };
 
-  return { run, dispose };
+  return { run, cancel, dispose };
 }
 
 /**

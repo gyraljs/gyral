@@ -3,7 +3,7 @@ import type { Prop } from './prop.js';
 import type { ChildValue, Styles } from './view/index.js';
 import type { CommandInfo } from './invokers.js';
 import type { HydrateStrategy } from './islands.js';
-import type { DriverOverrides, Next } from './command.js';
+import type { Command, DriverOverrides, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
@@ -75,21 +75,6 @@ export interface Hydrated {
   readonly _tag: 'Hydrated';
   /** `true` when the instance resumed from server-rendered markup (a hydration seed). */
   readonly serverRendered: boolean;
-}
-
-/**
- * Framework message: the host is back in the document after it was really detached (view/05
- * "Lifecycle"). Disconnecting stops a host's commands one microtask later, so a move (a
- * disconnect and connect in the same task, as `appendChild`/`insertBefore` reorders do) keeps
- * them running and sends nothing. Only a host that stayed detached long enough for its commands
- * to stop receives `Connected` when it is attached again; re-issue long-lived commands (a
- * `subscription()`, a periodic timer) from its reducer. Never sent on the first connect: `init`
- * covers that.
- */
-export interface Connected {
-  readonly _tag: 'Connected';
-  /** Always `true`: `Connected` is only sent when a stopped host is attached again. */
-  readonly reconnect: true;
 }
 
 /**
@@ -176,7 +161,6 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
-  readonly Connected?: Reducer<S, M, Connected, P>;
   readonly Errored?: Reducer<S, M, Errored, P>;
 };
 
@@ -290,4 +274,13 @@ interface SpecBody<S, M extends Tagged, P, N extends string, I> {
    * `gy-x:state(loading)`. Applied after each render; feature-detected; not on the server.
    */
   readonly states?: (state: S) => Readonly<Record<string, boolean>>;
+  /**
+   * The long-lived commands that should be running now (ADR 0025): polling, clocks, sockets,
+   * store or media-query watches. Evaluated after init, every update and every props change;
+   * the runtime starts lanes that appear, aborts lanes that disappear, and restarts a lane whose
+   * input changed (compared by JSON text). They stop with the host's other commands on removal
+   * and start again from the current state when it is attached again:
+   * `subscriptions: (s, p) => (s.live ? [every(30_000, (now) => ({ _tag: 'Tick', now }))] : [])`.
+   */
+  readonly subscriptions?: (state: S, props: P) => readonly Command<M>[];
 }

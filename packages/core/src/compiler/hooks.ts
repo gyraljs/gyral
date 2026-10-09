@@ -99,7 +99,10 @@ const CANT_FOLLOW =
 
 export function createCompiler(settings: CompilerSettings): CompilerHooks {
   const { sources } = settings;
-  const features = createFeatures(['transitions', 'frame', 'states'], settings.ownEntry);
+  const features = createFeatures(
+    ['transitions', 'frame', 'states', 'subscriptions'],
+    settings.ownEntry,
+  );
   /** Per environment (client, ssr, …): Vite may build them with one plugin instance. */
   const states = new WeakMap<object, BuildState>();
   const global = {};

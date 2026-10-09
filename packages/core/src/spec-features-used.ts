@@ -10,6 +10,7 @@ import { DEV } from './view/index.js';
 export let viewTransitions: typeof Full.viewTransitions;
 export let frameLane: typeof Full.frameLane;
 export let customStates: typeof Full.customStates;
+export let subscriptions: typeof Full.subscriptions;
 
 export const useViewTransitions = ((run) => {
   viewTransitions = run;
@@ -20,6 +21,9 @@ export const useFrameLane = ((lane) => {
 export const useCustomStates = ((sync) => {
   customStates = sync;
 }) satisfies typeof Full.useCustomStates;
+export const useSubscriptions = ((make) => {
+  subscriptions = make;
+}) satisfies typeof Full.useSubscriptions;
 
 /** Development: a spec field whose machinery the build left out (define(), element.ts). */
 export const checkSpecFeatures = ((tag: string, spec: object): void => {
@@ -28,6 +32,7 @@ export const checkSpecFeatures = ((tag: string, spec: object): void => {
     viewTransition: viewTransitions,
     renderOnFrame: frameLane,
     states: customStates,
+    subscriptions,
   };
   for (const [field, slot] of Object.entries(slots)) {
     if (!(field in spec) || slot !== undefined) continue;

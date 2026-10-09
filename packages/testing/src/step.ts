@@ -3,7 +3,6 @@ import {
   type Command,
   type ComponentSpec,
   type Ctx,
-  type Connected,
   type Errored,
   type Hydrated,
   type IntentRejected,
@@ -23,14 +22,13 @@ export interface Stepped<S, M> {
 
 /** Any message `update` accepts: the component's own, or a framework message. */
 export type StepMessage<M, P> =
-  M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected | Errored;
+  M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Errored;
 
 const FRAMEWORK = new Set([
   'PropsChanged',
   'IntentRejected',
   'StoreChanged',
   'Hydrated',
-  'Connected',
   'Errored',
 ]);
 
@@ -69,8 +67,21 @@ export function initial<S, M extends Tagged, P>(
 }
 
 /**
+ * The commands `spec.subscriptions` asks to keep running for `state` and `props` (ADR 0025),
+ * without a DOM: `subscriptionsFor(Clock.spec, { live: true })`. A spec without the field gives
+ * none. Assert their inputs with `inputsFor`, as for any commands.
+ */
+export function subscriptionsFor<S, M extends Tagged, P>(
+  spec: ComponentSpec<S, M, P>,
+  state: NoInfer<S>,
+  props: NoInfer<P> = {} as P,
+): ReadonlyArray<Command<M>> {
+  return spec.subscriptions?.(state, props) ?? [];
+}
+
+/**
  * Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
- * `IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`, `Errored`) without a reducer leave state unchanged, as in
+ * `IntentRejected`, `StoreChanged`, `Hydrated`, `Errored`) without a reducer leave state unchanged, as in
  * the element. `stores` are the instances `ctx.read()` sees.
  */
 export function step<S, M extends Tagged, P>(

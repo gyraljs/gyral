@@ -1,7 +1,7 @@
 // Build-time feature detection (view/05-element.md "Features register themselves",
 // gyral-c5d.11, gyral-c5d.12), loaded lazily by the plugin shells in ../vite.ts. Some optional
 // machinery can't register itself from an API call, because apps reach it through plain data:
-// spec fields (`viewTransition`, `renderOnFrame`, `states`) and markup (`data-intent-on`
+// spec fields (`viewTransition`, `renderOnFrame`, `states`, `subscriptions`) and markup (`data-intent-on`
 // values, `raw()` content). In builds that leave that machinery out by default (the
 // `gyral-compiled` condition, and `gyral-client-only` for the invoker fallback), the modules
 // that can affect Gyral components are scanned, and a module that may use a feature gets one
@@ -34,6 +34,7 @@ const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
   transitions: /\bviewTransition\b/,
   frame: /\brenderOnFrame\b/,
   states: /\bstates\b/,
+  subscriptions: /\bsubscriptions\b/,
 };
 
 /** Each feature's registration module in core (`src/<name>.ts`, published as `dist/<name>.js`). */
@@ -42,6 +43,7 @@ const REGISTRATION: Readonly<Record<Feature, string>> = {
   transitions: 'use-transitions',
   frame: 'use-frame-lane',
   states: 'use-states',
+  subscriptions: 'use-subscriptions',
 };
 
 /**
@@ -53,6 +55,7 @@ export const FEATURE_HINTS: Readonly<Record<Feature, RegExp>> = {
   transitions: /viewTransition/,
   frame: /renderOnFrame/,
   states: /states/,
+  subscriptions: /subscriptions/,
 };
 
 const PREFIX = 'virtual:gyral-use/';

@@ -82,7 +82,6 @@ export type {
   ParserCtx,
   ParserFor,
   PropDeclarations,
-  Connected,
   Errored,
   Hydrated,
   PropsChanged,

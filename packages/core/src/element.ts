@@ -311,6 +311,11 @@ export function elementClass<S, M extends Tagged, P>(
           this.#model.run(commands);
         });
       }
+      if (spec.subscriptions !== undefined) {
+        afterRender(POST_INIT, () => {
+          this.#model.subscribe();
+        });
+      }
     }
 
     /**

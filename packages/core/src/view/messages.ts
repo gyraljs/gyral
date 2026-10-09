@@ -79,4 +79,11 @@ export const MESSAGES = {
   78:
     '<{tag}> failed to render on the server; it renders its error view (or nothing) and ' +
     'starts fresh in the browser.',
+  // Subscriptions (ADR 0025)
+  79:
+    '<{tag}> subscriptions returned two commands for lane "{lane}"; only the first runs. ' +
+    'Give each its own `key`.',
+  80:
+    "<{tag}> subscriptions kept restarting: a subscription's input changes with every message " +
+    'it sends. Keep inputs to what should restart it.',
 } as const;

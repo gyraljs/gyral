@@ -18,6 +18,8 @@ import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
 import { noteActivity, requestTransition } from './scheduler.js';
+import { subscriptions as subscriptionSet } from '#spec-features';
+import type { Subscriptions } from './subscriptions.js';
 import type { AnyStore } from './store.js';
 import type { ComponentSpec, Ctx, IntentRejected, ParserCtx, Tagged } from './types.js';
 import { message } from './view/index.js';
@@ -56,8 +58,8 @@ export class HostModel<S, P> implements LocalHost {
   #pending: Cmd[] | undefined = [];
   /** Connected to the document (a pending stop checks it, so a move cancels the stop). */
   #on = false;
-  /** Commands were stopped while detached: the next connect sends `Connected`. */
-  #stopped = false;
+  /** `spec.subscriptions`, kept running once the host has rendered (ADR 0025). */
+  #subs: Subscriptions | undefined;
   /** `init` threw (ADR 0024): the host shows its error view, or stays empty. */
   #failure: GyralError | undefined;
   /** Handling `Errored`: a failure now is reported, never sent again (no loops). */
@@ -165,6 +167,7 @@ export class HostModel<S, P> implements LocalHost {
     const props = this.#host.props();
     if (names.every((name) => Object.is(props[name], prev[name]))) return;
     if (this.dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false)) this.#seen = props;
+    this.#resubscribe();
   }
 
   /**
@@ -193,6 +196,7 @@ export class HostModel<S, P> implements LocalHost {
     this.apply(next);
     const state = this.state();
     if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, state);
+    this.#resubscribe();
     if (!schedule) return true;
     if (this.#spec.viewTransition?.(prev, state, msg) === true) requestTransition();
     this.#host.invalidate(this.#onFrame(msg._tag));
@@ -225,8 +229,8 @@ export class HostModel<S, P> implements LocalHost {
   }
 
   /**
-   * Resolves stores and runs kept commands; after a real detach, sends `Connected` (05
-   * "Lifecycle"). Returns true if store instances were bound.
+   * Resolves stores and runs kept commands; after a real detach, starts the subscriptions again
+   * (05 "Lifecycle"). Returns true if store instances were bound.
    */
   connect(): boolean {
     this.#on = true; // a move: the pending stop finds the host connected and does nothing
@@ -235,13 +239,38 @@ export class HostModel<S, P> implements LocalHost {
     const pending = this.#pending ?? [];
     this.#pending = undefined;
     for (const cmd of pending) this.#commands().run(cmd);
-    if (this.#stopped) {
-      this.#stopped = false;
-      if (this.#reducers['Connected'] !== undefined) {
-        this.dispatch({ _tag: 'Connected', reconnect: true } as Tagged);
-      }
-    }
+    this.#resubscribe(); // a move: unchanged, nothing restarts
     return rebound;
+  }
+
+  /**
+   * Starts `spec.subscriptions` (ADR 0025): after the first render, as init's commands of a
+   * server-rendered host are, so nothing they emit can change what hydration adopts.
+   */
+  subscribe(): void {
+    const derive = this.#spec.subscriptions;
+    if (derive === undefined || subscriptionSet === undefined || this.#subs !== undefined) return;
+    this.#subs = subscriptionSet<Tagged | IntentRejected>(
+      this.tag,
+      () => derive(this.state(), this.#host.props() as P),
+      {
+        run: (cmd) => {
+          this.#commands().run(cmd);
+        },
+        cancel: (lane) => {
+          this.#interpreter?.cancel(lane);
+        },
+      },
+      (cause) => {
+        this.fail(cause, 'update', message(73, this.tag, 'subscriptions'), 'subscriptions');
+      },
+    );
+    this.#resubscribe();
+  }
+
+  /** Syncs the subscriptions while connected and healthy. */
+  #resubscribe(): void {
+    if (this.#pending === undefined && this.#failure === undefined) this.#subs?.update();
   }
 
   /**
@@ -256,7 +285,7 @@ export class HostModel<S, P> implements LocalHost {
       if (this.#on) return;
       this.#interpreter?.dispose();
       this.#interpreter = undefined;
-      this.#stopped = true;
+      this.#subs?.reset();
     });
   }
 
