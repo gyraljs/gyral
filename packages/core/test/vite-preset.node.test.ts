@@ -23,8 +23,13 @@ const noExternal = async (
 
 describe('gyralVitePreset() (gyral-a7r)', () => {
   it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
-    const [compiler, locations, devServer, ...rest] = gyralVitePreset().plugins;
+    const [compiler, locations, devServer, types, ...rest] = gyralVitePreset().plugins;
     expect(rest).toEqual([]);
+    // Generated element typings (gyral-1zd.25); `types: false` leaves the plugin out.
+    expect(types?.name).toBe('gyral:element-types');
+    expect(gyralVitePreset({ types: false }).plugins.map((p) => p.name)).not.toContain(
+      'gyral:element-types',
+    );
     // Development source locations for runtime templates (view/01 "Source locations").
     expect(locations?.name).toBe('gyral:template-locations');
     expect(locations?.apply).toBe('serve');

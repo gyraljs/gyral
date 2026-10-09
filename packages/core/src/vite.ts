@@ -318,14 +318,21 @@ export interface ElementTypesOptions {
  */
 function gyralElementTypes(options: ElementTypesOptions): Plugin {
   let root = process.cwd();
+  // ./compiler/tag-map imports Node built-ins only, so a plain import() loads it in every way
+  // this module loads (from TypeScript source too), without loadCompiler's module runner.
   type TagMap = typeof import('./compiler/tag-map.js');
-  let tagMap: TagMap | undefined;
+  let tagMap: Promise<TagMap> | undefined;
   const regenerate = async (): Promise<void> => {
-    tagMap ??= await loadCompiler<TagMap>('tag-map');
+    const source = import.meta.url.endsWith('.ts')
+      ? './compiler/tag-map.ts'
+      : './compiler/tag-map.js';
+    const { scanTags, writeTagMap } = await (tagMap ??= import(
+      new URL(source, import.meta.url).href
+    ) as Promise<TagMap>);
     const settings = { root, ...options };
     const out = join(root, options.out ?? '.gyral/elements.d.ts');
-    if (tagMap.scanTags(settings).length === 0 && !existsSync(out)) return;
-    tagMap.writeTagMap(settings);
+    if (scanTags(settings).length === 0 && !existsSync(out)) return;
+    writeTagMap(settings);
   };
   const isSource = (file: string): boolean =>
     /\.(?:ts|tsx|mts)$/.test(file) &&
