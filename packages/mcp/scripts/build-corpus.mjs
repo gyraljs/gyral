@@ -63,6 +63,13 @@ function declarationText(node, name, checker) {
   return upTo(node, node.end);
 }
 
+/** A function's overload signatures (every one, without the implementation), else its declaration. */
+function overloadsOf(symbol) {
+  const declarations = symbol.declarations ?? [];
+  const overloads = declarations.filter((d) => ts.isFunctionDeclaration(d) && d.body === undefined);
+  return overloads.length > 1 ? overloads : declarations.slice(0, 1);
+}
+
 function kindOf(node, checker) {
   if (ts.isFunctionDeclaration(node)) return 'function';
   if (ts.isClassDeclaration(node)) return 'class';
@@ -109,7 +116,9 @@ function buildApi() {
         name: exported.name,
         specifier,
         kind: kindOf(node, checker),
-        declaration: declarationText(node, exported.name, checker),
+        declaration: overloadsOf(symbol)
+          .map((n) => declarationText(n, exported.name, checker))
+          .join('\n'),
         doc,
       };
     });

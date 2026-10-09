@@ -84,7 +84,9 @@ describe('api', () => {
     if (define === undefined || matches.length !== 1) throw new Error('expected one define');
     const text = formatApi(define);
     expect(text).toContain("from '@gyral/core'");
-    expect(text).toContain('function define<');
+    // Both call forms (ADR 0023): the overloads are listed one after the other.
+    expect(text).toContain('function define(): <');
+    expect(text).toContain('>(): Definer<S, M, P, O>;');
     expect(text).toContain('Compiles a Model-View-Intent spec');
   });
 
@@ -128,7 +130,7 @@ describe('examples', () => {
     if (counter === undefined) throw new Error('expected the counter example');
     expect(counter.components.map((f) => f.path)).toEqual(['src/counter.ts']);
     expect(counter.otherFiles).toContain('src/main.ts');
-    expect(formatExample(counter)).toContain("define<State, Msg>('gy-counter'");
+    expect(formatExample(counter)).toContain("define<State, Msg>()('gy-counter'");
   });
 });
 
