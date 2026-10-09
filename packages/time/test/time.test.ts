@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import { inputsFor, step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { makeTime } from '../src/driver.js';
-import { animationFrames, debounce, delay, periodic, time } from '../src/index.js';
+import { animationFrames, debounce, delay, every, time } from '../src/index.js';
 
 type Msg =
-  | { readonly _tag: 'Tick'; readonly n: number }
+  | { readonly _tag: 'Tick'; readonly now: number }
   | { readonly _tag: 'Fired'; readonly label: string }
   | { readonly _tag: 'Frame'; readonly delta: number }
   | { readonly _tag: 'StartFrames' }
@@ -14,23 +14,23 @@ type Msg =
   | { readonly _tag: 'Later'; readonly label: string; readonly ms: number; readonly key?: string };
 
 interface State {
+  /** The period of the clock subscription (ms). */
+  readonly period: number;
   readonly ticks: readonly number[];
   readonly fired: readonly string[];
   readonly deltas: readonly number[];
 }
 
 const Clock = define<State, Msg>()('test-clock', {
-  init: () => [
-    { ticks: [], fired: [], deltas: [] },
-    [periodic(1000, (n) => ({ _tag: 'Tick', n }))],
-  ],
+  init: () => ({ period: 1000, ticks: [], fired: [], deltas: [] }),
+  subscriptions: (s) => [every(s.period, (now) => ({ _tag: 'Tick', now }))],
   intent: {},
   update: {
-    Tick: (s, m) => ({ ...s, ticks: [...s.ticks, m.n] }),
+    Tick: (s, m) => ({ ...s, ticks: [...s.ticks, m.now] }),
     Fired: (s, m) => ({ ...s, fired: [...s.fired, m.label] }),
     Frame: (s, m) => ({ ...s, deltas: [...s.deltas, m.delta] }),
     StartFrames: (s) => [s, [animationFrames((f) => ({ _tag: 'Frame', delta: f.delta }))]],
-    Restart: (s) => [{ ...s, ticks: [] }, [periodic(500, (n) => ({ _tag: 'Tick', n }))]],
+    Restart: (s) => ({ ...s, period: 500, ticks: [] }),
     Typed: (s, m) => [s, [debounce(300, { _tag: 'Fired', label: m.text })]],
     Later: (s, m) => [
       s,
@@ -57,18 +57,20 @@ afterEach(() => {
 });
 
 describe('@gyral/time', () => {
-  it('periodic streams elapsed-period counts', async () => {
+  it('every sends the wall-clock time at once, then every period', async () => {
     const { el, advance } = await mount();
+    const start = (clock as VirtualTime).now();
     await advance(3000);
-    expect(el.state.ticks).toEqual([1, 2, 3]);
+    expect(el.state.ticks).toEqual([start, start + 1000, start + 2000, start + 3000]);
   });
 
-  it('a new periodic in the same lane replaces the old one', async () => {
+  it('a subscription whose input changes restarts with it', async () => {
     const { el, advance } = await mount();
     await advance(1000);
-    el.send({ _tag: 'Restart' });
+    el.send({ _tag: 'Restart' }); // period 1000 → 500: the lane restarts and ticks at once
+    const restarted = (clock as VirtualTime).now();
     await advance(1000);
-    expect(el.state.ticks).toEqual([1, 2]);
+    expect(el.state.ticks).toEqual([restarted, restarted + 500, restarted + 1000]);
   });
 
   it('delays in the default lane all fire, in order', async () => {
@@ -111,7 +113,7 @@ describe('@gyral/time', () => {
   });
 
   it('commands are data: testable without timers', () => {
-    const s: State = { ticks: [], fired: [], deltas: [] };
+    const s: State = { period: 1000, ticks: [], fired: [], deltas: [] };
     const { commands } = step(Clock.spec, s, { _tag: 'Typed', text: 'x' });
     expect(inputsFor(commands, time)).toEqual([{ _tag: 'Delay', ms: 300 }]);
     expect(commands[0]?.key).toBe('time:debounce');

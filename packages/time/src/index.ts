@@ -1,6 +1,6 @@
-// `@gyral/time`: delays, debounces, periodic ticks and animation frames as commands, run by one
+// `@gyral/time`: delays, debounces, wall-clock ticks (`every`) and animation frames as commands, run by one
 // `time` driver. Apps that only need delays and debounces import them from `@gyral/time/delay`
-// instead (delay.ts), whose driver leaves the periodic and frame code out (gyral-c5d.15).
+// instead (delay.ts), whose driver leaves the `every` and frame code out (gyral-c5d.15).
 import type { Command } from '@gyral/core';
 import { time, type Frame } from './driver.js';
 import { timer, type Lane } from './timer.js';
@@ -26,20 +26,22 @@ export function debounce<M>(ms: number, msg: M, key = 'time:debounce'): Command<
 }
 
 /**
- * Streams the number of elapsed periods (1, 2, 3, …) every `ms` until the component
- * disconnects. Starting another periodic in the same lane replaces it (`switch`).
+ * Sends `toMsg(now)` at once and then every `ms`, `now` being `Date.now()` (virtual under
+ * `virtualTime()`), until it is stopped. Made for `subscriptions` (ADR 0025):
+ * `subscriptions: (s) => (s.live ? [every(1000, (now) => ({ _tag: 'Tick', now }))] : [])`.
+ * Each `every` runs in lane `key` (`switch`: another one in the same lane replaces it).
  */
-export function periodic<M>(
+export function every<M>(
   ms: number,
-  toMsg: (ticks: number) => M | undefined,
-  lane: Lane = {},
+  toMsg: (now: number) => M | undefined,
+  key = 'time:every',
 ): Command<M> {
   return timer(
     time,
-    { _tag: 'Periodic', ms },
+    { _tag: 'Every', ms },
     (output) => (typeof output === 'number' ? toMsg(output) : undefined),
-    lane,
-    { key: 'time:periodic', concurrency: 'switch' },
+    {},
+    { key, concurrency: 'switch' },
   );
 }
 

@@ -64,11 +64,9 @@ export const pageHead = (route: Route | undefined, origin: string): Head => ({
 export const RoutingView = define<State, Msg>()('gy-routing-view', {
   // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
   drivers: { router: makeRouter({ captureLinks: true }) },
-  // One streaming command: the current location now, then every change (ADR 0009).
-  init: () => [
-    { location: undefined, route: undefined },
-    [listen((location) => ({ _tag: 'Routed', location }))],
-  ],
+  init: () => ({ location: undefined, route: undefined }),
+  // One subscription: the current location now, then every change (ADR 0009, ADR 0025).
+  subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   intent: {
     Back: () => ({ _tag: 'Back' }),
   },

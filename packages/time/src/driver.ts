@@ -9,10 +9,10 @@ export interface Frame {
 
 export type TimeInput =
   | { readonly _tag: 'Delay'; readonly ms: number }
-  | { readonly _tag: 'Periodic'; readonly ms: number }
+  | { readonly _tag: 'Every'; readonly ms: number }
   | { readonly _tag: 'Frames' };
 
-/** Delays resolve `undefined`; periodic streams tick counts; frames stream `Frame`s. */
+/** Delays resolve `undefined`; `every` streams wall-clock times (`Date.now()`); frames stream `Frame`s. */
 export type TimeOutput = undefined | number | Frame;
 
 export type TimeDriver = Driver<TimeInput, TimeOutput>;
@@ -44,12 +44,12 @@ function until(signal: AbortSignal, start: () => () => void): Promise<never> {
   });
 }
 
-function periodic(ms: number, { signal, emit }: DriverContext<TimeOutput>): Promise<never> {
+/** Emits `Date.now()` at once, then every `ms`, until aborted. */
+function every(ms: number, { signal, emit }: DriverContext<TimeOutput>): Promise<never> {
   return until(signal, () => {
-    let ticks = 0;
+    emit(Date.now());
     const timer = setInterval(() => {
-      ticks += 1;
-      emit(ticks);
+      emit(Date.now());
     }, ms);
     return () => {
       clearInterval(timer);
@@ -100,8 +100,8 @@ export function makeTime(options: TimeOptions = {}): TimeDriver {
       switch (input._tag) {
         case 'Delay':
           return wait(input.ms, ctx.signal);
-        case 'Periodic':
-          return periodic(input.ms, ctx);
+        case 'Every':
+          return every(input.ms, ctx);
         case 'Frames':
           return frames(ctx);
       }

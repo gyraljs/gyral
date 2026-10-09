@@ -11,9 +11,9 @@ afterAll(() => {
   unmount();
 });
 
-// The router answers synchronously with the current URL. If init's commands ran before the
-// hydrating render, state would change first and hydration would fail with a mismatch.
-it('hydrates the server state first, then applies what init commands report', async () => {
+// The router answers synchronously with the current URL. If the location subscription started
+// before the hydrating render, state would change first and hydration would fail with a mismatch.
+it('hydrates the server state first, then applies what the subscription reports', async () => {
   history.replaceState(null, '', '/'); // the browser is somewhere else than the server render
   const page = mountSsr(serverHtml);
   unmount = page.unmount;

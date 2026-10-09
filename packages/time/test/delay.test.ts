@@ -65,7 +65,7 @@ describe('@gyral/time/delay', () => {
 
   it('rejects inputs only the full driver runs', async () => {
     const signal = new AbortController().signal;
-    const run = delayTime.run({ _tag: 'Periodic', ms: 10 }, { signal, emit: () => undefined });
+    const run = delayTime.run({ _tag: 'Every', ms: 10 }, { signal, emit: () => undefined });
     await expect(run).rejects.toThrow(/delays only/);
   });
 });

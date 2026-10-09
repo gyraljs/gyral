@@ -1,6 +1,6 @@
 # @gyral/time
 
-Gyral time: delays, debounces, periodic ticks and animation frames as commands, so timing logic stays in pure update functions and tests run on virtual time.
+Gyral time: delays, debounces, wall-clock ticks (`every`) and animation frames as commands, so timing logic stays in pure update functions and tests run on virtual time.
 
 ## Install
 
@@ -19,7 +19,7 @@ import { debounce, delay } from '@gyral/time';
 ```
 
 Apps that only need delays and debounces import them from `@gyral/time/delay`: the same
-`delay` and `debounce`, over a delay-only driver (also named `time`), so periodic ticks and
+`delay` and `debounce`, over a delay-only driver (also named `time`), so `every` ticks and
 animation frames stay out of the bundle.
 
 ```ts

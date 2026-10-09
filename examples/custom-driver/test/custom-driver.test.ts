@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { settled } from '@gyral/core';
-import { fakeDriver, inputsFor, run, virtualTime, type VirtualTime } from '@gyral/testing';
+import {
+  fakeDriver,
+  inputsFor,
+  run,
+  subscriptionsFor,
+  virtualTime,
+  type VirtualTime,
+} from '@gyral/testing';
 import { barAt, chart, layout, makeChartDriver, type ChartInput } from '../src/chart-driver.js';
 import { Clicks } from '../src/clicks.js';
 
@@ -28,9 +35,12 @@ describe('model', () => {
     expect(draws(inputsFor(commands, chart))).toEqual([[1], [2], [2, 1]]);
   });
 
-  it('init starts the timer and the chart-click stream', () => {
-    const { commands } = run(Clicks.spec, []);
-    expect(commands.map((c) => c.driver.name)).toEqual(['time', 'chart']);
+  it('keeps the timer and the chart-click stream running', () => {
+    const { state } = run(Clicks.spec, []);
+    expect(subscriptionsFor(Clicks.spec, state).map((c) => c.driver.name)).toEqual([
+      'time',
+      'chart',
+    ]);
   });
 });
 

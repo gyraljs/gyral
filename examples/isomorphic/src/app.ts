@@ -45,12 +45,11 @@ export const App = define<State, Msg, Props>()('gy-iso-app', {
   props: { path: prop.string() },
   // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
   drivers: { router: makeRouter({ captureLinks: true }) },
-  // Same on server and client. The server never runs commands; after hydration the client
-  // runs init's listen(), which streams the current location and every navigation (ADR 0012).
-  init: (props) => [
-    { path: props.path ?? '/' },
-    [listen((location) => ({ _tag: 'Routed', location }))],
-  ],
+  // Same on server and client.
+  init: (props) => ({ path: props.path ?? '/' }),
+  // The server never runs commands; after hydration the client subscribes to the location,
+  // which streams the current one and every navigation (ADR 0012, ADR 0025).
+  subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   intent: {},
   update: {
     // pageHead() also renders the server's head: one source for both (ADR 0019). The first
