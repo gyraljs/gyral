@@ -91,8 +91,15 @@ even for apps that prerender nothing. The asset half is now its own export:
   it at the volume) and `cache`; `staticDir` (default `<distDir>/static`, or `false` for apps
   with no `ssg` routes) for prerendered pages, which now answer `HEAD` too and carry
   `content-length` and `nosniff`.
-- Not covered: range requests, precompressed files (`.br`/`.gz`) and `ETag`s; hashed URLs make
-  revalidation unnecessary. Put a CDN or reverse proxy in front for compression.
+- Range requests (gyral-dyn.32): a single `bytes=` range gets a 206 with that slice and
+  `content-range`, so imported video and audio can seek (Safari won't play video without it);
+  an unsatisfiable range is a 416, and several ranges get the whole file (RFC 9110 allows it).
+  Every asset says `accept-ranges: bytes`. `If-Range` is ignored: a hashed file never changes.
+- Vite's `base` (gyral-dyn.32): the manifest's paths omit it, so `clientAssets`,
+  `clientAssetsFromManifest` and `clientEntryFromManifest` take `{ base }`, and
+  `productionServer({ base })` starts every URL with it and serves assets at `<base>assets/`.
+- Not covered: precompressed files (`.br`/`.gz`) and `ETag`s; hashed URLs make revalidation
+  unnecessary. Put a CDN or reverse proxy in front for compression.
 
 Tests: `packages/ssr/test/assets.node.test.ts` (each bug above, types, traversal, cache bound,
 configurable directories).

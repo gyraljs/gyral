@@ -42,6 +42,7 @@ describe('assetHandler (gyral-dyn.1)', () => {
     const res = await serve(request('/assets/nested/b.js'));
     expect(res?.status).toBe(200);
     expect(Object.fromEntries(res?.headers ?? [])).toEqual({
+      'accept-ranges': 'bytes',
       'cache-control': 'public, max-age=31536000, immutable',
       'content-length': '11',
       'content-type': 'text/javascript; charset=utf-8',

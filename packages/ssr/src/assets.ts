@@ -93,6 +93,28 @@ export async function readOrUndefined(file: string): Promise<Uint8Array<ArrayBuf
   }
 }
 
+/**
+ * The one byte range a `Range` header asks of a `size`-byte file, `[first, last]` inclusive:
+ * `null` when it can't be satisfied (416), `undefined` to ignore it and send the whole file
+ * (absent, malformed, several ranges, or `last` before `first`, as RFC 9110 allows).
+ */
+export function byteRange(
+  header: string | null,
+  size: number,
+): readonly [number, number] | null | undefined {
+  const match = header === null ? null : /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (match === null) return undefined;
+  const [, from = '', to = ''] = match;
+  if (from === '') {
+    if (to === '') return undefined;
+    const suffix = Number(to); // the last `suffix` bytes
+    return suffix === 0 || size === 0 ? null : [Math.max(0, size - suffix), size - 1];
+  }
+  const first = Number(from);
+  if (to !== '' && Number(to) < first) return undefined;
+  return first >= size ? null : [first, to === '' ? size - 1 : Math.min(Number(to), size - 1)];
+}
+
 export interface AssetHandlerOptions {
   /** The directory served under `prefix`, e.g. `dist/client/assets`. */
   readonly dir: string;
@@ -150,7 +172,9 @@ function memo(maxBytes: number) {
  * `content-length` and `x-content-type-options: nosniff`. Paths that are not under `dir` after
  * decoding (`..`, encoded slashes leading out) or have a dot segment (`.hidden`) are refused;
  * a malformed escape is a 400. Misses are 404 with `cache-control: no-store`, so a CDN never
- * keeps a miss for a file the next deploy brings. Other methods get 405.
+ * keeps a miss for a file the next deploy brings. Other methods get 405. A single-range
+ * `Range` request gets a 206 with that slice (media seeking: Safari won't play video without
+ * it); several ranges get the whole file. Hashed files never change, so `If-Range` isn't needed.
  */
 export function assetHandler(options: AssetHandlerOptions): AssetHandler {
   const root = resolve(options.dir);
@@ -195,6 +219,22 @@ export function assetHandler(options: AssetHandlerOptions): AssetHandler {
     if (!file.startsWith(`${root}${sep}`)) return errorResponse(404, 'Not found');
     const body = cache?.get(file) ?? (await read(file));
     if (body === undefined) return errorResponse(404, 'Not found');
-    return fileResponse(request.method, body, contentType(file), cacheHeaders.immutable);
+    const size = body.byteLength;
+    const range = byteRange(request.headers.get('range'), size);
+    if (range === null) {
+      return errorResponse(416, 'Range not satisfiable', {
+        'content-range': `bytes */${String(size)}`,
+      });
+    }
+    const [first, last] = range ?? [0, size - 1];
+    const whole = fileResponse(
+      request.method,
+      range === undefined ? body : body.subarray(first, last + 1),
+      contentType(file),
+      { ...cacheHeaders.immutable, 'accept-ranges': 'bytes' },
+    );
+    if (range === undefined) return whole;
+    whole.headers.set('content-range', `bytes ${String(first)}-${String(last)}/${String(size)}`);
+    return new Response(whole.body, { status: 206, headers: whole.headers });
   };
 }
