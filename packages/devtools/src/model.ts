@@ -1,6 +1,7 @@
 // Pure panel model (ADR 0017): turns DevEvents into timeline rows, live components and
 // command lanes. No DOM access, so it is tested without a browser.
 import type { DevComponentRef, DevEvent } from '@gyral/core';
+import { isSecretField } from '@gyral/core/internal';
 
 export type RowKind = 'component' | 'update' | 'command' | 'store' | 'error';
 export const ROW_KINDS: readonly RowKind[] = ['update', 'command', 'store', 'component', 'error'];
@@ -51,13 +52,22 @@ export const initialPanel = (open = false): PanelState => ({
 
 export const componentLabel = (c: DevComponentRef): string => `<${c.tag}>#${String(c.id)}`;
 
-/** A bounded, cycle-safe JSON preview for display. Never throws. */
+/**
+ * A bounded, cycle-safe JSON preview for display. Never throws. Values under a secret form
+ * field's name (`defineForm(schema, { secret })`, or a password-like name) show as `[secret]`.
+ */
 export function preview(value: unknown, limit = 120): string {
   const seen = new WeakSet();
   let text: string;
   try {
     // Typed as string, but JSON.stringify returns undefined for undefined and bare functions.
-    const json = JSON.stringify(value, (_key, v: unknown) => {
+    const json = JSON.stringify(value, (key, v: unknown) => {
+      if (key !== '' && v !== undefined && isSecretField(key)) return '[secret]';
+      if (typeof FormData !== 'undefined' && v instanceof FormData) {
+        return Object.fromEntries(
+          [...v.keys()].map((k) => [k, isSecretField(k) ? '[secret]' : v.getAll(k).map(String)]),
+        );
+      }
       if (typeof v === 'object' && v !== null) {
         if (seen.has(v)) return '[circular]';
         seen.add(v);
