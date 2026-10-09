@@ -7,8 +7,8 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Optional peers the smoke test touches (@gyral/testing/arbitraries uses fast-check).
-const PEERS = ['fast-check@^4'];
+// Optional peers the smoke test touches (none since @gyral/testing/arbitraries was removed).
+const PEERS = [];
 /** Packages no Gyral install may bring in (ADR 0018: Gyral renders with its own view layer). */
 const FORBIDDEN = ['lit', 'lit-html', 'lit-element', '@lit/reactive-element', '@lit-labs/ssr'];
 
@@ -39,9 +39,9 @@ try {
 import { define, html } from '@gyral/core';
 import { renderToString } from '@gyral/ssr';
 const entries = [
-  '@gyral/core', '@gyral/core/server', '@gyral/core/internal', '@gyral/core/vite', '@gyral/core/eslint',
-  '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time', '@gyral/time/delay',
-  '@gyral/ssr', '@gyral/ssr/static', '@gyral/ssr/node', '@gyral/testing', '@gyral/testing/arbitraries',
+  '@gyral/core', '@gyral/core/internal/server', '@gyral/core/internal', '@gyral/core/vite', '@gyral/core/eslint',
+  '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time',
+  '@gyral/ssr', '@gyral/ssr/static', '@gyral/ssr/node', '@gyral/testing',
 ];
 for (const entry of entries) {
   const mod = await import(entry);

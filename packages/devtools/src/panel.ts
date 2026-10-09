@@ -13,7 +13,7 @@ import {
   type RowKind,
 } from './model.js';
 import { panelStyles } from './styles.js';
-import type { DevEvent } from '@gyral/core';
+import type { DevEvent } from '@gyral/core/internal';
 
 export const PANEL_TAG = 'gyral-devtools';
 

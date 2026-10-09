@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { define, defineStore, html, type GyralError } from '@gyral/core';
-import { renderToString as renderWithoutScope } from '@gyral/core/server';
-import { page, renderPage, renderToStream, renderToString } from '../src/index.js';
+import { renderToString as renderWithoutScope } from '@gyral/core/internal/server';
+import { renderPage, renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
+import { renderToStream } from '../src/render-stream.js';
 
 interface Cart {
   readonly owner: string;

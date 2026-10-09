@@ -1,8 +1,7 @@
 # Server rendering and hydration
 
-Server rendering is Gyral's own (`@gyral/core/server`, spec:
-docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
-`renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration is built into
+Server rendering is Gyral's own (spec: docs/design-docs/view/06-server.md); `@gyral/ssr`
+(`renderPage`, `renderToString`, `styleHashes`, `formAction`, `@gyral/ssr/static`) is its API. Hydration is built into
 core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
 place, on its own, with no hydration import.
 
@@ -30,7 +29,7 @@ Pages work before JavaScript loads.
    plain elements. Hydration never overwrites what the user typed before scripts ran.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
-   first and switch in the `Hydrated` reducer. A mismatch throws `HydrationMismatch` in
+   first and switch in the `Hydrated` reducer. A mismatch throws a hydration-mismatch error in
    development (logged with the tag, template location, DOM path, expected and found; the
    component keeps the server's DOM) and, in production, warns and re-renders only that
    component. Browser extensions that edit the page before scripts run cause mismatches too.
@@ -67,8 +66,8 @@ export function home(request: Request): Response {
 }
 ```
 
-Also available: `page(options)` (the document template), `renderToString(value, { stores })`
-and `renderToStream(value, { stores })`. Head content the head model doesn't cover
+Also available: `renderToString(value, { stores })` for a fragment or a cached page; a
+`renderPage()` response's `body` is the chunked stream. Head content the head model doesn't cover
 (`extraHead`) is written with core's `html` too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
@@ -110,8 +109,8 @@ export function handle(request: Request): Response {
 ### One head for server and client
 
 A page's head (title, description, canonical, robots, `meta`, `links`, JSON-LD, `lang`, `dir`)
-is one `Head` value (ADR 0019). Compute it with one pure function, give it to `page()` /
-`renderPage()` on the server, and return `setHead(…)` from the reducer that has the route and
+is one `Head` value (ADR 0019). Compute it with one pure function, give it to `renderPage()` on
+the server, and return `setHead(…)` from the reducer that has the route and
 data, so a client navigation leaves the same head as a page load. `setHead` replaces the whole
 managed head: whatever the new head doesn't name (a `noindex`, last page's JSON-LD) is removed,
 unchanged elements aren't written (the first `Routed` after hydration writes nothing), and
@@ -169,7 +168,7 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 - Later `meta`/`links` entries win over earlier ones with the same name or attributes, so
   `meta: [...siteDefaults, ...pageMeta]` merges defaults. `charset`, `viewport`, `http-equiv`
   and `stylesheet`/`preload`/`modulepreload`/`canonical` links are refused there: they belong
-  to `page()`'s own options (or `canonical`).
+  to `renderPage()`'s own options (or `canonical`).
 - `canonical` must be absolute; development warns on a path.
 - JSON-LD needs no CSP allowance (a data block isn't script). Where Trusted Types are enforced,
   the client skips JSON-LD updates (crawlers read the server's).
@@ -229,8 +228,8 @@ rendered to a string first, so the body isn't chunked; each value adds about 54 
 header (development warns above 32; `maxStyleHashes`, default 128, caps the list). Serve-time
 pages only: `prerender` writes no per-page header.
 
-`@gyral/core/server` also exports `styleHashes()` (every registered shadow component's hash)
-and `componentStyles()` (tag → `<style>` text).
+`styleHashes()` from `@gyral/ssr` lists every registered shadow component's `<style>` hash,
+for a policy built outside `renderPage`.
 
 **Trusted Types** (client-only apps too): the browser parses template HTML and `raw()` markup
 through one policy named `gyral`, created on first use. Under
@@ -363,12 +362,13 @@ Hydration code loads lazily (only pages with server-rendered components need it)
 a round trip later. A page whose route module is imported lazily spreads
 `assets(['src/routes/product.ts'])` (also given to `createApp`) into `renderPage` instead:
 `{ modulepreload, stylesheets }` with that module, its imports and its CSS added
-(`clientAssets(manifest, entry, also)` underneath; `preload(modules)` is the `modulepreload`
-half alone). `clientEntryFromManifest()` (the entry URL alone) still works.
+(`preload(modules)` is the `modulepreload` half alone). Outside `productionServer`,
+`clientAssetsFromManifest(manifestPath, entry, also?)` gives the same `{ entry, modulepreload,
+css }`.
 
 **Hashed stylesheets.** Import the app's global CSS from the client entry
 (`import './app.css';`), so Vite bundles it into a content-hashed file listed in the manifest;
-`clientAssets(...).css` (`stylesheets` in `createApp`) lists those files, and
+`clientAssetsFromManifest(...).css` (`stylesheets` in `createApp`) lists those files, and
 `renderPage({ stylesheets })` links them before any inline `styles`. They are served immutable
 from `/assets/`, cached across pages, and `style-src 'self'` allows them without hashes. Use
 `styles` (inline, hashed for CSP) only for small critical CSS.
@@ -559,7 +559,7 @@ components.md.
 Create store instances **per request** and pass them to `renderPage({ stores })`; the page
 carries one store seed the client restores before components hydrate. Give stores a `schema`
 to validate that seed in the browser. To give part of a page its own instances, wrap it in a
-`<gyral-stores>` element (`STORES_ELEMENT` is its tag name); the server renders it with its
+`<gyral-stores>` element; the server renders it with its
 own seed.
 
 ## Preloads under a service worker

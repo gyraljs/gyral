@@ -1,6 +1,7 @@
 // Components for the light-DOM SSR tests (ADR 0014): rendered on the server
 // (light.node.test.ts), then hydrated in the browser (light-hydration.test.ts).
-import { child, define, emit, html } from '@gyral/core';
+import { child, define, html } from '@gyral/core';
+import { emit } from '@gyral/core/internal';
 
 type Bump = { readonly _tag: 'Bumped'; readonly by: string };
 type ItemMsg = { readonly _tag: 'Inc' };

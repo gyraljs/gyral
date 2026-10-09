@@ -180,12 +180,13 @@ export const Search = define<State, Msg>()('my-search', {
 
 ## Built-in commands in core
 
-- `emit(output)` — send an output to the parent (child components).
+- `emit(output)` from `outputs<O>()` — send an output to the parent (child components;
+  composition.md).
 - `send(store, msg)` — write to a store.
 - `focus(selector, { preventScroll?, select?, wait? })` — focus an element inside this
   component after the render this reducer caused (non-focusable targets need `tabindex="-1"`).
   With `wait: true`, a target that appears only in a later render (results after a search) is
   focused when it appears; a newer `focus()` from the component replaces the request, and it
   gives up with a warning after one second. `settled()` doesn't wait for it.
-- `random(count, toMsg)`, `randomInt(min, max, toMsg)` — randomness as an effect, so reducers
+- Randomness is an effect too: a small driver (effects-and-drivers.md "Recipes"), so reducers
   stay deterministic and tests feed fixed numbers.

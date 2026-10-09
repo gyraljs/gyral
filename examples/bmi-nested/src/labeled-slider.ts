@@ -1,4 +1,4 @@
-import { css, define, emit, html, prop, type Stateless } from '@gyral/core';
+import { css, define, html, outputs, prop, type Stateless } from '@gyral/core';
 
 export interface SliderProps {
   readonly label: string;
@@ -12,6 +12,9 @@ export interface SliderProps {
 export type SliderOutput = { readonly _tag: 'Changed'; readonly value: number };
 
 type Msg = { readonly _tag: 'Changed'; readonly value: number };
+
+/** Typed `emit` for this component's outputs. */
+const emit = outputs<SliderOutput>();
 
 /**
  * A reusable, *controlled* slider: the parent owns the value and passes it down as a prop;

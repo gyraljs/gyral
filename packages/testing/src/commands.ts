@@ -1,6 +1,5 @@
 import {
   call,
-  emit,
   focus,
   type AnyDriver,
   type CallInput,
@@ -10,6 +9,7 @@ import {
   type OutputsOf,
   type Tagged,
 } from '@gyral/core';
+import { emit } from '@gyral/core/internal';
 
 type Named = Pick<AnyDriver, 'name'>;
 

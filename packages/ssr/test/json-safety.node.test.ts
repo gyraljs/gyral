@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, defineStore, html } from '@gyral/core';
-import { page, renderToString } from '../src/index.js';
+import { renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 
 type Msg = { readonly _tag: 'Stamp' };
 

@@ -74,8 +74,8 @@ describe('search model', () => {
   `StoreChanged`) work too.
 - `commandsFor(commands, driver)` / `inputsFor(commands, driver)` filter by driver name;
   `resolve(command, output)` / `reject(command, error)` give the resulting message.
-- `outputsIn(commands, Component)` returns the outputs a reducer sent to the parent (`emit`,
-  `outputs<O>()`), typed by the class's output union (or `outputsIn<Out>(commands)`).
+- `outputsIn(commands, Component)` returns the outputs a reducer sent to the parent (`outputs<O>()`'s
+  emit), typed by the class's output union (or `outputsIn<Out>(commands)`).
   `focusTargetsIn(commands)` returns each `focus()` request as
   `{ selector, preventScroll?, select?, wait? }`, and `callsIn(commands)` each `call()` request
   as `{ selector, method, args }`. Never filter on driver names such as `'@gyral/emit'`: they
@@ -85,8 +85,8 @@ describe('search model', () => {
 - Calling a parser directly: parsers take `(input, ctx)`. Build the `ctx` with
   `{ props, state, read: readerOf(stores) }`; `readerOf([])` when the component reads no
   stores.
-- Pure update functions make property tests easy: `@gyral/testing/arbitraries` builds
-  fast-check arbitraries.
+- Pure update functions make property tests easy with fast-check: generate messages, run
+  `step`, assert invariants on the state.
 
 ## Element tests (browser)
 
@@ -206,7 +206,7 @@ Node, one of two ways:
 1. **`renderOnServer`** (Vitest browser mode, from `@gyral/testing/vitest`; needs `vitest` 4.1 or 5): a
    Vitest browser command that runs in Vitest's Node process, loads a module through the
    project's Vite server (same preset, development build) and renders it with
-   `@gyral/core/server`. Use it for component and page hydration tests: no files to sync,
+   Gyral's server renderer. Use it for component and page hydration tests: no files to sync,
    props per test.
 2. **Golden fixture:** a Node test (`*.node.test.ts`) calls the real server and writes the
    HTML with `toMatchFileSnapshot('./fixtures/page.ssr.html')`; the browser test imports it with

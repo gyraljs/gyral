@@ -19,12 +19,12 @@ const read = (path) => readFileSync(path, 'utf8');
  * template compiler's output, `@gyral/ssr/hydrate` an empty 0.2 leftover: neither is listed).
  */
 const ENTRIES = [
-  ['core', ['.', './server', './vite', './eslint']],
+  ['core', ['.', './vite', './eslint']],
   ['http', ['.', './testing']],
   ['router', ['.']],
-  ['time', ['.', './delay']],
+  ['time', ['.']],
   ['ssr', ['.', './static', './node']],
-  ['testing', ['.', './arbitraries', './vitest']],
+  ['testing', ['.', './vitest']],
   ['devtools', ['.']],
 ];
 

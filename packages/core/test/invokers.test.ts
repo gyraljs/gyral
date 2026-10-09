@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, invokersSupported, settled } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
+import { invokersSupported } from '../src/internal.js';
 
 interface State {
   readonly items: readonly string[];

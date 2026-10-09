@@ -10,7 +10,7 @@ import {
   type GyralError,
   type Head,
 } from '@gyral/core';
-import { StoreRegistry } from '@gyral/core/server';
+import { StoreRegistry } from '@gyral/core/internal/server';
 import {
   HEAD_ATTRIBUTE,
   headEntries,

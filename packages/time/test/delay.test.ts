@@ -1,4 +1,4 @@
-// `@gyral/time/delay` (gyral-c5d.15): delay and debounce for apps that need nothing else, with a
+// The delay-only driver behind @gyral/time's `delay` and `debounce` (gyral-c5d.15): delay and debounce for apps that need nothing else, with a
 // delay-only driver named `time` like the full one, so lanes, substitution and virtual time
 // behave the same.
 import { afterEach, describe, expect, it } from 'vitest';
@@ -42,7 +42,7 @@ async function mount() {
   return { el, advance: (ms: number) => (clock as VirtualTime).advance(ms) };
 }
 
-describe('@gyral/time/delay', () => {
+describe('@gyral/time', () => {
   it('delays fire in order and debounce fires once after a pause', async () => {
     const { el, advance } = await mount();
     el.send({ _tag: 'Later', label: 'slow', ms: 200 });

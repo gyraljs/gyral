@@ -7,14 +7,15 @@ import { join } from 'node:path';
 import { build } from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { html } from '@gyral/core';
-import { page, renderToString } from '../src/index.js';
+import { renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 import {
-  clientAssets,
   clientAssetsFromManifest,
   productionServer,
   type AppAssets,
   type ViteManifest,
 } from '../src/static.js';
+import { clientAssets } from '../src/manifest.js';
 
 const dirs: string[] = [];
 const tmp = (): string => {

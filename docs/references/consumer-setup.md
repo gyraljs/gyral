@@ -17,14 +17,14 @@ pnpm add -D @gyral/testing
 pnpm add @gyral/ssr
 ```
 
-| Package                                                     | Peer dependencies                                                                                                                   |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional)                                                                   |
-| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                                                                                           |
-| `@gyral/testing`                                            | `fast-check` ^4 (optional, only for `@gyral/testing/arbitraries`), `vitest` ^4.1 or ^5 (optional, only for `@gyral/testing/vitest`) |
+| Package                                                     | Peer dependencies                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `@gyral/core`                                               | none at runtime; `vite` ^8, `parse5`, `eslint` 9 or 10 (optional) |
+| `@gyral/http`, `@gyral/router`, `@gyral/time`, `@gyral/ssr` | none beyond `@gyral/core`                                         |
+| `@gyral/testing`                                            | `vitest` ^4.1 or ^5 (optional, only for `@gyral/testing/vitest`)  |
 
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
-`defineHook`, the hooks `invalid` and `labelledBy`, and `prop` for prop declarations.
+`defineHook`, the `invalid` hook, and `prop` for prop declarations.
 
 ## Vite and Vitest: `gyralVitePreset()`
 
@@ -197,7 +197,7 @@ can't render that markup itself, so it comes from Node:
   command: add `commands: { renderOnServer }` to `test.browser` above, then in a test call
   `commands.renderOnServer({ module: '../src/counter.ts', export: 'Counter', props })`
   (`commands` from `vitest/browser`) and pass the HTML to `mountSsr`. It renders in Vitest's Node
-  process through the project's Vite server and `@gyral/core/server`. Best for components and
+  process through the project's Vite server and Gyral's server renderer. Best for components and
   pages one module can render, with props per test and no files to keep in sync.
 - **A golden fixture:** a Node test calls your real server and writes the HTML with
   `toMatchFileSnapshot('./fixtures/page.ssr.html')`; the browser test imports it with `?raw`.
@@ -211,15 +211,15 @@ re-renders instead of throwing.
 
 ## Server rendering
 
-`@gyral/core/server` renders template results and components to HTML without a DOM
+`@gyral/ssr` renders template results and components to HTML without a DOM
 (view/06-server.md): synchronous, chunked at component boundaries, runtime-agnostic (no
 Node-only APIs). Chunked is not async streaming: data is loaded before the render starts, and
 `renderPage`'s body is that render pulled one component boundary at a time. It is server-only: never import it from client code, so client bundles
-carry no server renderer. `@gyral/ssr` builds on it: `renderPage`, `renderToStream` and
-`renderToString` (with per-request `stores`), `page()`, `renderPage({ csp })` and
-`contentSecurityPolicy()` (style hashes for a strict `style-src`), `formAction` and
-`@gyral/ssr/static`. `@gyral/core/server` itself exports `render`, `renderToString`,
-`styleHashes`, `styleHash`, `styleHashSync` and `componentStyles`.
+carry no server renderer. Its API: `renderPage` (a chunked `Response`; `renderPage({ csp })`)
+and `renderToString` (both with per-request `stores`), `contentSecurityPolicy()` and
+`styleHashes()` (style hashes for a strict `style-src`), `formAction` and `@gyral/ssr/static`.
+The renderer itself lives in core's internal server entry, which only Gyral's packages
+import.
 
 - Register components on the server by importing their modules: `define()` records the spec
   outside the browser, and the renderer renders it in place of its tag.

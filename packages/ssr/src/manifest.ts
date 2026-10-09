@@ -37,20 +37,6 @@ export function entryChunk(manifest: ViteManifest, entry: string, where: string)
   return chunk;
 }
 
-/**
- * The URL of a built entry chunk (e.g. `src/entry-client.ts` → `/assets/entry-client-Ab12.js`),
- * read from a Vite build manifest (`build.manifest: true`).
- */
-export async function clientEntryFromManifest(
-  manifestPath: string,
-  entry: string,
-  options: ManifestOptions = {},
-): Promise<string> {
-  return (
-    basePath(options.base) + entryChunk(await readManifest(manifestPath), entry, manifestPath).file
-  );
-}
-
 /** What a server-rendered page loads: the client entry, the modules to preload, the CSS. */
 export interface ClientAssets {
   /** The entry chunk's URL, for `page({ scripts })`. */

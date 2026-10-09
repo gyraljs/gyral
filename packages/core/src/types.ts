@@ -276,8 +276,6 @@ interface SpecBody<S, M extends Tagged, P, N extends string> {
    * renders are unaffected.
    */
   readonly hydrate?: HydrateStrategy;
-  /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
-  readonly events?: readonly string[];
   /**
    * Stores this component reads with `ctx.read(store)` and writes with `send(store, msg)`.
    * Their changes re-render it (and reach the optional `StoreChanged` reducer). ADR 0013.

@@ -1,5 +1,5 @@
 // The server renderer (view/06-server.md "API"): synchronous, chunked, runtime-agnostic (no
-// DOM, no Node-only APIs: a JavaScript SHA-256 for the style hashes). `@gyral/core/server` wraps these,
+// DOM, no Node-only APIs: a JavaScript SHA-256 for the style hashes). `@gyral/core/internal/server` wraps these,
 // registering recorded specs first; code outside view/ may import only this module of view/server/.
 import { DEV } from '../flags.js';
 import { serverComponents } from '../registry.js';

@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
-import { resetDocumentStores, settled } from '@gyral/core';
+import { settled } from '@gyral/core';
+import { resetDocumentStores } from '@gyral/testing';
 import { stepStore } from '@gyral/testing';
 import { cart, count, totalCents } from '../src/cart.js';
 import '../src/components.js';

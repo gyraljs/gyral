@@ -11,7 +11,7 @@ code, its arguments (in the order of the placeholders below) and a link here:
 
 ### G0001
 
-> \<{tag}> is a browser element (render it with @gyral/core/server).
+> \<{tag}> is a browser element (render it on the server with @gyral/ssr).
 
 Arguments: `tag`.
 

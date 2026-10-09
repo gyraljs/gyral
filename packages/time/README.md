@@ -18,13 +18,8 @@ import { debounce, delay } from '@gyral/time';
 //   Saved: (s) => [{ ...s, toast: true }, [delay(2000, { _tag: 'HideToast' })]],
 ```
 
-Apps that only need delays and debounces import them from `@gyral/time/delay`: the same
-`delay` and `debounce`, over a delay-only driver (also named `time`), so `every` ticks and
-animation frames stay out of the bundle.
-
-```ts
-import { debounce, delay } from '@gyral/time/delay';
-```
+`delay` and `debounce` run on a delay-only driver (also named `time`, so tests substitute it
+the same way), so an app that only delays doesn't bundle the `every` code.
 
 ## Documentation
 

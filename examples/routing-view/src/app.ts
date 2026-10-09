@@ -1,5 +1,12 @@
-import { css, define, html, nothing, type Head } from '@gyral/core';
-import { back, listen, routes, setHead, type RouteLocation, type RouteMatch } from '@gyral/router';
+import { command, css, define, html, nothing, type Head } from '@gyral/core';
+import {
+  listen,
+  router,
+  routes,
+  setHead,
+  type RouteLocation,
+  type RouteMatch,
+} from '@gyral/router';
 
 /** The route table: pure, typed, and reusable on a server (ADR 0009). */
 export const app = routes({ home: '/', about: '/about', contacts: '/contacts' });
@@ -66,7 +73,8 @@ export const RoutingView = define<State, Msg>()('gy-routing-view', {
       // A client-only app: the page's own origin is the canonical one.
       return [{ location, route }, [setHead(pageHead(route, new URL(location.href).origin))]];
     },
-    Back: (s) => [s, [back()]],
+    // History back is a router input (the "History back and forward" recipe).
+    Back: (s) => [s, [command(router, { _tag: 'Traverse', delta: -1 })]],
   },
   // Cross-fade between pages (an enhancement: skipped without support or with reduced motion).
   // The first location is not a page change, so it renders directly.

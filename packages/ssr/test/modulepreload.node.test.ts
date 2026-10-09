@@ -6,13 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { html } from '@gyral/core';
-import { page, renderToString } from '../src/index.js';
-import {
-  clientAssets,
-  clientAssetsFromManifest,
-  productionServer,
-  type ViteManifest,
-} from '../src/static.js';
+import { renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
+import { clientAssetsFromManifest, productionServer, type ViteManifest } from '../src/static.js';
+import { clientAssets } from '../src/manifest.js';
 
 const dirs: string[] = [];
 afterEach(() => {

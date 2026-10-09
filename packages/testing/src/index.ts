@@ -16,6 +16,7 @@ export { withDrivers } from './drivers.js';
 export { fakeDriver } from './fake.js';
 export type { FakeCall, FakeDriver, FakeOptions, FakeRun } from './fake.js';
 export { hydrated, mountSsr } from './ssr.js';
+export { resetDocumentStores } from '@gyral/core/internal';
 export type { HydratedOptions, MountedSsr, MountSsrOptions } from './ssr.js';
 export { collectErrors } from './errors.js';
 export type { CollectedErrors } from './errors.js';

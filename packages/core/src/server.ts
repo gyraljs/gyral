@@ -1,4 +1,4 @@
-// `@gyral/core/server` (docs/design-docs/view/06-server.md): renders template results and Gyral
+// `@gyral/core/internal/server` (docs/design-docs/view/06-server.md): renders template results and Gyral
 // components to HTML without a DOM. Server-only: never import it from client code. Every
 // render first registers the specs define() recorded outside the browser, and the
 // `<gyral-stores>` provider.

@@ -20,8 +20,6 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
 | `shadow`                          | no                           | `false`: light DOM (page content); `{ delegatesFocus: true }`. Default `true`   |
 | `hydrate`                         | no                           | `'load'` (default), `'idle'`, `'visible'`, `'interaction'` for SSR islands      |
-| `events`                          | no                           | Extra event types a bound `data-intent-on=${…}` may produce (see intent.md)     |
-| `drivers`                         | no                           | Driver substitutions by name for every instance                                 |
 | `stores`                          | no                           | Stores this component reads and writes                                          |
 | `viewTransition(prev, next, msg)` | no                           | `true` renders that change inside a View Transition                             |
 | `states(state)`                   | no                           | Boolean custom states for CSS: `:host(:state(loading))`                         |

@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { define, html } from '@gyral/core';
-import { renderPage, renderToString, page, type ComponentAssets } from '../src/index.js';
+import { renderPage, renderToString, type ComponentAssets } from '../src/index.js';
+import { page } from '../src/page.js';
 import { componentAssets } from '../src/manifest.js';
 import { componentsFromManifest, productionServer } from '../src/static.js';
 

@@ -7,11 +7,11 @@ import {
   defineDriver,
   defineStore,
   html,
-  resetDocumentStores,
   send,
   settled,
   type AnyStoreInstance,
 } from '../src/index.js';
+import { resetDocumentStores } from '../src/internal.js';
 import { STORE_SEED_ATTRIBUTE } from '../src/internal.js';
 
 interface Cart {

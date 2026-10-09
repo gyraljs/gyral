@@ -1,6 +1,7 @@
 // Components shared by the nested-SSR tests: rendered on the server (nested.node.test.ts),
 // then hydrated in the browser (nested-hydration.test.ts).
-import { child, command, define, defineDriver, emit, html } from '@gyral/core';
+import { child, command, define, defineDriver, html } from '@gyral/core';
+import { emit } from '@gyral/core/internal';
 
 /** Answers synchronously, like the router's first location. Records every call. */
 export const echoCalls: string[] = [];

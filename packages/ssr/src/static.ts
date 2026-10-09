@@ -7,7 +7,13 @@
 // - `csr`: not prerendered; the client renders it.
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { assetHandler, cacheHeaders, fileResponse, readOrUndefined } from './assets.js';
+import {
+  assetHandler,
+  cacheHeaders,
+  fileResponse,
+  readOrUndefined,
+  staticFileFor,
+} from './assets.js';
 import type { ComponentAssets } from './components.js';
 import {
   basePath,
@@ -17,16 +23,9 @@ import {
   type ViteManifest,
 } from './manifest.js';
 
+export { assetHandler, type AssetHandler, type AssetHandlerOptions } from './assets.js';
 export {
-  assetHandler,
-  cacheHeaders,
-  type AssetHandler,
-  type AssetHandlerOptions,
-} from './assets.js';
-export {
-  clientAssets,
   clientAssetsFromManifest,
-  clientEntryFromManifest,
   componentsFromManifest,
   type ClientAssets,
   type ManifestOptions,
@@ -59,13 +58,6 @@ export interface PrerenderedPage {
   readonly path: string;
   readonly file: string;
   readonly status: number;
-}
-
-/** The file a prerendered path is written to and served from. */
-export function staticFileFor(outDir: string, path: string): string {
-  const clean = path.replace(/^\/+|\/+$/g, '');
-  if (clean.split('/').some((part) => part === '..')) throw new Error(`unsafe path ${path}`);
-  return join(outDir, clean, 'index.html');
 }
 
 /**

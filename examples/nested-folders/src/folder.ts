@@ -3,9 +3,9 @@ import {
   css,
   define,
   each,
-  emit,
   html,
   nothing,
+  outputs,
   prop,
   type GyralElementClass,
 } from '@gyral/core';
@@ -22,6 +22,9 @@ export interface Props {
 }
 
 export type FolderOutput = { readonly _tag: 'Removed' };
+
+/** Typed `emit` for this component's outputs. */
+const emit = outputs<FolderOutput>();
 
 export type Msg =
   | { readonly _tag: 'Add' }

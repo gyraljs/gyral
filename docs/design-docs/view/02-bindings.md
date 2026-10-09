@@ -233,12 +233,12 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
   hook that measures or re-applies something each time, without a counter in the model only
   there to change an argument. The default is `'args'`.
 - `dispose(el, args)` (0.3.1, gyral-c5d.2) is the teardown, with the last arguments `client`
-  got, for hooks defined with `defineDisposableHook` (`defineHook` takes none: a development
-  error). See "Widgets with a lifecycle" below.
+  got (an optional key of the spec `defineHook` takes). See "Widgets with a lifecycle" below.
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
   a hook that only listens needs no `dispose`.
-- Core ships `invalid`, `labelledBy` and `capturePointer` (0.3.1, gyral-dyn.13: pointer
-  capture on `pointerdown` for press-and-release intents, 05 "Press and release") as hooks.
+- Core ships `invalid` as a hook. Pointer capture for press-and-release intents (05 "Press and
+  release") and naming an element after one outside the shadow root are short recipes in the
+  agent skill (0.3.1, gyral-1zd.24: they were `capturePointer` and `labelledBy`).
 
 ### Widgets with a lifecycle
 
@@ -253,14 +253,14 @@ input, `outputs<Out>()` for its events), and so does a plain `HTMLElement` subcl
 work is all imperative.
 
 For **small imperative behaviours** on an element of the view (scrolling it into view,
-observing its size, a third-party enhancer on one input), a hook with a teardown,
-`defineDisposableHook`, is the lighter option:
+observing its size, a third-party enhancer on one input), a hook with a teardown (`defineHook`
+with `dispose`) is the lighter option:
 
 ```ts
 const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
 /** Highlights the element for a moment whenever `value` changes. */
-export const flash = defineDisposableHook<[value: unknown]>({
+export const flash = defineHook<[value: unknown]>({
   client: (el, _args, prev) => {
     if (prev === undefined) return; // not on first render
     el.classList.add('flash');
@@ -292,12 +292,12 @@ export const flash = defineDisposableHook<[value: unknown]>({
   tracked hook whose element is no longer inside the root (`root.contains`), or whose position
   holds something else, is disposed. Moves keep elements inside the root, so nothing else is
   needed to tell a move from a removal.
-- **Cost (measured 2026-10-07, gzip):** the tracking comes with `defineDisposableHook` (05
-  "Features register themselves"), a function of its own rather than an option of
-  `defineHook` (owner decision, gyral-c5d.2 option B): an app that calls only `defineHook` (or
-  only uses `invalid`/`labelledBy`) doesn't bundle it. Every app: about 20 B (a check per render
-  and per disconnect). Apps that call `defineDisposableHook`: about 0.25 KiB more, which runs
-  only once such a hook has committed. Hooks without `dispose` pay no run-time cost.
+- **Cost (measured 2026-10-09, gzip):** `dispose` is an option of `defineHook` (owner decision
+  O6, gyral-1zd.24, replacing 0.3.0's separate `defineDisposableHook`). The tracking registers
+  itself like a spec-field feature (05 "Features register themselves"): with the Vite preset it
+  is bundled only when some module names `dispose`; without a build step it is always present.
+  Apps with hooks and no teardown pay about 5-20 B for the check that picks the commit; apps
+  that use `dispose` about 0.25 KiB more, which runs only once such a hook has committed.
 - Tested in `core/test/view/render-hooks-dispose.test.ts`.
 
 ## `raw(html)`
@@ -314,7 +314,7 @@ export const flash = defineDisposableHook<[value: unknown]>({
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`
   don't bundle it. Hook results do the same (`defineHook`, render/hook-part.ts): argument
   comparison and queueing come with the first hook an app defines, and disposal tracking with
-  the first `defineDisposableHook` (render/dispose.ts).
+  the `dispose` registration (render/dispose.ts, use-disposal.ts).
 
 ## `nothing`
 

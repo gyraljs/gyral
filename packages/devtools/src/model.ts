@@ -1,6 +1,6 @@
 // Pure panel model (ADR 0017): turns DevEvents into timeline rows, live components and
 // command lanes. No DOM access, so it is tested without a browser.
-import type { DevComponentRef, DevEvent } from '@gyral/core';
+import type { DevComponentRef, DevEvent } from '@gyral/core/internal';
 import { isSecretField } from '@gyral/core/internal';
 
 export type RowKind = 'component' | 'update' | 'command' | 'store' | 'error';

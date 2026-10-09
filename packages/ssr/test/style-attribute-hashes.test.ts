@@ -6,7 +6,7 @@
 // `pnpm vitest run --config packages/core/test/view/browsers.config.ts`.
 import { afterEach, describe, expect, it } from 'vitest';
 import { html } from '@gyral/core';
-import { development as DEV } from '@gyral/core/server';
+import { development as DEV } from '@gyral/core/internal/server';
 import { recordSpec } from '../../core/src/server-specs.js';
 import type { hydrate, html as viewHtml } from '../../core/src/view/index.js';
 import { renderPage } from '../src/index.js';

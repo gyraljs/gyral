@@ -13,13 +13,14 @@ Gyral calls the parser `intent[Name]` with an `IntentInput` and dispatches what 
 | `<button>`, `<input type=button/submit/reset/image>`, any other element | `click`                                                                  |
 | `<input>` (text-like), `<textarea>`                                     | `input`                                                                  |
 | `<select>`, checkbox, radio                                             | `change`                                                                 |
-| A child custom element                                                  | its outputs (`emit()` in the child)                                      |
+| A child custom element                                                  | its outputs (`outputs<O>()`'s emit in the child)                         |
 
 Override with `data-intent-on`: `keydown`, `keyup`, `focusin`, `focusout`, `toggle`
 (popover, `<details>`), `command` (invoker commands), `change`, `input`, `click`, `submit`.
 Any other event type works too when written statically (`data-intent-on="pointerdown"`): the
-component listens for the events its templates name. Only a type that comes from a bound
-`data-intent-on=${…}` and isn't in the list above must be added to `spec.events`.
+component listens for the events its templates name. A type that comes from a bound
+`data-intent-on=${…}` and isn't in the list above takes a per-event attribute instead
+(`data-intent-pointerdown=${i.Press}`, below), whose name the template carries.
 
 `data-intent-on` takes a list separated by spaces (0.3.1): `data-intent-on="keydown keyup"`
 fires the intent for both, and the parser tells them apart with `event.type` (see "Press and
@@ -123,7 +124,7 @@ export const Sortable = define<State, Msg>()('my-sortable', {
 - The event type is in the attribute's name, so write it in lower case, as event types are
   (`data-intent-pointerdown`). The name `data-intent-on` is the event list, not an event.
 - The component listens for the event types in these names, bound or static, also in list
-  rows and `raw()` markup; no `spec.events` needed.
+  rows and `raw()` markup.
 - `data-intent-keydown=${s.editing ? i.Key : nothing}` adds the intent only while editing.
 - One intent for several events stays `data-intent` with a `data-intent-on` list, when the
   events share a message (press and release below).
@@ -545,13 +546,32 @@ you mean 'Archvie'?", so fix the key), and a key no template names at all is rep
 
 A push-to-talk button (or any press-and-hold control) needs the press and the release. List
 both in `data-intent-on` and read `event.type`: one intent, one message with a `down` flag. Add
-the `capturePointer()` hook so the release arrives even when the pointer leaves the button
-before it lets go (it calls `setPointerCapture` on `pointerdown`). `pointercancel` (the browser
+a small `capturePointer()` hook (below: `defineHook` with a `dispose`) so the release arrives
+even when the pointer leaves the button before it lets go (it calls `setPointerCapture` on
+`pointerdown`). `pointercancel` (the browser
 took the touch over for scrolling, say) is a release too. For the keyboard, the same button
 lists `keydown keyup` and holds while Space is down; the parser ignores auto-repeat:
 
 ```ts
-import { capturePointer, define, html } from '@gyral/core';
+import { define, defineHook, html } from '@gyral/core';
+
+// Pointer capture as an element hook (a recipe, not a Gyral export): one shared listener,
+// removed by `dispose` when the position stops holding the hook.
+function capture(this: Element, event: Event): void {
+  try {
+    this.setPointerCapture((event as PointerEvent).pointerId);
+  } catch {
+    // Not an active pointer (a synthetic event): nothing to capture.
+  }
+}
+export const capturePointer = defineHook<[]>({
+  client: (el) => {
+    el.addEventListener('pointerdown', capture);
+  },
+  dispose: (el) => {
+    el.removeEventListener('pointerdown', capture);
+  },
+});
 
 interface State {
   readonly talking: boolean;
@@ -612,7 +632,24 @@ pointer: `elementFromPoint` on the shadow root (or `document` for a light-DOM co
 inside the shadow tree. The cell carries its index in `data-cell`:
 
 ```ts
-import { capturePointer, define, html } from '@gyral/core';
+import { define, defineHook, html } from '@gyral/core';
+
+// The pointer-capture hook from "Press and release".
+function capture(this: Element, event: Event): void {
+  try {
+    this.setPointerCapture((event as PointerEvent).pointerId);
+  } catch {
+    // Not an active pointer (a synthetic event): nothing to capture.
+  }
+}
+export const capturePointer = defineHook<[]>({
+  client: (el) => {
+    el.addEventListener('pointerdown', capture);
+  },
+  dispose: (el) => {
+    el.removeEventListener('pointerdown', capture);
+  },
+});
 
 interface State {
   readonly path: readonly number[];

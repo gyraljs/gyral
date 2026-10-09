@@ -18,9 +18,11 @@ export const DEFAULT_EVENTS: readonly string[] = [
 
 /**
  * The events `data-intent-on` usually names. A component root listens (capture phase, so
- * non-bubbling events such as `toggle` are seen too) for the defaults, for `spec.events`, and
- * for the `data-intent-on` values in the templates it renders; a template that binds
- * `data-intent-on` dynamically adds all of these (view/05-element.md "Intent events").
+ * non-bubbling events such as `toggle` are seen too) for the defaults and for the events its
+ * templates name in `data-intent-<event>` attributes and static `data-intent-on` values; a
+ * template that binds `data-intent-on` dynamically adds all of these. Any other event with a
+ * bound intent takes a per-event attribute, `data-intent-pointerdown=${i.Press}`, whose name the
+ * template carries (view/05-element.md "Intent events").
  */
 export const INTENT_EVENTS: readonly string[] = [
   ...DEFAULT_EVENTS,

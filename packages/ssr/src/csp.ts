@@ -11,7 +11,7 @@ import {
   registryVersion,
   styleHashSync,
   type StyleValues,
-} from '@gyral/core/server';
+} from '@gyral/core/internal/server';
 import { styleList, styleSafe } from './page.js';
 
 /** CSP directives by name: a source list, as one string or a list of sources. */

@@ -1,7 +1,8 @@
 // Optional machinery that apps reach through spec fields rather than an API call (view/05
 // "Features register themselves", gyral-c5d.12): view transitions (`viewTransition`), the frame
 // lane (`renderOnFrame`), custom states (`states`) and subscriptions (`subscriptions`); and
-// through markup: the dialog and popover bindings (`?modal`, `?popover-open`). Core's
+// through markup: the dialog and popover bindings (`?modal`, `?popover-open`); and through a
+// hook spec key: hook disposal (`dispose`). Core's
 // `#spec-features` resolves here by
 // default (the runtime path: no build step), so everything is present. Builds with the Vite
 // preset (the `gyral-compiled` condition) resolve spec-features-used.ts instead, whose slots
@@ -10,10 +11,12 @@ import { frameLane as lane, type FrameLane } from './frame-lane.js';
 import { syncStates } from './states.js';
 import { subscriptionSet } from './subscriptions.js';
 import { startTransition } from './transitions.js';
-import { applyToggle, useToggles } from './view/index.js';
+import { applyToggle, commitTracked, useDisposableHooks, useToggles } from './view/index.js';
 
 // `?modal`/`?popover-open` (view/02 "Dialogs and popovers"): present without a build step.
 useToggles(applyToggle);
+// Hooks with `dispose` (view/02 "Widgets with a lifecycle"): present without a build step.
+useDisposableHooks(commitTracked);
 
 /** Runs a flush inside a view transition (true), or declines (false: run it plainly). */
 export type ViewTransitions = (update: () => void) => boolean;

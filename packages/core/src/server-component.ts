@@ -1,6 +1,6 @@
 // A spec as the server renderer sees it (view/05-element.md "Registration", view/06-server.md
 // "Components"). Outside the browser `define()` records the spec (server-specs.ts) and
-// `@gyral/core/server` registers one of these per spec in view/'s server registry. Rendering is
+// `@gyral/core/internal/server` registers one of these per spec in view/'s server registry. Rendering is
 // `view(init(props))`: props parsed from the start tag's attributes (always validated) and
 // property holes (validated in development), `init`'s commands dropped (the client's `init`
 // starts them after hydration, ADR 0012), then `initialMessages` through their reducers.
@@ -139,7 +139,7 @@ export function serverComponent<S, M extends Tagged, P>(
 
 /**
  * Registers every spec define() recorded outside the browser (and not registered yet) in
- * view/'s server registry. `@gyral/core/server` calls it before each render; client code never
+ * view/'s server registry. `@gyral/core/internal/server` calls it before each render; client code never
  * imports this module.
  */
 export function registerRecordedSpecs(): void {

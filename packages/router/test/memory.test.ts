@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html, settled } from '@gyral/core';
+import { command, define, html, settled } from '@gyral/core';
 import {
-  back,
-  forward,
   listen,
   makeRouter,
   navigate,
@@ -11,7 +9,12 @@ import {
   type RouteLocation,
   type RouteMatch,
   type RouterDriver,
+  router,
 } from '../src/index.js';
+
+// History back and forward are router inputs (the skill's "History back and forward" recipe).
+const back = () => command(router, { _tag: 'Traverse', delta: -1 });
+const forward = () => command(router, { _tag: 'Traverse', delta: 1 });
 
 const app = routes({ home: '/', user: '/users/:id' });
 const titleOf = (route: RouteMatch<typeof app.table> | undefined): string =>

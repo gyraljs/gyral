@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
-import { redirectedTo, type IntentRejected } from '../src/index.js';
+import { type IntentRejected } from '../src/index.js';
 import { intentRejectedSchema } from '../src/internal.js';
 
 const validate = (value: unknown) => intentRejectedSchema['~standard'].validate(value);
@@ -40,13 +40,5 @@ describe('intentRejectedSchema', () => {
       issues: [],
     });
     expect(decoded.intent).toBe('x');
-  });
-});
-
-describe('redirectedTo', () => {
-  it('reads FormRedirected answers only', () => {
-    expect(redirectedTo({ _tag: 'Redirected', location: '/a' })).toBe('/a');
-    expect(redirectedTo({ _tag: 'Redirected' })).toBeUndefined();
-    expect(redirectedTo('nope')).toBeUndefined();
   });
 });

@@ -1,7 +1,8 @@
 // Browser tests for server-rendered pages (gyral-czi.22): put real server output into the
 // document the way a page load would, then import components so they hydrate in place.
 // Server output usually comes from golden fixtures written by Node route tests.
-import { resetDocumentStores, settled } from '@gyral/core';
+import { settled } from '@gyral/core';
+import { resetDocumentStores } from '@gyral/core/internal';
 import { HEAD_ATTRIBUTE, ISLAND_ATTRIBUTE } from '@gyral/core/internal';
 
 export interface MountSsrOptions {

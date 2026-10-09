@@ -16,7 +16,10 @@ and no VM: the renderer walks template objects (01) and writes strings.
 - Runtime-agnostic: no Node-only APIs (no `node:crypto`, no `Buffer`), so it runs in
   Node, Deno and Workers alike.
 
-## API (`@gyral/core/server`)
+## API (core's internal server entry, `@gyral/core/internal/server`)
+
+Since 0.3.1 this entry is internal (gyral-1zd.24): apps render through `@gyral/ssr`
+(`renderPage`, `renderToString`, `styleHashes`), which builds on it.
 
 ```ts
 render(value: ChildValue, options?: { dev?: boolean }): Iterable<string>; // synchronous chunks

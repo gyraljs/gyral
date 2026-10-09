@@ -37,7 +37,7 @@ Without `onSuccess`, or when it returns `undefined`, no message is sent.
 
 ### Commands that answer nothing: `Command<never>`
 
-`focus()`, `emit()`, `navigate()` and `go()` return `Command<never>`: they produce no message,
+`focus()`, an `outputs<O>()` emit, `navigate()` and `setHead()` return `Command<never>`: they produce no message,
 and `never` fits any message type, so they go in a reducer's command list or a helper typed
 `Command<Msg>` with no type argument. Your own fire-and-forget commands are the same: call
 `command(driver, input)` with no handlers (or without `onSuccess`). A failure is still reported
@@ -225,11 +225,11 @@ export const Shell = define<State, Msg>()('my-shell', {
   a POST/PUT/PATCH/DELETE goes out without the token while the page has a CSRF `<meta>`.
 - **`@gyral/time`**: `delay(ms, msg)`, `debounce(ms, msg, key?)` (a `switch` delay),
   `every(ms, (now) => msg, key?)` (the wall-clock time at once, then every `ms`; made for
-  `subscriptions`), `animationFrames(toMsg)`. An app that only needs `delay` and
-  `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
-  `time`; about 0.15 KiB less).
+  `subscriptions`). `delay` and `debounce` run on a delay-only driver (also named `time`), so
+  an app that only delays doesn't bundle the `every` code. Animation frames are a recipe:
+  `command(time, { _tag: 'Frames' }, { onSuccess, key: 'frames', concurrency: 'switch' })`.
 - **`@gyral/router`**: `listen(toMsg)` from `subscriptions`, `navigate(url, { replace?, scroll?, focusReset? })`,
-  `back()`, `forward()`, `go(n)`, `setHead(head)` (the page's head: see ssr.md "One head
+  `setHead(head)` (the page's head: see ssr.md "One head
   for server and client"), typed `routes({...})` tables with
   `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect
   to: ssr.md "One URL per page") and `href(name, params)` (same table on server and client).
@@ -361,12 +361,47 @@ export const copyText = <M>(text: string, done: M, failed: (e: CopyError) => M) 
 - Tests substitute it by name and never touch the real clipboard:
   `el.drivers = { clipboard: fakeDriver('clipboard') }`.
 
+## Recipes: history traversal and randomness
+
+These are a few lines each, so they are recipes rather than exports.
+
+- **History back and forward**: the router driver takes a `Traverse` input.
+
+  ```ts
+  import { command } from '@gyral/core';
+  import { router } from '@gyral/router';
+
+  export const back = () => command(router, { _tag: 'Traverse', delta: -1 });
+  export const forward = () => command(router, { _tag: 'Traverse', delta: 1 });
+  ```
+
+- **Randomness** is an effect, so reducers stay deterministic and tests substitute the driver
+  by name (`fakeDriver(randomDriver, { impl: () => [0.25] })`):
+
+  ```ts
+  import { command, defineDriver, type Command } from '@gyral/core';
+
+  export const randomDriver = defineDriver({
+    name: 'random',
+    run: ({ count }: { readonly count: number }): readonly number[] =>
+      Array.from({ length: count }, () => Math.random()),
+  });
+
+  /** A random integer in [min, max], delivered as a message. */
+  export function randomInt<M>(min: number, max: number, toMsg: (n: number) => M): Command<M> {
+    return command(
+      randomDriver,
+      { count: 1 },
+      { onSuccess: ([u = 0]) => toMsg(min + Math.min(max - min, Math.floor(u * (max - min + 1)))) },
+    );
+  }
+  ```
+
 ## Substituting drivers (by name)
 
 Lookup order: the element's `drivers` property → the nearest `<gyral-drivers>` provider
 (`provideDrivers(element, { http: … })`) → the command's own driver. Configure app-wide
-drivers once, at the entry. `DRIVERS_ELEMENT` is the provider's tag name, for code that looks
-for it.
+drivers once, at the entry.
 
 ```ts
 import { provideDrivers } from '@gyral/core';

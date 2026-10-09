@@ -1,10 +1,8 @@
 // Scroll and focus after a navigation (ADR 0009 "Scroll and focus", gyral-dyn.4): the same
 // behaviour on the History API path and the Navigation API path, both run in Chromium.
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, focus, html, settled } from '@gyral/core';
+import { command, define, focus, html, settled } from '@gyral/core';
 import {
-  back,
-  forward,
   listen,
   makeRouter,
   navigate,
@@ -13,7 +11,12 @@ import {
   type RouteLocation,
   type RouteMatch,
   type RouterDriver,
+  router,
 } from '../src/index.js';
+
+// History back and forward are router inputs (the skill's "History back and forward" recipe).
+const back = () => command(router, { _tag: 'Traverse', delta: -1 });
+const forward = () => command(router, { _tag: 'Traverse', delta: 1 });
 
 const app = routes({ home: '/', user: '/users/:id', profile: '/profile/:id' });
 

@@ -3,7 +3,7 @@
 // then run children first: one root's calls in document order, roots in reverse render order
 // (the scheduler renders parents before children), so a parent's hook sees the child components
 // it renders. Outside a flush a `render` call runs its own calls when it returns. Installed by
-// `defineHook`/`defineDisposableHook` (hook-part.ts), so apps without hooks bundle none of it.
+// `defineHook`/`defineHook` (hook-part.ts), so apps without hooks bundle none of it.
 import {
   disposalPass,
   hookFailure,

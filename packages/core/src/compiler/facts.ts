@@ -2,7 +2,8 @@
 // "Features register themselves"), read from its AST (Rolldown's `this.parse`, the author's
 // source: both plugins that scan run before other transforms). Comments are not in the AST,
 // and type-only code is skipped (ast.ts `children`), so neither counts. What does:
-//   - spec fields (`viewTransition`, `renderOnFrame`, `states`, `subscriptions`): the name as an identifier
+//   - spec fields (`viewTransition`, `renderOnFrame`, `states`, `subscriptions`) and the hook
+//     spec key `dispose`: the name as an identifier
 //     anywhere in runtime code (a property key, `spec.states = …`, `{ states }`, a binding a
 //     namespace import may spread, `export { f as states }`), or a string that is exactly the
 //     name (`Object.defineProperty(spec, 'states', …)`). A word inside a longer string doesn't;
@@ -20,7 +21,8 @@
 import { children, nodeAt, nodesAt, type Node } from './ast.js';
 
 /** Optional machinery the build adds when a module may use it. */
-export type Feature = 'invokers' | 'transitions' | 'frame' | 'states' | 'subscriptions' | 'dialogs';
+export type Feature =
+  'invokers' | 'transitions' | 'frame' | 'states' | 'subscriptions' | 'dialogs' | 'disposal';
 
 /** The spec field each spec-field feature is reached through (04, 05). */
 export const FIELDS = {
@@ -28,6 +30,7 @@ export const FIELDS = {
   frame: 'renderOnFrame',
   states: 'states',
   subscriptions: 'subscriptions',
+  disposal: 'dispose',
 } as const satisfies Readonly<Record<Exclude<Feature, 'invokers' | 'dialogs'>, string>>;
 
 /** Markup that binds the dialog or popover state (`?modal=`, `?popover-open=`, view/02). */

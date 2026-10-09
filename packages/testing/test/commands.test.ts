@@ -1,7 +1,8 @@
 // outputsIn and focusTargetsIn (gyral-dyn.8): what a reducer emitted to its parent and where it
 // asked focus to go, without naming core's internal marker drivers.
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { command, define, defineDriver, emit, focus, html, outputs } from '@gyral/core';
+import { command, define, defineDriver, focus, html, outputs } from '@gyral/core';
+import { emit } from '@gyral/core/internal';
 import { focusTargetsIn, inputsFor, outputsIn, step, type FocusTarget } from '../src/index.js';
 
 type Out = { readonly _tag: 'Picked'; readonly id: number } | { readonly _tag: 'Cleared' };

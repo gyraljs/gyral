@@ -65,7 +65,7 @@ spec)` (two calls): the keys of `intent` are the intent names markup uses. A key
    components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
    still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
-   `defineHook`, `defineDisposableHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()`
+   `defineHook`, `invalid`). Spread `gyralVitePreset()`
    into the Vite/Vitest config: `vite build` then compiles templates and checks their rules; add
    `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor. An app no
    server renders passes `{ clientOnly: true }` to leave the hydration code out (about 1 KiB).
@@ -114,9 +114,9 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
-`@gyral/time` (`delay`, `debounce`, `every`, `animationFrames`; delays only:
-`@gyral/time/delay`). URLs → `@gyral/router`
-(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. A store or feed
+`@gyral/time` (`delay`, `debounce`, `every`). URLs → `@gyral/router`
+(`listen`, `navigate`, `routes`). Randomness → a small driver (effects-and-drivers.md
+"Recipes"). A store or feed
 Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
 (`references/outside-stores.md`). Anything else → `defineDriver()` + `command()`.
 
@@ -125,7 +125,7 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages, `subscriptions` for long-lived work
-- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `defineDisposableHook`, `labelledBy`), widgets with a lifecycle, `focus`
+- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, with `dispose` for teardown), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores

@@ -11,10 +11,9 @@ import {
   html,
   send,
   settled,
-  DEVTOOLS_GLOBAL,
   GyralError,
-  type DevEvent,
 } from '../src/index.js';
+import { DEVTOOLS_GLOBAL, type DevEvent } from '../src/internal.js';
 import { DEV } from '../src/view/index.js';
 
 export function moreErrorCases(t: Tracking): void {

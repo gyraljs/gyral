@@ -284,16 +284,3 @@ export const intentRejectedSchema: StandardSchemaV1<unknown, IntentRejected> = {
     },
   },
 };
-
-/** A server's JSON answer to a valid form post that would have redirected without JS. */
-export interface FormRedirected {
-  readonly _tag: 'Redirected';
-  readonly location: string;
-}
-
-/** The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. */
-export function redirectedTo(body: unknown): string | undefined {
-  return isRecord(body) && body['_tag'] === 'Redirected' && typeof body['location'] === 'string'
-    ? body['location']
-    : undefined;
-}

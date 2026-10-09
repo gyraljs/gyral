@@ -84,7 +84,7 @@ from Node in one of two ways.
 **On demand: `renderOnServer`** (Vitest browser mode). `@gyral/testing/vitest` is a Vitest
 [browser command](https://vitest.dev/api/browser/commands): it runs in Vitest's Node process,
 loads your module through the project's Vite server (same plugins and preset, development
-build of core) and renders it with `@gyral/core/server`. Install `vitest` 4.1 or 5 (an optional peer)
+build of core) and renders it with Gyral's server renderer. Install `vitest` 4.1 or 5 (an optional peer)
 and register it:
 
 ```ts
@@ -160,8 +160,6 @@ with `vitest -u` and review the diff.
 
 Both feed the same `mountSsr` / `hydrated` assertions; run hydration tests against production
 builds of core too (a mismatch there warns and re-renders instead of throwing).
-
-`@gyral/testing/arbitraries` derives [fast-check](https://fast-check.dev) arbitraries from schemas (install `fast-check` to use it).
 
 ## Documentation
 

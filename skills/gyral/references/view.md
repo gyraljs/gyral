@@ -313,12 +313,12 @@ export const StatusStrip = define<{ readonly services: readonly Service[] }, nev
 ## Element hooks
 
 A hook is a small behaviour attached to the element it sits on, written in the start tag. Core
-ships `invalid(errors)` (forms.md), `labelledBy(id, fallback?)` and `capturePointer()`
-(press-and-release intents, intent.md). Write your own with
+ships `invalid(errors)` (forms.md); pointer capture (intent.md "Press and release") and naming
+a form from the page (below) are short recipes. Write your own with
 `defineHook`: `client(el, args, prev)` runs after the commit whenever the arguments change
 (`prev` is `undefined` the first time); the optional `server(args)` returns attributes for the
-server-rendered start tag. A hook that must tear down is defined with `defineDisposableHook`
-instead, which adds `dispose(el, args)` (below). A hook acts only on its own element.
+server-rendered start tag. A hook that must tear down adds `dispose(el, args)` (below). A hook
+acts only on its own element.
 
 Hooks run after the whole update has rendered, **children first** (0.3.1): a hook in a parent's
 view sees the child components it renders already updated, so it can measure a list a child
@@ -569,20 +569,20 @@ parent parses it like a child component's output (composition.md). It can be a G
 itself (`prop.value` input, `outputs<Out>()`) when it has a model of its own.
 
 For a **small imperative behaviour** on an element of the view, a hook with a teardown is the
-lighter option: `defineDisposableHook` takes `dispose(el, args)` next to `client`. It runs when
-Gyral removes the element (its part cleared, its template replaced, its row removed), when the
+lighter option: give `defineHook` a `dispose(el, args)` next to `client`. It runs when Gyral
+removes the element (its part cleared, its template replaced, its row removed), when the
 position stops holding the hook, and when the host disconnects; never on moves (`moveBefore`,
-list reorders). After a host reconnects, `client` runs again with `prev` undefined. `defineHook`
-takes no `dispose` (a type error, and a development error), so apps without teardowns don't
-bundle the tracking.
+list reorders). After a host reconnects, `client` runs again with `prev` undefined. The build
+bundles the tracking only when some module names `dispose`, so apps without teardowns don't
+pay for it.
 
 ```ts
-import { defineDisposableHook } from '@gyral/core';
+import { defineHook } from '@gyral/core';
 
 const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
 /** Highlights the element for a moment whenever `value` changes. */
-export const flash = defineDisposableHook<[value: unknown]>({
+export const flash = defineHook<[value: unknown]>({
   client: (el, _args, prev) => {
     if (prev === undefined) return; // not on first render
     el.classList.add('flash');
@@ -602,16 +602,40 @@ export const flash = defineDisposableHook<[value: unknown]>({
 
 ## Naming a component's form from the page
 
-`aria-labelledby` inside a shadow root can't see ids in the page. `labelledBy(id)` resolves the
-id outward through the shadow-including ancestors (element reflection, with an `aria-label`
-fallback):
+`aria-labelledby` inside a shadow root can't see ids in the page. A small hook (a recipe, not a
+Gyral export) resolves the id outward through the shadow-including ancestors and uses ARIA
+element reflection where the browser has it, with an `aria-label` fallback. Render a plain
+`aria-label` too (from a prop) for the page before scripts run:
 
 ```ts
-import { define, html, labelledBy, type Stateless } from '@gyral/core';
+import { define, defineHook, html, type Stateless } from '@gyral/core';
+
+/** The element with `id`, searched from `from`'s root outward to the document. */
+function findInScope(from: Element, id: string): Element | null {
+  for (let root: Node = from.getRootNode(); ;) {
+    const found =
+      root instanceof Document || root instanceof ShadowRoot ? root.getElementById(id) : null;
+    if (found !== null && found !== from) return found;
+    if (!(root instanceof ShadowRoot)) return null;
+    root = root.host.getRootNode();
+  }
+}
+
+export const labelledBy = defineHook<[id: string, fallback?: string]>({
+  client: (el, [id, fallback]) => {
+    const target = findInScope(el, id);
+    if (target !== null && 'ariaLabelledByElements' in el) {
+      (el as Element & { ariaLabelledByElements: Element[] }).ariaLabelledByElements = [target];
+    } else {
+      const text = fallback ?? target?.textContent.trim() ?? '';
+      if (text !== '') el.setAttribute('aria-label', text);
+    }
+  },
+});
 
 // Page markup: <h1 id="page-title">Checkout</h1> <my-checkout-form></my-checkout-form>
 export const CheckoutForm = define<Stateless, never>()('my-checkout-form', {
-  view: () => html`<form ${labelledBy('page-title')}><button>Pay</button></form>`,
+  view: () => html`<form ${labelledBy('page-title', 'Checkout')}><button>Pay</button></form>`,
 });
 ```
 

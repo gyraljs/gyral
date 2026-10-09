@@ -1,15 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  command,
-  define,
-  defineDriver,
-  defineStore,
-  DEVTOOLS_GLOBAL,
-  html,
-  send,
-  settled,
-  type DevEvent,
-} from '../src/index.js';
+import { command, define, defineDriver, defineStore, html, send, settled } from '../src/index.js';
+import { DEVTOOLS_GLOBAL, type DevEvent } from '../src/internal.js';
 import { devtoolsEnabled } from '../src/internal.js';
 import { resetDocumentStores } from '../src/store-scope.js';
 

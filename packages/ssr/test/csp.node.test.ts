@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { css, define, html } from '@gyral/core';
-import { registryVersion } from '@gyral/core/server';
+import { registryVersion } from '@gyral/core/internal/server';
 import { contentSecurityPolicy, renderPage, renderToString } from '../src/index.js';
 
 define<{ readonly n: number }>()('csp-styled', {

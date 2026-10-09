@@ -4,7 +4,6 @@ import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
 import {
   child,
   define,
-  emit,
   html,
   OUTPUT_EVENT,
   outputs,
@@ -14,6 +13,7 @@ import {
   type OutputEvent,
   type OutputsOf,
 } from '../src/index.js';
+import { emit } from '../src/internal.js';
 
 type PickerOut = { readonly _tag: 'Picked'; readonly id: number } | { readonly _tag: 'Cleared' };
 type PickerMsg = { readonly _tag: 'Pick'; readonly id: number } | { readonly _tag: 'Clear' };

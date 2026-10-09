@@ -3,7 +3,25 @@
 // keeps the pointer on the element, so the release arrives wherever it happens.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import { capturePointer, define, html, nothing, settled } from '../src/index.js';
+import { define, defineHook, html, nothing, settled } from '../src/index.js';
+
+// The pointer-capture recipe (skills/gyral/references/intent.md "Press and release"): one shared
+// listener, removed by `dispose` when the position stops holding the hook.
+function capture(this: Element, event: Event): void {
+  try {
+    this.setPointerCapture((event as PointerEvent).pointerId);
+  } catch {
+    // Not an active pointer (a synthetic event): nothing to capture.
+  }
+}
+const capturePointer = defineHook<[]>({
+  client: (el) => {
+    el.addEventListener('pointerdown', capture);
+  },
+  dispose: (el) => {
+    el.removeEventListener('pointerdown', capture);
+  },
+});
 
 type Dir = 'left' | 'right';
 interface State {

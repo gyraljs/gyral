@@ -17,7 +17,6 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./arbitraries": "./src/arbitraries.ts",
     "./vitest": "./src/vitest.ts"
   },
   "publishConfig": {
@@ -25,10 +24,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./arbitraries": {
-        "types": "./dist/arbitraries.d.ts",
-        "default": "./dist/arbitraries.js"
       },
       "./vitest": {
         "types": "./dist/vitest.d.ts",
@@ -53,20 +48,15 @@
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
-    "fast-check": "^4.0.0",
     "vitest": "^4.1.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
-    "fast-check": {
-      "optional": true
-    },
     "vitest": {
       "optional": true
     }
   },
   "devDependencies": {
     "@valibot/to-json-schema": "1.8.0",
-    "fast-check": "4.10.2",
     "vitest": "5.0.3"
   }
 }

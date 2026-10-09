@@ -20,7 +20,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts",
+    "./internal/server": "./src/server.ts",
     "./internal": "./src/internal.ts",
     "./vite": "./src/vite.ts",
     "./compiled": "./src/view/compiled.ts",
@@ -61,7 +61,7 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./server": {
+      "./internal/server": {
         "types": "./dist/server.d.ts",
         "default": "./dist/server.js"
       },

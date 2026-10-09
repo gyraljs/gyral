@@ -1,10 +1,11 @@
 // `defineHook` (view/02-bindings.md "Element hooks"): its results carry `commitHook`, so the
 // code that compares arguments and queues client calls is bundled only by apps with hooks.
-// Hooks with a teardown come from `defineDisposableHook` (dispose.ts), whose tracking only the
-// apps calling it bundle (gyral-c5d.2).
+// A spec with `dispose` commits through dispose.ts's tracking, registered separately (hooks.ts
+// `disposableCommit`) so apps whose hooks have no teardown don't bundle it (gyral-c5d.2).
 import { DEV } from '#view-dev';
 import { runner } from './hook-run.js';
 import {
+  disposableCommit,
   hookResult,
   hookSpec,
   queueHook,
@@ -29,15 +30,24 @@ export function commitHook(part: HookPart, result: HookResult): void {
 
 /** Defines an element hook: a small behaviour attached to the element it sits on. */
 export function defineHook<A extends readonly unknown[]>(
-  spec: HookSpec<A> & { readonly dispose?: never },
+  spec: HookSpec<A>,
 ): (...args: A) => HookResult<A> {
-  // Untyped callers (JavaScript, a cast) may still pass one: say where it goes.
-  if (DEV && (spec as { readonly dispose?: unknown }).dispose !== undefined) {
-    throw new TypeError(
-      'gyral: defineHook() takes no dispose. A hook with a teardown is defined with ' +
-        'defineDisposableHook() (view/02-bindings.md "Widgets with a lifecycle").',
+  useHookRunner(runner);
+  return (...args) =>
+    hookResult(spec, args, spec.dispose === undefined ? commitHook : commitDisposable);
+}
+
+let warned = false;
+
+/** A hook with `dispose`: tracked when disposal is registered, else committed plainly. */
+function commitDisposable(part: HookPart, result: HookResult): void {
+  if (DEV && disposableCommit === undefined && !warned) {
+    warned = true;
+    console.warn(
+      'gyral: a hook declares dispose, but the build found no module naming it, so hook ' +
+        'disposal was left out and dispose never runs. Write the dispose key in your source ' +
+        '(view/05-element.md "Features register themselves").',
     );
   }
-  useHookRunner(runner);
-  return (...args) => hookResult(spec, args, commitHook);
+  (disposableCommit ?? commitHook)(part, result);
 }

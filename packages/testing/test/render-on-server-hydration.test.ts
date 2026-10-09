@@ -1,5 +1,5 @@
 // Real server markup in a browser test (gyral-dyn.8): the renderOnServer browser command renders
-// ./server-app/counter.ts with @gyral/core/server in Vitest's Node process, the test mounts the
+// ./server-app/counter.ts with @gyral/core/internal/server in Vitest's Node process, the test mounts the
 // HTML, imports the same module and checks that it hydrates in place. Runs against development
 // and production builds of core (the browser and browser-prod projects).
 import { afterEach, describe, expect, it } from 'vitest';

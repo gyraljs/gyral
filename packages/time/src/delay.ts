@@ -1,4 +1,4 @@
-// `@gyral/time/delay` (gyral-c5d.15): `delay` and `debounce` for apps that need nothing else
+// `delay` and `debounce` (gyral-c5d.15), exported from @gyral/time: for apps that need nothing else
 // from @gyral/time. Same signatures, lanes and messages as the main entry's, but their driver
 // runs delays only, so `every` ticks and animation frames stay out of the bundle. The driver is
 // named `time` like the full one and takes the same input, so substitution (`el.drivers`,
@@ -7,9 +7,6 @@
 import type { Command } from '@gyral/core';
 import type { TimeDriver } from './driver.js';
 import { timer, wait, type Lane } from './timer.js';
-
-export type { Lane } from './timer.js';
-export type { TimeDriver, TimeInput, TimeOutput } from './driver.js';
 
 /**
  * A time driver for delays only (`{ _tag: 'Delay', ms }`). `Every` and frame inputs reject:
@@ -30,7 +27,7 @@ function makeDelayTime(): TimeDriver {
 }
 
 /** The delay-only time driver. */
-export const delayTime: TimeDriver = makeDelayTime();
+export const delayTime: TimeDriver = /* @__PURE__ */ makeDelayTime();
 
 /** Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`). */
 export function delay<M>(ms: number, msg: M, lane: Lane = {}): Command<M> {

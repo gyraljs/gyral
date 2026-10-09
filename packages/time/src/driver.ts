@@ -110,4 +110,4 @@ export function makeTime(options: TimeOptions = {}): TimeDriver {
 }
 
 /** The default time driver. */
-export const time: TimeDriver = makeTime();
+export const time: TimeDriver = /* @__PURE__ */ makeTime();

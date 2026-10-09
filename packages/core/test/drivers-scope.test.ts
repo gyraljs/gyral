@@ -3,12 +3,12 @@ import {
   command,
   define,
   defineDriver,
-  DRIVERS_ELEMENT,
   html,
   provideDrivers,
   settled,
   type AnyDriver,
 } from '../src/index.js';
+import { DRIVERS_ELEMENT } from '../src/internal.js';
 import { collectErrors } from './collect-errors.js';
 
 const real = defineDriver<string, string>({ name: 'echo', run: (s) => `real:${s}` });

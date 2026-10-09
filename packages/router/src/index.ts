@@ -36,11 +36,6 @@ export function navigate(url: string, options: NavigateOptions = {}): Command<ne
   return fireAndForget({ _tag: 'Navigate', url, ...options, replace: options.replace ?? false });
 }
 
-/** Moves through history by `delta` entries (`-1` is back). */
-export function go(delta: number): Command<never> {
-  return fireAndForget({ _tag: 'Traverse', delta });
-}
-
 /**
  * Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed
  * element (description, robots, canonical, meta, links, JSON-LD). Managed elements the new head
@@ -54,9 +49,6 @@ export function setHead(head: Head): Command<never> {
   headSlot.apply ??= applyHead;
   return fireAndForget({ _tag: 'Head', head });
 }
-
-export const back = (): Command<never> => go(-1);
-export const forward = (): Command<never> => go(1);
 
 /**
  * Streams the current location, then every URL change, as messages until the component

@@ -1,29 +1,15 @@
-// `@gyral/time`: delays, debounces, wall-clock ticks (`every`) and animation frames as commands, run by one
-// `time` driver. Apps that only need delays and debounces import them from `@gyral/time/delay`
-// instead (delay.ts), whose driver leaves the `every` and frame code out (gyral-c5d.15).
+// `@gyral/time`: delays, debounces and wall-clock ticks (`every`) as commands. Delays and
+// debounces run on a delay-only driver (delay.ts), `every` on the full one (driver.ts); both are
+// named `time`, so tests substitute either by that name, and an app that only delays bundles
+// none of the `every` code (gyral-c5d.15, gyral-1zd.24).
 import type { Command } from '@gyral/core';
-import { time, type Frame } from './driver.js';
-import { timer, type Lane } from './timer.js';
+import { time } from './driver.js';
+import { timer } from './timer.js';
 
 export { time } from './driver.js';
+export { debounce, delay } from './delay.js';
 export type { Frame, TimeDriver, TimeInput, TimeOutput } from './driver.js';
 export type { Lane } from './timer.js';
-
-/** Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`). */
-export function delay<M>(ms: number, msg: M, lane: Lane = {}): Command<M> {
-  return timer(time, { _tag: 'Delay', ms }, () => msg, lane, {
-    key: 'time:delay',
-    concurrency: 'merge',
-  });
-}
-
-/**
- * Sends `msg` once `ms` pass without another `debounce` in the same lane: a delay under
- * `switch`, so each call cancels the pending one.
- */
-export function debounce<M>(ms: number, msg: M, key = 'time:debounce'): Command<M> {
-  return delay(ms, msg, { key, concurrency: 'switch' });
-}
 
 /**
  * Sends `toMsg(now)` at once and then every `ms`, `now` being `Date.now()` (virtual under
@@ -42,19 +28,5 @@ export function every<M>(
     (output) => (typeof output === 'number' ? toMsg(output) : undefined),
     {},
     { key, concurrency: 'switch' },
-  );
-}
-
-/** Streams animation frames until the component disconnects (`switch` in its lane). */
-export function animationFrames<M>(
-  toMsg: (frame: Frame) => M | undefined,
-  lane: Lane = {},
-): Command<M> {
-  return timer(
-    time,
-    { _tag: 'Frames' },
-    (output) => (typeof output === 'object' ? toMsg(output) : undefined),
-    lane,
-    { key: 'time:frames', concurrency: 'switch' },
   );
 }

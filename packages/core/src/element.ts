@@ -245,7 +245,6 @@ export function elementClass<S, M extends Tagged, P>(
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       this.#listen(DEFAULT_EVENTS);
-      if (spec.events !== undefined) this.#listen(spec.events);
       this.#state(); // init, unless resumed from a seed
       this.#connect();
     }

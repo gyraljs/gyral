@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jsonHazard } from '../src/index.js';
+import { jsonHazard } from '../src/internal.js';
 
 class Point {
   constructor(readonly x: number) {}

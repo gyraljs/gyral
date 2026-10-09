@@ -10,7 +10,7 @@
 // Plain data, no TypeScript beyond `as const`, so Node scripts import it as is.
 export const MESSAGES = {
   // Components
-  1: '<{tag}> is a browser element (render it with @gyral/core/server).',
+  1: '<{tag}> is a browser element (render it on the server with @gyral/ssr).',
   10: '<{tag}> has no update for message "{message}".',
   11: '<{tag}> has no intent parser for data-intent="{intent}".',
   12: '<{tag}> intent parser for "{intent}" failed',

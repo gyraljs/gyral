@@ -9,7 +9,6 @@ type Msg =
 
 const Keys = define<{ readonly log: readonly string[] }, Msg>()('test-events', {
   init: () => ({ log: [] }),
-  events: ['pointerdown'],
   intent: {
     Key: ({ key, event }) => {
       if (key !== 'ArrowDown' && key !== 'Escape') return undefined;

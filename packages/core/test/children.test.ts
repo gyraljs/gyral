@@ -1,16 +1,8 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
-import {
-  child,
-  define,
-  each,
-  emit,
-  html,
-  prop,
-  settled,
-  type GyralElementClass,
-} from '../src/index.js';
+import { child, define, each, html, prop, settled, type GyralElementClass } from '../src/index.js';
+import { emit } from '../src/internal.js';
 import { ctxOf } from './ctx.js';
 
 interface Item {

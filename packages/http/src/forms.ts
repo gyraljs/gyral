@@ -56,3 +56,16 @@ export function submitForm<MS, MF = MS>(
     concurrency: options.concurrency ?? 'exhaust',
   });
 }
+
+/** A server's JSON answer to a valid form post that would have redirected without JS. */
+export interface FormRedirected {
+  readonly _tag: 'Redirected';
+  readonly location: string;
+}
+
+/** The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. */
+export function redirectedTo(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const { _tag, location } = body as { readonly _tag?: unknown; readonly location?: unknown };
+  return _tag === 'Redirected' && typeof location === 'string' ? location : undefined;
+}

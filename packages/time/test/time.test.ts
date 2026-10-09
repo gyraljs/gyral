@@ -2,7 +2,21 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import { inputsFor, step, virtualTime, type VirtualTime } from '@gyral/testing';
 import { makeTime } from '../src/driver.js';
-import { animationFrames, debounce, delay, every, time } from '../src/index.js';
+import { command, type Command } from '@gyral/core';
+import { debounce, delay, every, time, type Frame } from '../src/index.js';
+
+// The animation-frames recipe (skill: effects-and-drivers "Animation frames"): the time driver
+// streams frames for `{ _tag: 'Frames' }`, in a switch lane.
+const animationFrames = <M>(toMsg: (frame: Frame) => M): Command<M> =>
+  command(
+    time,
+    { _tag: 'Frames' },
+    {
+      onSuccess: (output) => (typeof output === 'object' ? toMsg(output) : undefined),
+      key: 'time:frames',
+      concurrency: 'switch',
+    },
+  );
 
 type Msg =
   | { readonly _tag: 'Tick'; readonly now: number }

@@ -4,7 +4,7 @@
 // release's hashed files on a persistent volume points `dir` there, so a tab opened before a
 // deploy still loads the chunks of its own release.
 import { readFile } from 'node:fs/promises';
-import { extname, resolve, sep } from 'node:path';
+import { extname, join, resolve, sep } from 'node:path';
 
 /** Cache policy for production serving. */
 export const cacheHeaders = {
@@ -237,4 +237,11 @@ export function assetHandler(options: AssetHandlerOptions): AssetHandler {
     whole.headers.set('content-range', `bytes ${String(first)}-${String(last)}/${String(size)}`);
     return new Response(whole.body, { status: 206, headers: whole.headers });
   };
+}
+
+/** The file a prerendered path is written to and served from (`prerender`, `productionServer`). */
+export function staticFileFor(outDir: string, path: string): string {
+  const clean = path.replace(/^\/+|\/+$/g, '');
+  if (clean.split('/').some((part) => part === '..')) throw new Error(`unsafe path ${path}`);
+  return join(outDir, clean, 'index.html');
 }

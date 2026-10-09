@@ -282,9 +282,9 @@ binding whose code the build left out does nothing, and development builds warn 
 element.
 
 The view layer does the same with values that carry their own commit code (02, 03): `each`,
-`raw`, `defineHook` (argument comparison, the client queue) and `defineDisposableHook` (disposal
-tracking, view/render/dispose.ts, gyral-c5d.2). A teardown is a function of its own rather than
-an option of `defineHook`, so apps whose hooks need none don't bundle the tracking.
+`raw` and `defineHook` (argument comparison, the client queue). Disposal tracking
+(view/render/dispose.ts) for hooks with `dispose` registers like a spec-field feature: the
+build adds it only when a module names `dispose` (gyral-c5d.2, gyral-1zd.24).
 
 Marker drivers carry their own `local` handler (focus, `emit`, store `send`), so their code
 comes with the function that builds the command. A host starts its interpreter with its
@@ -294,8 +294,9 @@ a component's props, stores and commands are built by those APIs.
 ## Intent events (gyral-g1r.20)
 
 A host's root listens (capture phase) only for events its intents can fire on: the default
-triggers (`click`, `submit`, `input`, `change`, child outputs), `spec.events`, and the
-`data-intent-on` values of the templates it renders. `render`/`hydrate` report each template
+triggers (`click`, `submit`, `input`, `change`, child outputs) and the `data-intent-<event>`
+names and `data-intent-on` values of the templates it renders (0.3.1 removed `spec.events`:
+a bound intent for another event takes a per-event attribute). `render`/`hydrate` report each template
 they instantiate (and `raw()` markup) to the host (`view/render/seen.ts`; one call per run of
 instances of the same template); core reads the static `data-intent-on` values from the
 template's HTML once per template, and listens for all intent events when the attribute is
@@ -373,14 +374,13 @@ and `keydown`/`keyup` listeners by hand. The client-only scan
 counts `command` anywhere in a quoted list (07 "Client-only builds").
 
 A release must arrive even when the pointer leaves the element first. That is pointer
-capture, provided by the `capturePointer()` element hook (02 "Element hooks"): it calls
-`setPointerCapture(pointerId)` on `pointerdown`. It is a hook rather than automatic for lists
-naming `pointerdown` and `pointerup` because built in it cost every app about 35 B gzip; as a
-hook only apps that use it bundle it, and the capture is visible in the markup. List support
-itself costs about 25 B. Capture is not set for synthetic events (the pointer isn't active:
-the call throws and is ignored). It is a disposable hook (02 "Widgets with a lifecycle"): a
-position that stops holding it (`${held ? capturePointer() : nothing}`) removes its listener,
-and adding it again never adds a second one.
+capture: a small element hook that calls `setPointerCapture(pointerId)` on `pointerdown` (a
+recipe in the agent skill's intent reference since 0.3.1, gyral-1zd.24; it was the
+`capturePointer()` export). It is not automatic for lists naming `pointerdown` and `pointerup`
+because built in it cost every app about 35 B gzip, and as a hook the capture is visible in
+the markup. List support itself costs about 25 B. Capture throws for synthetic events (the
+pointer isn't active), so the recipe ignores that. Written with `dispose` (02 "Widgets with a
+lifecycle"), a position that stops holding it removes its listener.
 
 Two consequences parsers must know (gyral-dyn.16):
 
@@ -388,7 +388,7 @@ Two consequences parsers must know (gyral-dyn.16):
   (the shadow root, or the host for light-DOM components), and `event.target` is the hit
   element inside the intent element.
 - While an element holds pointer capture, the browser targets that pointer's events at it.
-  `capturePointer()` captures on the intent element, so its own intents keep firing, but
+  A capture hook on the intent element keeps that element's own intents firing, but
   intents on elements inside a capturing ancestor stop firing until release: their events
   are retargeted to the ancestor, and the lookup starts there.
 
@@ -466,7 +466,7 @@ it: custom states today, form association later.
   returns the registered class. Defining the same tag with a different spec warns in
   development.
 - In an environment without `HTMLElement` (Node), `define()` records the spec in the server
-  registry used by `@gyral/core/server` (06) and returns a placeholder class (it carries `spec`
+  registry used by `@gyral/core/internal/server` (06) and returns a placeholder class (it carries `spec`
   and `tagName`; constructing it throws). That check is a few bytes; no export condition is
   needed.
 - The registry lives in `view/registry.ts` (so `view/server/` can read it):
@@ -480,7 +480,7 @@ it: custom states today, form association later.
   `serverProvider(tag)`: `<gyral-stores>` is one (06).
 - The server renderer takes the host attribute names (`SEED_ATTRIBUTE`, `LIGHT_ATTRIBUTE`,
   `ISLAND_ATTRIBUTE`) from `view/attributes.ts`; a test checks they match the client's.
-  `@gyral/core/server` calls `registerRecordedSpecs()` before each render; it registers only
+  `@gyral/core/internal/server` calls `registerRecordedSpecs()` before each render; it registers only
   specs not registered yet.
 
 ## Native primitives

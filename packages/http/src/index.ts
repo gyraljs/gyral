@@ -3,7 +3,8 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { http, type HttpError, type HttpRequest } from './driver.js';
 
 export { csrfFromMeta, http, makeHttpDriver, retryableHttpError } from './driver.js';
-export { submitForm } from './forms.js';
+export { redirectedTo, submitForm } from './forms.js';
+export type { FormRedirected } from './forms.js';
 export type { SubmitFormOptions } from './forms.js';
 export type {
   HeaderSource,

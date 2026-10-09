@@ -6,7 +6,7 @@ export const RULES_DOC = 'docs/design-docs/view/09-template-rules.md';
 /** Rule 11's message, here so the client's template cache needn't load the rule messages. */
 export const SERVER_ONLY =
   'This template has document-level tags (<!doctype>, <html>, <head> or <body>): it is a page ' +
-  'shell, and only the server renders those. Render it with @gyral/core/server, and render ' +
+  'shell, and only the server renders those. Render it with @gyral/ssr (renderPage, renderToString), and render ' +
   'components (not the page) in the browser.';
 
 /** A template breaks rule `rule` of view/09-template-rules.md. */

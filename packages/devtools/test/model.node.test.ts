@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defineForm, type DevEvent } from '@gyral/core';
+import { defineForm } from '@gyral/core';
+import { type DevEvent } from '@gyral/core/internal';
 import { initialPanel, MAX_ROWS, preview, receive, visibleRows } from '../src/model.js';
 
 const el = {} as Element;

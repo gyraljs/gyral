@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
 import { command, define, defineDriver, html, prop } from '@gyral/core';
-import { page, renderPage, renderToString } from '../src/index.js';
+import { renderPage, renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 
 const runs: string[] = [];
 const load = defineDriver<string, string>({

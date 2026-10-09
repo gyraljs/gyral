@@ -2,7 +2,7 @@
   {
     "code": "G0001",
     "group": "Components",
-    "message": "<{tag}> is a browser element (render it with @gyral/core/server).",
+    "message": "<{tag}> is a browser element (render it on the server with @gyral/ssr).",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0001"
   },

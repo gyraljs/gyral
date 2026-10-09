@@ -1,5 +1,5 @@
 import { css, define, defineStore, html, send } from '@gyral/core';
-import { delay } from '@gyral/time/delay';
+import { delay } from '@gyral/time';
 
 /** A shared store, so the timeline shows store messages too. */
 export const tally = defineStore<{ readonly total: number }, { readonly _tag: 'Add' }>('tally', {

@@ -24,7 +24,7 @@ site.match('/products/42/'); // { name: 'product', params: { id: '42' }, path: '
 
 `setHead(head)` makes the document's head (title, description, canonical, robots, meta, links,
 JSON-LD, `lang`, `dir`) match a `Head` after a navigation: pass it the same value the server
-gives `page()` / `renderPage()` (from `@gyral/ssr`), so a client navigation leaves the same head
+gives `renderPage()` (from `@gyral/ssr`), so a client navigation leaves the same head
 as a page load.
 
 After a push renders, the router scrolls to the `#fragment` target or the top, restores the

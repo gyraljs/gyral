@@ -1,5 +1,6 @@
-import { css, define, html, randomInt } from '@gyral/core';
+import { css, define, html } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
+import { randomInt } from './random.js';
 import { fetchUser, USER_COUNT, type User } from './users.js';
 
 export type State =
@@ -33,7 +34,7 @@ export const RandomUser = define<State, Msg>()('gy-random-user', {
     GetRandom: true,
   },
   update: {
-    // Randomness is an effect (gyral-czi.10): ask the random driver, so tests can fix it.
+    // Randomness is an effect: ask the random driver (src/random.ts), so tests can fix it.
     // Clicks while loading are ignored: any in-flight answer is "a random user".
     GetRandom: (s) =>
       s._tag === 'Loading'

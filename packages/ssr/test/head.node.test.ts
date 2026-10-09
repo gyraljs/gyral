@@ -2,7 +2,8 @@
 // <title>), and keeps hand-written extraHead content separate.
 import { describe, expect, it } from 'vitest';
 import { html } from '@gyral/core';
-import { page, renderToString } from '../src/index.js';
+import { renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 
 const headOf = async (options: Parameters<typeof page>[0]) => {
   const out = await renderToString(page(options));

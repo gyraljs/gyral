@@ -6,10 +6,10 @@ import {
   fieldErrors,
   form,
   html,
-  redirectedTo,
   settled,
   type IntentRejected,
 } from '@gyral/core';
+import { redirectedTo } from '../src/index.js';
 import { csrfFromMeta, makeHttpDriver, submitForm } from '../src/index.js';
 
 const Login = defineForm(

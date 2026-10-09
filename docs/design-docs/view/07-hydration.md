@@ -234,7 +234,7 @@ declarations (Firefox empties a blocked one).
 
 ### The server markup the walk meets (from Phase 4)
 
-What `@gyral/core/server` writes (06), as input for the walk. The points left open in Phase 4
+What `@gyral/core/internal/server` writes (06), as input for the walk. The points left open in Phase 4
 are resolved (marked **Phase 5**).
 
 - A host's root starts with its view: in a shadow root after the one `<style>` (when the
@@ -330,7 +330,7 @@ doesn't avoid it on 153 either: the entry script is fetched twice anyway.
 - `hydrated()` releases islands if asked, then awaits `settled()` (04).
 - Server markup comes from golden fixtures written by Node tests, or on demand from
   `renderOnServer` (`@gyral/testing/vitest`, a Vitest browser command that renders with
-  `@gyral/core/server` in Node; gyral-dyn.8).
+  `@gyral/core/internal/server` in Node; gyral-dyn.8).
 - Every hydration test runs against development and production builds of core (the
   `browser-prod` Vitest project stays).
 - **Phase 5:** `core/test/view/walk-hydration.test.ts` (the walk), `mismatch-hydration.test.ts`

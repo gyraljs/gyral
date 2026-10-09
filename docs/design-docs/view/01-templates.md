@@ -198,7 +198,7 @@ attributes decoded, for props). A child op carries `in`, its parent element's lo
 (absent at the template root), so the server can check text in table structure (06), and
 `svg: true` when that parent is SVG content, where svg templates may render (0.3.1).
 
-A `server` template (a page shell) may only be rendered by `@gyral/core/server`. Rendering one
+A `server` template (a page shell) may only be rendered by `@gyral/core/internal/server`. Rendering one
 in the browser is an error.
 
 ## Two ways to get a template object

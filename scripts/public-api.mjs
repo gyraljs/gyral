@@ -127,15 +127,16 @@ function inventory(exports) {
     const link = doc
       ? `[${relative(join(ROOT, 'docs/references'), doc.file).replace(/^(\.\.\/)+/, '')}](${relative(join(ROOT, 'docs/references'), doc.file)})`
       : '';
-    const status =
-      spec === INTERNAL
-        ? 'internal'
-        : doc
-          ? 'documented'
-          : e.kind === 'type'
-            ? 'supporting type'
-            : 'UNDOCUMENTED';
-    lines.push(`| \`${e.name}\` | ${e.kind} | ${status} | ${spec === INTERNAL ? '' : link} |`);
+    const status = spec.startsWith(INTERNAL)
+      ? 'internal'
+      : doc
+        ? 'documented'
+        : e.kind === 'type'
+          ? 'supporting type'
+          : 'UNDOCUMENTED';
+    lines.push(
+      `| \`${e.name}\` | ${e.kind} | ${status} | ${spec.startsWith(INTERNAL) ? '' : link} |`,
+    );
   }
   return lines.join('\n');
 }

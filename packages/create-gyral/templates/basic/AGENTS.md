@@ -31,9 +31,9 @@ client-rendered with Vite. This file tells coding agents how the project works.
    closure. Override the trigger event with `data-intent-on="keydown"`.
 3. Intent parsers validate input and return a message or `undefined`.
 4. Reducers are pure: no `fetch`, timers, `Math.random`, `Date.now`, DOM or storage. Return
-   `[nextState, [command]]` and use `@gyral/http`, `@gyral/time`, `random()` or a driver.
+   `[nextState, [command]]` and use `@gyral/http`, `@gyral/time` or a driver.
 5. Props are read-only (`ctx.props`); they enter state in `init(props)` or a `PropsChanged`
-   reducer. Children report up with `emit()`; parents read outputs with `child()`.
+   reducer. Children report up with `outputs<O>()`'s `emit`; parents read outputs with `child()`.
 6. Shared state goes in a store: `defineStore`, `spec.stores`, `ctx.read(store)`,
    `send(store, msg)`.
 7. Prefer plain data in state (it must be JSON only if a component is later server-rendered). Import `html`, `css`, `each` and hooks from `@gyral/core`.

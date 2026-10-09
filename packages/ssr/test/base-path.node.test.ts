@@ -5,13 +5,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  clientAssets,
   clientAssetsFromManifest,
-  clientEntryFromManifest,
   productionServer,
   type AppAssets,
   type ViteManifest,
 } from '../src/static.js';
+import { clientAssets } from '../src/manifest.js';
 
 const manifest: ViteManifest = {
   'src/entry-client.ts': {
@@ -50,9 +49,6 @@ describe('Vite base', () => {
 
   it('the file readers take it too', async () => {
     const path = join(dist(), 'client', '.vite', 'manifest.json');
-    expect(await clientEntryFromManifest(path, 'src/entry-client.ts', { base: '/app/' })).toBe(
-      '/app/assets/entry-E.js',
-    );
     const assets = await clientAssetsFromManifest(path, 'src/entry-client.ts', [], {
       base: '/app/',
     });

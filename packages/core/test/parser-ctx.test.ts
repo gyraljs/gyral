@@ -2,15 +2,8 @@
 // with props as they are when the event fires and `read(store)`, so a parser can decide
 // synchronously whether to call preventDefault from props.
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  define,
-  defineStore,
-  html,
-  prop,
-  resetDocumentStores,
-  send,
-  settled,
-} from '../src/index.js';
+import { define, defineStore, html, prop, send, settled } from '../src/index.js';
+import { resetDocumentStores } from '../src/internal.js';
 
 const layout = defineStore<{ readonly locked: boolean }, { readonly _tag: 'Lock' }>(
   'test-parser-ctx-layout',

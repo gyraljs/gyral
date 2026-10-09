@@ -6,12 +6,13 @@
 // children first, each root's calls in document order (hook-run.ts), so a parent's hook sees its
 // child components rendered (view/02 "Commit order"). A `render` call outside a flush runs its
 // own calls when it returns, in document order.
-// A hook from `defineDisposableHook` also has `dispose`, which runs when the element leaves its
-// render root (Gyral removed it: its part cleared, its instance replaced, its row removed), when
-// the position stops holding the hook, or when the host disconnects; not on moves. That
-// machinery (dispose.ts) registers itself in `disposal` when the first such hook commits, and
-// only apps that call `defineDisposableHook` bundle it (gyral-c5d.2): other apps pay one empty
-// check per render and per disconnect.
+// A hook whose spec has `dispose` runs it when the element leaves its render root (Gyral removed
+// it: its part cleared, its instance replaced, its row removed), when the position stops holding
+// the hook, or when the host disconnects; not on moves. That machinery (dispose.ts) is reached
+// through `disposableCommit`, filled by core's `#spec-features` (every build without the preset)
+// or, with the preset, only when some module names `dispose` (compiler/features.ts): apps whose
+// hooks have no teardown don't bundle it (gyral-c5d.2, gyral-1zd.24) and pay one empty check per
+// render and per disconnect.
 
 const HOOK: unique symbol = Symbol('gyral.hook');
 /** Internal: a hook result's commit function (hook-part.ts), so apps without hooks skip it. */
@@ -30,16 +31,13 @@ export interface HookSpec<A extends readonly unknown[]> {
    * `'always'` on every render that commits the hook's position (a skipped `each` row doesn't).
    */
   readonly update?: 'args' | 'always';
-}
-
-/** A hook with a teardown (`defineDisposableHook`, view/02 "Widgets with a lifecycle"). */
-export interface DisposableHookSpec<A extends readonly unknown[]> extends HookSpec<A> {
   /**
-   * Teardown, with the last arguments `client` got: runs when Gyral removes the element, when
-   * the position stops holding this hook, or when the host disconnects (not on `moveBefore`
-   * moves). After a host reconnects, `client` runs again with `prev` undefined.
+   * Teardown, with the last arguments `client` got (view/02 "Widgets with a lifecycle"): runs
+   * when Gyral removes the element, when the position stops holding this hook, or when the host
+   * disconnects (not on moves). After a host reconnects, `client` runs again with `prev`
+   * undefined.
    */
-  dispose(el: Element, args: A): void;
+  dispose?(el: Element, args: A): void;
 }
 
 /** What a hook returns in a template: `<input ${invalid(errors)}>`. */
@@ -57,7 +55,7 @@ export interface HookPart {
   prev: readonly unknown[] | undefined;
   /** dispose.ts: the tracked disposable hook, its last arguments, and whether a disconnect
    * disposed it (`client` runs again after the next render). */
-  kept?: DisposableHookSpec<readonly unknown[]> | undefined;
+  kept?: HookSpec<readonly unknown[]> | undefined;
   keptArgs?: readonly unknown[] | undefined;
   off?: boolean | undefined;
   /** The render root it was queued for (hook-run.ts: failures, order). */
@@ -96,6 +94,14 @@ let disposal: ((root: Node, disconnect?: boolean) => boolean) | undefined;
 /** Internal (dispose.ts): turns hook disposal on. */
 export function useDisposal(run: (root: Node, disconnect?: boolean) => boolean): void {
   disposal = run;
+}
+
+/** How a hook with `dispose` commits (dispose.ts `commitTracked`), once registered. */
+export let disposableCommit: ((part: HookPart, result: HookResult) => void) | undefined;
+
+/** Internal (`#spec-features`, use-disposal.ts): registers hook disposal. */
+export function useDisposableHooks(commit: (part: HookPart, result: HookResult) => void): void {
+  disposableCommit = commit;
 }
 
 /** The host owning `root` disconnected (element.ts): disposes its disposable hooks. */
@@ -141,7 +147,7 @@ export const disposalPass = (): typeof disposal => disposal;
 
 /**
  * What runs queued client calls (hook-run.ts): ordering, batching across a flush, failures.
- * Set by `defineHook`/`defineDisposableHook`, so apps without hooks bundle none of it; without
+ * Set by `defineHook`, so apps without hooks bundle none of it; without
  * hooks nothing is ever queued.
  */
 export interface HookRunner {

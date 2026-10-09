@@ -101,7 +101,7 @@ describe('api', () => {
     const at = (name: string) => findApi(corpus.api, name).matches.map((m) => m.specifier);
     expect(at('each')).toContain('@gyral/core');
     expect(at('prop')).toContain('@gyral/core');
-    expect(at('renderToString')).toContain('@gyral/core/server');
+    expect(at('renderToString')).toContain('@gyral/ssr');
     expect(at('clientAssetsFromManifest')).toContain('@gyral/ssr/static');
     expect(corpus.api.some((e) => e.specifier === '@gyral/core/eslint')).toBe(true);
     for (const gone of ['repeat', 'liveBoolean', 'serverHtml', 'unsafeCSS']) {

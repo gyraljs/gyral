@@ -1,5 +1,5 @@
 // The server registry (view/05-element.md "Registration", view/06-server.md "Components").
-// Outside the browser `define()` records each spec (server-specs.ts); `@gyral/core/server`
+// Outside the browser `define()` records each spec (server-specs.ts); `@gyral/core/internal/server`
 // turns them into entries here (server-component.ts `registerRecordedSpecs`) before each
 // render, and its renderer (view/server/) looks start tags up and renders the component in
 // place. Providers (`<gyral-stores>`, ADR 0013) register a scope for their subtree. Plain data

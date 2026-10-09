@@ -38,12 +38,12 @@ export { nothing, type ChildValue, type ListResult, type RawResult } from './ren
 export { defineHook } from './render/hook-part.js';
 export { useToggles } from './render/toggles.js';
 export { applyToggle } from './render/modal.js';
-export { defineDisposableHook } from './render/dispose.js';
+export { commitTracked } from './render/dispose.js';
 export {
   flushHooks,
   onHookFailure,
   suspendHooks,
-  type DisposableHookSpec,
+  useDisposableHooks,
   type HookAttributes,
   type HookResult,
   type HookSpec,

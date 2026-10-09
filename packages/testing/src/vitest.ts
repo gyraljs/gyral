@@ -4,7 +4,7 @@
 // in Vitest's Node process instead (https://vitest.dev/api/browser/commands): it loads the
 // module through the project's Vite server, in its SSR environment (Node conditions, the
 // development condition in tests, Gyral packages not externalized: gyralVitePreset), renders
-// with `@gyral/core/server` and returns the HTML for `mountSsr()`.
+// with `@gyral/core/internal/server` and returns the HTML for `mountSsr()`.
 //
 // Config side only: import it from vitest.config.ts, never from a test file.
 import { dirname, isAbsolute, resolve } from 'node:path';
@@ -46,7 +46,7 @@ declare module 'vitest/browser' {
   }
 }
 
-/** The parts of `@gyral/core/server` this command uses. */
+/** The parts of `@gyral/core/internal/server` this command uses. */
 interface ServerModule {
   readonly renderToString: (value: unknown, options?: { readonly dev?: boolean }) => string;
 }
@@ -142,7 +142,7 @@ export const renderOnServer: BrowserCommand<[ServerRenderRequest], string> = asy
   const core = async () =>
     (await load(await resolveId('@gyral/core', id))) as unknown as CoreModule;
   const server = async () =>
-    (await load(await resolveId('@gyral/core/server', id))) as unknown as ServerModule;
+    (await load(await resolveId('@gyral/core/internal/server', id))) as unknown as ServerModule;
   const name = request.export ?? 'default';
   if (!(name in module)) {
     throw new Error(

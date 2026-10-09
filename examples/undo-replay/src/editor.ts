@@ -1,5 +1,5 @@
 import { define, html, nothing, type Next } from '@gyral/core';
-import { delay } from '@gyral/time/delay';
+import { delay } from '@gyral/time';
 import {
   COLORS,
   canRedo,
