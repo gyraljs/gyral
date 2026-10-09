@@ -63,10 +63,10 @@ describe('gyral MCP server over stdio', () => {
     expect((await call('list_examples')).text).toContain('**counter**');
     expect((await call('get_example', { name: 'counter' })).text).toContain('src/counter.ts');
     expect((await call('scaffold_component', { tag: 'todo-list', kind: 'basic' })).text).toContain(
-      "define<State, Msg>('todo-list'",
+      "define<State, Msg>()('todo-list'",
     );
     const check = await call('check_snippet', {
-      code: "import { define, html } from '@gyral/core';\nexport const X = define<{ readonly n: number }, never>('x-y', { init: () => ({ n: 0 }), intent: {}, update: {}, view: (s) => html`${s.n}` });\n",
+      code: "import { define, html } from '@gyral/core';\nexport const X = define<{ readonly n: number }, never>()('x-y', { init: () => ({ n: 0 }), intent: {}, update: {}, view: (s) => html`${s.n}` });\n",
     });
     expect(check).toEqual({
       text: expect.stringMatching(/^No type errors/) as unknown,

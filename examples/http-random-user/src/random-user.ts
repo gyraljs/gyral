@@ -25,7 +25,7 @@ const describeError = (error: HttpError): string => {
   }
 };
 
-export const RandomUser = define<State, Msg>('gy-random-user', {
+export const RandomUser = define<State, Msg>()('gy-random-user', {
   init: () => ({ _tag: 'Idle' }),
   intent: {
     GetRandom: () => ({ _tag: 'GetRandom' }),

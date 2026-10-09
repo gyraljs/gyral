@@ -6,7 +6,7 @@ export interface State {
 
 export type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 
-export const Counter = define<State, Msg>('gy-counter', {
+export const Counter = define<State, Msg>()('gy-counter', {
   init: () => ({ count: 0 }),
   intent: {
     Increment: () => ({ _tag: 'Increment' }),

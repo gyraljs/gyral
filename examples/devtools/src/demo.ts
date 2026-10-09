@@ -16,7 +16,7 @@ export type Msg =
   { readonly _tag: 'Increment' } | { readonly _tag: 'Save' } | { readonly _tag: 'Saved' };
 
 /** Increment updates state and the store; Save runs a delayed command (a command lane). */
-export const Demo = define<State, Msg>('gy-devtools-demo', {
+export const Demo = define<State, Msg>()('gy-devtools-demo', {
   init: () => ({ count: 0, saving: false }),
   stores: [tally],
   intent: {

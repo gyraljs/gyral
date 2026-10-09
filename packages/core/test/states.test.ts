@@ -3,7 +3,7 @@ import { css, define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Toggle' };
 
-const Lamp = define<{ readonly on: boolean }, Msg>('test-states', {
+const Lamp = define<{ readonly on: boolean }, Msg>()('test-states', {
   init: () => ({ on: false }),
   intent: { Toggle: () => ({ _tag: 'Toggle' }) },
   update: { Toggle: (s) => ({ on: !s.on }) },
@@ -16,7 +16,7 @@ const Lamp = define<{ readonly on: boolean }, Msg>('test-states', {
   `,
 });
 
-const Plain = define<{ readonly n: number }, never>('test-no-states', {
+const Plain = define<{ readonly n: number }, never>()('test-no-states', {
   init: () => ({ n: 0 }),
   intent: {},
   update: {},

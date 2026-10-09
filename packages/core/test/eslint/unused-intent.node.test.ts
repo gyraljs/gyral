@@ -6,12 +6,12 @@ import { describe } from 'vitest';
 import { unusedIntentRule } from '../../src/eslint/index.js';
 import { tester, tsTester } from './helpers.js';
 
-const IMPORT = "import { define, html, intents, each } from '@gyral/core';\n";
+const IMPORT = "import { define, html, intentsOf, each } from '@gyral/core';\n";
 
 /** A component with parsers `Save` and `Load` and the given view (source). */
 const component = (view: string, before = ''): string =>
   `${IMPORT}${before}
-define('x-a', {
+define()('x-a', {
   init: () => ({ open: false, items: [] }),
   intent: { Save: () => ({ _tag: 'Save' }), Load: () => ({ _tag: 'Load' }) },
   update: { Save: (s) => s, Load: (s) => s, Done: (s) => s },
@@ -28,10 +28,10 @@ describe('gyral/unused-intent', () => {
       component(
         '(s, i) => html`<button data-intent=${i.Save}>Save</button>${s.open ? html`<button data-intent=${i.Load}></button>` : ""}`',
       ),
-      // A module-level intents() constant in a pure row, and a static data-intent value.
+      // A module-level intentsOf() constant in a pure row, and a static data-intent value.
       component(
         '(s) => html`<ul>${each(s.items, (x) => x.id, Row)}</ul><form data-intent="Load"></form>`',
-        'const r = intents();\nconst Row = (x) => html`<li data-intent=${r.Save}>${x.id}</li>`;\n',
+        'const r = intentsOf();\nconst Row = (x) => html`<li data-intent=${r.Save}>${x.id}</li>`;\n',
       ),
       // Destructured intents, a literal data-intent hole, and a local helper getting `i`.
       component("(s, { Save }) => html`<b data-intent=${Save}></b><i data-intent=${'Load'}></i>`"),
@@ -47,7 +47,10 @@ describe('gyral/unused-intent', () => {
         '(s, i) => html`<p data-intent=${i.Save}>${header("Load")}</p>`',
         "import { header } from './table.js';\n",
       ),
-      component('(s, i) => html`<p data-intent=${i.Save}></p>`', 'export const i2 = intents();\n'),
+      component(
+        '(s, i) => html`<p data-intent=${i.Save}></p>`',
+        'export const i2 = intentsOf();\n',
+      ),
       // svg fragments name intents too: a static value, and an imported function in a hole.
       component(
         '(s, i) => html`<svg data-intent=${i.Save}>${svg`<g data-intent="Load"></g>`}</svg>`',
@@ -101,9 +104,21 @@ describe('gyral/unused-intent', () => {
     valid: [],
     invalid: [
       {
+        // Intent names are the parser keys (ADR 0023): a misspelled key is a new name that no
+        // template uses, so it is reported even when nothing names the intended one.
+        code: `${IMPORT}type Msg = { readonly _tag: 'Send' };
+define<object, Msg>()('x-c', {
+  intent: { Sedn: () => ({ _tag: 'Send' }) },
+  update: { Send: (s) => s },
+  view: () => html\`<button>Send</button>\`,
+});
+`,
+        errors: [unused('Sedn')],
+      },
+      {
         code: `${IMPORT}type Msg = { readonly _tag: 'Go' } | { readonly _tag: 'Stop' };
-const i = intents<Msg>();
-define<object, Msg>('x-b', {
+const i = intentsOf<typeof B>();
+const B = define<object, Msg>()('x-b', {
   intent: { Go: () => ({ _tag: 'Go' }), Stop: () => ({ _tag: 'Stop' }) },
   update: { Go: (s) => s, Stop: (s) => s },
   view: () => html\`<button data-intent=\${i.Go}>Go</button>\`,

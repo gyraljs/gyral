@@ -4,7 +4,7 @@ import './counter.js';
 // A page-level component in light DOM (`shadow: false`): its headings and text are plain
 // children of <app-home>, visible to every crawler and styled by the document's CSS
 // (src/styles.css). Keep widgets like <app-counter> in shadow DOM.
-export const HomePage = define<Stateless, never>('app-home', {
+export const HomePage = define<Stateless, never>()('app-home', {
   shadow: false,
   intent: {},
   update: {},

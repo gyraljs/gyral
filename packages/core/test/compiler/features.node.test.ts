@@ -9,7 +9,7 @@ const appWith = (extra: string, files: Record<string, string> = {}): Record<stri
   'main.ts': `
     import { define } from ${JSON.stringify(CORE)};
     import { html } from ${JSON.stringify(VIEW)};
-    export const C = define('x-c', {
+    export const C = define()('x-c', {
       init: () => ({ on: false }),
       intent: {},
       update: { Flip: (s) => ({ on: !s.on }) },

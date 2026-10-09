@@ -12,7 +12,7 @@ export const duration = (seconds: number): string => `PT${String(seconds)}S`;
 
 // The periodic command streams 1, 2, 3… one per second; the initial state supplies the 0
 // shown before the first tick.
-export const SecondsElapsed = define<State, Msg>('gy-seconds-elapsed', {
+export const SecondsElapsed = define<State, Msg>()('gy-seconds-elapsed', {
   init: () => [{ seconds: 0 }, [periodic(1000, (seconds) => ({ _tag: 'Tick', seconds }))]],
   intent: {},
   update: {

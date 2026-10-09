@@ -12,7 +12,7 @@ const renders: boolean[] = [];
 
 // Progressive enhancement: a plain list first (server and first client render), then the
 // enhanced UI once the component is live.
-const Enhance = define<State, Msg>('test-enhance', {
+const Enhance = define<State, Msg>()('test-enhance', {
   init: () => ({ enhanced: false, heard: [] }),
   intent: {},
   update: {
@@ -25,7 +25,7 @@ const Enhance = define<State, Msg>('test-enhance', {
   },
 });
 
-const Plain = define<{ readonly n: number }, Msg>('test-no-hydrated', {
+const Plain = define<{ readonly n: number }, Msg>()('test-no-hydrated', {
   init: () => ({ n: 0 }),
   intent: {},
   update: { Noop: (s) => s },

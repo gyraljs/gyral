@@ -2,11 +2,11 @@
 // focus, so focusing the host, or a parent's focus() command naming it, lands on the host's
 // first focusable element. Server-rendered hosts get it from shadowrootdelegatesfocus.
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, focus, html, intents, settled } from '../src/index.js';
+import { define, focus, html, settled } from '../src/index.js';
 
 type FieldMsg = never;
 
-define<object, FieldMsg>('test-df-field', {
+define<object, FieldMsg>()('test-df-field', {
   shadow: { delegatesFocus: true },
   init: () => ({}),
   intent: {},
@@ -14,7 +14,7 @@ define<object, FieldMsg>('test-df-field', {
   view: () => html`<label>Name <input id="name" /></label>`,
 });
 
-define<object, FieldMsg>('test-df-plain', {
+define<object, FieldMsg>()('test-df-plain', {
   init: () => ({}),
   intent: {},
   update: {},
@@ -22,13 +22,12 @@ define<object, FieldMsg>('test-df-plain', {
 });
 
 type Msg = { readonly _tag: 'Edit' };
-const i = intents<Msg>();
 
-const Form = define<object, Msg>('test-df-form', {
+const Form = define<object, Msg>()('test-df-form', {
   init: () => ({}),
   intent: { Edit: () => ({ _tag: 'Edit' }) },
   update: { Edit: (s) => [s, [focus('test-df-field')]] },
-  view: () => html`
+  view: (_s, i) => html`
     <button data-intent=${i.Edit}>Edit</button>
     <test-df-field></test-df-field>
   `,

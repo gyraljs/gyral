@@ -193,13 +193,17 @@ export const intentNames: unknown = new Proxy(
 /**
  * A component's intent names as a module-level constant, so pure list rows can name intents
  * without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
- * the view gets as `i`:
+ * the view gets as `i`, typed by the component's class (ADR 0023). A row that names intents
+ * this way needs an explicit return type, or the row, the view and the class infer each other
+ * in a circle:
  *
- *   const i = intents<Msg>();
- *   const Row = (t: Todo) => html`<input value=${t.id} data-intent=${i.Toggle} />`;
+ *   const i = intentsOf<typeof TodoList>();
+ *   const Row = (t: Todo): TemplateResult => html`<input value=${t.id} data-intent=${i.Toggle} />`;
  */
-export function intents<M extends Tagged>(): IntentNames<M> {
-  return intentNames as IntentNames<M>;
+export function intentsOf<C extends { readonly intentNames?: string }>(): IntentNames<
+  NonNullable<C['intentNames']>
+> {
+  return intentNames as IntentNames<NonNullable<C['intentNames']>>;
 }
 
 /**

@@ -91,7 +91,7 @@ const step = (): Command<Msg> =>
 const autoAdvances = (steps: number): boolean => steps % 10 > 0 && steps % 10 < 6;
 
 const queueOf = (tag: string) =>
-  define<State, Msg>(tag, {
+  define<State, Msg>()(tag, {
     init: () => [
       { steps: -1, waited: false },
       [
@@ -195,7 +195,7 @@ describe('settled() waits for messages, not for commands', () => {
 // A driver that answers every message with the next one, in a microtask, forever.
 const echo = defineDriver<number, number>({ name: 'echo', run: (n) => n + 1 });
 type EchoMsg = { readonly _tag: 'Echo'; readonly n: number };
-const Echo = define<{ readonly n: number }, EchoMsg>('test-quiet-echo', {
+const Echo = define<{ readonly n: number }, EchoMsg>()('test-quiet-echo', {
   init: () => ({ n: 0 }),
   intent: {},
   update: {
@@ -243,7 +243,7 @@ const watchMounted = subscription<number>('mounted', (emit) => {
   return watcher.unwatch;
 });
 type PanelMsg = { readonly _tag: 'Close' } | { readonly _tag: 'Mounted'; readonly n: number };
-const Panel = define<{ readonly open: boolean; readonly mounted: number }, PanelMsg>(
+const Panel = define<{ readonly open: boolean; readonly mounted: number }, PanelMsg>()(
   'test-quiet-dispose',
   {
     init: () => [

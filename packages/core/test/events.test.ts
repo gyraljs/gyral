@@ -7,7 +7,7 @@ type Msg =
   | { readonly _tag: 'Toggled'; readonly open: boolean }
   | { readonly _tag: 'Pressed' };
 
-const Keys = define<{ readonly log: readonly string[] }, Msg>('test-events', {
+const Keys = define<{ readonly log: readonly string[] }, Msg>()('test-events', {
   init: () => ({ log: [] }),
   events: ['pointerdown'],
   intent: {

@@ -43,7 +43,7 @@ export function toggle(s: State, letter: string): Next<State, Msg> {
   ];
 }
 
-export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
+export const AnimatedLetters = define<State, Msg>()('gy-animated-letters', {
   init: () => [
     // The original starts with just "A"; "GYRAL" shows the staggered entrance.
     { letters: ['A', 'G', 'L', 'R', 'Y'].map((key) => ({ key, leaving: false })) },

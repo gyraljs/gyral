@@ -15,7 +15,7 @@ const isListCommand = (c: string | undefined): c is ListCommand => c === '--add'
  * Buttons send invoker commands to the list (gyral-czi.6): its `command` intent parses which
  * one. `show-modal` is a built-in command the browser handles with no JS at all.
  */
-export const ShoppingList = define<State, Msg>('gy-shopping-list', {
+export const ShoppingList = define<State, Msg>()('gy-shopping-list', {
   init: () => ({ items: ['Milk', 'Bread'], next: 1 }),
   intent: {
     Command: ({ command }) =>

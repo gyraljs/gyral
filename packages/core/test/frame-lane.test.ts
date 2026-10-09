@@ -7,7 +7,7 @@ type Msg = { readonly _tag: 'Tick' } | { readonly _tag: 'Bump' };
 
 const renders: number[] = [];
 
-const Ticker = define<{ readonly ticks: number; readonly bumps: number }, Msg>(
+const Ticker = define<{ readonly ticks: number; readonly bumps: number }, Msg>()(
   'test-frame-ticker',
   {
     init: () => ({ ticks: 0, bumps: 0 }),
@@ -106,7 +106,7 @@ describe('renderOnFrame', () => {
     });
     const seen: number[] = [];
     // A reader whose store-driven renders wait for the frame, and a writer elsewhere.
-    const Reader = define<Record<string, never>, never>('test-frame-reader', {
+    const Reader = define<Record<string, never>, never>()('test-frame-reader', {
       stores: [counter],
       intent: {},
       update: {},
@@ -116,7 +116,7 @@ describe('renderOnFrame', () => {
         return html`<output>${read(counter).n}</output>`;
       },
     });
-    const Writer = define<Record<string, never>, CounterMsg>('test-frame-writer', {
+    const Writer = define<Record<string, never>, CounterMsg>()('test-frame-writer', {
       stores: [counter],
       intent: {},
       update: { Add: (s) => [s, [send(counter, { _tag: 'Add' })]] },

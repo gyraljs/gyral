@@ -25,7 +25,7 @@ interface Props {
 }
 type Msg = { readonly _tag: 'Key'; readonly key: string } | { readonly _tag: 'LockAll' };
 
-const Keys = define<{ readonly log: readonly string[] }, Msg, Props>('test-parser-ctx', {
+const Keys = define<{ readonly log: readonly string[] }, Msg, Props>()('test-parser-ctx', {
   props: { keys: prop.string({ default: 'ArrowLeft ArrowRight' }) },
   stores: [layout],
   init: () => ({ log: [] }),

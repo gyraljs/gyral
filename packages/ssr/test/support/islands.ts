@@ -9,7 +9,7 @@ interface State {
 type Msg = { readonly _tag: 'Inc' };
 
 const island = (tag: string, hydrate: HydrateStrategy) =>
-  define<State, Msg>(tag, {
+  define<State, Msg>()(tag, {
     hydrate,
     init: () => ({ count: 0, hydrated: false }),
     intent: { Inc: () => ({ _tag: 'Inc' }) },
@@ -34,7 +34,7 @@ export const counter = defineStore<{ readonly n: number }, { readonly _tag: 'Bum
   },
 );
 
-export const StoreIsland = define<{ readonly seen: boolean }, never>('test-island-store', {
+export const StoreIsland = define<{ readonly seen: boolean }, never>()('test-island-store', {
   hydrate: 'idle',
   stores: [counter],
   init: () => ({ seen: false }),
@@ -44,7 +44,7 @@ export const StoreIsland = define<{ readonly seen: boolean }, never>('test-islan
 });
 
 /** An island whose shadow root holds a nested Gyral child: the child hydrates on its own. */
-export const ParentIsland = define<{ readonly label: string }, never>('test-island-parent', {
+export const ParentIsland = define<{ readonly label: string }, never>()('test-island-parent', {
   hydrate: 'interaction',
   init: () => ({ label: 'parent' }),
   intent: {},
@@ -55,7 +55,7 @@ export const ParentIsland = define<{ readonly label: string }, never>('test-isla
 });
 
 /** A component (hydrated at load) whose shadow root holds an island: islands sit anywhere. */
-export const IslandHost = define<{ readonly n: number }, never>('test-island-host', {
+export const IslandHost = define<{ readonly n: number }, never>()('test-island-host', {
   init: () => ({ n: 1 }),
   intent: {},
   update: {},

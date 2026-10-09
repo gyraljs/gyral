@@ -22,7 +22,7 @@ let renders: string[] = [];
 
 const load = defineDriver<string, string>({ name: 'load', run: (id) => id });
 
-const Card = define<State, Msg, Props>('test-card', {
+const Card = define<State, Msg, Props>()('test-card', {
   props: { userId: prop.string({ required: true }), label: prop.string({ required: true }) },
   init: (props) => ({ draft: '', loadedFor: props.userId, saved: [], fetched: [] }),
   intent: { Save: () => ({ _tag: 'Save' }) },
@@ -47,7 +47,7 @@ const Card = define<State, Msg, Props>('test-card', {
   },
 });
 
-const Plain = define<{ readonly n: number }, never, { readonly label: string }>('test-plain', {
+const Plain = define<{ readonly n: number }, never, { readonly label: string }>()('test-plain', {
   props: { label: prop.string({ required: true }) },
   init: () => ({ n: 0 }),
   intent: {},
@@ -131,7 +131,7 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     readonly note?: string | undefined;
   }
 
-  const Badge = define<{ readonly n: number }, never, BadgeProps>('test-badge', {
+  const Badge = define<{ readonly n: number }, never, BadgeProps>()('test-badge', {
     props: {
       label: prop.string({ required: true }),
       size: prop.number({ default: 3 }),
@@ -175,7 +175,7 @@ describe('honest prop types (ADR 0007 addendum)', () => {
   });
 
   it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {
-    define<{ readonly n: number }, never, { readonly code: string }>('test-badge-types', {
+    define<{ readonly n: number }, never, { readonly code: string }>()('test-badge-types', {
       // @ts-expect-error -- `code: string` needs `required: true` or a `default`
       props: { code: prop.string() },
       init: () => ({ n: 0 }),
@@ -187,7 +187,7 @@ describe('honest prop types (ADR 0007 addendum)', () => {
 
   it('rejects a prop that shadows a built-in element property in development (view/05)', () => {
     const shadowing = () =>
-      define('test-shadowing-props', {
+      define()('test-shadowing-props', {
         props: { hidden: prop.boolean(), title: prop.string(), label: prop.string() },
         init: () => ({ n: 0 }),
         intent: {},

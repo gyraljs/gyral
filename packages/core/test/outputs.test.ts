@@ -6,7 +6,6 @@ import {
   define,
   emit,
   html,
-  intents,
   OUTPUT_EVENT,
   outputs,
   prop,
@@ -21,7 +20,7 @@ type PickerMsg = { readonly _tag: 'Pick'; readonly id: number } | { readonly _ta
 
 const emitPicker = outputs<PickerOut>();
 
-const Picker = define<object, PickerMsg, { readonly label: string }, PickerOut>('test-picker', {
+const Picker = define<object, PickerMsg, { readonly label: string }, PickerOut>()('test-picker', {
   props: { label: prop.string({ default: 'pick' }) },
   init: () => ({}),
   intent: {
@@ -39,9 +38,7 @@ const Picker = define<object, PickerMsg, { readonly label: string }, PickerOut>(
 });
 
 type ParentMsg = { readonly _tag: 'FromPicker'; readonly out: PickerOut };
-const pi = intents<ParentMsg>();
-
-const Parent = define<{ readonly log: readonly string[] }, ParentMsg>('test-picker-parent', {
+const Parent = define<{ readonly log: readonly string[] }, ParentMsg>()('test-picker-parent', {
   init: () => ({ log: [] }),
   intent: { FromPicker: child(Picker, (out) => ({ _tag: 'FromPicker', out })) },
   update: {
@@ -49,8 +46,8 @@ const Parent = define<{ readonly log: readonly string[] }, ParentMsg>('test-pick
       log: [...s.log, out._tag === 'Picked' ? `picked ${String(out.id)}` : 'cleared'],
     }),
   },
-  view: (s) => html`
-    <test-picker data-intent=${pi.FromPicker}></test-picker>
+  view: (s, i) => html`
+    <test-picker data-intent=${i.FromPicker}></test-picker>
     <output>${s.log.join(', ')}</output>
   `,
 });

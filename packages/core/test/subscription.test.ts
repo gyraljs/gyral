@@ -79,7 +79,7 @@ const join = (name: string): Command<Msg> =>
     onFailure: (error): Msg => ({ _tag: 'Failed', why: String(error) }),
   });
 
-const Probe = define<State, Msg>('test-subscription-probe', {
+const Probe = define<State, Msg>()('test-subscription-probe', {
   init: () => [
     { n: -1, lines: [], failed: '' },
     [
@@ -194,7 +194,7 @@ const movesDriver = subscription<number>('moves', (emit, { signal }) => {
   return watcher.unwatch;
 });
 
-const Moves = define<{ readonly n: number }, { readonly _tag: 'Moved'; readonly n: number }>(
+const Moves = define<{ readonly n: number }, { readonly _tag: 'Moved'; readonly n: number }>()(
   'test-subscription-moves',
   {
     init: () => [

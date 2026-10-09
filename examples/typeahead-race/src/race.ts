@@ -9,7 +9,7 @@ export interface State {
 export type Msg = { readonly _tag: 'Typed'; readonly query: string };
 
 /** One field drives both panels, so they see exactly the same keystrokes. */
-export const Race = define<State, Msg>('gy-typeahead-race', {
+export const Race = define<State, Msg>()('gy-typeahead-race', {
   init: () => ({ query: '' }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),

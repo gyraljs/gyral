@@ -18,7 +18,7 @@ const component = (markup: string, extra = ''): Record<string, string> => ({
   'main.ts': `
     import { define } from ${JSON.stringify(CORE)};
     import { html } from ${JSON.stringify(VIEW)};
-    export const C = define('x-c', {
+    export const C = define()('x-c', {
       init: () => ({}),
       intent: { Run: () => ({ _tag: 'Run' }) },
       update: { Run: (s) => s },

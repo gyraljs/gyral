@@ -11,14 +11,14 @@ const tint = defineHook<[color: string]>({
   client: () => undefined,
 });
 
-define<{ readonly w: number }, never>('sv-shadow', {
+define<{ readonly w: number }, never>()('sv-shadow', {
   init: () => ({ w: 40 }),
   intent: {},
   update: {},
   view: (s) => html`<p style=${`--w: ${String(s.w)}%`}>shadow</p>`,
 });
 
-define<{ readonly w: number }, never>('sv-light', {
+define<{ readonly w: number }, never>()('sv-light', {
   shadow: false,
   init: () => ({ w: 60 }),
   intent: {},

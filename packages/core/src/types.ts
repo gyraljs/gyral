@@ -104,43 +104,25 @@ export type IntentParser<M, P = unknown> = (
   ctx: Ctx<P>,
 ) => ParseResult<M> | Promise<ParseResult<M>>;
 
-type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
-
-declare const INTENT_ONLY: unique symbol;
+type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
 
 /**
- * Intent names that are not messages (ADR 0001 "Intent names"). List them in the component's
- * message union, `type Msg = Request | Loaded | IntentName<'Archive' | 'Restore'>`: each
- * becomes a key of `intent` (required) whose parser may return any message, and a name in the
- * view's `i` and in `intents<Msg>()`. They are never dispatched, so they need no reducer.
- * Helpers that build messages for such a component return `Messages<Msg>`.
+ * The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
+ * variant; any other name is an intent of its own whose parser may produce any message.
  */
-export interface IntentName<Name extends string> {
-  readonly _tag: Name;
-  /**
-   * Brand: real messages never have it, so `Messages<M>` can tell the two apart, and no code
-   * can build one, so an intent name is never sent or produced by a command.
-   */
-  readonly [INTENT_ONLY]: true;
-}
-
-/** The messages of a union, without its `IntentName`s: what parsers and commands produce. */
-export type Messages<M extends Tagged> = Exclude<M, IntentName<string>>;
-
-/** The tags of a union's `IntentName`s. */
-type IntentOnly<M extends Tagged> = Extract<M, IntentName<string>>['_tag'];
+export type ParserFor<M extends Tagged, P, K> = K extends M['_tag']
+  ? IntentParser<Variant<M, K>, P>
+  : IntentParser<M, P>;
 
 /**
- * Intent parsers, keyed by intent name. An intent name is a message tag, whose parser returns
- * that variant (optional: messages from drivers need none), or a name declared with
- * `IntentName<…>` in the union, whose parser may return any message (required). Any other key
- * fails with "'X' does not exist in type 'Intents<…>'". Several controls that change one thing
- * can also share one intent and tell themselves apart by `name`.
+ * Intent parsers keyed by intent name (ADR 0001, ADR 0023). The keys are the component's
+ * intent names: `define<State, Msg>()(tag, { intent: { Archive: …, Increment: … } })` gives the
+ * view `i.Archive` and `i.Increment`. A key that is a message tag must return that variant; any
+ * other key may return any message (several controls that change one thing can also share one
+ * intent and tell themselves apart by `name`). Messages from drivers need no parser.
  */
-export type Intents<M extends Tagged, P = unknown> = {
-  readonly [K in Exclude<M['_tag'], IntentOnly<M>>]?: IntentParser<Variant<M, K>, P>;
-} & {
-  readonly [K in IntentOnly<M>]: IntentParser<Messages<M>, P>;
+export type Intents<M extends Tagged, P = unknown, N extends string = string> = {
+  readonly [K in N]: ParserFor<M, P, K>;
 };
 
 type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
@@ -150,7 +132,7 @@ type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
  * for framework messages. Reducers may return commands.
  */
 export type Update<S, M extends Tagged, P = object> = {
-  readonly [K in Exclude<M['_tag'], IntentOnly<M>>]: Reducer<S, M, Variant<M, K>, P>;
+  readonly [K in M['_tag']]: Reducer<S, M, Variant<M, K>, P>;
 } & {
   readonly PropsChanged?: Reducer<S, M, PropsChanged<P>, P>;
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
@@ -158,8 +140,11 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
 };
 
-/** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
-export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
+/**
+ * A component's intent names, the keys of its `intent` object, as the view's `i` and as
+ * `intentsOf<typeof C>()`, so `data-intent=${i.Increment}` is checked (ADR 0023).
+ */
+export type IntentNames<N extends string> = { readonly [K in N]: K };
 
 /**
  * The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per
@@ -180,7 +165,17 @@ type InitField<S, M extends Tagged, P> = Stateless extends S
   ? { readonly init?: Init<S, M, P> }
   : { readonly init: Init<S, M, P> };
 
-export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitField<S, M, P>;
+/**
+ * A component spec. `N` is the component's intent names, the keys of `intent` (ADR 0023).
+ */
+export type ComponentSpec<S, M extends Tagged, P, N extends string = string> = SpecBody<
+  S,
+  M,
+  P,
+  N,
+  Intents<M, P, N>
+> &
+  InitField<S, M, P>;
 
 /**
  * `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
@@ -190,15 +185,19 @@ export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitFiel
  */
 export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
 
-interface SpecBody<S, M extends Tagged, P> {
+interface SpecBody<S, M extends Tagged, P, N extends string, I> {
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
   /** INTENT: platform events to messages. */
-  readonly intent: Intents<M, P>;
+  readonly intent: I;
   /** MODEL: pure state transitions. */
   readonly update: Update<S, M, P>;
-  /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
-  readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => ChildValue;
+  /**
+   * VIEW: pure function of state and props. Name intents in markup; never attach closures.
+   * (A method, so a class typed with fewer intent names, e.g. `GyralElementClass<S, M, P, O>`
+   * for a recursive component, still accepts it.)
+   */
+  view(state: S, intents: IntentNames<N>, ctx: Ctx<P>): ChildValue;
   /**
    * Shadow-root styles: `css` values, plain CSS strings, or arrays of them, nested freely.
    * Each maps to one shared `CSSStyleSheet`. Ignored (with a warning) when `shadow: false`.

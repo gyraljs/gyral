@@ -1,85 +1,77 @@
-// Intent names that are not message tags (ADR 0001 "Intent names"): a component lists them in
-// its message union with `IntentName<…>`; each is a required `intent` key whose parser may
-// return any message, a name in the view's `i` and in `intents<Msg>()`, and needs no reducer.
-// Tag keys keep returning their variant. The type checks run under `pnpm typecheck` (tsc covers
-// tests); the document table runs in Chromium.
+// Intent names are the keys of `intent` (ADR 0023): `define<S, M>()(tag, spec)` infers them, the
+// view's `i` and `intentsOf<typeof C>()` offer exactly those names, a key that is a message tag
+// must return that variant, and any other key may return any message and needs no reducer. The
+// type checks run under `pnpm typecheck` (tsc covers tests); the document table runs in Chromium.
 import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
 import {
   define,
   each,
   html,
-  intents,
+  intentsOf,
   prop,
   settled,
   type IntentInput,
-  type IntentName,
   type IntentNames,
-  type Messages,
+  type TemplateResult,
 } from '../src/index.js';
 
 // ---- Type tests -------------------------------------------------------------------------
 
 type Request = { readonly _tag: 'Request'; readonly action: string; readonly id?: number };
 type Answered = { readonly _tag: 'Answered'; readonly ok: boolean };
-type TMsg = Request | Answered | IntentName<'Archive' | 'Restore'>;
+type TMsg = Request | Answered;
 
-describe('IntentName types', () => {
-  it('keeps real messages apart from intent names', () => {
-    expectTypeOf<Messages<TMsg>>().toEqualTypeOf<Request | Answered>();
-    expectTypeOf<IntentNames<TMsg>>().toEqualTypeOf<{
-      readonly Request: 'Request';
-      readonly Answered: 'Answered';
-      readonly Archive: 'Archive';
-      readonly Restore: 'Restore';
-    }>();
-  });
-
+describe('inferred intent names', () => {
   it('type-checks parsers, reducers, the view and props in ctx', () => {
-    define<{ readonly n: number }, TMsg, { readonly folder: string }>('test-names-types', {
-      props: { folder: prop.string({ default: 'inbox' }) },
-      init: () => ({ n: 0 }),
-      intent: {
-        // A non-tag key may return any message; input and ctx keep their types.
-        Archive: (input, { props }) => {
-          expectTypeOf(input).toEqualTypeOf<IntentInput>();
-          expectTypeOf(props.folder).toEqualTypeOf<string>();
-          return { _tag: 'Request', action: `archive:${props.folder}`, id: Number(input.value) };
+    const C = define<{ readonly n: number }, TMsg, { readonly folder: string }>()(
+      'test-names-types',
+      {
+        props: { folder: prop.string({ default: 'inbox' }) },
+        init: () => ({ n: 0 }),
+        intent: {
+          // A key that isn't a tag may return any message; input and ctx keep their types.
+          Archive: (input, { props }) => {
+            expectTypeOf(input).toEqualTypeOf<IntentInput>();
+            expectTypeOf(props.folder).toEqualTypeOf<string>();
+            return { _tag: 'Request', action: `archive:${props.folder}`, id: Number(input.value) };
+          },
+          Restore: () => ({ _tag: 'Answered', ok: true }),
+          // A tag key still returns its own variant.
+          // @ts-expect-error: the Request parser must return a Request
+          Request: () => ({ _tag: 'Answered', ok: true }),
         },
-        Restore: () => ({ _tag: 'Answered', ok: true }),
-        // A tag key still returns its own variant.
-        // @ts-expect-error: the Request parser must return a Request
-        Request: () => ({ _tag: 'Answered', ok: true }), // eslint-disable-line gyral/unused-intent
+        update: {
+          Request: (s) => s,
+          Answered: (s, m) => ({ n: m.ok ? s.n + 1 : s.n }),
+          // No reducer for Archive/Restore: they are never dispatched.
+        },
+        view: (_s, i) => {
+          expectTypeOf(i).toEqualTypeOf<IntentNames<'Archive' | 'Restore' | 'Request'>>();
+          return html`
+            <button data-intent=${i.Archive}>Archive</button>
+            <button data-intent-pointerdown=${i.Restore}>Restore</button>
+            <button data-intent=${i.Request}>Request</button>
+          `;
+        },
       },
-      update: {
-        Request: (s) => s,
-        Answered: (s, m) => ({ n: m.ok ? s.n + 1 : s.n }),
-        // No reducer for Archive/Restore: they are never dispatched.
-      },
-      view: (_s, i) => html`
-        <button data-intent=${i.Archive}>Archive</button>
-        <button data-intent-pointerdown=${i.Restore}>Restore</button>
-      `,
-    });
-    // A typo in the view fails like any unknown name.
-    const i = intents<TMsg>();
+    );
+    expectTypeOf(new C().state.n).toEqualTypeOf<number>();
+    // Rows take the same names from the class.
+    const i = intentsOf<typeof C>();
+    expectTypeOf(i.Archive).toEqualTypeOf<'Archive'>();
     // @ts-expect-error: 'Archvie' is not an intent name
     expect(i.Archvie).toBe('Archvie'); // the runtime proxy answers; the types refuse
-    expectTypeOf(i.Archive).toEqualTypeOf<'Archive'>();
+    // @ts-expect-error: Answered is a message tag with no parser, so not an intent name
+    expect(i.Answered).toBe('Answered');
   });
 
-  it('requires a parser for every intent name, and no reducer for one', () => {
-    define<{ readonly n: number }, TMsg>('test-names-missing', {
-      init: () => ({ n: 0 }),
-      // @ts-expect-error: Restore has no parser
-      intent: { Archive: () => ({ _tag: 'Answered', ok: true }) },
-      update: { Request: (s) => s, Answered: (s) => s },
-      view: () => html``,
-    });
-    define<{ readonly n: number }, TMsg>('test-names-reducer', {
+  it('refuses a reducer for an intent name and a non-message from a parser', () => {
+    define<{ readonly n: number }, TMsg>()('test-names-reducer', {
       init: () => ({ n: 0 }),
       intent: {
         Archive: () => ({ _tag: 'Answered', ok: true }),
-        Restore: () => ({ _tag: 'Answered', ok: true }),
+        // @ts-expect-error: a parser returns one of the component's messages
+        Restore: () => ({ _tag: 'Restored' }),
       },
       update: {
         Request: (s) => s,
@@ -91,10 +83,27 @@ describe('IntentName types', () => {
     });
   });
 
-  it('cannot build an intent name, so none is ever sent or produced by a command', () => {
-    // @ts-expect-error: the brand is a unique symbol no module exports
-    const name: IntentName<'Archive'> = { _tag: 'Archive' };
-    expect(name._tag).toBe('Archive');
+  it('catches a misspelled key when the view names the intended one', () => {
+    define<{ readonly n: number }, TMsg>()('test-names-typo', {
+      init: () => ({ n: 0 }),
+      intent: { Archvie: () => ({ _tag: 'Answered', ok: true }) },
+      update: { Request: (s) => s, Answered: (s) => s },
+      // @ts-expect-error: 'Archive' is not an intent name (the key is misspelled)
+      view: (_s, i) => html`<button data-intent=${i.Archive}>Archive</button>`,
+    });
+  });
+
+  it('infers the state, messages and props when define() gets no type arguments', () => {
+    const Badge = define()('test-names-inferred', {
+      props: { count: prop.number({ default: 1 }) },
+      intent: {},
+      update: {},
+      view: (_s, i, { props }) => {
+        expectTypeOf<keyof typeof i>().toEqualTypeOf<never>();
+        return html`<b>${props.count}</b>`;
+      },
+    });
+    expectTypeOf(new Badge().count).toEqualTypeOf<number>();
   });
 });
 
@@ -110,22 +119,19 @@ type Action =
   | { readonly kind: 'page-size'; readonly size: string }
   | { readonly kind: 'rename'; readonly title: string };
 
-/** Seven intents, one message: every control only sends a request to the server. */
-type TableMsg =
-  | { readonly _tag: 'Send'; readonly action: Action }
-  | IntentName<
-      'Archive' | 'Restore' | 'Star' | 'Duplicate' | 'SortBy' | 'PageSize' | 'RenameFolder'
-    >;
+/** One message: every control only sends a request to the server. */
+type TableMsg = { readonly _tag: 'Send'; readonly action: Action };
 
 interface Table {
   readonly docs: readonly Doc[];
   readonly sent: readonly Action[];
 }
 
-// Rows name intents through a module constant, which follows the same union.
-const ti = intents<TableMsg>();
+// Rows name intents through a module constant typed by the component. The row's return type
+// is written out: the row, the view and DocTable's type would otherwise infer each other.
+const ti = intentsOf<typeof DocTable>();
 
-const DocRow = (doc: Doc) =>
+const DocRow = (doc: Doc): TemplateResult =>
   html`<li data-doc=${doc.id}>
     ${doc.title}
     <button type="button" data-intent=${doc.archived ? ti.Restore : ti.Archive}>
@@ -136,10 +142,9 @@ const DocRow = (doc: Doc) =>
 
 const docOf = (target: Element): number =>
   Number(target.closest('[data-doc]')?.getAttribute('data-doc'));
-// Helpers that build messages return Messages<TableMsg>: the union without its intent names.
-const send = (action: Action): Messages<TableMsg> => ({ _tag: 'Send', action });
+const send = (action: Action): TableMsg => ({ _tag: 'Send', action });
 
-const DocTable = define<Table, TableMsg>('test-doc-table', {
+const DocTable = define<Table, TableMsg>()('test-doc-table', {
   init: () => ({
     docs: [
       { id: 1, title: 'Budget', archived: false },

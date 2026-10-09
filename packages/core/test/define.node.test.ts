@@ -16,7 +16,7 @@ const Counter = define<
   { readonly count: number },
   Msg,
   { readonly start: number; readonly tags: readonly string[] }
->('test-node-counter', {
+>()('test-node-counter', {
   props: {
     start: prop.number({ default: 1 }),
     tags: prop.value(strings, { default: [] }),
@@ -32,7 +32,7 @@ const Counter = define<
   `,
 });
 
-const Light = define<Stateless, never>('test-node-light', {
+const Light = define<Stateless, never>()('test-node-light', {
   shadow: false,
   hydrate: 'visible',
   intent: {},

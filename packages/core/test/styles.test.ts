@@ -15,7 +15,7 @@ const view = () =>
     <b>b</b>
     <i>i</i>`;
 
-const Styled = define<Stateless, never>('test-styled', {
+const Styled = define<Stateless, never>()('test-styled', {
   intent: {},
   update: {},
   view,
@@ -33,7 +33,7 @@ const Styled = define<Stateless, never>('test-styled', {
   ],
 });
 
-const Other = define<Stateless, never>('test-styled-other', {
+const Other = define<Stateless, never>()('test-styled-other', {
   intent: {},
   update: {},
   view,

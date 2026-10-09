@@ -122,8 +122,8 @@ const counter = {
   update: { Inc: (s: { n: number }) => ({ n: s.n + 1 }) },
   view: (s: { n: number }) => html`<button data-intent="Inc">n ${s.n}</button>`,
 };
-define<{ n: number }, Msg>('test-mm-shadow', counter);
-define<{ n: number }, Msg>('test-mm-light', { ...counter, shadow: false });
+define<{ n: number }, Msg>()('test-mm-shadow', counter);
+define<{ n: number }, Msg>()('test-mm-light', { ...counter, shadow: false });
 
 describe('a host whose server DOM does not match', () => {
   const page = (tag: string, n: number) =>

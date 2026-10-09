@@ -26,7 +26,7 @@ type Msg =
 
 const HOSTILE = `'</script><script>alert(1)</script>`;
 
-define<State, Msg, Props>('ssr-card', {
+define<State, Msg, Props>()('ssr-card', {
   props: {
     label: prop.string({ required: true }),
     items: prop.value(v.array(v.string()), { required: true }),
@@ -46,7 +46,7 @@ define<State, Msg, Props>('ssr-card', {
 });
 
 // State copied from props: the case seed deduplication exists for.
-define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>(
+define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>()(
   'ssr-copy',
   {
     props: { items: prop.value(v.array(v.string()), { required: true }) },

@@ -2,7 +2,7 @@
 // `data-intent-<event>=${i.Msg}` names the intent for one event type, before the element's
 // plain `data-intent`; the root listens for the event types in the attribute names.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { define, each, html, intents, raw, settled } from '../src/index.js';
+import { define, each, html, intentsOf, raw, settled, type TemplateResult } from '../src/index.js';
 import { eventsOf } from '../src/intent.js';
 import { normalize } from '../src/view/index.js';
 
@@ -21,11 +21,12 @@ type Msg =
   | { readonly _tag: 'Enter' }
   | { readonly _tag: 'Raw' };
 
-const i = intents<Msg>();
+// Rows take the component's intent names; the row's return type breaks the inference circle.
+const i = intentsOf<typeof Table>();
 const idOf = (el: Element): string => el.getAttribute('data-id') ?? '';
 
 // A pure row: two per-event intents and a plain click intent on one element.
-const CardRow = (c: Card) =>
+const CardRow = (c: Card): TemplateResult =>
   html`<li
     data-id=${c.id}
     data-intent-pointerdown=${i.Grab}
@@ -35,7 +36,7 @@ const CardRow = (c: Card) =>
     <span>${c.id}</span>
   </li>`;
 
-const Table = define<State, Msg>('test-per-event', {
+const Table = define<State, Msg>()('test-per-event', {
   init: () => ({ cards: [{ id: 'a' }, { id: 'b' }], log: [] }),
   intent: {
     Grab: ({ target }) => ({ _tag: 'Grab', id: idOf(target) }),
@@ -54,7 +55,7 @@ const Table = define<State, Msg>('test-per-event', {
     Enter: (s) => ({ ...s, log: [...s.log, 'enter'] }),
     Raw: (s) => ({ ...s, log: [...s.log, 'raw'] }),
   },
-  view: (s) => html`
+  view: (s, i) => html`
     <ul data-intent-keydown=${i.Key} data-intent-focusin=${i.Enter} tabindex="0">
       ${each(s.cards, (c) => c.id, CardRow)}
     </ul>
@@ -141,7 +142,7 @@ describe('per-event intents', () => {
   });
 
   it('adjacent static per-event attributes in raw() markup both fire', async () => {
-    const Adjacent = define<State, Msg>('test-per-event-adjacent', {
+    const Adjacent = define<State, Msg>()('test-per-event-adjacent', {
       init: () => ({ cards: [], log: [] }),
       intent: {
         Grab: () => ({ _tag: 'Grab', id: 'raw' }),

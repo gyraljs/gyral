@@ -4,7 +4,7 @@ import { page, renderToString } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Stamp' };
 
-define<{ readonly at: Date | string }, Msg>('ssr-dated', {
+define<{ readonly at: Date | string }, Msg>()('ssr-dated', {
   init: () => ({ at: '2026-10-04' }),
   intent: {},
   update: { Stamp: () => ({ at: new Date(0) }) },

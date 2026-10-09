@@ -14,7 +14,7 @@ type Msg =
 /** Markup characters in a bound attribute: the server escapes `<` and `>` there too (06). */
 export const PLACEHOLDER = 'Say <hi> & "bye"';
 
-export const Note = define<State, Msg>('test-note', {
+export const Note = define<State, Msg>()('test-note', {
   init: () => ({ message: 'Hello </textarea><b>x</b> & "q"', invalid: false }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', text: value ?? '' }),

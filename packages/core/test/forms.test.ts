@@ -34,7 +34,7 @@ const Taken = z.string().refine(async (s) => {
   return s !== 'admin';
 }, 'Name taken');
 
-const SignupEl = define<State, Msg>('test-signup', {
+const SignupEl = define<State, Msg>()('test-signup', {
   init: () => ({ saved: [], errors: {}, nick: '' }),
   intent: {
     Register: form(Signup, (d) => ({ _tag: 'Register', email: d.email, age: d.age })),
@@ -155,7 +155,7 @@ interface NameState {
   readonly live: boolean;
   readonly errors: Readonly<Record<string, readonly string[]>>;
 }
-const NameEl = define<NameState, NameMsg>('test-schema-messages', {
+const NameEl = define<NameState, NameMsg>()('test-schema-messages', {
   init: () => ({ live: false, errors: {} }),
   intent: { Save: form(Named, (d) => ({ _tag: 'Save', name: d.name })) },
   update: {

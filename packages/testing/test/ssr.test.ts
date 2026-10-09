@@ -28,7 +28,7 @@ afterEach(() => {
 type Msg = { readonly _tag: 'Inc' };
 
 // Hand-written server markup (production style: no development markers), hydrated in place.
-define<{ readonly n: number }, Msg>('test-ssr-counter', {
+define<{ readonly n: number }, Msg>()('test-ssr-counter', {
   hydrate: 'idle',
   init: () => ({ n: 0 }),
   intent: { Inc: () => ({ _tag: 'Inc' }) },

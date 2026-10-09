@@ -67,7 +67,7 @@ const modeSchema = {
   },
 };
 
-export const Panel = define<State, Msg, Props>('gy-search-panel', {
+export const Panel = define<State, Msg, Props>()('gy-search-panel', {
   props: {
     query: prop.string({ default: '' }),
     mode: prop.string({ schema: modeSchema, default: 'naive' }),

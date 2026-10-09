@@ -20,10 +20,10 @@ interface State {
   readonly log: readonly string[];
 }
 type Msg = { readonly _tag: 'Open' } | { readonly _tag: 'Hit'; readonly type: string };
-type View = (s: State, i: IntentNames<Msg>) => ChildValue;
+type View = (s: State, i: IntentNames<'Open' | 'Hit'>) => ChildValue;
 
 const component = (tag: string, view: View, events?: readonly string[]) =>
-  define<State, Msg>(tag, {
+  define<State, Msg>()(tag, {
     init: () => ({ open: false, on: 'keyup', log: [] }),
     ...(events === undefined ? {} : { events }),
     intent: {

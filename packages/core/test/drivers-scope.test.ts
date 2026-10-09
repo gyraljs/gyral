@@ -31,15 +31,15 @@ const spec = {
 };
 
 // A leaf component, and a parent that renders it inside its own shadow root.
-const Leaf = define<State, Msg>('test-drivers-leaf', {
+const Leaf = define<State, Msg>()('test-drivers-leaf', {
   ...spec,
   view: (s) => html`<p>${s.got.join(',')}</p>`,
 });
-define<State, Msg>('test-drivers-parent', {
+define<State, Msg>()('test-drivers-parent', {
   ...spec,
   view: () => html`<test-drivers-leaf></test-drivers-leaf>`,
 });
-const WithSpec = define<State, Msg>('test-drivers-spec', {
+const WithSpec = define<State, Msg>()('test-drivers-spec', {
   ...spec,
   view: () => html``,
   drivers: { echo: fake('spec') },

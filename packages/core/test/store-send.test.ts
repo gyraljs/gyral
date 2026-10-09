@@ -28,7 +28,7 @@ const cart = defineStore<Cart, CartMsg>('send-cart', {
   },
 });
 
-define<{ readonly x: number }, never>('send-owner', {
+define<{ readonly x: number }, never>()('send-owner', {
   stores: [cart],
   init: () => ({ x: 0 }),
   intent: {},

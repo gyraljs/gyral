@@ -19,7 +19,7 @@ export const MIN_LAST = 3;
 export const fullName = ({ first, last }: State): string =>
   first.length > 0 && last.length >= MIN_LAST ? `${last.toUpperCase()}, ${first}` : '';
 
-export const HelloLastname = define<State, Msg>('gy-hello-lastname', {
+export const HelloLastname = define<State, Msg>()('gy-hello-lastname', {
   init: () => ({ first: '', last: '' }),
   intent: {
     First: ({ value }) => ({ _tag: 'First', value: value ?? '' }),

@@ -27,7 +27,7 @@ const work = defineDriver<string, string, string>({
   toError: String,
 });
 
-const Fx = define<State, Msg>('test-fx', {
+const Fx = define<State, Msg>()('test-fx', {
   init: () => [{ log: [] }, [command(work, 'init', { onSuccess: (v) => ({ _tag: 'Done', v }) })]],
   intent: {},
   update: {

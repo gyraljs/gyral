@@ -22,7 +22,7 @@ const burst = (name: string, count: number) =>
 type Msg = { readonly _tag: 'Progress'; readonly n: number };
 
 const meter = (tag: string, count: number) =>
-  define<{ readonly n: number }, Msg>(tag, {
+  define<{ readonly n: number }, Msg>()(tag, {
     init: () => [
       { n: 0 },
       [command(burst(tag, count), undefined, { onSuccess: (n): Msg => ({ _tag: 'Progress', n }) })],

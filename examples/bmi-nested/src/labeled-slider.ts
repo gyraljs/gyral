@@ -21,7 +21,7 @@ type Msg = { readonly _tag: 'Changed'; readonly value: number };
  * parent's value changes, the render writes it to the input unless the input already shows it.
  * A render where the value is unchanged leaves the input as the user set it.
  */
-export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
+export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>()(
   'gy-labeled-slider',
   {
     props: {

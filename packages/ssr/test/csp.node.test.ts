@@ -6,7 +6,7 @@ import { css, define, html } from '@gyral/core';
 import { registryVersion } from '@gyral/core/server';
 import { contentSecurityPolicy, renderPage, renderToString } from '../src/index.js';
 
-define<{ readonly n: number }, never>('csp-styled', {
+define<{ readonly n: number }, never>()('csp-styled', {
   init: () => ({ n: 0 }),
   intent: {},
   update: {},
@@ -20,7 +20,7 @@ define<{ readonly n: number }, never>('csp-styled', {
 
 /** A shadow component with its own CSS, defined when called (late registration). */
 const styled = (tag: string, color: string) =>
-  define<{ readonly n: number }, never>(tag, {
+  define<{ readonly n: number }, never>()(tag, {
     init: () => ({ n: 0 }),
     intent: {},
     update: {},
@@ -96,7 +96,7 @@ describe('renderPage({ csp: options }) builds the header at render time', () => 
 describe('the registry version the cache keys on (gyral-g1r.23)', () => {
   it('changes with every registration, light components included, and not on a repeat', () => {
     const before = registryVersion();
-    define<{ readonly n: number }, never>('csp-light', {
+    define<{ readonly n: number }, never>()('csp-light', {
       shadow: false,
       init: () => ({ n: 0 }),
       intent: {},
@@ -119,7 +119,7 @@ describe('the registry version the cache keys on (gyral-g1r.23)', () => {
         'content-security-policy',
       ) ?? '';
     const first = header();
-    define<{ readonly n: number }, never>('csp-light-2', {
+    define<{ readonly n: number }, never>()('csp-light-2', {
       shadow: false,
       init: () => ({ n: 0 }),
       intent: {},

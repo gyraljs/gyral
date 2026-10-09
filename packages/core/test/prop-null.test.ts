@@ -9,7 +9,7 @@ const props = {
   reviewer: prop.json(v.nullable(v.string()), { default: 'the team' }),
 };
 
-const Owner = define<Stateless, never, PropsOf<typeof props>>('test-prop-null', {
+const Owner = define<Stateless, never, PropsOf<typeof props>>()('test-prop-null', {
   props,
   intent: {},
   update: {},

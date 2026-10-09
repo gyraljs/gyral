@@ -6,7 +6,7 @@ export interface State {
 
 export type Msg = { readonly _tag: 'Toggled'; readonly on: boolean };
 
-export const Checkbox = define<State, Msg>('gy-checkbox', {
+export const Checkbox = define<State, Msg>()('gy-checkbox', {
   init: () => ({ on: false }),
   intent: {
     // Checkboxes fire their intent on `change`, and `checked` is read for us (ADR 0001).

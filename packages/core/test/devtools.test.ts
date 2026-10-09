@@ -51,7 +51,7 @@ type Msg =
   | { readonly _tag: 'Got'; readonly v: string }
   | { readonly _tag: 'Bump' };
 
-const Probe = define<{ readonly got: readonly string[] }, Msg>('test-devtools-probe', {
+const Probe = define<{ readonly got: readonly string[] }, Msg>()('test-devtools-probe', {
   init: () => ({ got: [] }),
   stores: [counter],
   intent: { Bump: () => ({ _tag: 'Bump' }) },

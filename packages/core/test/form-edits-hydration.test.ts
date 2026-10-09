@@ -62,7 +62,7 @@ const spec = {
       )}
     </div>`,
 };
-define<State, Msg>('test-fe-form', spec);
+define<State, Msg>()('test-fe-form', spec);
 
 type Host = HTMLElement & { readonly state: State; send(msg: Msg): void };
 
@@ -186,7 +186,7 @@ describe('live form state after hydration (07 "Form state")', () => {
     );
     const c = controls(root);
     c.edit();
-    define<State, Msg>('test-fe-pending', { ...spec, shadow: false });
+    define<State, Msg>()('test-fe-pending', { ...spec, shadow: false });
     await settled();
     const el = root.firstElementChild as Host;
     expect(controls(el).input).toBe(c.input); // hydrated in place

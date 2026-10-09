@@ -27,7 +27,7 @@ const within = (range: { readonly min: number; readonly max: number }) =>
 export const bmiOf = ({ weight, height }: State): number =>
   Math.round(weight / (height / 100) ** 2);
 
-export const Bmi = define<State, Msg>('gy-bmi', {
+export const Bmi = define<State, Msg>()('gy-bmi', {
   init: () => ({ weight: 70, height: 170 }),
   intent: {
     Weight: field(within(WEIGHT), (kg) => ({ _tag: 'Weight', kg })),

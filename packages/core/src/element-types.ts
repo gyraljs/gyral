@@ -26,11 +26,19 @@ export interface GyralElement<S, M extends Tagged> extends HTMLElement {
   initialMessages: readonly Tagged[];
 }
 
-export interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = never> {
+export interface GyralElementClass<
+  S,
+  M extends Tagged,
+  P,
+  O extends Tagged = never,
+  N extends string = string,
+> {
   /** Instances expose their declared props as settable properties. */
   new (): GyralElement<S, M> & { -readonly [K in keyof P]: P[K] };
-  readonly spec: ComponentSpec<S, M, P>;
+  readonly spec: ComponentSpec<S, M, P, N>;
   readonly tagName: string;
   /** Type-only: the outputs this component emits (read by `child()`). */
   readonly outputs?: O;
+  /** Type-only: the component's intent names, the keys of `intent` (read by `intentsOf()`). */
+  readonly intentNames?: N;
 }

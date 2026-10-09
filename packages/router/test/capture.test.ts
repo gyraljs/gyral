@@ -7,7 +7,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 
-const Listener = define<State, Msg>('test-capture-app', {
+const Listener = define<State, Msg>()('test-capture-app', {
   init: () => [{ seen: [] }, [listen((location) => ({ _tag: 'Routed', location }))]],
   intent: {},
   update: { Routed: (s, m) => ({ seen: [...s.seen, m.location.pathname] }) },

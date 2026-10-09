@@ -102,7 +102,7 @@ export function serverComponent<S, M extends Tagged, P>(
         if (reducer !== undefined) [state] = splitNext(reducer(state, msg, ctx));
       }
       return {
-        view: spec.view(state, intentNames as IntentNames<M>, ctx as Ctx<P>),
+        view: spec.view(state, intentNames as IntentNames<string>, ctx as Ctx<P>),
         seed: makeSeed(tag, state, initial, carried),
       };
     },

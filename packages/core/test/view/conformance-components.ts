@@ -8,7 +8,7 @@ import { registerServerComponent } from '../../src/view/index.js';
 
 /** Defines a component for the client and registers it for the server renderer. */
 function both<S, P extends object>(tag: string, spec: ComponentSpec<S, never, P>): void {
-  define<S, never, P>(tag, spec);
+  define<S, never, P>()(tag, spec);
   registerServerComponent(serverComponent(tag, spec));
 }
 

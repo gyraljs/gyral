@@ -65,7 +65,7 @@ const LaneRow = (l: Lane) =>
     <td>${l.inFlight}</td>
   </tr>`;
 
-export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boolean }>(PANEL_TAG, {
+export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boolean }>()(PANEL_TAG, {
   props: { open: prop.boolean() },
   init: (props) => initialPanel(props.open),
   intent: {

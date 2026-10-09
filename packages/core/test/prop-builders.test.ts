@@ -18,7 +18,7 @@ const props = {
 
 type Props = PropsOf<typeof props>;
 
-const Shop = define<Stateless, never, Props>('test-prop-shop', {
+const Shop = define<Stateless, never, Props>()('test-prop-shop', {
   props,
   intent: {},
   update: {},
@@ -47,7 +47,7 @@ describe('prop builders', () => {
   });
 
   it('infers P from the builders when define() gets no type arguments (types)', () => {
-    const Inferred = define('test-prop-inferred', {
+    const Inferred = define()('test-prop-inferred', {
       props: { count: prop.number({ default: 1 }), title2: prop.string() },
       intent: {},
       update: {},
@@ -114,7 +114,7 @@ describe('prop builders', () => {
 
   it('warns in development when a schema transforms a property value', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const Trimmed = define('test-prop-trim', {
+    const Trimmed = define()('test-prop-trim', {
       props: { name: prop.string({ schema: v.pipe(v.string(), v.trim()) }) },
       intent: {},
       update: {},
@@ -127,7 +127,7 @@ describe('prop builders', () => {
   });
 
   it('rejects asynchronous schemas', () => {
-    const Async = define('test-prop-async', {
+    const Async = define()('test-prop-async', {
       props: { code: prop.string({ schema: v.pipeAsync(v.string()) }) },
       intent: {},
       update: {},
@@ -142,7 +142,7 @@ describe('prop builders', () => {
 
   it('keeps the object a property set passes, even when the schema copies it (identity)', () => {
     const Point = v.object({ x: v.number() });
-    const Plot = define('test-prop-identity', {
+    const Plot = define()('test-prop-identity', {
       props: { at: prop.value(Point) },
       intent: {},
       update: {},
@@ -176,7 +176,7 @@ describe('prop builders', () => {
       readonly held: Seat;
       readonly picks: readonly number[];
     }>();
-    const Booth = define('test-prop-guard', {
+    const Booth = define()('test-prop-guard', {
       props: guarded,
       intent: {},
       update: {},
@@ -206,7 +206,7 @@ describe('prop builders', () => {
     const el = document.createElement('test-prop-late') as HTMLElement & { label?: string };
     el.label = 'early';
     document.body.append(el);
-    const Late = define('test-prop-late', {
+    const Late = define()('test-prop-late', {
       props: { label: prop.string({ default: '?' }) },
       intent: {},
       update: {},

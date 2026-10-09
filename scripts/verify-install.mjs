@@ -48,7 +48,7 @@ for (const entry of entries) {
   if (Object.keys(mod).length === 0) throw new Error(entry + ' has no exports');
   console.log('import ok  ' + entry + ' (' + Object.keys(mod).length + ' exports)');
 }
-define('gy-hello', {
+define()('gy-hello', {
   init: () => ({ name: 'world' }),
   intent: {},
   update: {},

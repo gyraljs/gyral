@@ -36,7 +36,7 @@ type ItemMsg =
   { readonly _tag: 'Toggle' } | { readonly _tag: 'Remove' } | { readonly _tag: 'Poke' };
 
 // Child: owns local UI state (pokes), reports changes up as outputs.
-const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>(
+const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>()(
   'test-item',
   {
     props: { item: prop.value(itemSchema, { required: true }) },
@@ -64,7 +64,7 @@ type ListMsg =
   | { readonly _tag: 'Item'; readonly id: string; readonly out: ItemOut }
   | { readonly _tag: 'Reverse' };
 
-const TestList = define<{ readonly items: readonly Item[] }, ListMsg>('test-list', {
+const TestList = define<{ readonly items: readonly Item[] }, ListMsg>()('test-list', {
   init: () => ({
     items: [
       { id: 'a', text: 'A', done: false },
@@ -186,7 +186,7 @@ describe('child() with a lazy source', () => {
 
   // A recursive component: it renders itself and parses its own outputs.
   const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
-    define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
+    define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>()('test-tree', {
       props: { nodeId: prop.string({ required: true }) },
       init: () => ({ kids: [] }),
       intent: {

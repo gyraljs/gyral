@@ -250,7 +250,7 @@ export function elementClass<S, M extends Tagged, P>(
       }
       this.#stale = false;
       this.#model.syncProps(names);
-      const view = spec.view(this.state, intentNames as IntentNames<M>, this.#model.ctx());
+      const view = spec.view(this.state, intentNames as IntentNames<string>, this.#model.ctx());
       if (this.#hydrating) {
         hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
         this.#hydrating = false;

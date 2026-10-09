@@ -16,7 +16,7 @@ type Msg =
 
 const RELEASES = new Set(['pointerup', 'pointercancel', 'lostpointercapture']);
 
-const Pad = define<State, Msg>('test-press-release', {
+const Pad = define<State, Msg>()('test-press-release', {
   init: () => ({ held: undefined, log: [] }),
   intent: {
     Hold: ({ event, target }) => {

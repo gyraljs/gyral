@@ -6,7 +6,7 @@ export interface State {
 
 export type Msg = { readonly _tag: 'Named'; readonly name: string };
 
-export const Hello = define<State, Msg>('gy-hello', {
+export const Hello = define<State, Msg>()('gy-hello', {
   init: () => ({ name: '' }),
   intent: {
     Named: ({ value }) => ({ _tag: 'Named', name: value ?? '' }),

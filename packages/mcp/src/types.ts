@@ -46,7 +46,7 @@ export interface Example {
   readonly title: string;
   readonly description: string;
   readonly url: string;
-  /** Files that define components (`define(`), the ones worth reading first. */
+  /** Files that define components (`define()(`), the ones worth reading first. */
   readonly components: readonly ExampleFile[];
   /** Every other source file, by path only. */
   readonly otherFiles: readonly string[];

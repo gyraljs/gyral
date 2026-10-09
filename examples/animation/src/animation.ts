@@ -71,7 +71,7 @@ export type Msg = { readonly _tag: 'Animate' };
 /** One run's element; keyed by the run number, so each run gets a fresh one. */
 const target = (run: number) => html`<div class=${run === 0 ? 'target' : 'target moving'}></div>`;
 
-export const Animation = define<State, Msg>('gy-animation', {
+export const Animation = define<State, Msg>()('gy-animation', {
   init: () => ({ runs: 0 }),
   intent: { Animate: () => ({ _tag: 'Animate' }) },
   update: { Animate: (s) => ({ runs: s.runs + 1 }) },

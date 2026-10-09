@@ -7,7 +7,7 @@ interface State {
 }
 
 const counter = (tag: string, shadow: boolean, inner = '') =>
-  define<State, Msg>(tag, {
+  define<State, Msg>()(tag, {
     shadow,
     init: () => ({ hits: 0 }),
     intent: { Hit: () => ({ _tag: 'Hit' }) },
@@ -71,7 +71,7 @@ describe('shadow: false (ADR 0014)', () => {
 
   it('ignores styles with a warning, and is detectable by @gyral/ssr', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const Styled = define<State, Msg>('test-ld-styled', {
+    const Styled = define<State, Msg>()('test-ld-styled', {
       shadow: false,
       styles: css`
         p {

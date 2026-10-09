@@ -27,7 +27,7 @@ const spec = {
     html`<button data-intent=${i.Inc}>${props.label}:${s.count}</button>`,
 };
 type P = { readonly label: string };
-define<State, Msg, P>('test-eh-shadow', {
+define<State, Msg, P>()('test-eh-shadow', {
   ...spec,
   styles: css`
     button {
@@ -35,8 +35,8 @@ define<State, Msg, P>('test-eh-shadow', {
     }
   `,
 });
-define<State, Msg, P>('test-eh-light', { ...spec, shadow: false });
-define<State, Msg, P>('test-eh-island', { ...spec, hydrate: 'interaction' });
+define<State, Msg, P>()('test-eh-light', { ...spec, shadow: false });
+define<State, Msg, P>()('test-eh-island', { ...spec, hydrate: 'interaction' });
 
 type Live = HTMLElement & { readonly state: State };
 
@@ -133,7 +133,7 @@ describe('each host hydrates on its own (07)', () => {
       '</template></test-eh-shadow>',
       '</template><b>slotted x</b></test-eh-shadow>',
     );
-    define<object, never>('test-eh-parent', {
+    define<object, never>()('test-eh-parent', {
       init: () => ({}),
       intent: {},
       update: {},
@@ -163,7 +163,7 @@ describe('each host hydrates on its own (07)', () => {
     const late = root.querySelector('test-eh-late') as Live;
     const child = late.shadowRoot?.querySelector('test-eh-shadow') as Live;
     expect(child.hasAttribute('data-gyral-seed')).toBe(false);
-    define<object, never>('test-eh-late', {
+    define<object, never>()('test-eh-late', {
       init: () => ({}),
       intent: {},
       update: {},

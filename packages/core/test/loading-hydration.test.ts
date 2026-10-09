@@ -10,14 +10,14 @@ interface State {
   readonly text: string;
 }
 
-const Plain = define<State, never>('test-load-plain', {
+const Plain = define<State, never>()('test-load-plain', {
   init: () => ({ text: 'client' }),
   intent: {},
   update: {},
   view: (s) => html`<p>${s.text}</p>`,
 });
 
-const Seeded = define<State, never>('test-load-seeded', {
+const Seeded = define<State, never>()('test-load-seeded', {
   init: () => ({ text: 'init' }),
   intent: {},
   update: {},

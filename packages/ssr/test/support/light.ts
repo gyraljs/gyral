@@ -9,7 +9,7 @@ interface ItemState {
 }
 
 const item = (tag: string, shadow: boolean) =>
-  define<ItemState, ItemMsg, object, Bump>(tag, {
+  define<ItemState, ItemMsg, object, Bump>()(tag, {
     shadow,
     init: () => ({ count: 0 }),
     intent: { Inc: () => ({ _tag: 'Inc' }) },
@@ -32,7 +32,7 @@ type PageMsg =
   | { readonly _tag: 'Noop' };
 
 /** A page-level light-DOM component: its heading and content are plain children. */
-export const LightPage = define<PageState, PageMsg>('test-light-page', {
+export const LightPage = define<PageState, PageMsg>()('test-light-page', {
   shadow: false,
   init: () => ({ more: 0, bumps: [], hydrated: false }),
   states: (s) => ({ live: s.hydrated }),
@@ -63,7 +63,7 @@ interface HostState {
 type HostMsg = { readonly _tag: 'Bumped'; readonly by: string };
 
 /** A shadow-DOM component whose server-rendered shadow root contains a light-DOM child. */
-export const ShadowHost = define<HostState, HostMsg>('test-shadow-host', {
+export const ShadowHost = define<HostState, HostMsg>()('test-shadow-host', {
   init: () => ({ bumps: [] }),
   intent: { Bumped: child(LightItem, (out) => ({ _tag: 'Bumped', by: out.by })) },
   update: { Bumped: (s, m) => ({ bumps: [...s.bumps, m.by] }) },

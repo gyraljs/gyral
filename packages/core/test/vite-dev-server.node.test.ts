@@ -72,7 +72,7 @@ beforeAll(() => {
   write(
     'node_modules/ds/index.js',
     `import { define, html } from '@gyral/core';
-define('ds-badge', { init: () => ({ n: 1 }), intent: {}, update: (s) => s, view: (s) => html\`<b>\${s.n}</b>\` });`,
+define()('ds-badge', { init: () => ({ n: 1 }), intent: {}, update: (s) => s, view: (s) => html\`<b>\${s.n}</b>\` });`,
   );
   write(
     'package.json',

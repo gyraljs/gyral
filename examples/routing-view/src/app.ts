@@ -61,7 +61,7 @@ export const pageHead = (route: Route | undefined, origin: string): Head => ({
     : { canonical: new URL(route.path, origin).href }),
 });
 
-export const RoutingView = define<State, Msg>('gy-routing-view', {
+export const RoutingView = define<State, Msg>()('gy-routing-view', {
   // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
   drivers: { router: makeRouter({ captureLinks: true }) },
   // One streaming command: the current location now, then every change (ADR 0009).

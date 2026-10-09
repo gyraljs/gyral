@@ -11,7 +11,7 @@ type Msg = { readonly _tag: 'Say'; readonly text: string };
 const init = (): State => ({ message: '', label: '' });
 const update = { Say: (s: State, m: Msg): State => ({ ...s, message: m.text, label: m.text }) };
 
-export const EmptyText = define<State, Msg>('test-empty-text', {
+export const EmptyText = define<State, Msg>()('test-empty-text', {
   init,
   intent: {},
   update,
@@ -20,7 +20,7 @@ export const EmptyText = define<State, Msg>('test-empty-text', {
       <p class="mixed">Note: ${s.label}!</p>`,
 });
 
-export const EmptyLight = define<State, Msg>('test-empty-light', {
+export const EmptyLight = define<State, Msg>()('test-empty-light', {
   shadow: false,
   init,
   intent: {},

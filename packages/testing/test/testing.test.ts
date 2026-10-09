@@ -40,7 +40,7 @@ const loadUser = (id: string) =>
     },
   );
 
-const Profile = define<State, Msg, { readonly userId: string }>('test-profile', {
+const Profile = define<State, Msg, { readonly userId: string }>()('test-profile', {
   props: { userId: prop.string({ required: true }) },
   init: (props) => [
     { id: props.userId, user: undefined, error: undefined },
@@ -90,7 +90,7 @@ describe('pure stepping', () => {
       state: s0,
       commands: [],
     });
-    const Live = define<{ readonly live: boolean }, never>('test-hydrated-step', {
+    const Live = define<{ readonly live: boolean }, never>()('test-hydrated-step', {
       init: () => ({ live: false }),
       intent: {},
       update: { Hydrated: (s, m) => ({ ...s, live: m.serverRendered }) },
@@ -239,7 +239,7 @@ describe('virtualTime', () => {
       }),
   });
 
-  const Timer = define<{ readonly fired: number }, { readonly _tag: 'Fire' }>('test-timer', {
+  const Timer = define<{ readonly fired: number }, { readonly _tag: 'Fire' }>()('test-timer', {
     init: () => [
       { fired: 0 },
       [command(delay, { ms: 60_000 }, { onSuccess: () => ({ _tag: 'Fire' }) })],

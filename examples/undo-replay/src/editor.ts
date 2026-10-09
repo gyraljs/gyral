@@ -61,7 +61,7 @@ function step(s: State): Next<State, Msg> {
   return canRedo(history) ? [{ ...s, history }, [nextStep]] : { ...s, history, playing: false };
 }
 
-export const Editor = define<State, Msg>('gy-pixel-editor', {
+export const Editor = define<State, Msg>()('gy-pixel-editor', {
   init: () => ({ history: emptyHistory, tool: 'ink', playing: false }),
   intent: {
     Paint: ({ target }) => {

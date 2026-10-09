@@ -21,7 +21,7 @@ interface State {
   readonly seen: number;
 }
 
-const Buyer = define<State, Msg>('testing-buyer', {
+const Buyer = define<State, Msg>()('testing-buyer', {
   stores: [cart],
   init: () => ({ bought: 0, seen: 0 }),
   intent: {},

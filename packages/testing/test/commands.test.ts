@@ -10,7 +10,7 @@ type Msg = { readonly _tag: 'Pick'; readonly id: number } | { readonly _tag: 'Cl
 const send = outputs<Out>();
 const log = defineDriver<string, undefined>({ name: 'log', run: () => undefined });
 
-const Picker = define<{ readonly id: number }, Msg, object, Out>('test-commands-picker', {
+const Picker = define<{ readonly id: number }, Msg, object, Out>()('test-commands-picker', {
   init: () => ({ id: 0 }),
   intent: {},
   update: {
@@ -48,7 +48,7 @@ describe('outputsIn', () => {
     const [first] = outputsIn(commands, Picker);
     if (first?._tag === 'Picked') expectTypeOf(first.id).toBeNumber();
     // A component without outputs emits nothing:
-    const Plain = define<{ readonly id: number }, Msg>('test-commands-plain', Picker.spec);
+    const Plain = define<{ readonly id: number }, Msg>()('test-commands-plain', Picker.spec);
     expectTypeOf(outputsIn(commands, Plain)).toEqualTypeOf<readonly never[]>();
     // @ts-expect-error: not a component class
     outputsIn(commands, { outputs: 1 });

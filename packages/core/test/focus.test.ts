@@ -29,8 +29,8 @@ const spec = {
   `,
 };
 
-const Shadowed = define<State, Msg>('test-focus', spec);
-const Light = define<State, Msg>('test-focus-light', { ...spec, shadow: false });
+const Shadowed = define<State, Msg>()('test-focus', spec);
+const Light = define<State, Msg>()('test-focus-light', { ...spec, shadow: false });
 
 afterEach(() => {
   document.body.replaceChildren();

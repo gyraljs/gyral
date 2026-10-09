@@ -41,7 +41,7 @@ const content = (path: string) => {
   }
 };
 
-export const App = define<State, Msg, Props>('gy-iso-app', {
+export const App = define<State, Msg, Props>()('gy-iso-app', {
   props: { path: prop.string() },
   // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
   drivers: { router: makeRouter({ captureLinks: true }) },

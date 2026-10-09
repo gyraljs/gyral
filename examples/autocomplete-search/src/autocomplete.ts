@@ -89,7 +89,7 @@ const option = (title: string, [index, highlighted, pick]: readonly [number, boo
     ${title}
   </li>`;
 
-export const Autocomplete = define<State, Msg>('gy-autocomplete', {
+export const Autocomplete = define<State, Msg>()('gy-autocomplete', {
   init: () => ({ query: '', suggestions: [], highlighted: undefined, open: false, status: 'idle' }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),

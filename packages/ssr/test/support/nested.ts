@@ -21,7 +21,7 @@ type ChildMsg = { readonly _tag: 'Inc' } | { readonly _tag: 'Heard'; readonly va
 type ChildOut = { readonly _tag: 'Bumped'; readonly count: number };
 
 /** A Gyral child with an intent, an init command and an output. */
-export const NestChild = define<ChildState, ChildMsg, object, ChildOut>('test-nest-child', {
+export const NestChild = define<ChildState, ChildMsg, object, ChildOut>()('test-nest-child', {
   init: () => [
     { count: 0, heard: [], hydrated: undefined },
     [command(echo, 'child-ready', { onSuccess: (value) => ({ _tag: 'Heard', value }) })],
@@ -42,7 +42,7 @@ interface ParentState {
 type ParentMsg = { readonly _tag: 'Click' } | { readonly _tag: 'Child'; readonly count: number };
 
 /** A shadow-DOM parent whose server-rendered shadow root contains the child. */
-export const NestParent = define<ParentState, ParentMsg>('test-nest-parent', {
+export const NestParent = define<ParentState, ParentMsg>()('test-nest-parent', {
   init: () => ({ clicks: 0, bumps: [] }),
   intent: {
     Click: () => ({ _tag: 'Click' }),

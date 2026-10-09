@@ -14,7 +14,7 @@ interface Props {
   readonly fallback?: string | undefined;
 }
 
-const Named = define<Stateless, never, Props>('test-named', {
+const Named = define<Stateless, never, Props>()('test-named', {
   props: { target: prop.string({ required: true }), fallback: prop.string() },
   intent: {},
   update: {},
@@ -25,7 +25,7 @@ const Named = define<Stateless, never, Props>('test-named', {
 });
 
 // A shadow wrapper, so the form sits two shadow roots below the page heading.
-define<Stateless, never>('test-named-outer', {
+define<Stateless, never>()('test-named-outer', {
   intent: {},
   update: {},
   view: () => html`<test-named target="page-title"></test-named>`,

@@ -16,7 +16,7 @@ interface State {
   readonly fired: readonly string[];
 }
 
-const Toast = define<State, Msg>('test-delay-only', {
+const Toast = define<State, Msg>()('test-delay-only', {
   init: () => ({ fired: [] }),
   intent: {},
   update: {

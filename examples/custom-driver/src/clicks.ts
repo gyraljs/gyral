@@ -31,7 +31,7 @@ export function recordClick(s: State): State {
   return { ...s, count, history };
 }
 
-export const Clicks = define<State, Msg>('gy-clicks', {
+export const Clicks = define<State, Msg>()('gy-clicks', {
   init: () => [
     { count: 0, history: [], inspected: undefined },
     [

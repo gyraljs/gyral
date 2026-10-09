@@ -22,7 +22,7 @@ export { ISLAND_ATTRIBUTE } from './islands.js';
 export type { HydrateStrategy } from './islands.js';
 export type { ChildSource, OutputEvent, OutputSource, OutputsOf } from './children.js';
 export { define } from './define.js';
-export { intents, OUTPUT_EVENT } from './intent.js';
+export { intentsOf, OUTPUT_EVENT } from './intent.js';
 export { settled } from './settled.js';
 export { changed, defineStore, send } from './store.js';
 export type {
@@ -85,19 +85,18 @@ export type {
 } from './devtools-events.js';
 // Used by the server renderer and @gyral/ssr (ADR 0014, view/06-server.md).
 export { isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
-export type { GyralElement, GyralElementClass } from './define.js';
+export type { Definer, GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
   Ctx,
   FieldIssue,
   FormFields,
   IntentInput,
-  IntentName,
   IntentNames,
   IntentParser,
-  Messages,
   IntentRejected,
   Intents,
+  ParserFor,
   PropDeclarations,
   Hydrated,
   PropsChanged,

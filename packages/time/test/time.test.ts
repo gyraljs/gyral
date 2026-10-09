@@ -18,7 +18,7 @@ interface State {
   readonly deltas: readonly number[];
 }
 
-const Clock = define<State, Msg>('test-clock', {
+const Clock = define<State, Msg>()('test-clock', {
   init: () => [
     { ticks: [], fired: [], deltas: [] },
     [periodic(1000, (n) => ({ _tag: 'Tick', n }))],

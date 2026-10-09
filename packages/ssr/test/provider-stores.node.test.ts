@@ -10,7 +10,7 @@ const cart = defineStore<Cart, { readonly _tag: 'Noop' }>('provider-cart', {
   update: { Noop: (s) => s },
 });
 
-define<{ readonly x: number }, never>('ssr-owner', {
+define<{ readonly x: number }, never>()('ssr-owner', {
   stores: [cart],
   init: () => ({ x: 0 }),
   intent: {},
@@ -19,7 +19,7 @@ define<{ readonly x: number }, never>('ssr-owner', {
 });
 
 // A component whose shadow DOM contains a provider: scoping must cross the shadow boundary.
-define<{ readonly x: number }, never>('ssr-island', {
+define<{ readonly x: number }, never>()('ssr-island', {
   init: () => ({ x: 0 }),
   intent: {},
   update: {},

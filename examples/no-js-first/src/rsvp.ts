@@ -120,7 +120,7 @@ interface FormArgs {
  */
 const Attendees = v.array(v.object({ name: v.string(), guests: v.number() }));
 
-export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
+export const Rsvp = define<State, Msg, Props>()('gy-rsvp', {
   props: {
     attendees: prop.value(Attendees, {
       default: [],

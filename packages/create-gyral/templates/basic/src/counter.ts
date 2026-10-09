@@ -8,7 +8,7 @@ export interface State {
 // Messages: everything that can happen to the state.
 export type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 
-export const Counter = define<State, Msg>('app-counter', {
+export const Counter = define<State, Msg>()('app-counter', {
   init: () => ({ count: 0 }),
   // Intent: DOM events on elements marked with data-intent become messages.
   intent: {

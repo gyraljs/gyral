@@ -36,7 +36,7 @@ const strings: StandardSchemaV1<readonly string[]> = {
   },
 };
 
-const Seeded = define<State, Msg, Props>('test-seeded', {
+const Seeded = define<State, Msg, Props>()('test-seeded', {
   props: { label: prop.string(), items: prop.value(strings) },
   init: (p) => [
     { title: `init:${p.label ?? ''}`, heard: [], renders: 0 },

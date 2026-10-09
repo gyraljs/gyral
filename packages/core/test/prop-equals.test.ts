@@ -27,7 +27,7 @@ type Props = PropsOf<typeof props>;
 
 let changes: string[] = [];
 
-const Table = define<object, never, Props>('test-prop-equals', {
+const Table = define<object, never, Props>()('test-prop-equals', {
   props,
   init: () => ({}),
   intent: {},

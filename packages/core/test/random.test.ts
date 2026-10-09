@@ -11,7 +11,7 @@ describe('toInt', () => {
 
 describe('random commands', () => {
   type Msg = { readonly _tag: 'Roll' } | { readonly _tag: 'Rolled'; readonly n: number };
-  const Dice = define<{ readonly rolls: readonly number[] }, Msg>('test-dice', {
+  const Dice = define<{ readonly rolls: readonly number[] }, Msg>()('test-dice', {
     init: () => ({ rolls: [] }),
     intent: { Roll: () => ({ _tag: 'Roll' }) },
     update: {

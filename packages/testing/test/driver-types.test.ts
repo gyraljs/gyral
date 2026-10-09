@@ -49,7 +49,7 @@ const ticks = defineDriver<number, number>({
 const session = subscription<{ readonly turn: number }>('session', () => () => {});
 
 type Msg = { readonly _tag: 'Restored'; readonly query: string };
-const Search = define<{ readonly query: string }, Msg>('test-driver-types-search', {
+const Search = define<{ readonly query: string }, Msg>()('test-driver-types-search', {
   init: () => [
     { query: '' },
     [

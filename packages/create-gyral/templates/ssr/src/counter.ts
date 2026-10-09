@@ -11,7 +11,7 @@ export interface Props {
   readonly start: number;
 }
 
-export const Counter = define<State, Msg, Props>('app-counter', {
+export const Counter = define<State, Msg, Props>()('app-counter', {
   // Props are inputs (attributes or properties). The server-rendered value travels to the
   // browser in the hydration seed, so the page starts where the server left it.
   props: { start: prop.number({ default: 0 }) },

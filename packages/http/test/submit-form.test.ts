@@ -29,7 +29,7 @@ type Msg =
   | { readonly _tag: 'SignedIn'; readonly location: string }
   | { readonly _tag: 'Failed' };
 
-const LoginEl = define<State, Msg>('test-submit-login', {
+const LoginEl = define<State, Msg>()('test-submit-login', {
   init: () => ({ errors: {}, done: undefined, failed: false }),
   intent: { Login: form(Login, (_data, raw) => ({ _tag: 'Login', form: raw })) },
   update: {

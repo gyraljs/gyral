@@ -1,13 +1,14 @@
 // gyral/unused-intent: the "unused intent parser" warning of view/09-template-rules.md. A parser
-// in `define(tag, { intent: { Name: … } })` runs only when an element names it with
-// `data-intent`, so a parser no template in the module names is a renamed intent or dead code.
+// in `define<S, M>()(tag, { intent: { Name: … } })` runs only when an element names it with
+// `data-intent`, so a parser no template in the module names is a renamed intent, dead code, or
+// (since intent names are inferred from these keys, ADR 0023) a misspelled key.
 // Static, over the whole module, so intents rendered conditionally (a dialog's buttons, an
 // error state) count as used; that is why the warning lives here and not in the runtime, which
 // sees only the templates rendered so far. A name counts as used when the module mentions it as
-// a property (`i.Name`, `intents.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal
-// `data-intent` or `data-intent-<event>` value in an html or svg template. A component is skipped when its intent names
-// may be used elsewhere: its view is not in the module (an imported function), the view hands
-// its intents to an imported function, the module exports an `intents()` constant, or a
+// a property (`i.Name`, `{ Name } = i`, `i['Name']`) or as a static or literal `data-intent` or
+// `data-intent-<event>` value in an html or svg template. A component is skipped when its intent
+// names may be used elsewhere: its view is not in the module (an imported function), the view
+// hands its intents to an imported function, the module exports an `intentsOf()` constant, or a
 // template in the module calls (or passes on) a function imported from another module, which
 // may render `data-intent="Name"` itself (a shared table header, a row module).
 import type { Rule, Scope } from 'eslint';
@@ -172,13 +173,19 @@ export const unusedIntentRule: Rule.RuleModule = {
       },
       CallExpression(node) {
         const callee = node.callee as Node;
-        if (isGyral(context, callee, 'intents')) {
-          // `export const i = intents<Msg>()`: other modules may name the intents.
+        if (isGyral(context, callee, 'intentsOf')) {
+          // `export const i = intentsOf<typeof C>()`: other modules may name the intents.
           const declaration = node.parent.parent?.parent;
           if (declaration?.type === 'ExportNamedDeclaration') exportsIntents = true;
           return;
         }
-        if (!isGyral(context, callee, 'define')) return;
+        // `define<S, M>()(tag, spec)`: the spec is the second argument of the second call.
+        if (
+          callee.type !== 'CallExpression' ||
+          !isGyral(context, callee.callee as Node, 'define')
+        ) {
+          return;
+        }
         const spec = node.arguments[1] as Node | undefined;
         const fields = spec === undefined ? [] : entries(spec);
         const intent = fields.find((f) => f.name === 'intent')?.value;

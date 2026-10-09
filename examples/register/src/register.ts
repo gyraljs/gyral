@@ -92,7 +92,7 @@ const fieldView = (s: State, f: FieldSpec) => {
   </p>`;
 };
 
-export const Register = define<State, Msg, Props>('gy-register', {
+export const Register = define<State, Msg, Props>()('gy-register', {
   props: { welcome: prop.string() },
   init: (props) => ({ values: {}, errors: {}, welcome: props.welcome, pending: undefined }),
   intent: {

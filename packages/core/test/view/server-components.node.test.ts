@@ -21,7 +21,7 @@ interface Props {
   readonly tags: readonly string[];
 }
 
-define<{ readonly count: number }, Msg, Props>('srv-counter', {
+define<{ readonly count: number }, Msg, Props>()('srv-counter', {
   props: {
     start: prop.number({ default: 0 }),
     label: prop.string({ default: '' }),
@@ -43,7 +43,7 @@ define<{ readonly count: number }, Msg, Props>('srv-counter', {
   ],
 });
 
-define<{ readonly n: number }, never>('srv-light', {
+define<{ readonly n: number }, never>()('srv-light', {
   shadow: false,
   init: () => ({ n: 1 }),
   intent: {},
@@ -55,7 +55,7 @@ define<{ readonly n: number }, never>('srv-light', {
     </section>`,
 });
 
-define<{ readonly n: number }, never>('srv-island', {
+define<{ readonly n: number }, never>()('srv-island', {
   hydrate: 'visible',
   init: () => ({ n: 0 }),
   intent: {},
@@ -63,7 +63,7 @@ define<{ readonly n: number }, never>('srv-island', {
   view: () => html`<i>later</i>`,
 });
 
-define<{ readonly n: number }, never>('srv-focus', {
+define<{ readonly n: number }, never>()('srv-focus', {
   shadow: { delegatesFocus: true },
   init: () => ({ n: 0 }),
   intent: {},
@@ -178,7 +178,7 @@ describe('host attributes', () => {
 describe('streaming (06 "API")', () => {
   it('yields at every component boundary and renders each component only when pulled', () => {
     let rendered = 0;
-    define<{ readonly n: number }, never>('srv-counted', {
+    define<{ readonly n: number }, never>()('srv-counted', {
       init: () => {
         rendered++;
         return { n: rendered };

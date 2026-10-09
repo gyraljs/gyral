@@ -2,7 +2,7 @@
 // "Declining"): the next intent outward for the same event gets it, up to the component root.
 // A toolbar handles its arrow-key shortcuts around inputs that keep their own keys.
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, intents, settled } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
 
 type Msg =
   | { readonly _tag: 'Shortcut'; readonly key: string }
@@ -15,23 +15,20 @@ interface State {
   readonly log: readonly string[];
 }
 
-const i = intents<Msg>();
 const add = (s: State, entry: string): State => ({ log: [...s.log, entry] });
 
-const inner = intents<InnerMsg>();
-
 // The inner component handles Enter itself and declines every other key.
-define<State, InnerMsg>('test-decline-inner', {
+define<State, InnerMsg>()('test-decline-inner', {
   init: () => ({ log: [] }),
   intent: {
     Inner: ({ key }) => (key === 'Enter' ? { _tag: 'Inner', key } : undefined),
   },
   update: { Inner: (s, m) => add(s, `inner:${m.key}`) },
-  view: () =>
-    html`<input id="nested" data-intent-keydown=${inner.Inner} aria-label="nested field" />`,
+  view: (_s, i) =>
+    html`<input id="nested" data-intent-keydown=${i.Inner} aria-label="nested field" />`,
 });
 
-const Toolbar = define<State, Msg>('test-decline', {
+const Toolbar = define<State, Msg>()('test-decline', {
   init: () => ({ log: [] }),
   intent: {
     // The container's shortcuts: arrow keys only.
@@ -53,7 +50,7 @@ const Toolbar = define<State, Msg>('test-decline', {
     Later: (s, m) => add(s, `later:${m.key}`),
     Clicked: (s, m) => add(s, `clicked:${m.where}`),
   },
-  view: () => html`
+  view: (_s, i) => html`
     <div role="toolbar" data-intent-keydown=${i.Shortcut}>
       <input id="field" data-intent-keydown=${i.Field} aria-label="field" />
       <input id="later" data-intent-keydown=${i.Later} aria-label="later" />

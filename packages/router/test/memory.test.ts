@@ -27,7 +27,7 @@ type Msg =
   | { readonly _tag: 'Back' }
   | { readonly _tag: 'Forward' };
 
-const App = define<State, Msg>('test-memory-app', {
+const App = define<State, Msg>()('test-memory-app', {
   init: () => [
     { route: undefined, seen: [] },
     [listen((location) => ({ _tag: 'Routed', location }))],

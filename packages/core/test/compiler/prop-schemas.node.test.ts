@@ -17,7 +17,7 @@ const component = (props: string, extra = ''): Record<string, string> => ({
     import { define, html, prop } from '@gyral/core';
     import { isItem, schemas, made } from './guards.ts';
     ${extra}
-    export const C = define('x-c', {
+    export const C = define()('x-c', {
       props: { ${props} },
       init: () => ({}),
       intent: {},

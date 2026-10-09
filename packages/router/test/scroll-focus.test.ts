@@ -28,7 +28,7 @@ type Msg =
 
 // A light-DOM page (ADR 0014), so `#fragment` targets are in the document. Every page is
 // taller than the viewport; `#far` exists only on user pages, so it appears with the render.
-const Page = define<State, Msg>('test-scroll-page', {
+const Page = define<State, Msg>()('test-scroll-page', {
   shadow: false,
   init: () => [{ route: undefined }, [listen((location) => ({ _tag: 'Routed', location }))]],
   intent: {},

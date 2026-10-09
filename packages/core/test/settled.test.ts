@@ -6,7 +6,7 @@ import { child, define, emit, focus, html, prop, settled } from '../src/index.js
 type KidOut = { readonly _tag: 'Grown'; readonly size: number };
 type KidMsg = { readonly _tag: 'Grow' };
 
-const Kid = define<{ readonly grown: number }, KidMsg, { readonly label: string }, KidOut>(
+const Kid = define<{ readonly grown: number }, KidMsg, { readonly label: string }, KidOut>()(
   'test-settled-kid',
   {
     props: { label: prop.string({ attribute: false, default: '' }) },
@@ -29,7 +29,7 @@ interface ParentState {
   readonly page: string;
 }
 
-const Parent = define<ParentState, ParentMsg>('test-settled-parent', {
+const Parent = define<ParentState, ParentMsg>()('test-settled-parent', {
   init: () => ({ label: 'first', kidSize: 0, page: 'home' }),
   intent: { Kid: child(Kid, (out) => ({ _tag: 'Kid', size: out.size })) },
   update: {

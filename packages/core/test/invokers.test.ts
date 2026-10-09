@@ -7,7 +7,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Clear'; readonly from: string | undefined };
 
-const List = define<State, Msg>('test-invokers', {
+const List = define<State, Msg>()('test-invokers', {
   init: () => ({ items: ['a', 'b'], from: undefined }),
   intent: {
     Clear: ({ command }) =>

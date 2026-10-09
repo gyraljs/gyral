@@ -14,7 +14,7 @@ type Msg =
   | { readonly _tag: 'Toggle'; readonly done: boolean }
   | { readonly _tag: 'Clear' };
 
-const TodoEl = define<Todo, Msg>('test-todo', {
+const TodoEl = define<Todo, Msg>()('test-todo', {
   init: () => ({ draft: '', items: [], done: false }),
   intent: {
     Add: ({ formData }) => {
@@ -44,7 +44,7 @@ const TodoEl = define<Todo, Msg>('test-todo', {
   `,
 });
 
-define<{ readonly n: number }, { readonly _tag: 'Clear' }>('test-child', {
+define<{ readonly n: number }, { readonly _tag: 'Clear' }>()('test-child', {
   init: () => ({ n: 0 }),
   intent: { Clear: () => ({ _tag: 'Clear' }) },
   update: { Clear: (s) => ({ n: s.n + 1 }) },
