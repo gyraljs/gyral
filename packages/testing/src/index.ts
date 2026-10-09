@@ -1,6 +1,6 @@
 // Test helpers for Gyral components (gyral-czi.7). Plain TypeScript; works with any runner.
-export { initial, readerOf, run, step, subscriptionsFor } from './step.js';
-export { sentTo, stepStore, testStore } from './stores.js';
+export { initial, run, step, subscriptionsFor } from './step.js';
+export { stepStore } from './stores.js';
 export type { Ran, RunOptions, StepMessage, Stepped } from './step.js';
 export {
   callsIn,
@@ -12,7 +12,6 @@ export {
   resolve,
 } from './commands.js';
 export type { FocusTarget, WithOutputs } from './commands.js';
-export { withDrivers } from './drivers.js';
 export { fakeDriver } from './fake.js';
 export type { FakeCall, FakeDriver, FakeOptions, FakeRun } from './fake.js';
 export { hydrated, mountSsr } from './ssr.js';

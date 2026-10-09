@@ -113,7 +113,7 @@ async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHook
 }
 
 /** The template compiler alone (`gyralVitePreset()` includes it). */
-export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Plugin {
+function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Plugin {
   let hooks: CompilerHooks | undefined;
   const ready = (): CompilerHooks => {
     if (hooks === undefined) throw new Error('gyral: the template compiler is not loaded yet');
@@ -262,7 +262,7 @@ function gyralDevSsr(): Plugin {
  * too. Server-rendered markup met anyway renders fresh (development warns). Dev servers and
  * test runs get the condition too, and always keep the invoker fallback.
  */
-export function gyralClientOnly(): Plugin {
+function gyralClientOnly(): Plugin {
   let hooks: FeatureHooks | undefined;
   let root = process.cwd();
   return {

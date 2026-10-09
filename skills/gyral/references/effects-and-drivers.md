@@ -452,5 +452,5 @@ provideDrivers(document.body, {
 });
 ```
 
-Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `withDrivers`,
+Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `provideDrivers`,
 `el.drivers` or `mountSsr`.

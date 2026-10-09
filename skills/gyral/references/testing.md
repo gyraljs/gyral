@@ -80,11 +80,10 @@ describe('search model', () => {
   `{ selector, preventScroll?, select?, wait? }`, and `callsIn(commands)` each `call()` request
   as `{ selector, method, args }`. Never filter on driver names such as `'@gyral/emit'`: they
   are core internals.
-- Stores: `stepStore(store, state, msg)`, `testStore(store, initial?)` (an instance to pass in
-  `stores`), `sentTo(commands, store)` (messages a reducer sends to a store).
-- Calling a parser directly: parsers take `(input, ctx)`. Build the `ctx` with
-  `{ props, state, read: readerOf(stores) }`; `readerOf([])` when the component reads no
-  stores.
+- Stores: `stepStore(store, state, msg)`; `store.instance(initial?)` gives a fresh instance to
+  pass in `stores`; `inputsFor(commands, store)` lists the messages a reducer `send()`s to it.
+- Calling a parser directly: `parse(Component, 'Intent', input, { props, state, stores })`
+  builds the `ctx` for you (no casts).
 - Pure update functions make property tests easy with fast-check: generate messages, run
   `step`, assert invariants on the state.
 
@@ -151,13 +150,13 @@ it('loads the user when clicked', async () => {
   `signal`, so you can assert that `switch` aborted it. `fakeDriver(name, run)` answers every
   call with `run`: `fakeDriver<string | null, undefined>('url-sync', (query) => void urls.push(query))`.
 - Drivers and fakes need **no cast** anywhere drivers are substituted (`el.drivers`,
-  `withDrivers`, `provideDrivers`): any `Driver<I, O, E>`, from `defineDriver`, `subscription`
+  `provideDrivers`): any `Driver<I, O, E>`, from `defineDriver`, `subscription`
   or `fakeDriver`, is assignable to `AnyDriver`. Never write `as AnyDriver`. Type a driver map
   as `DriverOverrides` (or `Record<string, AnyDriver>`), not
   `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
 - A driver token (`defineDriver<I, O, E>('session')`) has no implementation: a test supplies
   one by name like any fake (`el.drivers = { session: fakeDriver('session', (move) => …) }`,
-  `withDrivers`, `mountSsr`). A token nothing provides is reported as G0043; catch it with
+  `mountSsr`, `mount`). A token nothing provides is reported as G0043; catch it with
   `collectErrors()` when that is what the test checks.
 - Removing an element stops its commands **one microtask later** (a move in the same task keeps
   them): after `el.remove(); await Promise.resolve();` every running call's `signal.aborted`
@@ -168,7 +167,7 @@ it('loads the user when clicked', async () => {
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
   fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
   `reply(status, body)`, `failNext()`.
-- `withDrivers(container, { http: fake })` provides fakes to every component below a container.
+- `provideDrivers(container, { http: fake })` (from `@gyral/core`) provides fakes to every component below a container.
 - `virtualTime()` fakes timers: `await time.advance(500)`, `time.runAll()`, `time.restore()`.
 - **Deliberate failures:** Gyral reports what a component throws with `reportError` (ADR 0024,
   `errors.md`), which Vitest counts as an uncaught error and fails the run on. Wrap such tests

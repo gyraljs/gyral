@@ -1,6 +1,6 @@
 // Drivers and fakes go wherever drivers are substituted with no cast (gyral-dyn.20): typed
 // inputs, outputs and errors, `toError`, `retry`, a run that names its `DriverContext<O>`,
-// subscriptions and fakes, into `el.drivers`, `withDrivers`, `provideDrivers` and a
+// subscriptions and fakes, into `el.drivers`, `provideDrivers` and a
 // `DriverOverrides` map.
 import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
 import {
@@ -17,7 +17,7 @@ import {
   type DriverContext,
   type DriverOverrides,
 } from '@gyral/core';
-import { fakeDriver, withDrivers, type FakeDriver } from '../src/index.js';
+import { fakeDriver, type FakeDriver } from '../src/index.js';
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -83,14 +83,14 @@ describe('driver substitution needs no cast', () => {
     expect(el.state).toEqual({ query: 'web' });
   });
 
-  it('takes them in withDrivers, provideDrivers and a DriverOverrides map', async () => {
+  it('takes them in provideDrivers and a DriverOverrides map', async () => {
     const fake = fakeDriver<undefined, string | null>('saved-query', () => 'from-tree');
     const overrides: DriverOverrides = { 'saved-query': fake, urlSync, clipboard, ticks, session };
     const all: Record<string, AnyDriver> = { savedQuery, urlSync, clipboard, ticks, session };
     const container = document.createElement('main');
     document.body.append(container);
     provideDrivers(document.createElement('section'), all)();
-    const stop = withDrivers(container, overrides);
+    const stop = provideDrivers(container, overrides);
     const el = new Search();
     container.append(el);
     await settled();
@@ -171,9 +171,9 @@ describe('driver tokens', () => {
     expect(fake.inputs).toEqual([{ card: 7 }]);
   });
 
-  it('take a fake from withDrivers like any other driver', async () => {
+  it('take a fake from provideDrivers like any other driver', async () => {
     const root = document.createElement('div');
-    const stop = withDrivers(root, { game: fakeDriver('game', (move: Move) => move.card) });
+    const stop = provideDrivers(root, { game: fakeDriver('game', (move: Move) => move.card) });
     const el = new Table();
     root.append(el);
     document.body.append(root);

@@ -87,7 +87,7 @@ function toResponse({ status = 200, statusText = '', body }: FakeResponse = {}):
 }
 
 /**
- * `el.drivers = { http: fakeHttp() }` (or `withDrivers(root, { http })`), then
+ * `el.drivers = { http: fakeHttp() }` (or `provideDrivers(root, { http })`), then
  * `http.respondNext({ body })` or `http.reply(422, problem)`. Request inputs are recorded in
  * `requests` (alias `inputs`).
  */

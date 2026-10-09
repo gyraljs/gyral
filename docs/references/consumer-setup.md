@@ -82,8 +82,7 @@ export default defineConfig({
   package (directly or through their dependencies) are scanned, comments excluded; other
   dependencies never keep it. Server-rendered markup met anyway renders fresh, replacing the
   server's (development warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
-  tests match the build (view/07-hydration.md "Client-only builds"). `gyralClientOnly()` is the
-  plugin alone.
+  tests match the build (view/07-hydration.md "Client-only builds").
 
 ### Element typings
 
@@ -119,7 +118,7 @@ Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 che
 `compiler: { sources: ['@gyral/core', 'my-design-system'] }` also compiles templates whose
 `html` comes from a package that re-exports it (that package must also export `compiled`, and
 `compiledSvg` if it re-exports `svg`).
-`gyralTemplateCompiler()` is the plugin alone. The compiler needs Vite 8.
+The preset is the only Vite API: compiler and client-only behaviour are its options. The compiler needs Vite 8.
 
 ## ESLint: `@gyral/core/eslint`
 
@@ -181,7 +180,7 @@ becomes one space; `<pre>`, `<textarea>`, `<script>`, `<style>` and `<title>` ke
 
 Test the model without a DOM (`step`, `run` and `initial` from `@gyral/testing`) and elements in
 a real browser with Vitest browser mode (the `vitest.config.ts` above), never jsdom. Swap
-drivers for fakes (`fakeDriver`, `fakeHttp` from `@gyral/http/testing`, `withDrivers`).
+drivers for fakes (`fakeDriver`, `fakeHttp` from `@gyral/http/testing`, core's `provideDrivers`).
 `await settled()` (from `@gyral/core`) waits until every component has rendered, view
 transitions included, and messages have stopped arriving (view/04-scheduler.md "`settled()`"):
 a stream or store notification already on its way in a microtask is waited for, while commands

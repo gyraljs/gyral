@@ -7,9 +7,10 @@ import {
   type Driver,
   type FocusOptions,
   type OutputsOf,
+  type Store,
   type Tagged,
 } from '@gyral/core';
-import { emit } from '@gyral/core/internal';
+import { emit, STORE_SEND, type StoreSendInput } from '@gyral/core/internal';
 
 type Named = Pick<AnyDriver, 'name'>;
 
@@ -24,12 +25,30 @@ export function commandsFor<I, M>(
   >;
 }
 
-/** The inputs of the commands addressed to `driver`. */
+/**
+ * The inputs of the commands addressed to `driver`; given a store, the messages the commands
+ * `send()` to it, in order (ADR 0013).
+ */
+export function inputsFor<S, SM extends Tagged>(
+  commands: ReadonlyArray<Command<unknown>>,
+  store: Store<S, SM>,
+): readonly SM[];
 export function inputsFor<I, M>(
   commands: ReadonlyArray<Command<M>>,
   driver: Driver<I, unknown> | Named,
-): readonly I[] {
-  return commandsFor(commands, driver).map((c) => c.input);
+): readonly I[];
+export function inputsFor(
+  commands: ReadonlyArray<Command<unknown>>,
+  target: Named | Store<unknown, Tagged>,
+): readonly unknown[] {
+  if ('spec' in target && 'instance' in target) {
+    return commands
+      .filter((c) => c.driver === STORE_SEND)
+      .map((c) => c.input as StoreSendInput)
+      .filter((input) => input.store.name === target.name)
+      .map((input) => input.msg);
+  }
+  return commandsFor(commands, target).map((c) => c.input);
 }
 
 // Core runs emit(), focus() and call() commands itself, with marker drivers it doesn't export: their

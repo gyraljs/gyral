@@ -155,7 +155,7 @@ export const Sidebar = define<Mailbox, Msg>()('my-sidebar', {
 ```
 
 - Both components name the driver `mailbox`, so one `provideDrivers(ancestor, { mailbox: … })`
-  (or `withDrivers(container, { mailbox: fakeDriver('mailbox') })` in a test) reaches both:
+  (or `provideDrivers(container, { mailbox: fakeDriver('mailbox') })` in a test) reaches both:
   provide it on an element that contains them, such as the page or the test's container ("A
   store per page, provided by name" above).
 - Each component can keep only what it shows (pick it in `onSuccess`). A feed that emits many
@@ -272,7 +272,7 @@ submissions, `IntentRejected` is already this message (forms.md).
 ## Testing
 
 - Use the real source: create the store in the test and provide it by name
-  (`withDrivers(container, { draft: … })` from `@gyral/testing`, or `el.drivers`), change it,
+  (`provideDrivers(container, { draft: … })`, or `el.drivers`), change it,
   then `await settled()`.
 - Or fake it: `fakeDriver('counter')` records the subscription; `emitNext(value)` pushes a
   value, and `calls[0].signal.aborted` shows it was released on disconnect or switch.

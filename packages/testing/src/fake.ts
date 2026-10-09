@@ -49,7 +49,7 @@ function noop(): void {
  *
  *   el.drivers = { 'url-sync': fakeDriver<string | null, void>('url-sync', (q) => void urls.push(q)) };
  *
- * Fakes go into `el.drivers`, `withDrivers` and `provideDrivers` as they are, with no cast.
+ * Fakes go into `el.drivers` and `provideDrivers` as they are, with no cast.
  */
 export function fakeDriver<I = unknown, O = unknown, E = unknown>(
   of: string | Driver<I, O, E>,

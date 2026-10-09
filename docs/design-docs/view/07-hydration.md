@@ -59,8 +59,7 @@ The walk, the mismatch messages and islands live in one internal module
 
 ## Client-only builds (gyral-c5d.11, 0.3.1)
 
-An app no server renders can say so: `gyralVitePreset({ clientOnly: true })` (or the
-`gyralClientOnly()` plugin). The browser environment then resolves core with the
+An app no server renders can say so: `gyralVitePreset({ clientOnly: true })`. The browser environment then resolves core with the
 `gyral-client-only` condition (dev server, Vitest and `vite build`; server environments are
 untouched):
 

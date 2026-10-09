@@ -300,7 +300,7 @@ A command's driver is now resolved in this order:
 
 A provider is a `<gyral-drivers>` element with a `.drivers` property, or any element registered
 with `provideDrivers(element, drivers)` (which returns a function that removes the overrides).
-`@gyral/testing` wraps it as `withDrivers(root, drivers)`, so one call covers every component
+Tests call it directly, so one call covers every component
 in a test container or a `mountSsr(...).root`. Resolution happens each time a command runs, so
 providers can change during a test. Commands never run on the server, so providers are not
 consulted there.
@@ -315,7 +315,7 @@ schemas, `errorSchema`, status errors and JSON parsing behave exactly as in prod
 ```ts
 import { fakeHttp } from '@gyral/http/testing';
 const http = fakeHttp(); // or fakeHttp({ respond: (req) => ({ body }) }) to answer at once
-el.drivers = { http }; // or withDrivers(root, { http })
+el.drivers = { http }; // or provideDrivers(root, { http })
 http.requests; // HttpRequest inputs
 http.respondNext({ body: { count: '42' } }); // decoded through the request's schema
 http.respondNext({ status: 422, body: { … } }); // HttpStatusError, detail via errorSchema
@@ -386,7 +386,7 @@ depended on which module happened to load first, and the `as AnyDriver` casts ar
 | Gyral                | `defineDriver<I, O, E>(name)`: a typed token, provided by an ancestor or `el.drivers`       |
 
 Gyral's lookup is by name rather than object identity, so a fake in a test (`fakeDriver`,
-`withDrivers`, `mountSsr`) needs no import of the token; commands stay plain data.
+`mountSsr`, `mount`) needs no import of the token; commands stay plain data.
 
 **Commands without handlers.** Every field of `CommandHandlers` is optional. `command(log,
 line)` is a `Command<never>`: it answers with nothing, and a failure is reported (G0041). The

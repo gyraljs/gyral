@@ -47,12 +47,13 @@ Without `mount`, append the element, dispatch events, then `await settled()` (fr
 `@gyral/core`) before you check the DOM: it
 waits until every component has rendered and messages have stopped arriving (streams that
 never end don't block it; timers are yours to advance). Swap
-drivers for fakes with `fakeDriver` and `withDrivers`; `mountSsr` and `hydrated` test
+drivers for fakes with `fakeDriver` and core's `provideDrivers`; `mountSsr` and `hydrated` test
 server-rendered pages through hydration (below).
 
 ```ts
 import { defineDriver } from '@gyral/core';
-import { fakeDriver, withDrivers } from '@gyral/testing';
+import { provideDrivers } from '@gyral/core';
+import { fakeDriver } from '@gyral/testing';
 
 const urls: (string | null)[] = [];
 el.drivers = {
@@ -64,10 +65,10 @@ el.drivers = {
   'url-sync': fakeDriver<string | null, undefined>('url-sync', (query) => void urls.push(query)),
   clipboard: fakeDriver<string, undefined, string>('clipboard'), // waits for resolveNext()
 };
-withDrivers(container, { 'saved-query': fakeDriver('saved-query', () => null) }); // a subtree
+provideDrivers(container, { 'saved-query': fakeDriver('saved-query', () => null) }); // a subtree
 ```
 
-Drivers need no cast in `el.drivers`, `withDrivers` or `provideDrivers`: any
+Drivers need no cast in `el.drivers` or `provideDrivers`: any
 `Driver<I, O, E>` (typed input, output and error, `toError`, a `retry()` wrapper, a `subscription`, a fake)
 is assignable to `AnyDriver`. Type your own driver maps as `DriverOverrides` from
 `@gyral/core`; `Record<string, Driver<unknown, unknown>>` rejects drivers with typed inputs.
