@@ -32,6 +32,8 @@ export type HttpError =
       readonly detail?: unknown;
     }
   | { readonly _tag: 'HttpNetworkError'; readonly url: string; readonly message: string }
+  /** The attempt took longer than the driver's `timeoutMs`. */
+  | { readonly _tag: 'HttpTimeoutError'; readonly url: string; readonly timeoutMs: number }
   | {
       readonly _tag: 'HttpDecodeError';
       readonly url: string;
@@ -58,6 +60,11 @@ export interface HttpDriverOptions {
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
   readonly concurrency?: Concurrency;
+  /**
+   * Aborts a request that takes longer than this, failing with `HttpTimeoutError`. Applies per
+   * attempt: under `retry(…)` each attempt gets the full time. Default: no limit.
+   */
+  readonly timeoutMs?: number;
   // No retry option: wrap the driver instead, `retry(makeHttpDriver(…), policy)` (ADR 0022).
 }
 
@@ -141,8 +148,14 @@ export function makeHttpDriver(
 ): Driver<HttpRequest, unknown, HttpError> {
   const doFetch = options.fetch ?? ((input, init) => fetch(input, init));
 
-  const run = async (req: HttpRequest, { signal }: { signal: AbortSignal }): Promise<unknown> => {
-    const url = new URL(req.url, options.baseUrl ?? location.href).href;
+  const urlOf = (req: HttpRequest): string =>
+    new URL(req.url, options.baseUrl ?? location.href).href;
+
+  const attempt = async (
+    req: HttpRequest,
+    { signal }: { signal: AbortSignal },
+  ): Promise<unknown> => {
+    const url = urlOf(req);
     const { body: payload } = req;
     const asJson = payload !== undefined && !isFormBody(payload);
     const method = req.method ?? 'GET';
@@ -186,6 +199,27 @@ export function makeHttpDriver(
     return result.value;
   };
 
+  const { timeoutMs } = options;
+  // A timer, not AbortSignal.timeout(), so fake timers in tests control it.
+  const run =
+    timeoutMs === undefined
+      ? attempt
+      : async (req: HttpRequest, { signal }: { signal: AbortSignal }): Promise<unknown> => {
+          const timer = new AbortController();
+          const id = setTimeout(() => {
+            timer.abort();
+          }, timeoutMs);
+          try {
+            return await attempt(req, { signal: AbortSignal.any([signal, timer.signal]) });
+          } catch (cause) {
+            throw timer.signal.aborted && !signal.aborted
+              ? new HttpFailure({ _tag: 'HttpTimeoutError', url: urlOf(req), timeoutMs })
+              : cause;
+          } finally {
+            clearTimeout(id);
+          }
+        };
+
   return {
     name: options.name ?? 'http',
     run,
@@ -196,6 +230,17 @@ export function makeHttpDriver(
     ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }),
   };
 }
+
+/**
+ * The failures worth retrying: network errors, timeouts, 408, 429 and 5xx. Pass it as
+ * `retry(…, { retryIf: retryableHttpError })`. A 4xx other than 408/429 means the request
+ * itself is wrong, and decoding errors won't change on a retry. `Retry-After` isn't read.
+ */
+export const retryableHttpError = (error: HttpError): boolean =>
+  error._tag === 'HttpNetworkError' ||
+  error._tag === 'HttpTimeoutError' ||
+  (error._tag === 'HttpStatusError' &&
+    (error.status >= 500 || error.status === 408 || error.status === 429));
 
 /** The default driver. Substitute it by name: `el.drivers = { http: makeHttpDriver({...}) }`. */
 export const http = makeHttpDriver();

@@ -70,21 +70,30 @@ Set per command (`{ key: 'search', concurrency: 'switch' }`) or as the driver's 
 
 ## Retries: wrap the driver
 
-`retry(driver, { times, delayMs?, backoff?: 'fixed' | 'exponential' })` returns the same driver
-(same name, so substitution still works) with failures retried after the delay; an abort
-(switched away, disconnected) ends it at once and is never retried. Wrap where the driver is
-chosen: app setup, a component's `drivers`, or a test fake. Apps that never call `retry` don't
-bundle it.
+`retry(driver, { times, delayMs?, backoff?, jitter?, retryIf? })` returns the same driver (same
+name, so substitution still works) with failures retried after the delay; an abort (switched
+away, disconnected) ends it at once and is never retried. Wrap where the driver is chosen: app
+setup, a component's `drivers`, or a test fake. Apps that never call `retry` don't bundle it.
+
+- `backoff: 'exponential'` doubles the delay each attempt; `jitter: true` waits a random part of
+  it (full jitter), so many clients don't retry in lockstep.
+- `retryIf(error)` gets the driver's typed error and decides; default: retry every failure. For
+  HTTP use `retryableHttpError` from `@gyral/http`: network errors, timeouts, 408, 429 and 5xx
+  (`Retry-After` isn't read).
+- `makeHttpDriver({ timeoutMs })` aborts an attempt that takes longer, failing with
+  `HttpTimeoutError`. Under `retry` each attempt gets the full time.
 
 ```ts
 import { provideDrivers, retry } from '@gyral/core';
-import { makeHttpDriver } from '@gyral/http';
+import { makeHttpDriver, retryableHttpError } from '@gyral/http';
 
 provideDrivers(document.body, {
-  http: retry(makeHttpDriver({ baseUrl: '/api' }), {
-    times: 2,
+  http: retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
+    times: 3,
     delayMs: 300,
     backoff: 'exponential',
+    jitter: true,
+    retryIf: retryableHttpError,
   }),
 });
 ```

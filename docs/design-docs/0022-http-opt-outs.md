@@ -155,3 +155,24 @@ All three recommendations were accepted: (1a) CSRF only through driver header so
    and register it by build-time name detection.
 3. **Missing-token dev warning.** (a) Warn on non-GET requests when a CSRF `<meta>` exists and
    no header came from it (recommended); (b) no warning, document only.
+
+## Addendum: jitter, retryIf and timeouts (2026-10-09, gyral-dyn.34)
+
+An app with real API traffic needs three things the first `retry()` lacked; without them it
+writes its own driver instead of using `@gyral/http`. They are now part of the design:
+
+- **`RetryPolicy.jitter`**: full jitter (`Math.random() × delay`), so clients that failed
+  together don't retry in lockstep.
+- **`RetryPolicy.retryIf(error)`**: gets the driver's typed error (`toError`, else the thrown
+  value). `RetryPolicy` takes the error type (`RetryPolicy<E>`), inferred from the driver.
+  `@gyral/http` exports `retryableHttpError`: network errors, timeouts, 408, 429 and 5xx.
+  `Retry-After` isn't read; a server that needs it gets the exponential delay instead.
+- **`makeHttpDriver({ timeoutMs })`**: a per-attempt limit. The attempt's signal is
+  `AbortSignal.any([command signal, timer signal])` (Baseline widely available since
+  2026-09-19); the timer is a `setTimeout`, not `AbortSignal.timeout()`, so fake timers control
+  it in tests. A timeout fails with the new `HttpTimeoutError` (a breaking change for exhaustive
+  switches over `HttpError`); an abort of the command itself stays an abort.
+
+Cost: jitter and `retryIf` live in `retry()`, so apps that don't call it pay nothing. The timeout
+branch is part of `makeHttpDriver` (measured in the changeset); apps without `@gyral/http` pay
+nothing.

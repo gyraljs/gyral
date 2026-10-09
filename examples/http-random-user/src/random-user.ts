@@ -20,6 +20,8 @@ const describeError = (error: HttpError): string => {
       return `The server answered ${String(error.status)} ${error.statusText}.`;
     case 'HttpNetworkError':
       return 'Could not reach the server. Check your connection.';
+    case 'HttpTimeoutError':
+      return 'The server took too long to answer.';
     case 'HttpDecodeError':
       return 'The server sent a user we could not read.';
   }

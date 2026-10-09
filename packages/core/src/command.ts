@@ -8,13 +8,20 @@ import type { IntentRejected } from './types.js';
 /** How commands in the same lane interact. See ADR 0006 for the table. */
 export type Concurrency = 'merge' | 'switch' | 'exhaust' | 'queue';
 
-/** How `retry(driver, policy)` retries a rejected run (retry.ts). */
-export interface RetryPolicy {
+/** How `retry(driver, policy)` retries a rejected run (retry.ts). `E`: the driver's error. */
+export interface RetryPolicy<E = unknown> {
   /** Retries after the first failure. */
   readonly times: number;
   /** Delay before each retry (the base delay for exponential backoff). Default 0. */
   readonly delayMs?: number;
   readonly backoff?: 'fixed' | 'exponential';
+  /** Full jitter: wait a random time between 0 and the computed delay, so clients spread out. */
+  readonly jitter?: boolean;
+  /**
+   * Which failures to retry, given the driver's typed error (its `toError`, else the thrown
+   * value). Default: every failure. For `@gyral/http`, `retryableHttpError`.
+   */
+  readonly retryIf?: (error: E) => boolean;
 }
 
 export interface DriverContext<O = unknown> {

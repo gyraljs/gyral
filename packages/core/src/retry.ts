@@ -19,15 +19,18 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
 /**
  * The same driver (same name, so substitution by name still works), with `run` retried when it
  * rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with
- * `backoff: 'exponential'`). An abort (the command switched away, the component disconnected)
- * ends it at once and is never retried. Wrap where the driver is chosen: app setup, a
- * component's `drivers`, or a test fake.
+ * `backoff: 'exponential'`; a random part of it with `jitter`), and only for failures
+ * `retryIf` accepts. An abort (the command switched away, the component disconnected) ends it
+ * at once and is never retried. Wrap where the driver is chosen: app setup, a component's
+ * `drivers`, or a test fake.
  *
- *   const api = retry(makeHttpDriver({ baseUrl: '/api' }), { times: 2, delayMs: 300 });
+ *   const api = retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
+ *     times: 3, delayMs: 300, backoff: 'exponential', jitter: true, retryIf: retryableHttpError,
+ *   });
  *   const feed = retry(subscription('feed', connect), { times: Infinity, delayMs: 1000 });
  */
-export function retry<I, O, E>(driver: Driver<I, O, E>, policy: RetryPolicy): Driver<I, O, E> {
-  const base = policy.delayMs ?? 0;
+export function retry<I, O, E>(driver: Driver<I, O, E>, policy: RetryPolicy<E>): Driver<I, O, E> {
+  const { times, delayMs: base = 0, backoff, jitter, retryIf } = policy;
   return {
     ...driver,
     run: async (input, ctx) => {
@@ -35,8 +38,11 @@ export function retry<I, O, E>(driver: Driver<I, O, E>, policy: RetryPolicy): Dr
         try {
           return await driver.run(input, ctx);
         } catch (cause) {
-          if (ctx.signal.aborted || attempt >= policy.times) throw cause;
-          await sleep(policy.backoff === 'exponential' ? base * 2 ** attempt : base, ctx.signal);
+          if (ctx.signal.aborted || attempt >= times) throw cause;
+          // Sound: without `toError` the driver's error type is what it throws.
+          if (retryIf?.(driver.toError?.(cause) ?? (cause as E)) === false) throw cause;
+          const delay = backoff === 'exponential' ? base * 2 ** attempt : base;
+          await sleep(jitter === true ? Math.random() * delay : delay, ctx.signal);
         }
       }
     },
