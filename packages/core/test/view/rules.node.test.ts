@@ -74,7 +74,12 @@ describe('template errors (view/09)', () => {
 
   it('rule 14: boolean attributes bound as strings', () => {
     // The shipped bug: selected="false" still selects the option.
-    expectRule(t`<option value="x" selected=${false}></option>`, 14, 'selected=${…}', '?selected=${…}');
+    expectRule(
+      t`<option value="x" selected=${false}></option>`,
+      14,
+      'selected=${…}',
+      '?selected=${…}',
+    );
     expectRule(t`<input disabled=${0}>`, 14, '?disabled=${…}', '"false"');
     expectRule(t`<details open="${0}"></details>`, 14, '?open=${…}');
     expectRule(t`<input DISABLED=${0}>`, 14, '?disabled=${…}');

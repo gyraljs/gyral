@@ -208,7 +208,12 @@ export class TreeBuilder implements Sink {
         const fix = formStateFix(tag.name, a.name);
         if (fix !== undefined) this.src.fail(4, msg.formState(tag.name, a.name, fix));
       }
-      if (a.kind === 'attr' && ns === 'html' && !tag.name.includes('-') && BOOLEAN_ATTRS.has(name)) {
+      if (
+        a.kind === 'attr' &&
+        ns === 'html' &&
+        !tag.name.includes('-') &&
+        BOOLEAN_ATTRS.has(name)
+      ) {
         this.src.fail(14, msg.booleanAttr(tag.name, name));
       }
       if ((a.kind === 'attr' || a.kind === 'bool') && ns !== 'html' && namespacedAttr(a.name)) {
