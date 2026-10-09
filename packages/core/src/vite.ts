@@ -318,17 +318,17 @@ export interface ElementTypesOptions {
  */
 function gyralElementTypes(options: ElementTypesOptions): Plugin {
   let root = process.cwd();
-  // ./compiler/tag-map imports Node built-ins only, so a plain import() loads it in every way
-  // this module loads (from TypeScript source too), without loadCompiler's module runner.
+  // ./compiler/tag-map imports Node built-ins only, so Node's own require loads it, from
+  // TypeScript source too (type stripping): no module runner, which may be closed by the time
+  // a build starts (see loadCompiler).
   type TagMap = typeof import('./compiler/tag-map.js');
-  let tagMap: Promise<TagMap> | undefined;
-  const regenerate = async (): Promise<void> => {
+  let tagMap: TagMap | undefined;
+  const regenerate = (): void => {
     const source = import.meta.url.endsWith('.ts')
       ? './compiler/tag-map.ts'
       : './compiler/tag-map.js';
-    const { scanTags, writeTagMap } = await (tagMap ??= import(
-      new URL(source, import.meta.url).href
-    ) as Promise<TagMap>);
+    tagMap ??= createRequire(import.meta.url)(source) as TagMap;
+    const { scanTags, writeTagMap } = tagMap;
     const settings = { root, ...options };
     const out = join(root, options.out ?? '.gyral/elements.d.ts');
     if (scanTags(settings).length === 0 && !existsSync(out)) return;
@@ -342,15 +342,15 @@ function gyralElementTypes(options: ElementTypesOptions): Plugin {
     configResolved(config) {
       root = config.root;
     },
-    async buildStart() {
-      await regenerate();
+    buildStart() {
+      regenerate();
     },
-    async watchChange(id) {
-      if (isSource(id)) await regenerate();
+    watchChange(id) {
+      if (isSource(id)) regenerate();
     },
     configureServer(server) {
       const changed = (file: string): void => {
-        if (isSource(file)) void regenerate();
+        if (isSource(file)) regenerate();
       };
       server.watcher.on('add', changed).on('change', changed).on('unlink', changed);
     },
