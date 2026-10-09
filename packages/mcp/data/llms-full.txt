@@ -1,4 +1,4 @@
-# Gyral 0.3.1-next.5: complete documentation
+# Gyral 0.3.1-next.6: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -870,7 +870,7 @@ itself would work as well.
 ## What a parser receives
 
 A parser gets an `IntentInput` object, and the component's read-only context as a second
-argument (see [props and stores in a parser](#props-and-stores-in-a-parser)):
+argument (see [props, state and stores in a parser](#props-state-and-stores-in-a-parser)):
 
 | Field      | Holds                                                                          |
 | ---------- | ------------------------------------------------------------------------------ |
@@ -996,10 +996,10 @@ section's `Save` sees Ctrl+S from there too.
 Before Gyral 0.3.1, `undefined` ended the lookup, so an outer intent never saw an event that an
 inner parser ignored. See the [migration guide](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#behavior-changes).
 
-## Props and stores in a parser
+## Props, state and stores in a parser
 
-A parser's second argument is the read-only context reducers get: `props`, as they are when the
-event fires, and `read(store)` for the stores in the spec's `stores`. Parsers that don't need it
+A parser's second argument is a read-only context: `props` and the component's `state`, as they
+are when the event fires, and `read(store)` for the stores in the spec's `stores`. Parsers that don't need it
 take one parameter. Use it when the decision must be made during the event, such as whether to
 call `preventDefault()`: by the time a reducer runs, the browser has already acted.
 
@@ -1058,6 +1058,41 @@ export const Folders = define<{ readonly active: number }, Msg, Props>()('my-fol
   `,
 });
 ```
+
+Where the user is often decides the default, and that's state. A seat grid keeps Tab while
+there is a next seat, and lets it move focus on from the last one:
+
+```ts
+// src/seats.ts
+import { define, html } from '@gyral/core';
+
+interface Grid {
+  readonly cell: number;
+  readonly cells: number;
+}
+type Msg = { readonly _tag: 'NextCell' };
+
+export const Seats = define<Grid, Msg>()('my-seat-grid', {
+  init: () => ({ cell: 0, cells: 12 }),
+  intent: {
+    NextCell: ({ key, event }, { state }) => {
+      if (key !== 'Tab' || state.cell === state.cells - 1) return undefined;
+      event.preventDefault();
+      return { _tag: 'NextCell' };
+    },
+  },
+  update: { NextCell: (s) => ({ ...s, cell: s.cell + 1 }) },
+  view: (s, i) => html`
+    <div role="grid" tabindex="0" aria-label="Seats" data-intent-keydown=${i.NextCell}>
+      Seat ${s.cell + 1} of ${s.cells}
+    </div>
+  `,
+});
+```
+
+`state` includes messages sent earlier in the same task, before the next render. Read it,
+don't write it: apart from `preventDefault()`, a parser stays pure, and the view doesn't need
+to write `data-first`/`data-last` attributes just so a parser can read them.
 
 Keep parsers pure apart from `preventDefault()`: they read the context, they never write.
 `form()`, `field()` and `child()` return one-parameter parsers, so code that calls one directly,
@@ -1304,6 +1339,59 @@ auto-repeat.
 - Keys reach the button only while it has focus. For a shortcut anywhere on the page, read keys
   in a driver: a [subscription](https://gyral.dev/docs/outside-state/) to `keydown` and `keyup` on `window`.
 
+## The element under a captured pointer
+
+While an element holds pointer capture, every move lands on it, not on what the pointer is
+over. To trace a path across items (drawing across a grid of cells, selecting a range of days
+by dragging), capture on the container and ask the component's root which element is under the
+pointer: `elementFromPoint` on the shadow root (or `document` for a light-DOM component) sees
+inside the shadow tree. The cell carries its index in `data-cell`:
+
+```ts
+// src/path-grid.ts
+import { capturePointer, define, html } from '@gyral/core';
+
+interface State {
+  readonly path: readonly number[];
+}
+type Msg = { readonly _tag: 'Trace'; readonly cell: number; readonly start: boolean };
+
+const CELLS = Array.from({ length: 16 }, (_, n) => n);
+
+export const PathGrid = define<State, Msg>()('my-path-grid', {
+  init: () => ({ path: [] }),
+  intent: {
+    Trace: ({ event, target }) => {
+      if (!(event instanceof PointerEvent)) return undefined;
+      if (event.type === 'pointermove' && event.buttons === 0) return undefined;
+      const root = target.getRootNode() as Document | ShadowRoot;
+      const under = root.elementFromPoint(event.clientX, event.clientY);
+      const cell = under?.closest('[data-cell]')?.getAttribute('data-cell');
+      if (cell == null) return undefined;
+      return { _tag: 'Trace', cell: Number(cell), start: event.type === 'pointerdown' };
+    },
+  },
+  update: {
+    Trace: (s, m) =>
+      m.start ? { path: [m.cell] } : s.path.at(-1) === m.cell ? s : { path: [...s.path, m.cell] },
+  },
+  view: (s, i) => html`
+    <div
+      class="grid"
+      ${capturePointer()}
+      data-intent=${i.Trace}
+      data-intent-on="pointerdown pointermove"
+    >
+      ${CELLS.map(
+        (n) => html`<span data-cell=${n} class=${s.path.includes(n) ? 'on' : ''}>${n}</span>`,
+      )}
+    </div>
+  `,
+});
+```
+
+Give the container `touch-action: none` so a finger traces instead of scrolling.
+
 ## Invoker commands
 
 An element with `data-intent-on="command"` receives
@@ -1520,6 +1608,7 @@ message changes nothing.
 | `StoreChanged`   | A store the component reads changed. [Shared state](https://gyral.dev/docs/stores/)                                                                            |
 | `Hydrated`       | The component is live in the browser, once, after its first render. Has `serverRendered`.                                                     |
 | `Connected`      | The component was removed, its commands stopped, and it was attached again. [Moves and reconnects](https://gyral.dev/docs/outside-state/#moves-and-reconnects) |
+| `Errored`        | An update, parser or command of this component failed. Has `phase` and `error` (a `GyralError`). [Error handling](https://gyral.dev/docs/error-handling/)      |
 
 `Hydrated` is the hook for progressive enhancement: render the no-JavaScript version on the
 server and in the first client render (so hydration matches), then switch to the enhanced UI
@@ -2290,6 +2379,65 @@ export const Pager = define<State, Msg>()('my-pager', {
 ```
 
 Headings aren't focusable by default, hence `tabindex="-1"`.
+
+### Focusing what a later render brings
+
+`focus()` runs after the render its update caused. When the target only appears later, such as
+the first result once a search answers, pass `wait: true`: the request stays pending until a
+render of the component produces the target. A newer `focus()` from the component replaces it,
+and after one second it gives up with the usual warning. `settled()` doesn't wait for it.
+
+```ts
+// src/result-search.ts
+import { command, define, defineDriver, focus, html } from '@gyral/core';
+
+interface Result {
+  readonly id: string;
+  readonly title: string;
+}
+export interface State {
+  readonly query: string;
+  readonly results: readonly Result[];
+}
+export type Msg =
+  | { readonly _tag: 'Search'; readonly query: string }
+  | { readonly _tag: 'Found'; readonly results: readonly Result[] };
+
+const search = defineDriver<string, readonly Result[]>({
+  name: 'search',
+  run: async (query, { signal }) => {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal });
+    return (await response.json()) as readonly Result[];
+  },
+});
+
+export const ResultSearch = define<State, Msg>()('my-result-search', {
+  init: () => ({ query: '', results: [] }),
+  intent: {
+    Search: ({ formData }) => ({ _tag: 'Search', query: String(formData?.get('q') ?? '') }),
+  },
+  update: {
+    // The first result exists only after `Found` renders: the focus waits for it.
+    Search: (s, m) => [
+      { ...s, query: m.query },
+      [
+        command(search, m.query, { onSuccess: (results): Msg => ({ _tag: 'Found', results }) }),
+        focus('#results li:first-child a', { wait: true }),
+      ],
+    ],
+    Found: (s, m) => ({ ...s, results: m.results }),
+  },
+  view: (s, i) => html`
+    <form data-intent=${i.Search}>
+      <input name="q" aria-label="Search" .value=${s.query} />
+      <button>Search</button>
+    </form>
+    <ul id="results">
+      ${s.results.map((r) => html`<li><a href=${`/items/${r.id}`}>${r.title}</a></li>`)}
+    </ul>
+  `,
+});
+```
 
 ### Focusing into a child component
 
@@ -3098,6 +3246,51 @@ export const describeError = (e: HttpError): string => {
 };
 ```
 
+### Telling a refused request from no change
+
+When a server (or a shared session) can refuse what the user asked for, don't infer the refusal
+from a snapshot that didn't change: "same data" can mean refused, not yet processed, or a move
+that changed nothing. Make the refusal a message of its own. A request with a reply maps the
+refusal to its own variant through the command's `onFailure`; a feed that answers out of band
+carries the request's id, so the component can tell its own refusal from someone else's update:
+
+```ts
+// src/moves.ts
+import { command, defineDriver, type Command } from '@gyral/core';
+
+interface Move {
+  readonly id: string;
+  readonly cell: number;
+}
+type Refusal = { readonly reason: string };
+
+type Msg =
+  | { readonly _tag: 'Accepted'; readonly id: string }
+  | { readonly _tag: 'Refused'; readonly id: string; readonly reason: string };
+
+/** The server answers 200 or a 409 with `{ reason }`; `toError` turns the 409 into a Refusal. */
+const moves = defineDriver<Move, void, Refusal>({
+  name: 'moves',
+  run: async (move, { signal }) => {
+    const res = await fetch('/api/moves', { method: 'POST', body: JSON.stringify(move), signal });
+    if (!res.ok) throw (await res.json()) as Refusal;
+  },
+  toError: (cause) =>
+    typeof cause === 'object' && cause !== null && 'reason' in cause
+      ? { reason: String(cause.reason) }
+      : { reason: 'unavailable' },
+});
+
+export const propose = (move: Move): Command<Msg> =>
+  command(moves, move, {
+    onSuccess: (): Msg => ({ _tag: 'Accepted', id: move.id }),
+    onFailure: (refusal): Msg => ({ _tag: 'Refused', id: move.id, reason: refusal.reason }),
+  });
+```
+
+The `Refused` reducer can then undo an optimistic change and show the reason. For form
+submissions, `IntentRejected` is already this message ([Forms](https://gyral.dev/docs/forms/)).
+
 ### A copy button
 
 With the driver above, a "Copy link" button is a message, a command and two answers:
@@ -3225,6 +3418,243 @@ Commands never run during a server render: there is no interpreter, no timer and
 Do async work in the route handler and pass results as props. After hydration, the browser
 starts `init`'s commands, so a subscription such as `listen()` begins exactly where the server
 left off. See [Server rendering](https://gyral.dev/docs/server-rendering/).
+
+---
+
+# Error handling
+
+> How Gyral reports each failure once, lets a parent catch a child's failure, shows a component's fallback and keeps a server-rendered page going.
+
+Source: https://gyral.dev/docs/error-handling/
+
+Code fails: a reducer reads a field that isn't there, a view meets data it didn't expect, a
+driver's server is down. Gyral catches every failure in a component, wraps it in a
+`GyralError` and sends it through **one channel**, so nothing escapes into the page as an
+uncaught exception and nothing is only logged.
+
+Expected failures are different: a request that can fail should say what its failure becomes.
+Give its command an `onFailure` that maps the error to a message, and handle that message in
+`update` like any other ([Effects and drivers](https://gyral.dev/docs/effects/)). The channel on this page is for
+the failures you didn't plan for.
+
+## One channel
+
+A `GyralError` carries `component` (the host's tag), `phase` (where it failed), `msg` (the
+message tag, intent name or driver) and `cause` (what was thrown). In order:
+
+1. **Devtools** shows an `error` row in the timeline (development).
+2. **A parent can catch it.** A bubbling, composed, cancelable `ErrorEvent('error')` is
+   dispatched on the failing component. An ancestor that listens for it is a **boundary**; it
+   claims the failure with `preventDefault()`.
+3. **The component's own fallback runs.** Its `error(failure, state)` view renders when `init`
+   or the view threw; its optional `Errored` reducer receives failed updates, parsers and
+   commands.
+4. **Unless a parent claimed it, it is reported** with
+   [`reportError()`](https://developer.mozilla.org/docs/Web/API/reportError): `window`'s `error`
+   event and your monitoring see it, once.
+
+| Phase       | What threw                                                                 | What happens                                                                |
+| ----------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `init`      | `init`                                                                     | No state: `error(failure, undefined)` renders, or the component stays empty |
+| `update`    | a reducer                                                                  | Nothing changes: the state is kept and its commands don't run; `Errored`    |
+| `view`      | the view                                                                   | `error(failure, state)` renders, or the previous DOM stays                  |
+| `parse`     | an intent parser (throws or rejects)                                       | No message; `Errored`                                                       |
+| `command`   | an `onSuccess`/`onFailure` mapper, or a driver failure without `onFailure` | No message; `Errored`                                                       |
+| `hook`      | an element hook                                                            | Reported; the other hooks of that render still run                          |
+| `store`     | a store reducer or a subscriber                                            | The store is unchanged / the other subscribers are still notified           |
+| `subscribe` | a subscription's unsubscribe                                               | Reported; the command still stops                                           |
+
+`el.send()` never throws to its caller, and a failure inside `error` or `Errored` is reported
+once, never looped. `Errored` is a framework message name, like `PropsChanged`.
+
+## A component's own fallback
+
+`error(failure, state)` renders instead of the view when `init` (then `state` is `undefined`)
+or the view throws. `Errored` lets the component switch to an error state, or reset:
+
+```ts
+// src/order-list.ts
+import { command, define, defineDriver, html, type GyralError } from '@gyral/core';
+
+interface Order {
+  readonly id: string;
+  readonly total: number;
+}
+type State =
+  | { readonly _tag: 'Ready'; readonly orders: readonly Order[] }
+  | { readonly _tag: 'Broken'; readonly reason: string };
+type Msg =
+  { readonly _tag: 'Refresh' } | { readonly _tag: 'Loaded'; readonly orders: readonly Order[] };
+
+const orders = defineDriver<undefined, readonly Order[]>({
+  name: 'orders',
+  run: async (_input, { signal }) => {
+    const response = await fetch('/api/orders', { signal });
+    return (await response.json()) as readonly Order[];
+  },
+});
+const refresh = () =>
+  command(orders, undefined, { onSuccess: (list): Msg => ({ _tag: 'Loaded', orders: list }) });
+
+export const OrderList = define<State, Msg>()('order-list', {
+  init: () => [{ _tag: 'Ready', orders: [] }, [refresh()]],
+  intent: { Refresh: () => ({ _tag: 'Refresh' }) },
+  update: {
+    Refresh: (s) => [s, [refresh()]],
+    Loaded: (_s, m) => ({ _tag: 'Ready', orders: m.orders }),
+    // Any failed update, parse or command of this component. The driver failing lands here
+    // too, because this command has no onFailure.
+    Errored: (_s, m) => ({ _tag: 'Broken', reason: m.error.phase }),
+  },
+  view: (s, i) =>
+    s._tag === 'Broken'
+      ? html`<p role="alert">Orders are unavailable (${s.reason}).</p>
+          <button type="button" data-intent=${i.Refresh}>Try again</button>`
+      : html`<ul>
+          ${s.orders.map((o) => html`<li>${o.id}: ${o.total}</li>`)}
+        </ul>`,
+  error: (failure: GyralError) =>
+    html`<p role="alert">Orders failed to show (${failure.phase}).</p>`,
+});
+```
+
+## A parent boundary
+
+A parent catches a child's failure with the intents it already has: listen for `error` on the
+child, read the `GyralError` from the event, and call `preventDefault()` to claim it. A claimed
+failure isn't reported, so report it yourself if you still want it in your telemetry. To retry,
+re-mount the child (render it in a different template, or give it a new key in `each()`): its
+`init` runs again.
+
+```ts
+// src/dashboard.ts
+import { define, html, type GyralError } from '@gyral/core';
+
+interface State {
+  readonly attempt: number;
+  readonly failed: boolean;
+}
+type Msg = { readonly _tag: 'WidgetFailed' } | { readonly _tag: 'Retry' };
+
+export const Dashboard = define<State, Msg>()('my-dashboard', {
+  init: () => ({ attempt: 0, failed: false }),
+  intent: {
+    WidgetFailed: ({ event }) => {
+      const failure = (event as ErrorEvent).error as GyralError;
+      event.preventDefault(); // claimed: this boundary handles it, the page doesn't
+      console.info('the chart failed in', failure.phase);
+      return { _tag: 'WidgetFailed' };
+    },
+    Retry: () => ({ _tag: 'Retry' }),
+  },
+  update: {
+    WidgetFailed: (s) => ({ ...s, failed: true }),
+    Retry: (s) => ({ attempt: s.attempt + 1, failed: false }),
+  },
+  view: (s, i) =>
+    s.failed
+      ? html`<p role="alert">The chart is unavailable.</p>
+          <button type="button" data-intent=${i.Retry}>Retry</button>`
+      : s.attempt % 2 === 0
+        ? html`<div>
+            <sales-chart data-intent=${i.WidgetFailed} data-intent-on="error"></sales-chart>
+          </div>`
+        : html`<p>
+            <sales-chart data-intent=${i.WidgetFailed} data-intent-on="error"></sales-chart>
+          </p>`,
+});
+```
+
+The event stops at the document, so `window` hears an unclaimed failure only once, through
+`reportError`.
+
+## Monitoring
+
+Every unclaimed failure reaches `window` once. Listen there; `event.error` is the `GyralError`:
+
+```ts
+// src/telemetry.ts
+import { GyralError } from '@gyral/core';
+
+window.addEventListener('error', (event) => {
+  if (!(event.error instanceof GyralError)) return;
+  const { component, phase, msg, cause } = event.error;
+  navigator.sendBeacon(
+    '/telemetry',
+    JSON.stringify({ component, phase, msg, cause: String(cause) }),
+  );
+});
+```
+
+Production builds report the same errors with short messages; the codes are explained on the
+[error codes](https://gyral.dev/errors/) page.
+
+## On the server
+
+A component whose `init` or view throws during [server rendering](https://gyral.dev/docs/server-rendering/)
+renders its `error` view (or nothing), marked `data-gyral-error` and without a seed. The rest of
+the page renders, and the browser starts that component fresh. `renderPage`'s `onError` hears
+each failure (default `console.error`). With `onError: 'throw'`, `renderPage` renders the page
+to a string first and throws before any byte is sent, so the route can answer with its error
+page:
+
+```ts
+// src/server/orders-page.ts
+import { html, type GyralError } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+
+declare const report: (error: GyralError) => void;
+const body = html`<order-list></order-list>`;
+
+// One failing component shouldn't take the page down: it shows its fallback.
+export const ordersPage = (): Response =>
+  renderPage({ title: 'Orders', body, onError: (error) => report(error) });
+
+// This page is all or nothing: answer 500 with an error page instead.
+export function checkoutPage(): Response {
+  try {
+    return renderPage({ title: 'Checkout', body, onError: 'throw' });
+  } catch {
+    return new Response('Something went wrong', { status: 500 });
+  }
+}
+```
+
+Data loading happens before `renderPage`, so the route handler already owns the error page for
+its own failures.
+
+## In tests
+
+`reportError` counts as an uncaught error, and Vitest fails a test run on one. That's what you
+want for failures you didn't plan. When a test makes a component fail on purpose, collect the
+failures with `collectErrors()` from `@gyral/testing` and assert on them:
+
+```ts
+// src/order-list.browser.test.ts
+import { settled } from '@gyral/core';
+import { collectErrors, fakeDriver } from '@gyral/testing';
+import { afterEach, expect, it } from 'vitest';
+import { OrderList } from './order-list.js';
+
+let collected: ReturnType<typeof collectErrors> | undefined;
+afterEach(() => collected?.stop());
+
+it('shows the error state when the orders fail to load', async () => {
+  collected = collectErrors();
+  const el = new OrderList();
+  el.drivers = {
+    orders: fakeDriver('orders', () => {
+      throw new Error('down');
+    }),
+  };
+  document.body.append(el);
+  await settled();
+  expect(collected.errors.map((e) => e.phase)).toEqual(['command']);
+  expect(el.shadowRoot?.textContent).toContain('unavailable');
+});
+```
+
+In a model test, `step()` accepts `Errored`, so you can test that reducer without a DOM.
 
 ---
 
@@ -4002,8 +4432,8 @@ Measured on Gyral's examples (gzip, 0.3.1):
 
 | App         | Default: first load | Default: all chunks | `clientOnly: true` |
 | ----------- | ------------------- | ------------------- | ------------------ |
-| hello-world | 8.42 KiB            | 10.81 KiB           | 7.35 KiB           |
-| counter     | 8.34 KiB            | 10.72 KiB           | 7.27 KiB           |
+| hello-world | 9.27 KiB            | 11.71 KiB           | 8.21 KiB           |
+| counter     | 9.19 KiB            | 11.62 KiB           | 8.13 KiB           |
 
 "First load" is what a page downloads before any lazy `import()`; in these examples a
 client-only build has nothing lazy left, so its first load is all of it.
@@ -4023,7 +4453,7 @@ silently. The server's work is wasted, though, so treat that warning as a config
 
 `create-gyral`'s `basic` template is client-only from the start: its `vite.config.ts` sets
 `gyralVitePreset({ clientOnly: true })`, and its `vitest.config.ts` reuses that config, so tests
-build the way the app does. A new app is about 7.5 KiB gzip, in one file. Keep the option while
+build the way the app does. A new app is about 8.5 KiB gzip, in one file. Keep the option while
 every page renders in the browser. Delete `clientOnly: true` as soon as any page is rendered on
 a server or prerendered, for example when you add `@gyral/ssr`: with it on, those components
 can't hydrate and render again from scratch. The `ssr` template builds without it.
@@ -6114,17 +6544,18 @@ Measured on Gyral's examples (KiB gzip, production builds with the preset):
 
 | App                      | 0.2.0 | 0.3.1: first load | 0.3.1: all chunks |
 | ------------------------ | ----- | ----------------- | ----------------- |
-| hello-world              | 12.2  | 8.4               | 10.9              |
-| hello-world, client-only | —     | 7.4               | 7.4               |
-| isomorphic (SSR)         | 17.3  | 13.0              | 16.0              |
-| no-js-first (SSR, forms) | 18.7  | 15.9              | 18.3              |
+| hello-world              | 12.2  | 9.3               | 11.7              |
+| hello-world, client-only | —     | 8.2               | 8.2               |
+| isomorphic (SSR)         | 17.3  | 14.5              | 17.5              |
+| no-js-first (SSR, forms) | 18.7  | 16.6              | 19.2              |
 
 "First load" is the entry chunk and what it imports statically: what a page downloads before any
 lazy `import()`. On 0.3.0 the same first loads were 8.9, 12.9 and 16.6 KiB. 0.3.1 leaves out
 view transitions, the frame lane and custom states unless a module names their spec field (the
 build reads your code and the packages that depend on Gyral; see [what the build
 reads](https://gyral.dev/docs/rendering-modes/#what-the-build-reads)), and its production builds print short
-[error codes](https://gyral.dev/errors/) instead of messages. The client-only
+[error codes](https://gyral.dev/errors/) instead of messages. Those savings pay for most of 0.3.1's additions;
+the largest, [error handling](https://gyral.dev/docs/error-handling/), adds about 0.75 KiB to every app. The client-only
 row is the same app built with [`clientOnly: true`](https://gyral.dev/docs/rendering-modes/#client-only-builds).
 The isomorphic example routes, and the router's [scroll and focus
 handling](https://gyral.dev/docs/routing/#scroll-and-focus) costs it about 0.5 KiB of first load; the History API
@@ -6187,7 +6618,7 @@ The guides explain how the pieces fit together: start with [Components](https://
 
 # Migrating from 0.3.0 to 0.3.1
 
-> Move a Gyral 0.3.0 app to 0.3.1 - the two-call define, the head model, retries and CSRF on the driver, behavior changes - and what's new.
+> Move a Gyral 0.3.0 app to 0.3.1 - the two-call define, the head model, retries and CSRF on the driver, one error channel, behavior changes - and what's new.
 
 Source: https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/
 
@@ -6328,6 +6759,54 @@ it against the old page.
   first navigation there resolves a moment later. If it can't load, navigations become full
   page loads.
 
+## Errors go through one channel
+
+Every failure Gyral catches in a component (`init`, a reducer, the view, a parser, a command's
+mappers, a driver without `onFailure`, an element hook, a store) is now a `GyralError`, reported
+once through one channel ([Error handling](https://gyral.dev/docs/error-handling/)). That changes what your tests
+and logs see:
+
+- **Failures that were only logged now reach `window`'s `error` event** through
+  `reportError()`, so monitoring sees them, and so does a test runner: Vitest fails a run on
+  one. In a browser test that makes a component fail on purpose, use `collectErrors()` from
+  `@gyral/testing` and assert on the errors it collected. Tests that spied on `console.error`
+  for these failures switch to it too.
+- **A driver failure without `onFailure` is an error**, no longer a warning. Give every command
+  whose failure is expected an `onFailure` that maps it to a message.
+- **Nothing throws to the caller.** A throwing `init`, synchronous parser or intent reducer is
+  reported with its component and phase instead of escaping, `el.send()` reports a failing
+  reducer instead of throwing, and a store reducer that throws doesn't throw to the sender. A
+  reducer that throws changes nothing.
+- **Fixed:** a store subscriber that throws no longer keeps the other subscribers stale; an
+  element hook that throws no longer skips the other hooks of that render; a failed
+  `PropsChanged` is sent again with the next render.
+- **`Errored` is a framework message name**, like `PropsChanged`: rename an app message that
+  uses it. Devtools' `DevEvent` has a new `kind: 'error'`.
+- **On the server, a failing component no longer truncates the page.** It renders its `error`
+  view (or nothing) and the rest of the page is sent; pass `onError: 'throw'` to `renderPage` to
+  fail the whole page instead.
+- New error codes G0073 to G0078; G0031, G0040 and G0041 have new texts
+  ([error codes](https://gyral.dev/errors/)).
+
+## Exports removed from the public API
+
+0.3.1 reviews every export before the API locks; the full list is in Gyral's
+`docs/references/public-api-0.3.1.md`. These are no longer exported, and `tsc` names any you
+used:
+
+- `@gyral/core`: `StoreRegistry` and `withStoreScope` (import them from `@gyral/core/server`);
+  the internals `headEntries`, `HEAD_ATTRIBUTE`, `HeadEntry`, `scriptSafeJson`, `STORE_SEND`,
+  `StoreSendInput`, `STORE_SEED_ATTRIBUTE`, `warnJsonHazard`, `formFields`, `formDataToObject`,
+  `intentRejectedSchema`, `runInit`, `ISLAND_ATTRIBUTE`, `devtoolsEnabled` and
+  `devtoolsLiveComponents` (use the documented APIs: `Head` with `page()` and `setHead()`,
+  `form()`, `submitForm()`, `validateForm()`, `step()`); `isLightComponent`, `findInScope`.
+- `@gyral/core/vite`: everything but `gyralVitePreset`, `gyralTemplateCompiler`,
+  `gyralClientOnly` and their option types. `@gyral/core/eslint`: the rule re-exports (use the
+  plugin).
+- `@gyral/router`: `capturedUrl`. `@gyral/testing`: `customElementsIn`, `undefinedElementsIn`.
+  `@gyral/time`: `makeTime`, `TimeOptions`; `@gyral/time/delay`: `makeDelayTime`.
+- `@gyral/devtools`, `@gyral/mcp` and `create-gyral`: only their documented entry points.
+
 ## Behavior changes
 
 These keep compiling but behave differently. Check each against your app and its tests.
@@ -6368,11 +6847,12 @@ These keep compiling but behave differently. Check each against your app and its
 - **Empty segments never match**: `/users//7` no longer matches `/users/:id` in browsers
   without URLPattern, as it already didn't with it. Patterns the two matchers would read
   differently (`/v:id`, `:post-id`, a param named twice) throw.
-- **A parser takes a second argument**, the read-only context `{ props, read }`
-  ([Props and stores in a parser](https://gyral.dev/docs/intent/#props-and-stores-in-a-parser)). Parsers with
-  one parameter still fit, and so do direct calls of `form()`, `field()` and `child()`. A test
-  that calls a parser from a spec, `SearchBox.spec.intent.Search?.(input)`, must now pass a
-  context: `{ props: {}, read: readerOf([]) }`, with `readerOf` from `@gyral/testing`.
+- **A parser takes a second argument**, the read-only context `{ props, state, read }`
+  ([Props, state and stores in a parser](https://gyral.dev/docs/intent/#props-state-and-stores-in-a-parser)).
+  Parsers with one parameter still fit, and so do direct calls of `form()`, `field()` and
+  `child()`. A test that calls a parser from a spec, `SearchBox.spec.intent.Search?.(input)`,
+  must now pass a context: `{ props: {}, state, read: readerOf([]) }`, with `readerOf` from
+  `@gyral/testing`. `IntentParser` takes the state type as a third type parameter.
 
 ## Short error messages in production
 
@@ -6419,12 +6899,17 @@ dependency.
 - Intents: [`data-intent-on` lists](https://gyral.dev/docs/intent/#trigger-events) such as
   `"pointerdown pointerup"`, [per-event attributes](https://gyral.dev/docs/intent/#one-element-an-intent-per-event)
   `data-intent-<event>`, [declining parsers](https://gyral.dev/docs/intent/#declining-passing-an-event-outward),
-  [props and stores in a parser](https://gyral.dev/docs/intent/#props-and-stores-in-a-parser),
+  [props, state and stores in a parser](https://gyral.dev/docs/intent/#props-state-and-stores-in-a-parser),
   [intent names inferred from parser keys](https://gyral.dev/docs/intent/#intent-names-that-arent-messages),
   including names that aren't message tags, `detail` for every `CustomEvent`, and the
   [`capturePointer()`](https://gyral.dev/docs/intent/#press-and-hold) hook for press-and-hold and drag.
+- Errors: [one channel](https://gyral.dev/docs/error-handling/) with a `GyralError` per failure, parent
+  boundaries through a cancelable `error` event, a component's `error` view and `Errored`
+  reducer, isolated failures on the server with `renderPage({ onError })`, and
+  `collectErrors()` for tests.
 - Components: [`shadow: { delegatesFocus: true }`](https://gyral.dev/docs/views/#focusing-into-a-child-component),
-  also written by the server, and [prop equality](https://gyral.dev/docs/components/#when-a-prop-counts-as-changed)
+  also written by the server, [`focus(selector, { wait: true })`](https://gyral.dev/docs/views/#focusing-what-a-later-render-brings)
+  for a target a later render brings, and [prop equality](https://gyral.dev/docs/components/#when-a-prop-counts-as-changed)
   with an `equals` option for `prop.json` and `prop.value`.
 - [`svg` templates](https://gyral.dev/docs/views/#svg-fragments) for SVG fragments that are templates of their
   own.
@@ -6451,6 +6936,8 @@ dependency.
   `retryableHttpError`, and `csrfFromMeta` on the driver ([Effects](https://gyral.dev/docs/effects/#retries)).
 - [Moves keep commands running](https://gyral.dev/docs/outside-state/#moves-and-reconnects), and the framework
   message `Connected` for a component attached again after a real removal.
+- Patterns: [the element under a captured pointer](https://gyral.dev/docs/intent/#the-element-under-a-captured-pointer)
+  and [telling a refused request from no change](https://gyral.dev/docs/effects/#telling-a-refused-request-from-no-change).
 - Server: opt-in [hashes for server-rendered `style` attributes](https://gyral.dev/docs/server-rendering/#content-security-policy)
   (`renderPage({ csp: { styleAttributes: 'hash' } })`), and a
   [Trusted Types](https://gyral.dev/docs/server-rendering/#trusted-types) policy named `gyral`.
@@ -6469,13 +6956,15 @@ dependency.
 - `registryVersion()` from `@gyral/core/server`: `renderPage({ csp })` now rebuilds its header
   whenever a component registers.
 - Smaller bundles: view transitions, the frame lane and custom states ship only when a module
-  names their spec field, and production messages are codes. Hello-world's first load went
-  from 8.9 to 8.4 KiB gzip (7.4 KiB built client-only); see [Packages](https://gyral.dev/docs/packages/).
+  names their spec field, and production messages are codes. Those savings pay for most of
+  0.3.1's additions; error handling adds about 0.75 KiB to every app. Hello-world's first load
+  is 9.3 KiB gzip (8.9 on 0.3.0; 8.2 KiB built client-only); see [Packages](https://gyral.dev/docs/packages/).
 
-This site's islands got slightly smaller. Their entry chunk was 13.7 KiB gzip (level 9) on 0.3.0
-and is 13.6 KiB on 0.3.1: the size work and retries leaving the command runner paid for the
-search box's new debounce with `@gyral/time/delay` (0.25 KiB) and for 0.3.1's additions (Trusted
-Types, prop equality, declining parsers). The hydration chunk stays at about 2.8 KiB.
+This site's islands grew a little. Their entry chunk was 13.7 KiB gzip (level 9) on 0.3.0 and
+is 14.4 KiB on 0.3.1: the size work and retries leaving the command runner paid for the search
+box's new debounce with `@gyral/time/delay` (0.25 KiB) and for most of 0.3.1's additions
+(Trusted Types, prop equality, declining parsers), and error handling adds about 0.75 KiB. The
+hydration chunk stays at about 2.8 KiB.
 
 ---
 
@@ -6892,7 +7381,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1-next.5, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.1-next.6, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -7023,14 +7512,14 @@ A callback Gyral deferred to a microtask threw: delivering a child component’s
 ### G0031
 
 ```text
-<{tag}> failed to render; its previous DOM stays.
+<{tag}> view failed; it shows its error view, or its previous DOM stays.
 ```
 
 Arguments: `tag`.
 
-A component’s `view` threw during a render. Gyral logs it and keeps rendering the other components, so this one’s DOM shows its previous state.
+A component’s `view` threw during a render. Gyral reports a `GyralError` (phase `view`) through its error channel and keeps rendering the other components. The component renders its `error` view if its spec has one; otherwise its DOM shows its previous state.
 
-**Fix:** Fix the exception in the view, using the error logged with this message. It is often a field read on state that has a different shape than the view expects.
+**Fix:** Fix the exception in the view, using the `cause` of the reported error. It is often a field read on state that has a different shape than the view expects. Give the spec an `error(failure, state)` view so users see a fallback ([Error handling](https://gyral.dev/docs/error-handling/)).
 
 ### G0032
 
@@ -7073,26 +7562,26 @@ Arguments: `rounds`.
 ### G0040
 
 ```text
-gyral: command mapper threw
+{owner}: the onSuccess or onFailure mapper for driver "{driver}" threw; no message was sent.
 ```
 
-Arguments: none.
+Arguments: `owner`, `driver`.
 
-A command’s `onSuccess` or `onFailure` mapper threw while turning a driver’s result into a message, so the result never reached `update`.
+A command’s `onSuccess` or `onFailure` mapper threw while turning a driver’s result into a message, so the result never reached `update`. It is reported as a `GyralError` (phase `command`), and the component’s `Errored` reducer, if any, receives it.
 
 **Fix:** Make the mapper total: return a message, or `undefined`, for every input.
 
 ### G0041
 
 ```text
-gyral: unhandled failure from driver "{driver}"
+{owner}: driver "{driver}" failed and the command has no onFailure.
 ```
 
-Arguments: `driver`.
+Arguments: `owner`, `driver`.
 
-A driver failed, after its `retry` policy, and the command has no `onFailure`. The failure is dropped, so the component can’t react: a spinner may spin forever.
+A driver failed, after any `retry()` policy, and the command has no `onFailure`. Since 0.3.1 this is an error, not a warning: it is reported as a `GyralError` (phase `command`) and reaches the component’s `Errored` reducer, if any. Without one, the component can’t react: a spinner may spin forever.
 
-**Fix:** Give the command an `onFailure` that turns the error into a message, and handle that message in `update`.
+**Fix:** Give the command an `onFailure` that turns the error into a message, and handle that message in `update`. Expected failures (the network, a 5xx, a refusal) should always be messages.
 
 ### G0042
 
@@ -7268,6 +7757,80 @@ Gyral parses template HTML and `raw()` markup through a Trusted Types policy nam
 
 **Fix:** Add `gyral` to the policy list: `trusted-types gyral` (with your own policies, if any). If you don’t use Trusted Types, remove the `trusted-types` directive.
 
+## Errors (ADR 0024)
+
+### G0073
+
+```text
+<{tag}> update for "{message}" failed; the state is unchanged.
+```
+
+Arguments: `tag`, `message`.
+
+A reducer threw while handling the named message. Nothing changed: the state stays as it was and the commands that reducer would have returned don’t run. It is reported as a `GyralError` (phase `update`), and the component’s `Errored` reducer, if any, receives it.
+
+**Fix:** Fix the exception in that reducer, using the `cause` of the reported error. Add an `Errored` reducer if the component should show an error state ([Error handling](https://gyral.dev/docs/error-handling/)).
+
+### G0074
+
+```text
+<{tag}> init failed; it shows its error view, or stays empty.
+```
+
+Arguments: `tag`.
+
+A component’s `init` threw, so it has no state. It renders its `error(failure, undefined)` view if its spec has one, or stays empty. The error is reported as a `GyralError` (phase `init`).
+
+**Fix:** Fix the exception in `init`, using the `cause` of the reported error; often a prop or seed read with an unexpected shape. Give the spec an `error` view for a visible fallback.
+
+### G0075
+
+```text
+<{tag}> element hook failed; the other hooks still ran.
+```
+
+Arguments: `tag`.
+
+An element hook’s `client` function threw. Gyral reported it (phase `hook`) and still ran the other hooks of that render; the element itself is in the DOM.
+
+**Fix:** Fix the exception in the hook, using the `cause` of the reported error.
+
+### G0076
+
+```text
+store "{store}": update for "{message}" failed; the state is unchanged.
+```
+
+Arguments: `store`, `message`.
+
+A store’s reducer threw while handling the named message. The store’s state is unchanged and its commands don’t run. The error is reported as a `GyralError` (phase `store`); the sender isn’t affected.
+
+**Fix:** Fix the exception in that store reducer, using the `cause` of the reported error.
+
+### G0077
+
+```text
+store "{store}": a subscriber failed; the other subscribers were still notified.
+```
+
+Arguments: `store`.
+
+A component that reads the store threw while handling `StoreChanged`. The other subscribers were still notified and the store’s commands still ran.
+
+**Fix:** Fix the exception in that component’s `StoreChanged` reducer (or the code it calls), using the `cause` of the reported error.
+
+### G0078
+
+```text
+<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.
+```
+
+Arguments: `tag`.
+
+A component’s `init` or view threw during server rendering. It rendered its `error` view (or nothing), marked `data-gyral-error` and without a seed, and the rest of the page was sent; the browser starts that component fresh. `renderPage`’s `onError` received the error.
+
+**Fix:** Fix the exception, using the error your `onError` received. Pass `onError: 'throw'` to `renderPage` if a failing component should fail the whole page instead, so the route can answer with its error page.
+
 ---
 
 # @gyral/core
@@ -7301,22 +7864,16 @@ Generated from the package's type declarations. Entry points: [`@gyral/core`](#g
 | [`defineForm`](#core-defineform) |  |
 | [`defineHook`](#core-definehook) | Defines an element hook: a small behaviour attached to the element it sits on. |
 | [`defineStore`](#core-definestore) | Defines a store. |
-| [`devtoolsLiveComponents`](#core-devtoolslivecomponents) |  |
 | [`each`](#core-each) | A keyed list (view/03-lists.md). |
 | [`emit`](#core-emit) | A command that sends `output` to the parent component. |
 | [`field`](#core-field) | Intent parser for one control (pair with `data-intent-on="input"` for live checks). |
 | [`fieldErrors`](#core-fielderrors) | Groups issues by field name. |
-| [`findInScope`](#core-findinscope) | The element with `id`, searched from `from`'s own root outward to the document. |
 | [`focus`](#core-focus) | A command that focuses the first element matching `selector` inside this component (its shadow root, or its own children in light-DOM mode) once the current update has rendered: |
 | [`form`](#core-form) | Intent parser for a `<form data-intent>` submission, validated by a schema. |
-| [`formDataToObject`](#core-formdatatoobject) | FormData to a plain object. |
-| [`formFields`](#core-formfields) | The text fields of a parsed form, for re-filling it after a rejection. |
-| [`headEntries`](#core-headentries) | A head's managed elements, in document order and without duplicates: description, robots, canonical, `meta`, `links`, then JSON-LD. |
 | [`html`](#core-html) | The template tag: `` html`<p>${s.text}</p>` ``. |
 | [`intentsOf`](#core-intentsof) | A component's intent names as a module-level constant, so pure list rows can name intents without passing them through `pick` (view/03-lists.md "Rows must be pure"). |
 | [`invalid`](#core-invalid) | Mirrors model errors to native validity: `setCustomValidity` and `aria-invalid`. |
 | [`invokersSupported`](#core-invokerssupported) | Native invoker commands available? |
-| [`isLightComponent`](#core-islightcomponent) | Is this class a light-DOM Gyral component (`shadow: false`)? |
 | [`jsonHazard`](#core-jsonhazard) | The first place where `value` would change across a JSON round trip, as `path: reason`, or `undefined` when it is JSON-safe. |
 | [`labelledBy`](#core-labelledby) | Names the element after the element with `id`, even outside this component's shadow root: |
 | [`outputs`](#core-outputs) | `emit`, typed by a component's output union (the 4th `define` type parameter), so an output of the wrong shape fails to compile. |
@@ -7327,16 +7884,12 @@ Generated from the package's type declarations. Entry points: [`@gyral/core`](#g
 | [`redirectedTo`](#core-redirectedto) | The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. |
 | [`resetDocumentStores`](#core-resetdocumentstores) | Tests only: forget the document default so each test starts clean. |
 | [`retry`](#core-retry) | The same driver (same name, so substitution by name still works), with `run` retried when it rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with `backoff: 'exponential'`; a random part of it with `jitter`), and only for failures `retryIf` accepts. |
-| [`runInit`](#core-runinit) | Runs a spec's `init`, or starts from `{}` when a stateless component omits it. |
-| [`scriptSafeJson`](#core-scriptsafejson) | JSON for an inline `<script type="application/json">`: `</script>` and friends escaped. |
 | [`send`](#core-send) | A command that sends `msg` to the component's instance of `store`. |
 | [`settled`](#core-settled) | Resolves once the page is quiet: every connected Gyral host has rendered its latest state, view-transition updates have run, focus commands and outputs have been delivered, and messages have stopped arriving (a stream's next value, already on its way in a microtask, is waited for; long-lived commands themselves are not). |
 | [`subscription`](#core-subscription) | A streaming driver over a source Gyral doesn't own. |
 | [`svg`](#core-svg) | The SVG fragment tag: `` svg`<path d=${s.d} />` ``. |
 | [`toInt`](#core-toint) | Maps a uniform number in [0, 1) to an integer in `min..max` (inclusive). |
 | [`validateForm`](#core-validateform) | Validates submitted form data exactly as `form()` does. |
-| [`warnJsonHazard`](#core-warnjsonhazard) | Warns (server side) when a seed would hydrate differently from what was rendered. |
-| [`withStoreScope`](#core-withstorescope) | Runs `fn` with `registry` as the server's store scope. |
 
 #### `capturePointer`
 
@@ -7466,13 +8019,6 @@ function defineStore<S, M extends Tagged>(name: string, spec: StoreSpec<S, M>): 
 
 Defines a store. `name` keys it in registries, seeds and overrides, so keep it unique.
 
-#### `devtoolsLiveComponents`
-
-```ts
-const devtoolsLiveComponents: () => readonly DevComponentRef[]
-```
-
-
 #### `each`
 
 ```ts
@@ -7511,14 +8057,6 @@ function fieldErrors(issues: readonly FieldIssue[]): Readonly<Record<string, rea
 Groups issues by field name. Call it in the `IntentRejected` reducer and keep the result in
 state: `invalid()` re-applies an error only when it gets a new array.
 
-#### `findInScope`
-
-```ts
-function findInScope(from: Element, id: string): Element | null;
-```
-
-The element with `id`, searched from `from`'s own root outward to the document.
-
 #### `focus`
 
 ```ts
@@ -7544,35 +8082,6 @@ function form<Schema extends StandardSchemaV1, M>(definition: FormDefinition<Sch
 Intent parser for a `<form data-intent>` submission, validated by a schema. `toMsg` also
 gets the raw `FormData`, for sending the submission to the server (`submitForm` in
 `@gyral/http`) after it passed client-side validation.
-
-#### `formDataToObject`
-
-```ts
-function formDataToObject(data: FormData): Readonly<Record<string, FormValue>>;
-```
-
-FormData to a plain object. The same function runs on the server, so both sides agree.
-Repeated names become arrays; a `name[]` suffix always yields an array (named `name`).
-Values stay strings (or Files): the schema coerces them.
-
-#### `formFields`
-
-```ts
-function formFields(data: Readonly<Record<string, FormValue>>): FormFields;
-```
-
-The text fields of a parsed form, for re-filling it after a rejection.
-
-#### `headEntries`
-
-```ts
-function headEntries(head: Head): readonly HeadEntry[];
-```
-
-A head's managed elements, in document order and without duplicates: description, robots,
-canonical, `meta`, `links`, then JSON-LD. Later `meta`/`links` entries with the same key win
-(at the later position); the typed description and robots win over `meta` entries. The
-title, `lang` and `dir` are not elements here.
 
 #### `html`
 
@@ -7629,14 +8138,6 @@ const invokersSupported: () => boolean
 ```
 
 Native invoker commands available?
-
-#### `isLightComponent`
-
-```ts
-function isLightComponent(ctor: unknown): boolean;
-```
-
-Is this class a light-DOM Gyral component (`shadow: false`)?
 
 #### `jsonHazard`
 
@@ -7757,23 +8258,6 @@ const feed = retry(subscription('feed', connect), { times: Infinity, delayMs: 10
 ```
 
 
-#### `runInit`
-
-```ts
-function runInit<S, M extends Tagged, P>(spec: ComponentSpec<S, M, P>, props: P): Next<S, M>;
-```
-
-Runs a spec's `init`, or starts from `{}` when a stateless component omits it. Used by
-`define()` and by `@gyral/testing`.
-
-#### `scriptSafeJson`
-
-```ts
-function scriptSafeJson(value: unknown): string;
-```
-
-JSON for an inline `<script type="application/json">`: `</script>` and friends escaped.
-
 #### `send`
 
 ```ts
@@ -7850,30 +8334,26 @@ function validateForm<Schema extends StandardSchemaV1>(definition: FormDefinitio
 Validates submitted form data exactly as `form()` does. The no-JS server path
 (`formAction` in `@gyral/ssr`) uses it, so both paths produce the same `IntentRejected`.
 
-#### `warnJsonHazard`
-
-```ts
-function warnJsonHazard(owner: string, value: unknown, path: string): void;
-```
-
-Warns (server side) when a seed would hydrate differently from what was rendered.
-
-#### `withStoreScope`
-
-```ts
-function withStoreScope<T>(registry: StoreRegistry, fn: () => T): T;
-```
-
-Runs `fn` with `registry` as the server's store scope. Server renders are synchronous per
-render step, so `@gyral/ssr` wraps every step: interleaved requests never see each other's
-stores, without AsyncLocalStorage (works on any runtime).
-
 ### Classes
 
 | Name | Summary |
 | --- | --- |
+| [`GyralError`](#core-gyralerror) | A failure Gyral caught, with its context; `cause` is what was thrown. |
 | [`HydrationMismatch`](#core-hydrationmismatch) | The server's DOM doesn't match the component's first client render. |
-| [`StoreRegistry`](#core-storeregistry) | A set of store instances by store name, created on demand from optional seeds. |
+
+#### `GyralError`
+
+```ts
+class GyralError extends Error {
+  readonly name = "GyralError";
+  readonly component: string | undefined;
+  readonly phase: ErrorPhase;
+  readonly msg: string | undefined;
+  constructor(phase: ErrorPhase, text: string, cause: unknown, component?: string, msg?: string);
+}
+```
+
+A failure Gyral caught, with its context; `cause` is what was thrown.
 
 #### `HydrationMismatch`
 
@@ -7885,36 +8365,17 @@ class HydrationMismatch extends Error {
 
 The server's DOM doesn't match the component's first client render.
 
-#### `StoreRegistry`
-
-```ts
-class StoreRegistry {
-  constructor(instances?: readonly AnyStoreInstance[], seeds?: Readonly<Record<string, unknown>>);
-  get(store: AnyStore): AnyStoreInstance;
-  snapshot(): Readonly<Record<string, unknown>>;
-  dispose(): void;
-}
-```
-
-A set of store instances by store name, created on demand from optional seeds.
-
 ### Constants
 
 | Name | Summary |
 | --- | --- |
 | [`DEVTOOLS_GLOBAL`](#core-devtools_global) | Where a listener installs itself: `globalThis.__GYRAL_DEVTOOLS__ = { emit }`. |
-| [`devtoolsEnabled`](#core-devtoolsenabled) |  |
 | [`DRIVERS_ELEMENT`](#core-drivers_element) | Provider element name: `<gyral-drivers .drivers=${{ http: fake }}>…</gyral-drivers>`. |
-| [`HEAD_ATTRIBUTE`](#core-head_attribute) | The attribute that marks an element the head model manages; its value is the entry's key. |
-| [`intentRejectedSchema`](#core-intentrejectedschema) | A Standard Schema for `IntentRejected` as a server sends it (`formAction` answering JSON). |
-| [`ISLAND_ATTRIBUTE`](#core-island_attribute) | Server-written strategy for a deferred island; removed when the island is released. |
 | [`LIGHT_ATTRIBUTE`](#core-light_attribute) | Server-rendered light hosts carry this attribute (ADR 0014 addendum, view/06-server.md "Components"), so a parent's hydration walk leaves a light child's content alone (view/07). |
 | [`nothing`](#core-nothing) | Renders nothing in a child hole; removes the attribute in an attribute hole. |
 | [`OUTPUT_EVENT`](#core-output_event) | Event a child component dispatches on its host to send an output up (ADR 0010); public. |
 | [`prop`](#core-prop) | The prop builders. |
 | [`randomDriver`](#core-randomdriver) | Uniform numbers in [0, 1). |
-| [`STORE_SEED_ATTRIBUTE`](#core-store_seed_attribute) | Page-level seed from `@gyral/ssr`: `<script type="application/json" data-gyral-stores>`. |
-| [`STORE_SEND`](#core-store_send) | Marker driver for `send()`: `define()` delivers these to the resolved store instance. |
 | [`STORES_ELEMENT`](#core-stores_element) | Provider element name. |
 
 #### `DEVTOOLS_GLOBAL`
@@ -7925,13 +8386,6 @@ const DEVTOOLS_GLOBAL: "__GYRAL_DEVTOOLS__"
 
 Where a listener installs itself: `globalThis.__GYRAL_DEVTOOLS__ = { emit }`.
 
-#### `devtoolsEnabled`
-
-```ts
-const devtoolsEnabled: boolean
-```
-
-
 #### `DRIVERS_ELEMENT`
 
 ```ts
@@ -7939,31 +8393,6 @@ const DRIVERS_ELEMENT: "gyral-drivers"
 ```
 
 Provider element name: `<gyral-drivers .drivers=${{ http: fake }}>…</gyral-drivers>`.
-
-#### `HEAD_ATTRIBUTE`
-
-```ts
-const HEAD_ATTRIBUTE: "data-gyral-head"
-```
-
-The attribute that marks an element the head model manages; its value is the entry's key.
-
-#### `intentRejectedSchema`
-
-```ts
-const intentRejectedSchema: StandardSchemaV1<unknown, IntentRejected>
-```
-
-A Standard Schema for `IntentRejected` as a server sends it (`formAction` answering JSON).
-Used by `submitForm` in `@gyral/http` to recognise a 422 rejection; usable with any decoder.
-
-#### `ISLAND_ATTRIBUTE`
-
-```ts
-const ISLAND_ATTRIBUTE: "data-gyral-hydrate"
-```
-
-Server-written strategy for a deferred island; removed when the island is released.
 
 #### `LIGHT_ATTRIBUTE`
 
@@ -8006,22 +8435,6 @@ const randomDriver: Driver<RandomInput, readonly number[], unknown>
 
 Uniform numbers in [0, 1). Substitute it in tests: `el.drivers = { random: fake }`.
 
-#### `STORE_SEED_ATTRIBUTE`
-
-```ts
-const STORE_SEED_ATTRIBUTE: "data-gyral-stores"
-```
-
-Page-level seed from `@gyral/ssr`: `<script type="application/json" data-gyral-stores>`.
-
-#### `STORE_SEND`
-
-```ts
-const STORE_SEND: { readonly name: "@gyral/store-send"; readonly run: () => undefined; readonly local: (host: LocalHost, input: unknown) => void; }
-```
-
-Marker driver for `send()`: `define()` delivers these to the resolved store instance.
-
 #### `STORES_ELEMENT`
 
 ```ts
@@ -8057,6 +8470,8 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`Driver`](#core-driver) | Performs one kind of side effect. |
 | [`DriverContext`](#core-drivercontext) |  |
 | [`DriverOverrides`](#core-driveroverrides) | Drivers substituted by name (test fakes, configured instances): `el.drivers`, `provideDrivers`. |
+| [`Errored`](#core-errored) | Framework message (ADR 0024): an update, an intent parser or a command of this component failed. |
+| [`ErrorPhase`](#core-errorphase) | Where a failure happened. |
 | [`FieldIssue`](#core-fieldissue) | One validation problem. |
 | [`FocusOptions`](#core-focusoptions) |  |
 | [`FormDefinition`](#core-formdefinition) | A form's schema, shared by the client component and (with `@gyral/ssr`) the server route. |
@@ -8067,7 +8482,6 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`GyralElement`](#core-gyralelement) | The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public instance API"). |
 | [`GyralElementClass`](#core-gyralelementclass) |  |
 | [`Head`](#core-head) | A page's head: what `page()` writes on the server and `setHead()` applies on the client. |
-| [`HeadEntry`](#core-headentry) | One managed element: its key, tag, attributes (in order) and, for JSON-LD, its text. |
 | [`HeadLink`](#core-headlink) | A metadata `<link>`: `alternate` (with `hreflang`), `icon`, `manifest`, `prev`/`next`, … |
 | [`HeadMeta`](#core-headmeta) | `<meta name content>`, or `<meta property content>` (Open Graph uses `property`). |
 | [`HookAttributes`](#core-hookattributes) | Attributes a hook's server half adds to the start tag (`true`: present, no value). |
@@ -8086,6 +8500,7 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`OutputEvent`](#core-outputevent) | The `gyral-output` event a child dispatches on its host for each output (ADR 0010): `detail` is the output. |
 | [`OutputsOf`](#core-outputsof) | The output union of a `define()` class: `OutputsOf<typeof Item>`. |
 | [`OutputSource`](#core-outputsource) | Anything `child()` can read an output type from: a `define()` class. |
+| [`ParserCtx`](#core-parserctx) | What an intent parser gets besides the input: the reducers' context plus the component's current state, read-only. |
 | [`ParserFor`](#core-parserfor) | The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that variant; any other name is an intent of its own whose parser may produce any message. |
 | [`Prop`](#core-prop) | One declared prop: what a builder returns. |
 | [`PropDeclarations`](#core-propdeclarations) | The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per key. |
@@ -8106,7 +8521,6 @@ Provider element name. Set `.instances=${[cart.instance()]}`, or let it create i
 | [`StoreReader`](#core-storereader) | Reads a declared store's current state, typed by the store (ADR 0013). |
 | [`StoreRef`](#core-storeref) | What `ctx.read()` accepts: anything that names a store and carries its state type. |
 | [`StoreResolver`](#core-storeresolver) | Finds a store's instance in a scope (a registry). |
-| [`StoreSendInput`](#core-storesendinput) | The input of a `send()` command. |
 | [`StoreSpec`](#core-storespec) |  |
 | [`StoreUpdate`](#core-storeupdate) | One pure reducer per message tag, like a component's `update` but without context. |
 | [`Styles`](#core-styles) | What `spec.styles` accepts: `css` values, plain CSS strings (e.g. |
@@ -8243,7 +8657,7 @@ What the interpreter reports about one command (ADR 0006 lanes and policies).
 #### `ComponentSpec`
 
 ```ts
-type ComponentSpec<S, M extends Tagged, P, N extends string = string> = SpecBody<S, M, P, N, Intents<M, P, N>> & InitField<S, M, P>;
+type ComponentSpec<S, M extends Tagged, P, N extends string = string> = SpecBody<S, M, P, N, Intents<M, P, N, S>> & InitField<S, M, P>;
 ```
 
 A component spec. `N` is the component's intent names, the keys of `intent` (ADR 0023).
@@ -8342,6 +8756,14 @@ type DevEvent = {
     readonly kind: 'command';
     readonly owner: string;
 } & CommandTraceEvent) | {
+    /** A failure Gyral caught (ADR 0024): `component` is absent for stores and shared work. */
+    readonly kind: 'error';
+    readonly component?: DevComponentRef;
+    readonly phase: string;
+    readonly msg?: string;
+    readonly message: string;
+    readonly error: unknown;
+} | {
     readonly kind: 'store';
     readonly store: string;
     readonly msg: Tagged;
@@ -8417,6 +8839,29 @@ Drivers substituted by name (test fakes, configured instances): `el.drivers`,
 `provideDrivers`. Annotate a driver map with this type (or `Record<string, AnyDriver>`), not
 `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
 
+#### `Errored`
+
+```ts
+interface Errored {
+    readonly _tag: 'Errored';
+    readonly phase: 'update' | 'parse' | 'command';
+    readonly error: GyralError;
+}
+```
+
+Framework message (ADR 0024): an update, an intent parser or a command of this component
+failed. The failure was reported (`reportError`, or claimed by an ancestor's boundary) and
+changed nothing; reduce it to show an error state or to reset. A failure while reducing
+`Errored` is reported and not sent again.
+
+#### `ErrorPhase`
+
+```ts
+type ErrorPhase = 'init' | 'update' | 'view' | 'parse' | 'command' | 'hook' | 'store' | 'subscribe';
+```
+
+Where a failure happened.
+
 #### `FieldIssue`
 
 ```ts
@@ -8436,6 +8881,12 @@ interface FocusOptions {
     readonly preventScroll?: boolean;
     /** Also select the text of an input or textarea. */
     readonly select?: boolean;
+    /**
+     * If nothing matches after this render, keep the request and focus the target as soon as a
+     * later render of this component produces it; a newer `focus()` from the component replaces
+     * it, and after one second it gives up with the usual warning. `settled()` doesn't wait for it.
+     */
+    readonly wait?: boolean;
 }
 ```
 
@@ -8559,19 +9010,6 @@ interface Head {
 ```
 
 A page's head: what `page()` writes on the server and `setHead()` applies on the client.
-
-#### `HeadEntry`
-
-```ts
-interface HeadEntry {
-    readonly key: string;
-    readonly tag: 'meta' | 'link' | 'script';
-    readonly attributes: readonly (readonly [name: string, value: string])[];
-    readonly text?: string;
-}
-```
-
-One managed element: its key, tag, attributes (in order) and, for JSON-LD, its text.
 
 #### `HeadLink`
 
@@ -8699,15 +9137,15 @@ A component's intent names, the keys of its `intent` object, as the view's `i` a
 #### `IntentParser`
 
 ```ts
-type IntentParser<M, P = unknown> = (input: IntentInput, ctx: Ctx<P>) => ParseResult<M> | Promise<ParseResult<M>>;
+type IntentParser<M, P = unknown, S = unknown> = (input: IntentInput, ctx: ParserCtx<P, S>) => ParseResult<M> | Promise<ParseResult<M>>;
 ```
 
 Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
 decline it: a synchronous `undefined` passes the event to the next intent outward for the
 same event (view/05-element.md "Declining"). May be async because schema validation may be;
-an async parser keeps the event. `ctx` is the read-only context
-reducers get (props as they are when the event fires, `read(store)`); parsers that don't
-need it take one parameter.
+an async parser keeps the event. `ctx` is the read-only context reducers get (props as
+they are when the event fires, `read(store)`) plus `state`, the component's state at that
+moment; parsers that don't need it take one parameter.
 
 #### `IntentRejected`
 
@@ -8730,8 +9168,8 @@ Framework message: an intent's input failed schema validation (ADR 0008).
 #### `Intents`
 
 ```ts
-type Intents<M extends Tagged, P = unknown, N extends string = string> = {
-    readonly [K in N]: ParserFor<M, P, K>;
+type Intents<M extends Tagged, P = unknown, N extends string = string, S = unknown> = {
+    readonly [K in N]: ParserFor<M, P, K, S>;
 };
 ```
 
@@ -8806,10 +9244,23 @@ interface OutputSource<O extends Tagged, E extends Element> {
 
 Anything `child()` can read an output type from: a `define()` class.
 
+#### `ParserCtx`
+
+```ts
+interface ParserCtx<P, S = unknown> extends Ctx<P> {
+    /** The state when the event fires. */
+    readonly state: Readonly<S>;
+}
+```
+
+What an intent parser gets besides the input: the reducers' context plus the component's
+current state, read-only. Parsers decide synchronously (`preventDefault()`), and where the
+user is often decides it: Tab leaves a grid only from its last cell.
+
 #### `ParserFor`
 
 ```ts
-type ParserFor<M extends Tagged, P, K> = K extends M['_tag'] ? IntentParser<Variant<M, K>, P> : IntentParser<M, P>;
+type ParserFor<M extends Tagged, P, K, S = unknown> = K extends M['_tag'] ? IntentParser<Variant<M, K>, P, S> : IntentParser<M, P, S>;
 ```
 
 The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
@@ -9059,17 +9510,6 @@ type StoreResolver = (store: AnyStore) => AnyStoreInstance;
 
 Finds a store's instance in a scope (a registry).
 
-#### `StoreSendInput`
-
-```ts
-interface StoreSendInput {
-    readonly store: AnyStore;
-    readonly msg: Tagged;
-}
-```
-
-The input of a `send()` command.
-
 #### `StoreSpec`
 
 ```ts
@@ -9189,6 +9629,7 @@ type Update<S, M extends Tagged, P = object> = {
     readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
     readonly Hydrated?: Reducer<S, M, Hydrated, P>;
     readonly Connected?: Reducer<S, M, Connected, P>;
+    readonly Errored?: Reducer<S, M, Errored, P>;
 };
 ```
 
@@ -9341,6 +9782,12 @@ interface ServerRenderOptions {
      * (ADR 0020). The markup is the same with or without it.
      */
     readonly styleAttributes?: StyleValues;
+    /**
+     * Hears each component whose `init` or view threw (ADR 0024; core's `GyralError`): the page
+     * goes on with that component's error view, or nothing. Default `console.error`. Throwing
+     * from it ends the render with that error.
+     */
+    readonly onError?: (error: unknown) => void;
 }
 ```
 
@@ -9362,10 +9809,7 @@ neither is known).
 | Name | Summary |
 | --- | --- |
 | [`gyralClientOnly`](#core-vite-gyralclientonly) | Client-only builds (view/07-hydration.md "Client-only builds", gyral-c5d.11), for apps no server renders: the browser environment resolves core with the `gyral-client-only` condition, so the bundle carries no hydration code (no seed reading, no hydration chunk and its import()), and in `vite build` the invoker-command fallback only when a module that can affect Gyral components (the app's own, or a package that reaches a Gyral package) may use command intents (./compiler/features.ts). |
-| [`gyralDependents`](#core-vite-gyraldependents) | The app's direct dependencies that depend on a Gyral package (a design system, say). |
-| [`gyralDevServer`](#core-vite-gyraldevserver) | Development output from the dev server's SSR (`ssrLoadModule`, view/06 "Development markers"). |
 | [`gyralTemplateCompiler`](#core-vite-gyraltemplatecompiler) | The template compiler alone (`gyralVitePreset()` includes it). |
-| [`gyralTemplateLocations`](#core-vite-gyraltemplatelocations) | Development source locations (view/01-templates.md "Source locations"): in `vite serve` (the dev server, Vitest) each html`…` and svg`…` call site of the template sources tells the runtime where it was written, so template rule errors and hydration mismatches name `file:line:col` (./compiler/locate.ts, loaded on the first hook). |
 | [`gyralVitePreset`](#core-vite-gyralvitepreset) | Spread into a Vite config, or into each Vitest project: |
 
 #### `gyralClientOnly`
@@ -9383,29 +9827,6 @@ command intents (./compiler/features.ts). With no other import(), Vite's preload
 too. Server-rendered markup met anyway renders fresh (development warns). Dev servers and
 test runs get the condition too, and always keep the invoker fallback.
 
-#### `gyralDependents`
-
-```ts
-function gyralDependents(root: string): string[];
-```
-
-The app's direct dependencies that depend on a Gyral package (a design system, say). They
-import `@gyral/core`, so they must share the copy the dev server runs.
-
-#### `gyralDevServer`
-
-```ts
-function gyralDevServer(): Plugin;
-```
-
-Development output from the dev server's SSR (`ssrLoadModule`, view/06 "Development
-markers"). Vite externalizes installed packages there and Node imports them itself, resolving
-core's `#view-dev` without the `development` condition (Vite's `externalConditions` only pick
-the entry file, not the package's own imports), so the server rendered production output.
-In serve mode this plugin keeps Gyral's packages, and the app's dependencies that use them,
-out of externalization in server environments: Vite resolves them with its conditions
-(`development` in dev), and they all share one copy of core. `vite build` is unaffected.
-
 #### `gyralTemplateCompiler`
 
 ```ts
@@ -9413,18 +9834,6 @@ function gyralTemplateCompiler(options?: TemplateCompilerOptions): Plugin;
 ```
 
 The template compiler alone (`gyralVitePreset()` includes it).
-
-#### `gyralTemplateLocations`
-
-```ts
-function gyralTemplateLocations(options?: TemplateCompilerOptions): Plugin;
-```
-
-Development source locations (view/01-templates.md "Source locations"): in `vite serve` (the
-dev server, Vitest) each html`…` and svg`…` call site of the template sources tells the
-runtime where it was written, so template rule errors and hydration mismatches name
-`file:line:col` (./compiler/locate.ts, loaded on the first hook). `vite build` compiles
-templates instead.
 
 #### `gyralVitePreset`
 
@@ -9440,65 +9849,6 @@ export default defineConfig({ ...gyralVitePreset(), build: { … } });
 ```
 
 With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
-
-### Constants
-
-| Name | Summary |
-| --- | --- |
-| [`CLIENT_CONDITIONS`](#core-vite-client_conditions) | Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser). |
-| [`CLIENT_ONLY_CONDITION`](#core-vite-client_only_condition) | The client's resolve condition in client-only builds (view/07 "Client-only builds"). |
-| [`COMPILED_CONDITION`](#core-vite-compiled_condition) | The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). |
-| [`DEFAULT_TEMPLATE_SOURCES`](#core-vite-default_template_sources) | Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3). |
-| [`GYRAL_PACKAGES`](#core-vite-gyral_packages) | Gyral's packages: the dev server runs them through Vite, never Node (view/06). |
-| [`SERVER_CONDITIONS`](#core-vite-server_conditions) |  |
-
-#### `CLIENT_CONDITIONS`
-
-```ts
-const CLIENT_CONDITIONS: readonly string[]
-```
-
-Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser).
-
-#### `CLIENT_ONLY_CONDITION`
-
-```ts
-const CLIENT_ONLY_CONDITION: "gyral-client-only"
-```
-
-The client's resolve condition in client-only builds (view/07 "Client-only builds").
-
-#### `COMPILED_CONDITION`
-
-```ts
-const COMPILED_CONDITION: "gyral-compiled"
-```
-
-The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism).
-
-#### `DEFAULT_TEMPLATE_SOURCES`
-
-```ts
-const DEFAULT_TEMPLATE_SOURCES: readonly string[]
-```
-
-Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3).
-
-#### `GYRAL_PACKAGES`
-
-```ts
-const GYRAL_PACKAGES: RegExp
-```
-
-Gyral's packages: the dev server runs them through Vite, never Node (view/06). The feature
-scan's scope (./compiler/scope.ts) uses the same pattern.
-
-#### `SERVER_CONDITIONS`
-
-```ts
-const SERVER_CONDITIONS: readonly string[]
-```
-
 
 ### Types and interfaces
 
@@ -9565,35 +9915,11 @@ interface TemplateCompilerOptions {
 | Name | Summary |
 | --- | --- |
 | [`default`](#core-eslint-default) |  |
-| [`rowPurityRule`](#core-eslint-rowpurityrule) |  |
-| [`templateRule`](#core-eslint-templaterule) |  |
-| [`unusedIntentRule`](#core-eslint-unusedintentrule) |  |
 
 #### `default`
 
 ```ts
 const default: GyralPlugin
-```
-
-
-#### `rowPurityRule`
-
-```ts
-const rowPurityRule: RuleModule
-```
-
-
-#### `templateRule`
-
-```ts
-const templateRule: RuleModule
-```
-
-
-#### `unusedIntentRule`
-
-```ts
-const unusedIntentRule: RuleModule
 ```
 
 
@@ -10009,7 +10335,6 @@ Generated from the package's type declarations. Entry points: [`@gyral/router`](
 | Name | Summary |
 | --- | --- |
 | [`back`](#router-back) |  |
-| [`capturedUrl`](#router-capturedurl) | The URL a click should navigate to in-app, or `undefined` to let the browser handle it. |
 | [`forward`](#router-forward) |  |
 | [`go`](#router-go) | Moves through history by `delta` entries (`-1` is back). |
 | [`listen`](#router-listen) | Streams the current location, then every URL change, as messages until the component disconnects (a streaming command, ADR 0006/0009). |
@@ -10024,16 +10349,6 @@ Generated from the package's type declarations. Entry points: [`@gyral/router`](
 const back: () => Command<never>
 ```
 
-
-#### `capturedUrl`
-
-```ts
-function capturedUrl(event: MouseEvent, location: LocationLike): URL | undefined;
-```
-
-The URL a click should navigate to in-app, or `undefined` to let the browser handle it.
-Skips: already-handled clicks, modified or non-primary clicks, `target` other than
-`_self`, `download`, `rel="external"`, other origins, and same-page hash links.
 
 #### `forward`
 
@@ -10377,7 +10692,6 @@ Generated from the package's type declarations. Entry points: [`@gyral/time`](#g
 | [`animationFrames`](#time-animationframes) | Streams animation frames until the component disconnects (`switch` in its lane). |
 | [`debounce`](#time-debounce) | Sends `msg` once `ms` pass without another `debounce` in the same lane: a delay under `switch`, so each call cancels the pending one. |
 | [`delay`](#time-delay) | Sends `msg` after `ms`. |
-| [`makeTime`](#time-maketime) | A time driver. |
 | [`periodic`](#time-periodic) | Streams the number of elapsed periods (1, 2, 3, …) every `ms` until the component disconnects. |
 
 #### `animationFrames`
@@ -10404,14 +10718,6 @@ function delay<M>(ms: number, msg: M, lane?: Lane): Command<M>;
 ```
 
 Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`).
-
-#### `makeTime`
-
-```ts
-function makeTime(options?: TimeOptions): TimeDriver;
-```
-
-A time driver. Nothing starts at import time, so it is safe to load on a server.
 
 #### `periodic`
 
@@ -10444,7 +10750,6 @@ The default time driver.
 | [`Lane`](#time-lane) | Concurrency lane for a timer. |
 | [`TimeDriver`](#time-timedriver) |  |
 | [`TimeInput`](#time-timeinput) |  |
-| [`TimeOptions`](#time-timeoptions) |  |
 | [`TimeOutput`](#time-timeoutput) | Delays resolve `undefined`; periodic streams tick counts; frames stream `Frame`s. |
 
 #### `Frame`
@@ -10489,16 +10794,6 @@ type TimeInput = {
 } | {
     readonly _tag: 'Frames';
 };
-```
-
-
-#### `TimeOptions`
-
-```ts
-interface TimeOptions {
-    /** Driver name used for substitution (`el.drivers`). Default `'time'`. */
-    readonly name?: string;
-}
 ```
 
 
@@ -10596,6 +10891,9 @@ header: a string as is, or `contentSecurityPolicy()`'s options to build it now, 
 component registered by the time the page renders (and the page's `styles`). With
 `csp: { styleAttributes: 'hash' }` the page is rendered to a string first, so the header can
 list its `style` attribute values by hash (ADR 0020); a render error then throws here.
+A component whose `init` or view throws renders its error view and the page goes on;
+`onError` hears it, and `onError: 'throw'` renders to a string first and throws here instead,
+before any byte is sent (ADR 0024).
 
 #### `renderToStream`
 
@@ -10773,6 +11071,14 @@ interface RenderOptions {
      * `@gyral/core` resolves with the `development` condition (Vite's dev server, Vitest).
      */
     readonly dev?: boolean;
+    /**
+     * A component whose `init` or view throws (ADR 0024): by default the page goes on with that
+     * component's error view (or an empty host the browser starts fresh) and the `GyralError` is
+     * logged with `console.error`. A function hears each failure instead (logging, monitoring).
+     * `'throw'` ends the render with the failure instead; `renderPage` then renders the whole page
+     * first, so it throws before any byte is sent and the route can answer with an error page.
+     */
+    readonly onError?: ((error: GyralError) => void) | 'throw';
 }
 ```
 
@@ -11116,8 +11422,8 @@ Generated from the package's type declarations. Entry points: [`@gyral/testing`]
 
 | Name | Summary |
 | --- | --- |
+| [`collectErrors`](#testing-collecterrors) | Starts collecting every `GyralError` Gyral reports, so deliberate failures don't fail the test run. |
 | [`commandsFor`](#testing-commandsfor) | The commands addressed to `driver` (matched by name, so fakes and real drivers agree). |
-| [`customElementsIn`](#testing-customelementsin) | Custom elements under `root`, including those inside (nested) shadow roots. |
 | [`fakeDriver`](#testing-fakedriver) | A recording driver for DOM-level tests: `el.drivers = { http: fakeDriver(http) }`. |
 | [`focusTargetsIn`](#testing-focustargetsin) | The focus requests among the commands (`focus(selector, options)`), in order: |
 | [`hydrated`](#testing-hydrated) | Waits until the page's Gyral components have rendered (docs/design-docs/view/04-scheduler.md "`settled()`"): releases lazy islands if asked, then `await settled()`. |
@@ -11133,9 +11439,17 @@ Generated from the package's type declarations. Entry points: [`@gyral/testing`]
 | [`step`](#testing-step) | Feeds one message through `update` without a DOM. |
 | [`stepStore`](#testing-stepstore) | Feeds one message through a store's `update` without an instance. |
 | [`testStore`](#testing-teststore) | A fresh store instance for one test, optionally starting from `initial`. |
-| [`undefinedElementsIn`](#testing-undefinedelementsin) | Server-rendered custom elements that never upgraded (gyral-czi.32): their module wasn't imported, so nothing hydrated them and a test could pass without exercising them. |
 | [`virtualTime`](#testing-virtualtime) | Replaces timers and `Date` with a virtual clock (ADR 0006, "Testing"). |
 | [`withDrivers`](#testing-withdrivers) | Substitutes drivers for every Gyral component under `root` (including nested components in shadow roots), e.g. |
+
+#### `collectErrors`
+
+```ts
+function collectErrors(): CollectedErrors;
+```
+
+Starts collecting every `GyralError` Gyral reports, so deliberate failures don't fail the
+test run. Errors that aren't Gyral's are left alone. Call `stop()` when the test ends.
 
 #### `commandsFor`
 
@@ -11146,14 +11460,6 @@ function commandsFor<I, M>(commands: ReadonlyArray<Command<M>>, driver: Driver<I
 ```
 
 The commands addressed to `driver` (matched by name, so fakes and real drivers agree).
-
-#### `customElementsIn`
-
-```ts
-function customElementsIn(root: ParentNode): Element[];
-```
-
-Custom elements under `root`, including those inside (nested) shadow roots.
 
 #### `fakeDriver`
 
@@ -11292,7 +11598,7 @@ function step<S, M extends Tagged, P>(spec: ComponentSpec<S, M, P>, state: NoInf
 ```
 
 Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
-`IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`) without a reducer leave state unchanged, as in
+`IntentRejected`, `StoreChanged`, `Hydrated`, `Connected`, `Errored`) without a reducer leave state unchanged, as in
 the element. `stores` are the instances `ctx.read()` sees.
 
 #### `stepStore`
@@ -11311,15 +11617,6 @@ function testStore<S, M extends Tagged>(store: Store<S, M>, initial?: NoInfer<S>
 
 A fresh store instance for one test, optionally starting from `initial`. Give it to an
 element (`el.stores = { [store.name]: instance }`) or to `step(…, [instance])`.
-
-#### `undefinedElementsIn`
-
-```ts
-function undefinedElementsIn(root: ParentNode, allow?: readonly string[]): readonly string[];
-```
-
-Server-rendered custom elements that never upgraded (gyral-czi.32): their module wasn't
-imported, so nothing hydrated them and a test could pass without exercising them.
 
 #### `virtualTime`
 
@@ -11347,6 +11644,7 @@ the overrides. Per-element `el.drivers` still wins (Gyral ADR 0006, tree-scoped 
 
 | Name | Summary |
 | --- | --- |
+| [`CollectedErrors`](#testing-collectederrors) | The failures collected so far; `stop()` removes the listeners. |
 | [`FakeCall`](#testing-fakecall) | One recorded `run` of a fake driver. |
 | [`FakeDriver`](#testing-fakedriver) |  |
 | [`FakeOptions`](#testing-fakeoptions) |  |
@@ -11361,6 +11659,18 @@ the overrides. Per-element `el.drivers` still wins (Gyral ADR 0006, tree-scoped 
 | [`Stepped`](#testing-stepped) | A reducer result, normalised: the new state plus the commands it asked for. |
 | [`VirtualTime`](#testing-virtualtime) | Controls time in a test. |
 | [`WithOutputs`](#testing-withoutputs) | Anything carrying a component's output union: a `define()` class. |
+
+#### `CollectedErrors`
+
+```ts
+interface CollectedErrors {
+    readonly errors: readonly GyralError[];
+    /** Stops collecting; later failures are reported as usual. */
+    stop(): void;
+}
+```
+
+The failures collected so far; `stop()` removes the listeners.
 
 #### `FakeCall`
 
@@ -11500,7 +11810,7 @@ interface RunOptions<S, P> {
 #### `StepMessage`
 
 ```ts
-type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected;
+type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Connected | Errored;
 ```
 
 Any message `update` accepts: the component's own, or a framework message.
@@ -11648,18 +11958,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/devtools`
 
 | Name | Summary |
 | --- | --- |
-| [`initialPanel`](#devtools-initialpanel) |  |
 | [`mountDevtools`](#devtools-mountdevtools) | Mounts the panel and starts listening. |
-| [`preview`](#devtools-preview) | A bounded, cycle-safe JSON preview for display. |
-| [`receive`](#devtools-receive) | Folds a batch of events into the panel state. |
-| [`visibleRows`](#devtools-visiblerows) | Rows shown for the current filter text and kinds, newest first. |
-
-#### `initialPanel`
-
-```ts
-const initialPanel: (open?: boolean | undefined) => PanelState
-```
-
 
 #### `mountDevtools`
 
@@ -11670,79 +11969,12 @@ function mountDevtools(options?: DevtoolsOptions): MountedDevtools;
 Mounts the panel and starts listening. Events arrive in batches (one per microtask), so a
 burst of messages renders once. Returns a handle to remove everything again.
 
-#### `preview`
-
-```ts
-function preview(value: unknown, limit?: number): string;
-```
-
-A bounded, cycle-safe JSON preview for display. Never throws.
-
-#### `receive`
-
-```ts
-function receive(state: PanelState, events: readonly DevEvent[]): PanelState;
-```
-
-Folds a batch of events into the panel state.
-
-#### `visibleRows`
-
-```ts
-function visibleRows(state: PanelState): readonly Row[];
-```
-
-Rows shown for the current filter text and kinds, newest first.
-
-### Constants
-
-| Name | Summary |
-| --- | --- |
-| [`DevtoolsPanel`](#devtools-devtoolspanel) |  |
-| [`MAX_ROWS`](#devtools-max_rows) | Rows kept in memory; older ones drop off the front. |
-| [`PANEL_TAG`](#devtools-panel_tag) |  |
-| [`ROW_KINDS`](#devtools-row_kinds) |  |
-
-#### `DevtoolsPanel`
-
-```ts
-const DevtoolsPanel: GyralElementClass<PanelState, PanelMsg, { readonly open: boolean; }, never, "Toggle" | "Filter" | "Kind" | "Clear">
-```
-
-
-#### `MAX_ROWS`
-
-```ts
-const MAX_ROWS: 500
-```
-
-Rows kept in memory; older ones drop off the front.
-
-#### `PANEL_TAG`
-
-```ts
-const PANEL_TAG: "gyral-devtools"
-```
-
-
-#### `ROW_KINDS`
-
-```ts
-const ROW_KINDS: readonly RowKind[]
-```
-
-
 ### Types and interfaces
 
 | Name | Summary |
 | --- | --- |
 | [`DevtoolsOptions`](#devtools-devtoolsoptions) |  |
-| [`Lane`](#devtools-lane) |  |
 | [`MountedDevtools`](#devtools-mounteddevtools) |  |
-| [`PanelMsg`](#devtools-panelmsg) |  |
-| [`PanelState`](#devtools-panelstate) |  |
-| [`Row`](#devtools-row) |  |
-| [`RowKind`](#devtools-rowkind) |  |
 
 #### `DevtoolsOptions`
 
@@ -11758,20 +11990,6 @@ interface DevtoolsOptions {
 ```
 
 
-#### `Lane`
-
-```ts
-interface Lane {
-    readonly key: string;
-    readonly owner: string;
-    readonly lane: string;
-    readonly policy: string;
-    readonly last: string;
-    readonly inFlight: number;
-}
-```
-
-
 #### `MountedDevtools`
 
 ```ts
@@ -11780,66 +11998,6 @@ interface MountedDevtools {
     /** Removes the panel, the hook and the shortcut. */
     readonly unmount: () => void;
 }
-```
-
-
-#### `PanelMsg`
-
-```ts
-type PanelMsg = {
-    readonly _tag: 'Received';
-    readonly events: readonly DevEvent[];
-} | {
-    readonly _tag: 'Toggle';
-} | {
-    readonly _tag: 'Filter';
-    readonly text: string;
-} | {
-    readonly _tag: 'Kind';
-    readonly kind: RowKind;
-    readonly on: boolean;
-} | {
-    readonly _tag: 'Clear';
-};
-```
-
-
-#### `PanelState`
-
-```ts
-interface PanelState {
-    readonly open: boolean;
-    readonly filter: string;
-    readonly kinds: readonly RowKind[];
-    readonly rows: readonly Row[];
-    readonly components: readonly DevComponentRef[];
-    readonly lanes: readonly Lane[];
-    readonly seq: number;
-}
-```
-
-
-#### `Row`
-
-```ts
-interface Row {
-    readonly seq: number;
-    readonly at: number;
-    readonly kind: RowKind;
-    /** `<tag>#id`, `store:name` or a command owner. */
-    readonly who: string;
-    /** The message tag, command phase + driver, or lifecycle step. */
-    readonly what: string;
-    /** Extra detail: lane and policy, or a short JSON preview of the next state. */
-    readonly detail: string;
-}
-```
-
-
-#### `RowKind`
-
-```ts
-type RowKind = 'component' | 'update' | 'command' | 'store';
 ```
 
 ---
