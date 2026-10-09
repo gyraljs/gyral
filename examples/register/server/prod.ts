@@ -10,7 +10,7 @@ import { createApp } from './app.js';
 const port = Number(process.env['PORT'] ?? 5173);
 const app = await productionServer({
   distDir: fileURLToPath(new URL('../dist', import.meta.url)),
-  createApp,
+  createApp: ({ components }) => createApp({ components }),
   staticDir: false,
 });
 

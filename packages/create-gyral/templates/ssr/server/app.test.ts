@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
 
-const app = createApp({ clientEntry: '/src/entry-client.ts' });
+const app = createApp({});
 
 describe('server rendering', () => {
   it('renders the home page on the server', async () => {

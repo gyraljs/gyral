@@ -1,3 +1,4 @@
+import '../../shared/devtools.js'; // ?devtools opens the panel (dev only)
 import {
   css,
   define,

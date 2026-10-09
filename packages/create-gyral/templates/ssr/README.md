@@ -16,7 +16,8 @@ the browser. They work before any JavaScript loads.
 - `src/home-page.ts`: the page, a light-DOM component (`shadow: false`), styled by
   `src/styles.css`.
 - `src/counter.ts`: a widget in shadow DOM.
-- `src/entry-client.ts`: the browser entry. It imports the components; hydration is built in.
+- No browser entry to maintain: the build gives every component under `src/` its own module,
+  and each page loads only the components it rendered (`components` in `vite.config.ts`).
 - `server/app.ts`: renders each page. Add a route there and its path to `staticPaths` to
   prerender it.
 

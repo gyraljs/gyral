@@ -4,17 +4,16 @@
 import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html } from '@gyral/core';
-import { renderPage, type CspOptions } from '@gyral/ssr';
-import '../src/home-page.js';
+import { renderPage, type ComponentAssets, type CspOptions } from '@gyral/ssr';
+import '../src/home-page.js'; // registers <app-home> so the server can render it
 
 export interface AppOptions {
-  /** URL of the client entry module (dev: the source path; production: the built asset). */
-  readonly clientEntry: string;
   /**
-   * Production: chunks to fetch alongside the entry (its imports and Gyral's hydration chunk),
-   * from the Vite manifest, so the page hydrates without extra round trips.
+   * The components' client modules (dev: from the dev server; production: from the build). Each
+   * page loads exactly the components it rendered, with their preloads; a page that renders
+   * none loads no JavaScript. Leave it out (tests) to render without loading anything.
    */
-  readonly modulepreload?: readonly string[];
+  readonly components?: ComponentAssets | undefined;
 }
 
 const styles = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
@@ -37,8 +36,7 @@ export function createApp(options: AppOptions): Hono {
       description: 'A Gyral app rendered on the server and hydrated in the browser.',
       styles,
       body: html`<app-home></app-home>`,
-      scripts: [options.clientEntry],
-      modulepreload: options.modulepreload ?? [],
+      ...(options.components === undefined ? {} : { components: options.components }),
       csp,
     }),
   );

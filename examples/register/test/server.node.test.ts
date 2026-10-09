@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../server/app.js';
 
-const app = createApp({ clientEntry: '/src/entry-client.ts' });
+const app = createApp({});
 const get = (path: string) => app.fetch(new Request(`http://localhost${path}`));
 const post = (fields: Record<string, string>) =>
   app.fetch(
@@ -94,14 +94,14 @@ describe('register server (JS path: submitForm round trip)', () => {
   };
 
   it('stores the account and answers { _tag: Redirected } instead of a 303', async () => {
-    const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
+    const fresh = createApp({});
     const res = await submit(fresh, valid);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ _tag: 'Redirected', location: '/?welcome=mike' });
   });
 
   it('rejects a duplicate email on both paths with the same issue', async () => {
-    const fresh = createApp({ clientEntry: '/src/entry-client.ts' });
+    const fresh = createApp({});
     await submit(fresh, valid);
     const json = await submit(fresh, { ...valid, name: 'other' });
     expect(json.status).toBe(422);

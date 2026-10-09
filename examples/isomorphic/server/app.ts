@@ -7,8 +7,12 @@ import '../src/contact.js'; // and <gy-iso-contact>, rendered inside it on /abou
 import { pageHead, site } from '../src/routes.js';
 
 export interface AppOptions {
-  /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
-  readonly clientEntry: string;
+  /**
+   * URL of the client entry module (Vite dev: the source path; prod: the built asset). This
+   * example keeps a client entry, rather than automatic component loading, because its router
+   * renders pages inside the app's shadow root and splits the About page's code itself.
+   */
+  readonly clientEntry: string | undefined;
   /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
   readonly modulepreload?: readonly string[];
 }
@@ -42,7 +46,7 @@ export function createApp(options: AppOptions): Hono {
         ...pageHead(pathname),
         extraHead: baseStyles,
         body: html`<gy-iso-app path=${pathname}></gy-iso-app>`,
-        scripts: [options.clientEntry],
+        scripts: options.clientEntry === undefined ? [] : [options.clientEntry],
         modulepreload: options.modulepreload ?? [],
       },
       { status: site.match(pathname) === undefined ? 404 : 200 },
