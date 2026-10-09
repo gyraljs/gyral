@@ -82,7 +82,7 @@ describe('gyral/unused-intent', () => {
       },
       {
         code: component('(s, i) => html`<button data-intent=${i.Save}>Save</button>`'),
-        errors: [{ ...unused('Load'), line: 5, column: 45 }],
+        errors: [{ ...unused('Load'), line: 5, column: 25 }],
       },
       {
         // Message tags in reducers or parsers don't count, nor a formatter from core.
