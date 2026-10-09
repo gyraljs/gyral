@@ -69,9 +69,3 @@ export const Checkbox = define<State, Msg>()('gy-checkbox', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-checkbox': InstanceType<typeof Checkbox>;
-  }
-}

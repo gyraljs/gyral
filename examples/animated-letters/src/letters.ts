@@ -132,9 +132,3 @@ export const AnimatedLetters = define<State, Msg>()('gy-animated-letters', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-animated-letters': InstanceType<typeof AnimatedLetters>;
-  }
-}

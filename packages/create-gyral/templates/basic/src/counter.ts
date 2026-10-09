@@ -57,9 +57,3 @@ export const Counter = define<State, Msg>()('app-counter', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'app-counter': InstanceType<typeof Counter>;
-  }
-}

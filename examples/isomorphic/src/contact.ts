@@ -28,9 +28,3 @@ export const Contact = define<State, Msg>()('gy-iso-contact', {
       }
     </p>`,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-iso-contact': InstanceType<typeof Contact>;
-  }
-}

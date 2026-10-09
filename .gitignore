@@ -12,6 +12,7 @@ node_modules
 .beads/proxieddb/
 
 # Build / test output
+.gyral/
 dist/
 coverage/
 *.tsbuildinfo

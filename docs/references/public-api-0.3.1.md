@@ -219,6 +219,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 | Export                    | Kind  | Status          | Documented in                                                           |
 | ------------------------- | ----- | --------------- | ----------------------------------------------------------------------- |
+| `ElementTypesOptions`     | type  | supporting type |                                                                         |
 | `gyralClientOnly`         | value | documented      | [design-docs/view/07-hydration.md](../design-docs/view/07-hydration.md) |
 | `gyralTemplateCompiler`   | value | documented      | [consumer-setup.md](consumer-setup.md)                                  |
 | `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)              |

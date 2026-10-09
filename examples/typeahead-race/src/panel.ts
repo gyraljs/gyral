@@ -114,9 +114,3 @@ export const Panel = define<State, Msg, Props>()('gy-search-panel', {
   },
   styles: panelStyles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-search-panel': InstanceType<typeof Panel>;
-  }
-}

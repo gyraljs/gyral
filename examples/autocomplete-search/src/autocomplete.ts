@@ -185,9 +185,3 @@ export const Autocomplete = define<State, Msg>()('gy-autocomplete', {
   `,
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-autocomplete': InstanceType<typeof Autocomplete>;
-  }
-}

@@ -64,9 +64,3 @@ export const Hello = define<State, Msg>()('gy-hello', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-hello': InstanceType<typeof Hello>;
-  }
-}

@@ -51,9 +51,3 @@ export const Demo = define<State, Msg>()('gy-devtools-demo', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-devtools-demo': InstanceType<typeof Demo>;
-  }
-}

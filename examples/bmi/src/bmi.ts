@@ -102,9 +102,3 @@ export const Bmi = define<State, Msg>()('gy-bmi', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-bmi': InstanceType<typeof Bmi>;
-  }
-}

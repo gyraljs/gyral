@@ -9,7 +9,7 @@
 // file may be closed by then, and would reject a dynamic import(). Public: the preset,
 // gyralTemplateCompiler and gyralClientOnly (docs/references/public-api-0.3.1.md); the other
 // plugins and constants here are internal.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -302,7 +302,60 @@ export function gyralClientOnly(): Plugin {
   };
 }
 
+/** Where the preset looks for components and writes their typings (gyral-1zd.25). */
+export interface ElementTypesOptions {
+  /** Source directories to scan, relative to the Vite root. Default `['src']`. */
+  readonly dirs?: readonly string[];
+  /** The declaration file to write, relative to the Vite root. Default `.gyral/elements.d.ts`. */
+  readonly out?: string;
+}
+
+/**
+ * Writes `HTMLElementTagNameMap` entries for every exported `define()` component (a
+ * `.gyral/elements.d.ts` to gitignore and include in tsconfig): at the start of a build, dev
+ * server or test run, and again when a source file changes. Nothing is written for a project
+ * without components.
+ */
+function gyralElementTypes(options: ElementTypesOptions): Plugin {
+  let root = process.cwd();
+  type TagMap = typeof import('./compiler/tag-map.js');
+  let tagMap: TagMap | undefined;
+  const regenerate = async (): Promise<void> => {
+    tagMap ??= await loadCompiler<TagMap>('tag-map');
+    const settings = { root, ...options };
+    const out = join(root, options.out ?? '.gyral/elements.d.ts');
+    if (tagMap.scanTags(settings).length === 0 && !existsSync(out)) return;
+    tagMap.writeTagMap(settings);
+  };
+  const isSource = (file: string): boolean =>
+    /\.(?:ts|tsx|mts)$/.test(file) &&
+    (options.dirs ?? ['src']).some((dir) => file.startsWith(join(root, dir)));
+  return {
+    name: 'gyral:element-types',
+    configResolved(config) {
+      root = config.root;
+    },
+    async buildStart() {
+      await regenerate();
+    },
+    async watchChange(id) {
+      if (isSource(id)) await regenerate();
+    },
+    configureServer(server) {
+      const changed = (file: string): void => {
+        if (isSource(file)) void regenerate();
+      };
+      server.watcher.on('add', changed).on('change', changed).on('unlink', changed);
+    },
+  };
+}
+
 export interface GyralViteOptions {
+  /**
+   * Generated element typings (`.gyral/elements.d.ts`, see `ElementTypesOptions`), or `false`
+   * to write none. Default: on, scanning `src`.
+   */
+  readonly types?: ElementTypesOptions | false;
   /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
@@ -334,6 +387,7 @@ export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig
       gyralTemplateCompiler(options.compiler),
       gyralTemplateLocations(options.compiler),
       gyralDevServer(),
+      ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
     ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
   };

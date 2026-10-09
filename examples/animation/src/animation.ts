@@ -137,9 +137,3 @@ export const Animation = define<State, Msg>()('gy-animation', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-animation': InstanceType<typeof Animation>;
-  }
-}

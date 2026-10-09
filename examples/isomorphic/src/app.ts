@@ -89,9 +89,3 @@ export const App = define<State, Msg, Props>()('gy-iso-app', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-iso-app': InstanceType<typeof App>;
-  }
-}

@@ -208,9 +208,3 @@ export const Rsvp = define<State, Msg, Props>()('gy-rsvp', {
   `,
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-rsvp': InstanceType<typeof Rsvp>;
-  }
-}

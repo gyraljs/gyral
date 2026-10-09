@@ -60,9 +60,3 @@ export const BmiNested = define<State, Msg>()('gy-bmi-nested', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-bmi-nested': InstanceType<typeof BmiNested>;
-  }
-}

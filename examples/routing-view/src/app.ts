@@ -198,9 +198,3 @@ export const RoutingView = define<State, Msg>()('gy-routing-view', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-routing-view': InstanceType<typeof RoutingView>;
-  }
-}
