@@ -121,12 +121,58 @@ whole union fails with a long `IntentParser<…>` error. Leave the return type o
 (as above), or annotate `Extract<ListMsg, { _tag: 'ItemOut' }>` (plus `| undefined` when it
 ignores some outputs); a mapper defined outside the spec needs `_tag: 'ItemOut' as const`.
 
+### Who hears an output, and slotted children
+
+An output goes to the **direct parent** only (0.3.1). It fires the intent on the child's host,
+where the parent's `data-intent` sits, never an intent on an ancestor; once that parser takes it
+(returns a message), the event stops there. So a grandparent never mistakes a grandchild's
+output for its child's, and parsers need no `event.target` checks. A parser that returns
+`undefined` lets it go on.
+
+Content you slot into a shadow-DOM child (a card, a dialog shell) stays **yours**: the intents,
+forms and child components you write between `<my-card>` and `</my-card>` belong to your
+component, as if the card weren't there. A slotted `<form data-intent=${i.Save}>` gets its
+`FormData` and its native submit cancelled; a slotted child's outputs reach your `child()`
+parser.
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface State {
+  readonly title: string;
+}
+type Msg = { readonly _tag: 'Save'; readonly title: string };
+
+// <my-card> is a shadow-DOM component whose view is `<article><slot></slot></article>`.
+export const Editor = define<State, Msg>()('my-editor', {
+  init: () => ({ title: '' }),
+  intent: {
+    Save: ({ formData }) => {
+      const title = formData?.get('title');
+      return { _tag: 'Save', title: typeof title === 'string' ? title : '' };
+    },
+  },
+  update: { Save: (_s, m) => ({ title: m.title }) },
+  view: (s, i) => html`
+    <my-card>
+      <form data-intent=${i.Save}>
+        <input name="title" value=${s.title} />
+        <button>Save</button>
+      </form>
+    </my-card>
+  `,
+});
+```
+
+A light-DOM child (`shadow: false`) is different: its children are what it rendered, so they
+are its own.
+
 ### Outputs to a parent that isn't Gyral
 
 An output is a `gyral-output` `CustomEvent` (`OUTPUT_EVENT`) dispatched on the child's host in a
 microtask; `detail` is the output. It bubbles but isn't composed, so it stays in the tree the
-child sits in. Plain DOM code, or a component from another library, listens for it on the child
-or an ancestor in that tree:
+child sits in (and stops at a Gyral parent that takes it). Plain DOM code, or a component from
+another library, listens for it on the child or an ancestor in that tree:
 
 ```ts
 import { define, html, OUTPUT_EVENT, outputs, type OutputEvent, type OutputsOf } from '@gyral/core';

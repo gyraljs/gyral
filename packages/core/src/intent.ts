@@ -1,5 +1,6 @@
 import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
+import { isLightComponent } from './light-dom.js';
 import type { IntentInput, IntentNames, IntentParser, ParserCtx, Tagged } from './types.js';
 import { message, type Markup } from './view/index.js';
 
@@ -117,16 +118,18 @@ export function hostDepth(el: Element): number {
 /**
  * Does `node` belong to the component whose intent root is `root`? `root` is the component's
  * shadow root, or the host itself for light-DOM components (ADR 0014). The node must be in the
- * same tree (not inside a nested shadow root) with no other Gyral host between them: a nested
- * component, light-DOM or shadow, owns its own content. The nested host element itself (with
- * the parent's `data-intent` on it) still belongs to the parent.
+ * same tree (not inside a nested shadow root) with no light-DOM Gyral host between them: a
+ * light-DOM component owns its children (it rendered them). Children of a shadow-DOM host are
+ * the outer template's content, slotted into it, so they stay the outer component's (a form or
+ * a child component slotted into a card). The nested host element itself (with the parent's
+ * `data-intent` on it) still belongs to the parent.
  */
 function ownedBy(node: Element, root: Node): boolean {
   const tree = root instanceof ShadowRoot ? root : root.getRootNode();
   if (node.getRootNode() !== tree) return false;
   for (let p = node.parentNode; p !== null; p = p.parentNode) {
     if (p === root) return true;
-    if (isGyralHost(p)) return false;
+    if (isGyralHost(p) && isLightComponent(p.constructor)) return false;
   }
   return false;
 }
@@ -156,6 +159,9 @@ export function readIntent(event: Event, root: Node, after?: Element): IntentInp
   for (const target of path.slice(path.indexOf(after as Element) + 1)) {
     if (target === root) return undefined;
     if (!(target instanceof Element)) continue;
+    // An output is the dispatching child's own: only the element it was dispatched on (the
+    // child host, where the direct parent's `data-intent` sits) takes it, never an ancestor.
+    if (event.type === OUTPUT_EVENT && target !== path[0]) continue;
     const name =
       target.getAttribute('data-intent-' + event.type) ??
       (triggersOf(target).includes(event.type) ? target.getAttribute('data-intent') : null);
@@ -264,6 +270,9 @@ export function handleIntent<M>(
       failed(cause);
       return;
     }
+    // The direct parent took a child's output: it goes no further (no outer component or page
+    // listener sees it, ADR 0010 addendum). A declining parser lets it go on.
+    if (event.type === OUTPUT_EVENT && result !== undefined) event.stopPropagation();
     if (result instanceof Promise) return void result.then(deliver, failed);
     if (result !== undefined) {
       deliver(result);
