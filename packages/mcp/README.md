@@ -61,6 +61,22 @@ Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component)
 `check_snippet` uses the TypeScript installed in your project (an optional peer dependency),
 so `npx` doesn't download a second compiler.
 
+## Embedding
+
+To run the server inside another process, as the CLI does:
+
+```ts
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { createServer, loadCorpus, refreshDocs } from '@gyral/mcp';
+
+let corpus = await loadCorpus(); // the bundled docs, API, examples and skill
+corpus = (await refreshDocs(corpus, 'https://gyral.dev/llms-full.txt')).corpus; // optional
+await createServer(corpus, { projectDir: process.cwd() }).connect(new StdioServerTransport());
+```
+
+`Corpus` and its parts (`DocPage`, `ApiEntry`, `Example`, `SkillFile`, …) are exported as types.
+The tools' building blocks are internal.
+
 ## License
 
 MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and

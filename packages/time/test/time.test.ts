@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import { inputsFor, step, virtualTime, type VirtualTime } from '@gyral/testing';
-import { animationFrames, debounce, delay, makeTime, periodic, time } from '../src/index.js';
+import { makeTime } from '../src/driver.js';
+import { animationFrames, debounce, delay, periodic, time } from '../src/index.js';
 
 type Msg =
   | { readonly _tag: 'Tick'; readonly n: number }

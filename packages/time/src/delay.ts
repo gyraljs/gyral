@@ -5,19 +5,19 @@
 // `provideDrivers`) and virtual time work unchanged, and either driver can stand in for the
 // other.
 import type { Command } from '@gyral/core';
-import type { TimeDriver, TimeOptions } from './driver.js';
+import type { TimeDriver } from './driver.js';
 import { timer, wait, type Lane } from './timer.js';
 
 export type { Lane } from './timer.js';
-export type { TimeDriver, TimeInput, TimeOptions, TimeOutput } from './driver.js';
+export type { TimeDriver, TimeInput, TimeOutput } from './driver.js';
 
 /**
  * A time driver for delays only (`{ _tag: 'Delay', ms }`). Periodic and frame inputs reject:
  * they come from the main entry's commands, whose driver runs them.
  */
-export function makeDelayTime(options: TimeOptions = {}): TimeDriver {
+function makeDelayTime(): TimeDriver {
   return {
-    name: options.name ?? 'time',
+    name: 'time',
     run: (input, ctx) =>
       input._tag === 'Delay'
         ? wait(input.ms, ctx.signal)

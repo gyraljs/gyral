@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html, settled } from '@gyral/core';
 import { inputsFor, step, virtualTime, type VirtualTime } from '@gyral/testing';
-import { debounce, delay, delayTime, makeDelayTime } from '../src/delay.js';
+import { debounce, delay, delayTime } from '../src/delay.js';
 import { time } from '../src/index.js';
 
 type Msg =
@@ -61,7 +61,6 @@ describe('@gyral/time/delay', () => {
     expect(commands[0]?.key).toBe('time:debounce');
     expect(commands[0]?.concurrency).toBe('switch');
     expect(delayTime.name).toBe(time.name);
-    expect(makeDelayTime({ name: 'clock' }).name).toBe('clock');
   });
 
   it('rejects inputs only the full driver runs', async () => {

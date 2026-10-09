@@ -14,7 +14,6 @@ export type {
 } from './driver.js';
 export type { MemoryOptions } from './memory.js';
 export type { LocationLike } from './stream.js';
-export { capturedUrl } from './links.js';
 export { routes } from './routes.js';
 export type { Matcher, Params, RouteMatch, RouteTable, Routes } from './routes.js';
 

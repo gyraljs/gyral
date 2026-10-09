@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html } from '@gyral/core';
-import {
-  customElementsIn,
-  hydrated,
-  mountSsr,
-  undefinedElementsIn,
-  type MountedSsr,
-} from '../src/index.js';
+import { hydrated, mountSsr, type MountedSsr } from '../src/index.js';
+import { customElementsIn, undefinedElementsIn } from '../src/ssr.js';
 
 const DOC = `<!doctype html><html><head>
 <style>.from-head { color: rgb(1, 2, 3); }</style>
