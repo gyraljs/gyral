@@ -1,6 +1,6 @@
 # Gyral
 
-> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Components are standard custom elements rendered by Gyral's own view layer: messages come in from DOM events (intent), a pure `update` makes the next state and describes side effects as data (commands run by drivers), and a pure `view` renders it. Pages render on the server or prerender to static HTML and hydrate in place. The public API is plain TypeScript. Current version: 0.3.0.
+> Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in. Components are standard custom elements rendered by Gyral's own view layer: messages come in from DOM events (intent), a pure `update` makes the next state and describes side effects as data (commands run by drivers), and a pure `view` renders it. Pages render on the server or prerender to static HTML and hydrate in place. The public API is plain TypeScript. Current version: 0.3.1-next.4.
 
 Start a project with `npm create gyral@latest my-app -- --template ssr` (or `--template basic`). In Claude Code, install the Gyral skill with `/plugin marketplace add gyraljs/gyral`, then `/plugin install gyral@gyral`. Every link below is a Markdown page; https://gyral.dev/llms-full.txt has the docs, API reference and examples in one file.
 
@@ -16,6 +16,7 @@ Start a project with `npm create gyral@latest my-app -- --template ssr` (or `--t
 - [Forms](https://gyral.dev/docs/forms/index.md): Real forms with native validation, one Standard Schema for client and server, errors kept in the model, and the same behaviour with or without JavaScript.
 - [Effects and drivers](https://gyral.dev/docs/effects/index.md): Reducers return commands, side effects described as data. Drivers run them, with built-in concurrency, retries and cancellation, and answer with messages.
 - [Shared state](https://gyral.dev/docs/stores/index.md): Share state between distant components with stores, read like props from the side and written with messages, on the client and per request on the server.
+- [State Gyral doesn't own](https://gyral.dev/docs/outside-state/index.md): Read signals, Redux-style stores, XState actors and WebSocket feeds with subscription(), write to them with plain drivers, and test both.
 - [Routing](https://gyral.dev/docs/routing/index.md): Typed route tables that work on the server and in the browser, navigation as commands, and the current URL streamed into your model.
 - [Rendering modes](https://gyral.dev/docs/rendering-modes/index.md): Choose how each page renders - in the browser only, once at build time, or on every request - and mix all three in one app.
 - [Server rendering](https://gyral.dev/docs/server-rendering/index.md): Render pages on the server with Declarative Shadow DOM, hydrate them in place, keep a strict CSP, and ship a production build.
@@ -28,16 +29,18 @@ Start a project with `npm create gyral@latest my-app -- --template ssr` (or `--t
 - [Using third-party web components](https://gyral.dev/docs/third-party-components/index.md): Use Web Awesome, Shoelace, Material Web or any other custom element inside a Gyral view - turn its events into intents and style it through parts.
 - [Packages](https://gyral.dev/docs/packages/index.md): Every @gyral package, what it's for, how to install it, and the optional build tools Gyral works with.
 - [API reference](https://gyral.dev/docs/api/index.md): The public API of every Gyral package, generated from the type declarations at build time so it always matches the code.
+- [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/index.md): Move a Gyral 0.3.0 app to 0.3.1 - the two-call define, the head model, retries and CSRF on the driver, behavior changes - and what's new.
 - [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/index.md): Move a Gyral 0.2 app to 0.3 and its own view layer - dependencies, imports, props, lists, form state, tests and server rendering, step by step.
+- [Error codes](https://gyral.dev/errors/index.md): Every code a production build of Gyral prints, such as G0010: what the message says, what it means and how to fix it.
 
 ## API reference
 
-- [@gyral/core](https://gyral.dev/docs/api/core/index.md): Gyral core: Model-View-Intent web components on the web platform, with their own view layer. Inspired by Cycle.js.
+- [@gyral/core](https://gyral.dev/docs/api/core/index.md): Gyral core: Model-View-Intent web components on the web platform, with their own view layer.
 - [@gyral/http](https://gyral.dev/docs/api/http/index.md): Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.
 - [@gyral/router](https://gyral.dev/docs/api/router/index.md): Gyral router: typed route tables, navigation as commands, History API baseline with Navigation API enhancement.
 - [@gyral/time](https://gyral.dev/docs/api/time/index.md): Gyral time: delays, debounces, periodic ticks and animation frames as commands.
 - [@gyral/ssr](https://gyral.dev/docs/api/ssr/index.md): Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.
-- [@gyral/testing](https://gyral.dev/docs/api/testing/index.md): Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.
+- [@gyral/testing](https://gyral.dev/docs/api/testing/index.md): Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests, schema arbitraries.
 - [@gyral/devtools](https://gyral.dev/docs/api/devtools/index.md): Gyral devtools: an in-page timeline of messages, state, commands and stores (development builds).
 
 ## Examples
