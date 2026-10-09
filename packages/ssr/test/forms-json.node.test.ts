@@ -70,7 +70,7 @@ describe('formAction answering the JS path with JSON', () => {
     expect(seen.at(-1)).toMatchObject({
       intent: 'Login',
       issues: [{ path: '', message: 'Wrong email or password.' }],
-      values: { email: 'a@b.co', password: 'wrong' },
+      values: { email: 'a@b.co' }, // the password is never echoed
     });
     const ok = await submit({ email: 'a@b.co', password: 'right' }, 'text/html');
     expect(ok.status).toBe(303);

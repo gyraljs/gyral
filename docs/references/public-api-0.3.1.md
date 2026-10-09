@@ -21,20 +21,21 @@ this list disagree, or when a value is exported without documentation.
 locks the surface, every export was reviewed (gyral-1zd.6): what only Gyral's own packages use
 moved to `@gyral/core/internal`, and what nothing outside its package uses is no longer exported.
 
-| Export                                                                                                                                                                                                                                                                         | Was in                  | Now                                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `StoreRegistry`, `withStoreScope`                                                                                                                                                                                                                                              | `@gyral/core`           | `@gyral/core/server` only (they were exported from both)                                             |
-| `headEntries`, `HEAD_ATTRIBUTE`, `HeadEntry`, `scriptSafeJson`, `STORE_SEND`, `StoreSendInput`, `STORE_SEED_ATTRIBUTE`, `warnJsonHazard`, `formFields`, `formDataToObject`, `intentRejectedSchema`, `runInit`, `ISLAND_ATTRIBUTE`, `devtoolsEnabled`, `devtoolsLiveComponents` | `@gyral/core`           | `@gyral/core/internal` (no semver); apps use `Head`, `page()`, `setHead()`, `form()`, `submitForm()` |
-| `isLightComponent`, `findInScope`                                                                                                                                                                                                                                              | `@gyral/core`           | not exported                                                                                         |
-| `gyralTemplateLocations`, `gyralDependents`, `gyralDevServer`, `DEFAULT_TEMPLATE_SOURCES`, `GYRAL_PACKAGES`, `COMPILED_CONDITION`, `CLIENT_ONLY_CONDITION`, `CLIENT_CONDITIONS`, `SERVER_CONDITIONS`                                                                           | `@gyral/core/vite`      | not exported: `gyralVitePreset()` (or `gyralTemplateCompiler()`, `gyralClientOnly()`) sets them up   |
-| `templateRule`, `rowPurityRule`, `unusedIntentRule`                                                                                                                                                                                                                            | `@gyral/core/eslint`    | not exported: use the plugin (`gyral.rules['template']`, `gyral.configs.recommended`)                |
-| `capturedUrl`                                                                                                                                                                                                                                                                  | `@gyral/router`         | not exported                                                                                         |
-| `customElementsIn`, `undefinedElementsIn`                                                                                                                                                                                                                                      | `@gyral/testing`        | not exported: `hydrated()` reports undefined elements                                                |
-| `makeTime`, `TimeOptions`; `makeDelayTime`                                                                                                                                                                                                                                     | `@gyral/time`, `/delay` | not exported: commands always run on the `time` driver; substitute it by name (`time`, `delayTime`)  |
-| `DevtoolsPanel`, `PANEL_TAG`, `PanelMsg`, `initialPanel`, `MAX_ROWS`, `ROW_KINDS`, `visibleRows`, `preview`, `receive`, `PanelState`, `Row`, `RowKind`, `Lane`                                                                                                                 | `@gyral/devtools`       | not exported: `mountDevtools()` is the API                                                           |
-| `getDoc`, `parseLlmsFull`, `searchDocs`, `SearchHit`, `findApi`, `formatApi`, `listApi`, `ApiResult`, `checkSnippet`, `CheckResult`, `scaffold`, `validTag`, `Scaffold`, `ScaffoldFile`, `ScaffoldKind`                                                                        | `@gyral/mcp`            | not exported: embed with `createServer`, `loadCorpus`, `refreshDocs` (the tools stay)                |
-| `isTemplate`, `TEMPLATES`, `USAGE`, `invalidPackageName`, `toPackageName`, `detectPackageManager`, `nextSteps`, `PackageManager`, `isEmptyDir`, `TEMPLATES_DIR`                                                                                                                | `create-gyral`          | not exported: `parse`, `scaffold` and `manifest` remain                                              |
-| `periodic`                                                                                                                                                                                                                                                                     | `@gyral/time`           | replaced by `every(ms, (now) => msg, key?)` (ADR 0025)                                               |
+| Export                                                                                                                                                                                                                                       | Was in                  | Now                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `StoreRegistry`, `withStoreScope`                                                                                                                                                                                                            | `@gyral/core`           | `@gyral/core/server` only (they were exported from both)                                             |
+| `headEntries`, `HEAD_ATTRIBUTE`, `HeadEntry`, `scriptSafeJson`, `STORE_SEND`, `StoreSendInput`, `STORE_SEED_ATTRIBUTE`, `warnJsonHazard`, `intentRejectedSchema`, `runInit`, `ISLAND_ATTRIBUTE`, `devtoolsEnabled`, `devtoolsLiveComponents` | `@gyral/core`           | `@gyral/core/internal` (no semver); apps use `Head`, `page()`, `setHead()`, `form()`, `submitForm()` |
+| `isLightComponent`, `findInScope`                                                                                                                                                                                                            | `@gyral/core`           | not exported                                                                                         |
+| `gyralTemplateLocations`, `gyralDependents`, `gyralDevServer`, `DEFAULT_TEMPLATE_SOURCES`, `GYRAL_PACKAGES`, `COMPILED_CONDITION`, `CLIENT_ONLY_CONDITION`, `CLIENT_CONDITIONS`, `SERVER_CONDITIONS`                                         | `@gyral/core/vite`      | not exported: `gyralVitePreset()` (or `gyralTemplateCompiler()`, `gyralClientOnly()`) sets them up   |
+| `templateRule`, `rowPurityRule`, `unusedIntentRule`                                                                                                                                                                                          | `@gyral/core/eslint`    | not exported: use the plugin (`gyral.rules['template']`, `gyral.configs.recommended`)                |
+| `validateForm`, `formValues`, `formFields`, `formDataToObject`                                                                                                                                                                               | `@gyral/core`           | methods of the form definition: `definition.validate(data, intent)`, `definition.values(data)`       |
+| `capturedUrl`                                                                                                                                                                                                                                | `@gyral/router`         | not exported                                                                                         |
+| `customElementsIn`, `undefinedElementsIn`                                                                                                                                                                                                    | `@gyral/testing`        | not exported: `hydrated()` reports undefined elements                                                |
+| `makeTime`, `TimeOptions`; `makeDelayTime`                                                                                                                                                                                                   | `@gyral/time`, `/delay` | not exported: commands always run on the `time` driver; substitute it by name (`time`, `delayTime`)  |
+| `DevtoolsPanel`, `PANEL_TAG`, `PanelMsg`, `initialPanel`, `MAX_ROWS`, `ROW_KINDS`, `visibleRows`, `preview`, `receive`, `PanelState`, `Row`, `RowKind`, `Lane`                                                                               | `@gyral/devtools`       | not exported: `mountDevtools()` is the API                                                           |
+| `getDoc`, `parseLlmsFull`, `searchDocs`, `SearchHit`, `findApi`, `formatApi`, `listApi`, `ApiResult`, `checkSnippet`, `CheckResult`, `scaffold`, `validTag`, `Scaffold`, `ScaffoldFile`, `ScaffoldKind`                                      | `@gyral/mcp`            | not exported: embed with `createServer`, `loadCorpus`, `refreshDocs` (the tools stay)                |
+| `isTemplate`, `TEMPLATES`, `USAGE`, `invalidPackageName`, `toPackageName`, `detectPackageManager`, `nextSteps`, `PackageManager`, `isEmptyDir`, `TEMPLATES_DIR`                                                                              | `create-gyral`          | not exported: `parse`, `scaffold` and `manifest` remain                                              |
+| `periodic`                                                                                                                                                                                                                                   | `@gyral/time`           | replaced by `every(ms, (now) => msg, key?)` (ADR 0025)                                               |
 
 ## Inventory
 
@@ -54,7 +55,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `ChildValue`           | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
 | `command`              | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Command`              | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
-| `CommandHandlers`      | type  | supporting type |                                                                                                        |
+| `CommandHandlers`      | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `CommandInfo`          | type  | supporting type |                                                                                                        |
 | `CommandPhase`         | type  | supporting type |                                                                                                        |
 | `CommandTraceEvent`    | type  | supporting type |                                                                                                        |
@@ -78,8 +79,8 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `Driver`               | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DriverContext`        | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `DriverOverrides`      | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
-| `DriverToken`          | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DRIVERS_ELEMENT`      | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `DriverToken`          | type  | supporting type |                                                                                                        |
 | `each`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `emit`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Errored`              | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -87,15 +88,16 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `field`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `fieldErrors`          | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `FieldIssue`           | type  | supporting type |                                                                                                        |
+| `FieldName`            | type  | supporting type |                                                                                                        |
 | `focus`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `FocusOptions`         | type  | supporting type |                                                                                                        |
 | `form`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `FormDefinition`       | type  | supporting type |                                                                                                        |
 | `FormFields`           | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
+| `FormOptions`          | type  | supporting type |                                                                                                        |
 | `FormRedirected`       | type  | supporting type |                                                                                                        |
 | `FormResult`           | type  | supporting type |                                                                                                        |
 | `FormValue`            | type  | supporting type |                                                                                                        |
-| `formValues`           | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormValues`           | type  | documented      | [design-docs/0008-forms.md](../design-docs/0008-forms.md)                                              |
 | `GyralElement`         | type  | supporting type |                                                                                                        |
 | `GyralElementClass`    | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
@@ -139,7 +141,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `PropKind`             | type  | supporting type |                                                                                                        |
 | `PropsChanged`         | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `PropsOf`              | type  | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
-| `provideDrivers`       | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `provideDrivers`       | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `random`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `randomDriver`         | value | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `RandomInput`          | type  | supporting type |                                                                                                        |
@@ -163,7 +165,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `StoreRef`             | type  | supporting type |                                                                                                        |
 | `StoreResolver`        | type  | supporting type |                                                                                                        |
 | `STORES_ELEMENT`       | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
-| `StoreSpec`            | type  | supporting type |                                                                                                        |
+| `StoreSpec`            | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `StoreUpdate`          | type  | supporting type |                                                                                                        |
 | `Styles`               | type  | documented      | [design-docs/0001-mvi-parsed-intent.md](../design-docs/0001-mvi-parsed-intent.md)                      |
 | `StyleSource`          | type  | supporting type |                                                                                                        |
@@ -176,7 +178,6 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `toInt`                | value | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Unsubscribe`          | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Update`               | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
-| `validateForm`         | value | documented      | [design-docs/0008-forms.md](../design-docs/0008-forms.md)                                              |
 
 ### `@gyral/core/server`
 
@@ -201,13 +202,12 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | ------------------------ | ----- | -------- | ------------- |
 | `devtoolsEnabled`        | value | internal |               |
 | `devtoolsLiveComponents` | value | internal |               |
-| `formDataToObject`       | value | internal |               |
-| `formFields`             | value | internal |               |
 | `HEAD_ATTRIBUTE`         | value | internal |               |
 | `headEntries`            | value | internal |               |
 | `HeadEntry`              | type  | internal |               |
 | `intentRejectedSchema`   | value | internal |               |
 | `ISLAND_ATTRIBUTE`       | value | internal |               |
+| `isSecretField`          | value | internal |               |
 | `runInit`                | value | internal |               |
 | `scriptSafeJson`         | value | internal |               |
 | `STORE_SEED_ATTRIBUTE`   | value | internal |               |
