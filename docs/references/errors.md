@@ -238,3 +238,17 @@ Arguments: `store`.
 > \<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.
 
 Arguments: `tag`.
+
+## Subscriptions (ADR 0025)
+
+### G0079
+
+> \<{tag}> subscriptions returned two commands for lane "{lane}"; only the first runs. Give each its own `key`.
+
+Arguments: `tag`, `lane`.
+
+### G0080
+
+> \<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.
+
+Arguments: `tag`.

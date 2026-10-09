@@ -250,5 +250,19 @@
     "message": "<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0078"
+  },
+  {
+    "code": "G0079",
+    "group": "Subscriptions (ADR 0025)",
+    "message": "<{tag}> subscriptions returned two commands for lane \"{lane}\"; only the first runs. Give each its own `key`.",
+    "arguments": ["tag", "lane"],
+    "url": "https://gyral.dev/errors/#G0079"
+  },
+  {
+    "code": "G0080",
+    "group": "Subscriptions (ADR 0025)",
+    "message": "<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.",
+    "arguments": ["tag"],
+    "url": "https://gyral.dev/errors/#G0080"
   }
 ]

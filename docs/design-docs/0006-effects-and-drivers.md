@@ -128,12 +128,12 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `appendChild`/`insertBefore`, which disconnects and connects in one task), the disposal is
   cancelled and every command keeps running. Otherwise the interpreter is disposed, which aborts
   every running or queued command's `AbortController`; `abort` listeners run inside `abort()`,
-  and no later result of those commands is dispatched. A host attached again after that gets
-  the optional framework message `Connected { reconnect: true }` to re-issue long-lived
-  commands (view/05 "Moves and reconnects"). Tests assert `signal.aborted` after
+  and no later result of those commands is dispatched. A host attached again after that starts
+  its `subscriptions` again from the current state (ADR 0025, view/05 "Moves and reconnects";
+  the `Connected` message of next.5 was removed). Tests assert `signal.aborted` after
   `el.remove(); await Promise.resolve();` (or `await clock.advance(0)` under `virtualTime()`).
   Why: list libraries and DOM code reorder elements by removing and re-inserting them, and a
-  synchronous dispose ended `init`'s subscriptions for good on every reorder.
+  synchronous dispose ended long-lived commands for good on every reorder.
 - **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
   microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
   promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's
@@ -184,7 +184,7 @@ type Unsubscribe = (() => void) | { readonly unsubscribe: () => void };
   once, emits after that are ignored, and an unsubscribe that throws is logged. A `subscribe`
   that throws, or `fail(error)`, rejects the run with that error as is, so `toError`,
   `onFailure` and `retry` (which subscribes again: socket reconnects) work as for any driver.
-- Default lane policy `'switch'` (like `listen()` and `periodic()`): re-issuing the command
+- Default lane policy `'switch'` (like `listen()` and `every()`): re-issuing the command
   replaces the subscription; a per-input `key` keeps several.
 - Writing stays a plain driver; the change comes back through the subscription.
 - A standalone module (`subscription.ts`), so apps that don't import it don't bundle it; it
@@ -197,19 +197,19 @@ type Unsubscribe = (() => void) | { readonly unsubscribe: () => void };
 One `time` driver (substitutable by name) with four commands. Each command kind has its own
 default lane, and a `Lane` option (`key`, `concurrency`) lets timers coexist:
 
-| Command                   | Kind                        | Default lane / policy                                         |
-| ------------------------- | --------------------------- | ------------------------------------------------------------- |
-| `delay(ms, msg)`          | one-shot                    | `time:delay`, `merge` (every delay fires)                     |
-| `debounce(ms, msg, key?)` | one-shot                    | `time:debounce`, `switch` (each call cancels the pending one) |
-| `periodic(ms, toMsg)`     | stream of 1, 2, 3…          | `time:periodic`, `switch`                                     |
-| `animationFrames(toMsg)`  | stream of `{ time, delta }` | `time:frames`, `switch`                                       |
+| Command                   | Kind                              | Default lane / policy                                         |
+| ------------------------- | --------------------------------- | ------------------------------------------------------------- |
+| `delay(ms, msg)`          | one-shot                          | `time:delay`, `merge` (every delay fires)                     |
+| `debounce(ms, msg, key?)` | one-shot                          | `time:debounce`, `switch` (each call cancels the pending one) |
+| `every(ms, toMsg, key?)`  | `Date.now()` now, then every `ms` | `time:every`, `switch`                                        |
+| `animationFrames(toMsg)`  | stream of `{ time, delta }`       | `time:frames`, `switch`                                       |
 
 Debounce is a delay under `switch`, not a separate mechanism. Nothing starts at import, and
 `animationFrames` falls back to a 16 ms timer where `requestAnimationFrame` is missing. Tests
 use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval`/rAF.
 
 **Delay-only apps (gyral-c5d.15, 0.3.1):** the driver is one `switch` over its inputs, so
-`delay` alone bundles `periodic` and `animationFrames` too. `@gyral/time/delay` exports `delay`
+`delay` alone bundles `every` and `animationFrames` too. `@gyral/time/delay` exports `delay`
 and `debounce` with the same signatures and lanes over a delay-only driver (`delayTime`;
 the `makeTime`/`makeDelayTime` factories are internal since 0.3.1), also named `time` and taking the same input, so substitution, `inputsFor`
 and virtual time work unchanged and either driver can stand in for the other. About 0.15 KiB

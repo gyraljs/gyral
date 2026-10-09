@@ -34,6 +34,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `DevtoolsPanel`, `PANEL_TAG`, `PanelMsg`, `initialPanel`, `MAX_ROWS`, `ROW_KINDS`, `visibleRows`, `preview`, `receive`, `PanelState`, `Row`, `RowKind`, `Lane`                                                                                                                 | `@gyral/devtools`       | not exported: `mountDevtools()` is the API                                                           |
 | `getDoc`, `parseLlmsFull`, `searchDocs`, `SearchHit`, `findApi`, `formatApi`, `listApi`, `ApiResult`, `checkSnippet`, `CheckResult`, `scaffold`, `validTag`, `Scaffold`, `ScaffoldFile`, `ScaffoldKind`                                                                        | `@gyral/mcp`            | not exported: embed with `createServer`, `loadCorpus`, `refreshDocs` (the tools stay)                |
 | `isTemplate`, `TEMPLATES`, `USAGE`, `invalidPackageName`, `toPackageName`, `detectPackageManager`, `nextSteps`, `PackageManager`, `isEmptyDir`, `TEMPLATES_DIR`                                                                                                                | `create-gyral`          | not exported: `parse`, `scaffold` and `manifest` remain                                              |
+| `periodic`                                                                                                                                                                                                                                                                     | `@gyral/time`           | replaced by `every(ms, (now) => msg, key?)` (ADR 0025)                                               |
 
 ## Inventory
 
@@ -59,7 +60,6 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `CommandTraceEvent`    | type  | supporting type |                                                                                                        |
 | `ComponentSpec`        | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `Concurrency`          | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
-| `Connected`            | type  | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md)           |
 | `css`                  | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `CssValue`             | type  | supporting type |                                                                                                        |
 | `Ctx`                  | type  | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
@@ -95,7 +95,7 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `FormResult`           | type  | supporting type |                                                                                                        |
 | `FormValue`            | type  | supporting type |                                                                                                        |
 | `formValues`           | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
-| `FormValues`           | type  | supporting type |                                                                                                        |
+| `FormValues`           | type  | documented      | [design-docs/0008-forms.md](../design-docs/0008-forms.md)                                              |
 | `GyralElement`         | type  | supporting type |                                                                                                        |
 | `GyralElementClass`    | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `GyralError`           | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                           |
@@ -179,20 +179,20 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 ### `@gyral/core/server`
 
-| Export                | Kind  | Status          | Documented in                                                                    |
-| --------------------- | ----- | --------------- | -------------------------------------------------------------------------------- |
-| `componentStyles`     | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)           |
-| `development`         | value | documented      | [skills/gyral/references/devtools.md](../../skills/gyral/references/devtools.md) |
-| `registryVersion`     | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                |
-| `render`              | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)           |
-| `renderToString`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)           |
-| `ServerRenderOptions` | type  | supporting type |                                                                                  |
-| `StoreRegistry`       | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                |
-| `styleHash`           | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                |
-| `styleHashes`         | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)           |
-| `styleHashSync`       | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                |
-| `StyleValues`         | type  | supporting type |                                                                                  |
-| `withStoreScope`      | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                |
+| Export                | Kind  | Status          | Documented in                                                                                          |
+| --------------------- | ----- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `componentStyles`     | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
+| `development`         | value | documented      | [skills/gyral/references/devtools.md](../../skills/gyral/references/devtools.md)                       |
+| `registryVersion`     | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                                      |
+| `render`              | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `renderToString`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
+| `ServerRenderOptions` | type  | supporting type |                                                                                                        |
+| `StoreRegistry`       | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                                      |
+| `styleHash`           | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                                      |
+| `styleHashes`         | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)                                 |
+| `styleHashSync`       | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                                      |
+| `StyleValues`         | type  | supporting type |                                                                                                        |
+| `withStoreScope`      | value | documented      | [design-docs/view/06-server.md](../design-docs/view/06-server.md)                                      |
 
 ### `@gyral/core/internal`
 
@@ -392,42 +392,43 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 
 ### `@gyral/testing`
 
-| Export            | Kind  | Status          | Documented in                                                                                |
-| ----------------- | ----- | --------------- | -------------------------------------------------------------------------------------------- |
-| `CollectedErrors` | type  | supporting type |                                                                                              |
-| `collectErrors`   | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                 |
-| `commandsFor`     | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `FakeCall`        | type  | supporting type |                                                                                              |
-| `fakeDriver`      | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |
-| `FakeDriver`      | type  | supporting type |                                                                                              |
-| `FakeOptions`     | type  | supporting type |                                                                                              |
-| `FakeRun`         | type  | supporting type |                                                                                              |
-| `FocusTarget`     | type  | supporting type |                                                                                              |
-| `focusTargetsIn`  | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `hydrated`        | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
-| `HydratedOptions` | type  | supporting type |                                                                                              |
-| `initial`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `inputsFor`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `MountedSsr`      | type  | supporting type |                                                                                              |
-| `mountSsr`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `MountSsrOptions` | type  | supporting type |                                                                                              |
-| `outputsIn`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `Ran`             | type  | supporting type |                                                                                              |
-| `readerOf`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `reject`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `resolve`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `run`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
-| `RunOptions`      | type  | supporting type |                                                                                              |
-| `sentTo`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `step`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
-| `StepMessage`     | type  | supporting type |                                                                                              |
-| `Stepped`         | type  | supporting type |                                                                                              |
-| `stepStore`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `testStore`       | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `virtualTime`     | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
-| `VirtualTime`     | type  | supporting type |                                                                                              |
-| `withDrivers`     | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |
-| `WithOutputs`     | type  | supporting type |                                                                                              |
+| Export             | Kind  | Status          | Documented in                                                                                |
+| ------------------ | ----- | --------------- | -------------------------------------------------------------------------------------------- |
+| `CollectedErrors`  | type  | supporting type |                                                                                              |
+| `collectErrors`    | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)                 |
+| `commandsFor`      | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `FakeCall`         | type  | supporting type |                                                                                              |
+| `fakeDriver`       | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |
+| `FakeDriver`       | type  | supporting type |                                                                                              |
+| `FakeOptions`      | type  | supporting type |                                                                                              |
+| `FakeRun`          | type  | supporting type |                                                                                              |
+| `FocusTarget`      | type  | supporting type |                                                                                              |
+| `focusTargetsIn`   | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `hydrated`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
+| `HydratedOptions`  | type  | supporting type |                                                                                              |
+| `initial`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `inputsFor`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `MountedSsr`       | type  | supporting type |                                                                                              |
+| `mountSsr`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `MountSsrOptions`  | type  | supporting type |                                                                                              |
+| `outputsIn`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `Ran`              | type  | supporting type |                                                                                              |
+| `readerOf`         | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `reject`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `resolve`          | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `run`              | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
+| `RunOptions`       | type  | supporting type |                                                                                              |
+| `sentTo`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `step`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                         |
+| `StepMessage`      | type  | supporting type |                                                                                              |
+| `Stepped`          | type  | supporting type |                                                                                              |
+| `stepStore`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `subscriptionsFor` | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |
+| `testStore`        | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `virtualTime`      | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)               |
+| `VirtualTime`      | type  | supporting type |                                                                                              |
+| `withDrivers`      | value | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md) |
+| `WithOutputs`      | type  | supporting type |                                                                                              |
 
 ### `@gyral/testing/arbitraries`
 
@@ -452,9 +453,9 @@ moved to `@gyral/core/internal`, and what nothing outside its package uses is no
 | `animationFrames` | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
 | `debounce`        | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
 | `delay`           | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
+| `every`           | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
 | `Frame`           | type  | supporting type |                                                                                       |
 | `Lane`            | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md) |
-| `periodic`        | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
 | `time`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                  |
 | `TimeDriver`      | type  | supporting type |                                                                                       |
 | `TimeInput`       | type  | supporting type |                                                                                       |

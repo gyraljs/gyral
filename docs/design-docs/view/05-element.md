@@ -152,17 +152,31 @@ user on 2026-10-08. Tests: `packages/core/test/prop-equals.test.ts`.
 
 Keyed-list libraries and plain DOM code move elements with `appendChild`/`insertBefore`, which
 disconnect and connect the element in the same task. Gyral treats that as a move: commands keep
-running, so a `subscription()` or periodic timer started in `init` keeps delivering. The rule:
+running. The rule:
 
 - **A move** (disconnect and connect in one task, including before the first render): nothing
-  stops and no message is sent.
+  stops.
 - **A real removal**: one microtask after `disconnectedCallback`, the interpreter is disposed and
   every running command's signal aborts (a subscription's unsubscribe runs).
-- **Attached again after a real removal**: the optional framework message
-  `Connected { reconnect: true }` is delivered. Re-issue long-lived commands from its reducer
-  (`Connected: (s) => [s, [watchUnread()]]`). `reconnect` is always `true`: `Connected` is
-  never sent on the first connect (`init` covers that) and never after a move (nothing stopped).
+- **Attached again after a real removal**: `subscriptions` (below) is derived from the current
+  state and started again. Commands started from `init` or a reducer are not restarted.
 - `moveBefore()` keeps everything, as before (`connectedMoveCallback`).
+
+### Subscriptions (ADR 0025)
+
+`subscriptions(state, props)` lists the long-lived commands that should be running now. It is
+evaluated after the first render, then after every update and props change while connected.
+The runtime diffs the result by lane (`key`, else the driver's name): a new lane starts, a lane
+that is gone is aborted, a lane whose input changed (compared by JSON text) restarts, and an
+unchanged one keeps running. Two commands in one lane: the first runs, development warns
+(G0079). A throwing `subscriptions` is an update failure (ADR 0024).
+
+```ts
+subscriptions: (s, p) => [
+  ...(s.live ? [every(30_000, (now) => ({ _tag: 'Poll', now }), 'poll')] : []),
+  watchUnread(p.userId), // restarts when userId changes
+],
+```
 
 ## Errors (ADR 0024, 0.3.1)
 

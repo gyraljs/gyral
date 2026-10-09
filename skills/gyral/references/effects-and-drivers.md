@@ -142,18 +142,19 @@ Redux-style store, a store provided per page, a WebSocket) and testing: outside-
 import { define, html } from '@gyral/core';
 import { request, type HttpError } from '@gyral/http';
 import { listen, navigate, routes, setHead, type RouteLocation } from '@gyral/router';
-import { delay, periodic } from '@gyral/time';
+import { delay, every } from '@gyral/time';
 
 export const site = routes({ home: '/', product: '/products/:id' });
 
 interface State {
   readonly path: string;
+  readonly since: number | undefined;
   readonly seconds: number;
   readonly saved: boolean;
 }
 type Msg =
   | { readonly _tag: 'Routed'; readonly location: RouteLocation }
-  | { readonly _tag: 'Tick'; readonly seconds: number }
+  | { readonly _tag: 'Tick'; readonly now: number }
   | { readonly _tag: 'Open'; readonly id: string }
   | { readonly _tag: 'Save' }
   | { readonly _tag: 'Saved' }
@@ -161,12 +162,12 @@ type Msg =
   | { readonly _tag: 'HideToast' };
 
 export const Shell = define<State, Msg>()('my-shell', {
-  init: () => [
-    { path: '/', seconds: 0, saved: false },
-    [
-      listen((location) => ({ _tag: 'Routed', location })), // current URL, then every change
-      periodic(1000, (ticks) => ({ _tag: 'Tick', seconds: ticks })),
-    ],
+  init: () => ({ path: '/', since: undefined, seconds: 0, saved: false }),
+  // Long-lived work runs as subscriptions (ADR 0025): started after the first render, kept
+  // running across moves, started again after a real removal.
+  subscriptions: () => [
+    listen((location) => ({ _tag: 'Routed', location })), // current URL, then every change
+    every(1000, (now) => ({ _tag: 'Tick', now })), // the time now, then every second
   ],
   intent: {
     Open: ({ value }) => (value === undefined ? undefined : { _tag: 'Open', id: value }),
@@ -177,7 +178,10 @@ export const Shell = define<State, Msg>()('my-shell', {
       { ...s, path: m.location.pathname },
       [setHead({ title: `Shop — ${m.location.pathname}` })],
     ],
-    Tick: (s, m) => ({ ...s, seconds: m.seconds }),
+    Tick: (s, m) => {
+      const since = s.since ?? m.now;
+      return { ...s, since, seconds: Math.round((m.now - since) / 1000) };
+    },
     Open: (s, m) => [s, [navigate(site.href('product', { id: m.id }))]],
     Save: (s) => [
       s,
@@ -214,10 +218,11 @@ export const Shell = define<State, Msg>()('my-shell', {
   `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`. Development builds warn once when
   a POST/PUT/PATCH/DELETE goes out without the token while the page has a CSRF `<meta>`.
 - **`@gyral/time`**: `delay(ms, msg)`, `debounce(ms, msg, key?)` (a `switch` delay),
-  `periodic(ms, toMsg)`, `animationFrames(toMsg)`. An app that only needs `delay` and
+  `every(ms, (now) => msg, key?)` (the wall-clock time at once, then every `ms`; made for
+  `subscriptions`), `animationFrames(toMsg)`. An app that only needs `delay` and
   `debounce` imports them from `@gyral/time/delay` (same API, a delay-only driver also named
   `time`; about 0.15 KiB less).
-- **`@gyral/router`**: `listen(toMsg)` from `init`, `navigate(url, { replace?, scroll?, focusReset? })`,
+- **`@gyral/router`**: `listen(toMsg)` from `subscriptions`, `navigate(url, { replace?, scroll?, focusReset? })`,
   `back()`, `forward()`, `go(n)`, `setHead(head)` (the page's head: see ssr.md "One head
   for server and client"), typed `routes({...})` tables with
   `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect

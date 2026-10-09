@@ -114,7 +114,7 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
-`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`; delays only:
+`@gyral/time` (`delay`, `debounce`, `every`, `animationFrames`; delays only:
 `@gyral/time/delay`). URLs → `@gyral/router`
 (`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. A store or feed
 Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
@@ -124,7 +124,7 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
-- `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
+- `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages, `subscriptions` for long-lived work
 - `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `defineDisposableHook`, `labelledBy`), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them

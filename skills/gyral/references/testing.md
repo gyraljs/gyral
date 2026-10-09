@@ -159,7 +159,9 @@ it('loads the user when clicked', async () => {
 - Removing an element stops its commands **one microtask later** (a move in the same task keeps
   them): after `el.remove(); await Promise.resolve();` every running call's `signal.aborted`
   is `true` and its `abort` listeners have run. Test reconnects by removing, awaiting a turn and
-  appending again: the component gets `Connected { reconnect: true }`.
+  appending again: `subscriptions` starts again from the current state.
+- `subscriptionsFor(spec, state, props?)` returns the commands `subscriptions` asks to keep
+  running for a state, without a DOM; check them with `inputsFor`.
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
   fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
   `reply(status, body)`, `failNext()`.

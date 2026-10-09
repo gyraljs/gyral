@@ -281,37 +281,40 @@ submissions, `IntentRejected` is already this message (forms.md).
 - A real removal releases the source one microtask later (ADR 0006): after
   `el.remove(); await Promise.resolve();`, `calls[0].signal.aborted` is `true` and the driver's
   `abort` listeners have run. A move (`appendChild`/`insertBefore` in one task) keeps the
-  subscription; see "Moves and reconnects" below.
+  subscription; see "Subscriptions" below.
 
-## Moves and reconnects
+## Subscriptions: keeping a watch running (ADR 0025)
 
-A keyed-list library or DOM code that reorders rows by removing and re-inserting them in one
-task doesn't stop a component's subscription. A component removed for real and attached again
-later gets the framework message `Connected { reconnect: true }`; re-issue its watches there.
-It is never sent on the first connect or after a move.
+Put long-lived watches in `subscriptions(state, props)` instead of starting them from `init`.
+Gyral starts each one after the first render, restarts it when its input changes (here: the
+`room` prop), stops it when the state no longer lists it, keeps it running across moves
+(`appendChild`/`insertBefore` reorders) and starts it again when the component is attached after
+a real removal. No reducer is needed for any of that.
 
 ```ts
-import { command, define, html, subscription, type Command } from '@gyral/core';
+import { command, define, html, prop, subscription } from '@gyral/core';
 
-declare const unread: { get(): number; subscribe(listener: () => void): () => void };
-const unreadSource = subscription<number>('unread', (emit) => {
-  emit(unread.get());
-  return unread.subscribe(() => emit(unread.get()));
+declare const unread: {
+  get(room: string): number;
+  subscribe(room: string, listener: () => void): () => void;
+};
+const unreadSource = subscription<number, string>('unread', (emit, { input: room }) => {
+  emit(unread.get(room));
+  return unread.subscribe(room, () => emit(unread.get(room)));
 });
 
-type Msg =
-  | { readonly _tag: 'Count'; readonly n: number }
-  | { readonly _tag: 'Connected'; readonly reconnect: true };
-const watch = (): Command<Msg> =>
-  command(unreadSource, undefined, { onSuccess: (n): Msg => ({ _tag: 'Count', n }) });
+type Msg = { readonly _tag: 'Count'; readonly n: number };
 
-export const UnreadBadge = define<number, Msg>()('unread-badge', {
-  init: () => [0, [watch()]],
+export const UnreadBadge = define<number, Msg, { room: string }>()('unread-badge', {
+  props: { room: prop.string({ default: 'general' }) },
+  init: () => 0,
+  subscriptions: (_n, p) => [
+    command(unreadSource, p.room, { onSuccess: (n): Msg => ({ _tag: 'Count', n }) }),
+  ],
   intent: {},
-  update: {
-    Count: (_n, m) => m.n,
-    Connected: (n) => [n, [watch()]], // attached again after a real removal
-  },
+  update: { Count: (_n, m) => m.n },
   view: (n) => html`<span>${n}</span>`,
 });
 ```
+
+Test what runs for a state without a DOM: `subscriptionsFor(UnreadBadge.spec, 0, { room: 'a' })`.

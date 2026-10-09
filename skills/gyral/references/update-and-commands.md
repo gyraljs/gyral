@@ -75,6 +75,61 @@ can't show a stale user next to an error.
 
 Without a reducer they leave state unchanged (props and stores are still readable via `ctx`).
 
+## Subscriptions: long-lived commands (ADR 0025)
+
+One-shot work (a request, a delay) is a command returned from `init` or a reducer. Work that
+should keep running while some condition holds (a clock, polling, a socket, a store or
+media-query watch, the router's `listen`) goes in `subscriptions(state, props)`, which returns
+the commands that should be running now:
+
+```ts
+import { command, define, html, prop, subscription } from '@gyral/core';
+import { listen, type RouteLocation } from '@gyral/router';
+import { every } from '@gyral/time';
+
+declare const rooms: { subscribe(room: string, listener: (text: string) => void): () => void };
+const roomFeed = subscription<string, string>('room', (emit, { input }) =>
+  rooms.subscribe(input, emit),
+);
+
+type Msg =
+  | { readonly _tag: 'Routed'; readonly location: RouteLocation }
+  | { readonly _tag: 'Poll'; readonly now: number }
+  | { readonly _tag: 'Said'; readonly text: string }
+  | { readonly _tag: 'Pause' };
+interface State {
+  readonly live: boolean;
+  readonly lines: readonly string[];
+}
+
+export const Room = define<State, Msg, { room: string }>()('my-room', {
+  props: { room: prop.string({ default: 'lobby' }) },
+  init: () => ({ live: true, lines: [] }),
+  subscriptions: (s, p) => [
+    listen((location) => ({ _tag: 'Routed', location })),
+    ...(s.live ? [every(30_000, (now): Msg => ({ _tag: 'Poll', now }), 'poll')] : []),
+    // restarts when the room prop changes
+    command(roomFeed, p.room, { onSuccess: (text): Msg => ({ _tag: 'Said', text }) }),
+  ],
+  intent: { Pause: () => ({ _tag: 'Pause' }) },
+  update: {
+    Routed: (s) => s,
+    Poll: (s) => s,
+    Said: (s, m) => ({ ...s, lines: [...s.lines, m.text] }),
+    Pause: (s) => ({ ...s, live: false }),
+  },
+  view: (s, i) => html`<button data-intent=${i.Pause}>Pause</button>${s.lines.length}`,
+});
+```
+
+After the first render and after every update and props change, Gyral diffs the list by lane
+(`key`, else the driver's name): new lanes start, missing lanes are aborted, a lane whose input
+changed restarts, an unchanged lane keeps running. Moves keep them running; a real removal
+stops them; attaching again starts them from the current state. So there is no start in `init`,
+no restart on `PropsChanged` and no reconnect handling. Give each subscription its own `key`
+when two use the same driver, and keep inputs to what should restart it. In model tests,
+`subscriptionsFor(spec, state, props)` returns the list.
+
 ## Ignoring stale responses
 
 Under `switch` the previous request is aborted, but a response can still race a state change.
