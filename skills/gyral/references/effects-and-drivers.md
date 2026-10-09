@@ -355,6 +355,7 @@ export const copyText = <M>(text: string, done: M, failed: (e: CopyError) => M) 
 
 Lookup order: the element's `drivers` property → the nearest `<gyral-drivers>` provider
 (`provideDrivers(element, { http: … })`) → the spec's `drivers` → the command's own driver.
+`DRIVERS_ELEMENT` is that provider's tag name, for code that looks for it.
 
 ```ts
 import { define, html, provideDrivers, type Stateless } from '@gyral/core';

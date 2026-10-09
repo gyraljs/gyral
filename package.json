@@ -14,7 +14,7 @@
     "lint:css": "stylelint \"packages/*/src/**/*.ts\" \"examples/*/src/**/*.ts\" \"examples/**/*.css\" --allow-empty-input",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "invariants": "node scripts/check-docs.mjs && node scripts/errors.mjs --check && node scripts/check-workflows.mjs && node scripts/check-public-api.mjs && node scripts/check-skill.mjs && node scripts/check-provenance.mjs",
+    "invariants": "node scripts/check-docs.mjs && node scripts/errors.mjs --check && node scripts/public-api.mjs --check && node scripts/check-workflows.mjs && node scripts/check-public-api.mjs && node scripts/check-skill.mjs && node scripts/check-provenance.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "bench:view": "vitest run --config packages/core/bench/vitest.config.ts",
