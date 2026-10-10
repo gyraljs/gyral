@@ -1,4 +1,4 @@
-# Gyral 0.3.1-next.7: complete documentation
+# Gyral 0.3.1-next.8: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -1668,8 +1668,11 @@ export const Clock = define<State, Msg>()('my-clock', {
 After the first render and after every update and props change, Gyral compares the list with
 what is running, lane by lane (a command's `key`, else its driver's name): a new lane starts, a
 missing lane is stopped, a lane whose input changed restarts, and an unchanged lane keeps
-running. Moving the element keeps subscriptions running, removing it stops them, and attaching
-it again starts them from the current state. So there is no start in `init`, no restart on
+running. Inputs are compared as data: functions inside them are ignored, so an inline selector
+such as `(s) => s.unread` doesn't restart a lane on every update. To restart when a selector
+changes, put what it depends on in the key, for example one that includes the room id.
+Moving the element keeps subscriptions running, removing it stops them, and attaching it again
+starts them from the current state. So there is no start in `init`, no restart on
 `PropsChanged` and no reconnect handling. `every(ms, (now) => msg)` sends the time at once and
 then every `ms`. In model tests, `subscriptionsFor(Component, state, props)` returns the list.
 
@@ -2974,8 +2977,8 @@ the way `form()` does, and `SignupForm.values(data)` returns the submitted value
 form, without its secret fields.
 
 **Secret fields are never echoed.** After a failed submit, the submitted values come back so the
-form can be re-filled, except fields listed in `secret` and any field whose name contains
-`password` or `passcode`. They're left out of `IntentRejected.values` on both paths and out of
+form can be re-filled, except fields listed in `secret` (any posted field name, not only the
+schema's) and any field whose name contains `password`, `passcode`, `csrf` or `xsrf`. They're left out of `IntentRejected.values` on both paths and out of
 `values()`, and the devtools timeline shows them as `[secret]`. Development builds warn once
 about an unlisted field whose name looks secret (`token`, `card`, `cvc`, …).
 
@@ -3777,7 +3780,12 @@ window.addEventListener('error', (event) => {
 ```
 
 Production builds report the same errors with short messages; the codes are explained on the
-[error codes](https://gyral.dev/errors/) page.
+[error codes](https://gyral.dev/errors/) page. For your own tooling, the same table (code, group, message,
+arguments, link) ships with the package as `@gyral/core/errors.json`:
+
+```ts
+import table from '@gyral/core/errors.json' with { type: 'json' };
+```
 
 ## On the server
 
@@ -4825,11 +4833,24 @@ export default defineConfig({
 });
 ```
 
-The server still imports the components it renders. A component rendered inside another
-component's shadow root loads with that component, since its module imports the other's. A
+The server still imports the components it renders. The loader finds the tags in the page and,
+as it defines components, the tags rendered in their shadow roots too, at any depth, so a
+component inside another component's shadow DOM loads without its parent importing it. A
 rendered tag that no client module defines is a development warning, so a missing island can't
 fail silently. For app-wide setup in the browser (providing drivers to the page), keep a small
 client entry and pass it in `scripts` next to `components`.
+
+To wait until the page's components are defined and have rendered, await `componentsReady()`
+from `@gyral/core`, in a page script or a browser test. It resolves once every rendered tag the
+loader knows about is defined and the page has settled; without automatic components it is
+`settled()`:
+
+```ts
+import { componentsReady } from '@gyral/core';
+
+await componentsReady();
+document.querySelector('site-search')?.focus();
+```
 
 Hydration is built into `@gyral/core`, and module order doesn't matter. When a server-rendered
 component connects in the browser, it reads the state the server rendered (each one carries a
@@ -5838,6 +5859,8 @@ arriving. Await it before you look at the DOM; there's nothing to poll.
   the messages they deliver.
 - **It never waits for timers or the network.** Answer fake drivers and advance virtual time
   first, then `await settled()`.
+- **On a page that loads its components automatically**, await `componentsReady()` instead:
+  it first waits until the loader has defined every rendered component, then settles.
 
 Because it waits for the whole chain, a fake that answers at once runs to the end before
 `settled()` resolves. To see an in-between state such as "Loading…", use a fake that waits for
@@ -7707,7 +7730,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1-next.7, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.1-next.8, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -7974,7 +7997,7 @@ The store seed on the page, or on a `<gyral-stores>` provider, isn’t valid JSO
 ### G0053
 
 ```text
-<{tag}> reads store "{store}" during a server render without a store scope. Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).
+<{tag}> reads store "{store}" during a server render without a store scope. Pass the request's store instances to renderPage({ stores }) or renderToString(value, { stores }).
 ```
 
 Arguments: `tag`, `store`.
@@ -8186,7 +8209,7 @@ The component’s `subscriptions` returned two commands in the same lane: the sa
 ### G0080
 
 ```text
-<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.
+<{tag}> subscriptions kept restarting: a subscription's input data changes with every message it sends (for example a timestamp or a counter in the input). Keep inputs to what should restart it; functions are ignored, so to restart on a new selector, change the key.
 ```
 
 Arguments: `tag`.
@@ -8247,6 +8270,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/core`](#g
 | [`changed`](#core-changed) | Narrows a `StoreChanged` message to one store's typed state, or `undefined`. |
 | [`child`](#core-child) | Intent parser for a child component's outputs, typed by the child's output union. |
 | [`command`](#core-command) | Builds a command whose mappers are typed by the driver's input, output and error. |
+| [`componentsReady`](#core-componentsready) | Resolves once every rendered tag the component loader knows (in the document and in the shadow roots of components it defined) is defined, and the page has settled. |
 | [`css`](#core-css) | Component CSS: `` css`p { margin-block: ${GAP}px; }` ``. |
 | [`define`](#core-define) | Compiles a Model-View-Intent spec into a custom element and registers it under `tag`. |
 | [`defineDriver`](#core-definedriver) | Defines a driver. |
@@ -8331,6 +8355,17 @@ function command<I, O, E, const MS = never, const MF = MS>(driver: Driver<I, O, 
 Builds a command whose mappers are typed by the driver's input, output and error. Without
 handlers (or without `onSuccess`) it answers with no message: `command(log, line)` is a
 `Command<never>`, which fits any `Command<Msg>`.
+
+#### `componentsReady`
+
+```ts
+function componentsReady(): Promise<void>;
+```
+
+Resolves once every rendered tag the component loader knows (in the document and in the
+shadow roots of components it defined) is defined, and the page has settled. Await it in
+browser tests and page scripts after the loader has run (page scripts placed after it; in
+tests, import `virtual:gyral/components` first).
 
 #### `css`
 
@@ -8710,7 +8745,7 @@ The prop builders.
 | [`FormValues`](#core-formvalues) | A form's submitted text values, keyed by the definition's fields, for re-rendering the form with what was typed (sticky fields). |
 | [`GyralElement`](#core-gyralelement) | The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public instance API"). |
 | [`GyralElementClass`](#core-gyralelementclass) |  |
-| [`Head`](#core-head) | A page's head: what `page()` writes on the server and `setHead()` applies on the client. |
+| [`Head`](#core-head) | A page's head: what `renderPage()` writes on the server and `setHead()` applies on the client. |
 | [`HeadLink`](#core-headlink) | A metadata `<link>`: `alternate` (with `hreflang`), `icon` (with `sizes`, `type`), `manifest` (with `crossorigin`), `prev`/`next`, … Any other attribute is written as given. |
 | [`HeadMeta`](#core-headmeta) | `<meta name content>`, or `<meta property content>` (Open Graph uses `property`). |
 | [`HookAttributes`](#core-hookattributes) | Attributes a hook's server half adds to the start tag (`true`: present, no value). |
@@ -8844,7 +8879,7 @@ interface Command<M> {
 ```
 
 A side effect described as data, plus pure mappers from its outcome to messages. Commands
-that answer with no message (`focus()`, `emit()`, `navigate()`, `go()`) are `Command<never>`,
+that answer with no message (`focus()`, `call()`, `navigate()`) are `Command<never>`,
 which fits wherever a `Command<Msg>` is expected: no type argument needed.
 
 #### `CommandHandlers`
@@ -9040,7 +9075,7 @@ interface FocusOptions {
 interface FormDefinition<Schema extends StandardSchemaV1> {
     readonly _tag: 'FormDefinition';
     readonly schema: Schema;
-    /** The fields listed as secret (names containing `password`/`passcode` are secret too). */
+    /** The fields listed as secret (names containing `password`, `passcode`, `csrf` or `xsrf` are secret too). */
     readonly secret: readonly string[];
     /**
      * Validates submitted form data exactly as `form()` does; the server's `formAction` uses it,
@@ -9068,10 +9103,12 @@ Submitted text values of a form (Files are dropped: they can't be re-filled).
 interface FormOptions<Schema extends StandardSchemaV1> {
     /**
      * Fields whose submitted values are never sent back: not in `IntentRejected.values`, not in
-     * `values()`, not in the devtools timeline. Names containing `password` or `passcode` are
-     * secret without being listed (the browser never restores a password field either).
+     * `values()`, not in the devtools timeline. Any posted field name may be listed, including
+     * fields outside the schema. Names containing `password`, `passcode`, `csrf` or `xsrf` are
+     * secret without being listed (the browser never restores a password field either, and a
+     * CSRF token must come fresh from the server, not from the echo).
      */
-    readonly secret?: readonly FieldName<Schema>[];
+    readonly secret?: readonly (FieldName<Schema> | (string & {}))[];
 }
 ```
 
@@ -9176,7 +9213,7 @@ interface Head {
 }
 ```
 
-A page's head: what `page()` writes on the server and `setHead()` applies on the client.
+A page's head: what `renderPage()` writes on the server and `setHead()` applies on the client.
 
 #### `HeadLink`
 
@@ -10436,9 +10473,9 @@ function setHead(head: Head): Command<never>;
 
 Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed
 element (description, robots, canonical, meta, links, JSON-LD). Managed elements the new head
-doesn't name are removed; unchanged ones are not written; content from `page({ extraHead })`
+doesn't name are removed; unchanged ones are not written; content from `renderPage({ extraHead })`
 is never touched. The memory history records it instead. Build the head with one pure
-function and pass the same function's result to the server's `page()`:
+function and pass the same function's result to the server's `renderPage()`:
 
 
 ```ts
@@ -10688,11 +10725,11 @@ type RouteTable = Readonly<Record<string, string>>;
 
 # @gyral/time
 
-> Gyral time: delays, debounces, periodic ticks and animation frames as commands.
+> Gyral time: delays, debounces and wall-clock ticks (every) as commands.
 
 Source: https://gyral.dev/docs/api/time/
 
-Gyral time: delays, debounces, periodic ticks and animation frames as commands.
+Gyral time: delays, debounces and wall-clock ticks (every) as commands.
 
 ```sh
 npm install @gyral/time
@@ -10840,7 +10877,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/ssr`](#gy
 | [`contentSecurityPolicy`](#ssr-contentsecuritypolicy) | A `Content-Security-Policy` header value whose `style-src` allows Gyral's `<style>` elements by hash, for the components registered when it is called (import them first). |
 | [`formAction`](#ssr-formaction) | A request handler for a `<form method="post">` that works with JavaScript disabled, and answers the JS path (`submitForm` in `@gyral/http`, `Accept: application/json`) with JSON: valid → the handler's response, a redirect turned into `{ _tag: 'Redirected', location }`; invalid → `422` with the `IntentRejected` (without `values`). |
 | [`rejectWith`](#ssr-rejectwith) | Rejects a submission that passed the schema but failed a server-only check (email taken, wrong password). |
-| [`renderPage`](#ssr-renderpage) | An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one component boundary per pull; `renderToStream`): load data first, since nothing is awaited and there is no async or suspense streaming. |
+| [`renderPage`](#ssr-renderpage) | An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one component boundary per pull): load data first, since nothing is awaited and there is no async or suspense streaming. |
 | [`renderToString`](#ssr-rendertostring) | Renders to a complete string (tests, caching, static generation), with this request's stores in scope (ADR 0013). |
 | [`seeOther`](#ssr-seeother) | 303 See Other: the redirect that turns a POST into a GET (no resubmit on reload). |
 | [`styleHashes`](#ssr-stylehashes) | `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`, for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server"). |
@@ -10887,7 +10924,7 @@ function renderPage(options: PageOptions, init?: ResponseInit): Response;
 ```
 
 An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one
-component boundary per pull; `renderToStream`): load data first, since nothing is awaited
+component boundary per pull): load data first, since nothing is awaited
 and there is no async or suspense streaming. Status and headers are final before the first
 byte. `csp` sets the `Content-Security-Policy`
 header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every
@@ -10997,12 +11034,12 @@ interface CspOptions {
      */
     readonly directives?: CspDirectives;
     /**
-     * The page's global styles, exactly as passed to `page({ styles })`, hashed too. In
+     * The page's global styles, exactly as passed to `renderPage({ styles })`, hashed too. In
      * `renderPage({ csp })` it defaults to the page's own `styles`.
      */
     readonly styles?: string | readonly string[];
     /**
-     * The page's inline head scripts, exactly as passed to `page({ headScripts })`, allowed in
+     * The page's inline head scripts, exactly as passed to `renderPage({ headScripts })`, allowed in
      * `script-src` by hash (a `script-src` given in `directives` is kept and the hashes appended;
      * without one it is `'self'` plus the hashes). In `renderPage({ csp })` it defaults to the
      * page's own `headScripts`.
@@ -11289,10 +11326,10 @@ interface AssetHandlerOptions {
 
 ```ts
 interface ClientAssets {
-    /** The entry chunk's URL, for `page({ scripts })`. */
+    /** The entry chunk's URL, for `renderPage({ scripts })`. */
     readonly entry: string;
     /**
-     * Chunks the entry is known to need, for `page({ modulepreload })`: the entry itself first
+     * Chunks the entry is known to need, for `renderPage({ modulepreload })`: the entry itself first
      * (when there is anything else), then its static imports and Gyral's lazily loaded hydration
      * chunk with its imports. Without the hints the browser
      * finds them only after it has fetched and parsed the entry (a server-rendered page would
@@ -11300,7 +11337,7 @@ interface ClientAssets {
      */
     readonly modulepreload: readonly string[];
     /**
-     * The hashed CSS files of those chunks, for `page({ stylesheets })`: what Vite emitted for
+     * The hashed CSS files of those chunks, for `renderPage({ stylesheets })`: what Vite emitted for
      * CSS imported by the entry, its static imports and the `also` modules, each chunk's after
      * its imports' (module order), each file once.
      */
