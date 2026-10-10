@@ -6,7 +6,7 @@
 // The rules: once the host has rendered, and after every update and props change while it is
 // connected, `subscriptions(state, props)` is evaluated and synced. Commands are matched by
 // lane (`key`, else the driver's name). A lane that is new starts; a lane that is gone is
-// aborted; a lane whose input changed (compared by its JSON text, else by identity) is aborted
+// aborted; a lane whose input changed (compared as JSON text, functions ignored) is aborted
 // and started again; a lane with the same input keeps running. A subscription that ends by
 // itself stays ended until its lane or input changes. When the host's commands stop (removal,
 // ADR 0006) the set is forgotten, and the next connect starts it again from the current state.
@@ -33,15 +33,25 @@ export interface Subscriptions {
   readonly reset: () => void;
 }
 
-/** An input's identity for the diff: its JSON text, or the value when it has none. */
-const fingerprint = (input: unknown): unknown => {
-  try {
-    // `undefined` for values with no JSON text (functions, `undefined`).
-    const text = JSON.stringify(input) as string | undefined;
-    return text ?? input;
-  } catch {
-    return input; // cyclic or BigInt: compared by identity
-  }
+/**
+ * An input's identity for the diff: its data as JSON text. Functions inside it count as equal
+ * (an inline selector, `watch(store, (s) => s.x)`, is a new function after every message, and
+ * comparing it would restart the lane each time), repeated objects and cycles are cut, and
+ * BigInts are written out. So a changed key or changed data restarts a lane; a changed function
+ * alone doesn't: to restart on a new selector, change the key (gyral-1zd.29).
+ */
+const fingerprint = (input: unknown): string => {
+  const seen = new WeakSet<object>();
+  // Wrapped in an array, so even `undefined` has a text (`[null]`).
+  return JSON.stringify([input], (_key, value: unknown) => {
+    if (typeof value === 'function') return '[function]';
+    if (typeof value === 'bigint') return `${value.toString()}n`;
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[seen]';
+      seen.add(value);
+    }
+    return value;
+  });
 };
 
 /**

@@ -127,7 +127,9 @@ After the first render and after every update and props change, Gyral diffs the 
 changed restarts, an unchanged lane keeps running. Moves keep them running; a real removal
 stops them; attaching again starts them from the current state. So there is no start in `init`,
 no restart on `PropsChanged` and no reconnect handling. Give each subscription its own `key`
-when two use the same driver, and keep inputs to what should restart it. In model tests,
+when two use the same driver, and keep inputs to what should restart it. Inputs compare as
+data: functions inside them are ignored, so an inline selector (`watch(store, (s) => s.x)`)
+doesn't restart the lane; to restart on a new selector, change the key. In model tests,
 `subscriptionsFor(spec, state, props)` returns the list.
 
 ## Ignoring stale responses

@@ -56,8 +56,12 @@ nothing a subscription emits can change the state hydration adopts.
 | present, input A | present, input B | abort, then start |
 | present, input A | present, input A | keep running      |
 
-Inputs are compared by their JSON text (`JSON.stringify`), so a fresh but equal object doesn't
-restart anything; inputs with no JSON text (functions, cyclic values) compare by identity. Two
+Inputs are compared by their JSON text, so a fresh but equal object doesn't restart anything.
+Functions inside an input count as equal (an inline selector such as `watch(store, (s) => s.x)`
+is a new function after every message), repeated objects and cycles are cut, and BigInts are
+written out (gyral-1zd.29; first shipped comparing functions and cyclic values by identity, which
+restarted such lanes on every message until G0080 stopped them). To restart on a new selector,
+change the key. Two
 commands in one result with the same lane: the first runs and development warns (G0079); give
 each its own `key`. A subscription that ends by itself stays ended until its lane or input
 changes. A sync that keeps triggering itself (an input that changes with every message the

@@ -50,7 +50,7 @@ export const MESSAGES = {
   52: 'unreadable {attribute} seed on {where}',
   53:
     '<{tag}> reads store "{store}" during a server render without a store scope. Pass the ' +
-    "request's store instances to page({ stores }) or renderToString(value, { stores }).",
+    "request's store instances to renderPage({ stores }) or renderToString(value, { stores }).",
   54:
     'store "{store}" sends to "{target}" but is not held by a store scope (a registry, ' +
     '<gyral-stores> or the page default), so the message is dropped.',
@@ -87,8 +87,9 @@ export const MESSAGES = {
     '<{tag}> subscriptions returned two commands for lane "{lane}"; only the first runs. ' +
     'Give each its own `key`.',
   80:
-    "<{tag}> subscriptions kept restarting: a subscription's input changes with every message " +
-    'it sends. Keep inputs to what should restart it.',
+    "<{tag}> subscriptions kept restarting: a subscription's input data changes with every " +
+    'message it sends (for example a timestamp or a counter in the input). Keep inputs to what ' +
+    'should restart it; functions are ignored, so to restart on a new selector, change the key.',
   // Element calls (gyral-1zd.27)
   85: '<{tag}> call("{selector}", "{method}") failed',
   86: 'call("{selector}", "{method}"): arguments must be plain data.',
