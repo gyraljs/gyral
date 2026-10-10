@@ -115,8 +115,9 @@ export const Signup = define<State, Msg>()('my-signup', {
 ```
 
 Never keep passwords in state: state is serialized into the page. Secret fields never come back
-in `values` anyway: a name containing `password` or `passcode` is secret by itself, and others
-are listed in the definition. Development builds warn about an unlisted field that looks secret
+in `values` anyway: a name containing `password`, `passcode`, `csrf` or `xsrf` is secret by
+itself, and others are listed in the definition (`secret` takes any posted field name, inside
+the schema or not, such as a hidden `_session` field). Development builds warn about an unlisted field that looks secret
 (`token`, `card`, `cvc`, `pin`, …), and the devtools timeline shows secrets as `[secret]`.
 
 ```ts

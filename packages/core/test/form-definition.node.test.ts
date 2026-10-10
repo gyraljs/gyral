@@ -148,3 +148,33 @@ describe('secret fields', () => {
     expect(warn.mock.calls[0]?.[0]).toContain('"apiToken"');
   });
 });
+
+describe('secret fields outside the schema (gyral-1zd.29)', () => {
+  const Login = defineForm(v.object({ handle: v.string(), password: v.string() }), {
+    secret: ['handle', 'session_ref'],
+  });
+
+  it('accepts any posted field name and still autocompletes schema keys', () => {
+    expectTypeOf(Login.secret).toEqualTypeOf<readonly string[]>();
+    const data = new FormData();
+    data.append('handle', 'ada');
+    data.append('password', 'hunter2');
+    data.append('session_ref', 'abc');
+    data.append('note', 'hi');
+    expect(Login.values(data)).toEqual({ note: 'hi' });
+  });
+
+  it('never echoes CSRF-named fields, on the client path too', async () => {
+    const data = new FormData();
+    data.append('email', 'nope');
+    data.append('_csrf', 'tok-123');
+    data.append('csrfToken', 'tok-456');
+    const result = await Contact.validate(data, 'Send');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.rejected.values).toBeDefined();
+    expect(JSON.stringify(result.rejected.values)).not.toMatch(/tok-123|tok-456/);
+    expect(isSecretField('_csrf')).toBe(true);
+    expect(isSecretField('xsrf-token')).toBe(true);
+  });
+});

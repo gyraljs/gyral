@@ -13,10 +13,12 @@ export type FieldName<Schema extends StandardSchemaV1> =
 export interface FormOptions<Schema extends StandardSchemaV1> {
   /**
    * Fields whose submitted values are never sent back: not in `IntentRejected.values`, not in
-   * `values()`, not in the devtools timeline. Names containing `password` or `passcode` are
-   * secret without being listed (the browser never restores a password field either).
+   * `values()`, not in the devtools timeline. Any posted field name may be listed, including
+   * fields outside the schema. Names containing `password`, `passcode`, `csrf` or `xsrf` are
+   * secret without being listed (the browser never restores a password field either, and a
+   * CSRF token must come fresh from the server, not from the echo).
    */
-  readonly secret?: readonly FieldName<Schema>[];
+  readonly secret?: readonly (FieldName<Schema> | (string & {}))[];
 }
 
 /**
@@ -37,7 +39,7 @@ export type FormResult<T> =
 export interface FormDefinition<Schema extends StandardSchemaV1> {
   readonly _tag: 'FormDefinition';
   readonly schema: Schema;
-  /** The fields listed as secret (names containing `password`/`passcode` are secret too). */
+  /** The fields listed as secret (names containing `password`, `passcode`, `csrf` or `xsrf` are secret too). */
   readonly secret: readonly string[];
   /**
    * Validates submitted form data exactly as `form()` does; the server's `formAction` uses it,
@@ -54,7 +56,7 @@ export interface FormDefinition<Schema extends StandardSchemaV1> {
 // Every secret name a definition declared, for redacting previews (the devtools timeline).
 const declaredSecrets = /* @__PURE__ */ new Set<string>();
 
-const DEFAULT_SECRET = /password|passcode/i;
+const DEFAULT_SECRET = /password|passcode|csrf|xsrf/i;
 
 /** Whether `name` is never echoed: declared secret by a form, or a password-like name. */
 export function isSecretField(name: string): boolean {

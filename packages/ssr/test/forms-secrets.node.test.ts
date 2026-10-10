@@ -43,6 +43,18 @@ describe('formAction never echoes secret fields', () => {
     expect(JSON.stringify(seen.at(-1))).not.toMatch(SECRETS);
   });
 
+  it('no-JS: CSRF token fields are never echoed, listed or not (gyral-1zd.29)', async () => {
+    await post({
+      email: 'nope',
+      password: 'hunter2',
+      card: '4111111111111111',
+      _csrf: 'tok-123',
+      xsrf_token: 'tok-456',
+    });
+    expect(seen.at(-1)?.values).toEqual({ email: 'nope' });
+    expect(JSON.stringify(seen.at(-1))).not.toMatch(/tok-123|tok-456/);
+  });
+
   it('no-JS server-only rejection (rejectWith): the same', async () => {
     await post({
       email: 'a@b.co',
