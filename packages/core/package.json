@@ -24,7 +24,8 @@
     "./internal": "./src/internal.ts",
     "./vite": "./src/vite.ts",
     "./compiled": "./src/view/compiled.ts",
-    "./eslint": "./src/eslint/index.ts"
+    "./eslint": "./src/eslint/index.ts",
+    "./errors.json": "./src/errors.json"
   },
   "imports": {
     "#devtools": {
@@ -80,7 +81,8 @@
       "./eslint": {
         "types": "./dist/eslint/index.d.ts",
         "default": "./dist/eslint/index.js"
-      }
+      },
+      "./errors.json": "./dist/errors.json"
     },
     "imports": {
       "#devtools": {

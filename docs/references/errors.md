@@ -5,7 +5,9 @@
 Development builds of `@gyral/core` print each message in full. Production builds print its
 code, its arguments (in the order of the placeholders below) and a link here:
 `Gyral G0010 my-cart Increment https://gyral.dev/errors/#G0010`. The table is
-[errors.json](errors.json) (gyral-c5d.13).
+[errors.json](errors.json) (gyral-c5d.13), also published with the package as
+`@gyral/core/errors.json` (`import errors from '@gyral/core/errors.json' with { type: 'json' }`),
+for tools and docs sites that render the codes.
 
 ## Components
 
@@ -145,7 +147,7 @@ Arguments: `attribute`, `where`.
 
 ### G0053
 
-> \<{tag}> reads store "{store}" during a server render without a store scope. Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).
+> \<{tag}> reads store "{store}" during a server render without a store scope. Pass the request's store instances to renderPage({ stores }) or renderToString(value, { stores }).
 
 Arguments: `tag`, `store`.
 
@@ -255,7 +257,7 @@ Arguments: `tag`, `lane`.
 
 ### G0080
 
-> \<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.
+> \<{tag}> subscriptions kept restarting: a subscription's input data changes with every message it sends (for example a timestamp or a counter in the input). Keep inputs to what should restart it; functions are ignored, so to restart on a new selector, change the key.
 
 Arguments: `tag`.
 

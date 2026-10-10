@@ -149,7 +149,7 @@
   {
     "code": "G0053",
     "group": "Stores",
-    "message": "<{tag}> reads store \"{store}\" during a server render without a store scope. Pass the request's store instances to page({ stores }) or renderToString(value, { stores }).",
+    "message": "<{tag}> reads store \"{store}\" during a server render without a store scope. Pass the request's store instances to renderPage({ stores }) or renderToString(value, { stores }).",
     "arguments": ["tag", "store"],
     "url": "https://gyral.dev/errors/#G0053"
   },
@@ -268,7 +268,7 @@
   {
     "code": "G0080",
     "group": "Subscriptions (ADR 0025)",
-    "message": "<{tag}> subscriptions kept restarting: a subscription's input changes with every message it sends. Keep inputs to what should restart it.",
+    "message": "<{tag}> subscriptions kept restarting: a subscription's input data changes with every message it sends (for example a timestamp or a counter in the input). Keep inputs to what should restart it; functions are ignored, so to restart on a new selector, change the key.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0080"
   },

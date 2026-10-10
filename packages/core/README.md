@@ -49,6 +49,13 @@ consumer setup guide (packages, Vite preset, template compiler):
 
 > Status: pre-alpha. APIs change between 0.x releases.
 
+## Diagnostic codes
+
+Production builds print codes such as `Gyral G0010 my-cart Increment`. The full table (code,
+group, message, arguments, link) ships with the package as `@gyral/core/errors.json`, for tools
+and docs sites: `import errors from '@gyral/core/errors.json' with { type: 'json' };`. The
+same table, rendered: <https://gyral.dev/errors/>.
+
 ## License
 
 MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and

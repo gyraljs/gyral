@@ -18,6 +18,8 @@ const SRC = join(ROOT, 'packages/core/src');
 const TABLE = join(SRC, 'view/messages.ts');
 const MD = join(ROOT, 'docs/references/errors.md');
 const JSON_FILE = join(ROOT, 'docs/references/errors.json');
+// The same table, published with @gyral/core as `@gyral/core/errors.json` (no runtime code).
+const PACKAGE_JSON_FILE = join(ROOT, 'packages/core/src/errors.json');
 const URL = 'https://gyral.dev/errors/#';
 
 const codeName = (code) => `G${String(code).padStart(4, '0')}`;
@@ -110,7 +112,9 @@ function markdown(entries) {
     'Development builds of `@gyral/core` print each message in full. Production builds print its',
     'code, its arguments (in the order of the placeholders below) and a link here:',
     '`Gyral G0010 my-cart Increment https://gyral.dev/errors/#G0010`. The table is',
-    '[errors.json](errors.json) (gyral-c5d.13).',
+    '[errors.json](errors.json) (gyral-c5d.13), also published with the package as',
+    "`@gyral/core/errors.json` (`import errors from '@gyral/core/errors.json' with { type: 'json' }`),",
+    'for tools and docs sites that render the codes.',
   ];
   let group;
   for (const e of entries) {
@@ -171,6 +175,7 @@ const outputs = [
     await format(markdown(entries), { parser: 'markdown', printWidth: 100, proseWrap: 'preserve' }),
   ],
   [JSON_FILE, await format(json(entries), { parser: 'json' })],
+  [PACKAGE_JSON_FILE, await format(json(entries), { parser: 'json' })],
 ];
 if (process.argv.includes('--check')) {
   for (const [file, text] of outputs) {
@@ -194,5 +199,7 @@ if (process.argv.includes('--check')) {
     process.exit(1);
   }
   for (const [file, text] of outputs) writeFileSync(file, text);
-  console.log(`errors: wrote ${relative(ROOT, MD)} and ${relative(ROOT, JSON_FILE)}`);
+  console.log(
+    `errors: wrote ${relative(ROOT, MD)}, ${relative(ROOT, JSON_FILE)} and ${relative(ROOT, PACKAGE_JSON_FILE)}`,
+  );
 }
