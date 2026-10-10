@@ -353,6 +353,12 @@ export interface GyralViteOptions {
 export interface ComponentsOptions {
   /** Directories (relative to Vite's root) whose modules' `define()` tags are found. Default `['src']`. */
   readonly include?: readonly string[];
+  /**
+   * Tag → module (relative to Vite's root) for components the scan can't find: those defined
+   * through a wrapper such as `defineMemberForm({ tag: 'member-form' })`, which calls
+   * `define()` itself. Listed entries win over scanned ones.
+   */
+  readonly modules?: Readonly<Record<string, string>>;
 }
 
 export interface GyralViteConfig {

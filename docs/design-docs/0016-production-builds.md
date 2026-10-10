@@ -217,6 +217,27 @@ the page loads exactly the components it rendered.
   `renderPage`, and drop per-page island flags and client-side side-effect imports. The server
   still imports the components it renders.
 
+## Addendum: folded and listed components (gyral-1zd.30, 2026-10-09)
+
+Found by migrating a multi-page shop: with `components: true`, `componentsFromManifest` (and so
+`productionServer`, at startup) threw "… is not an entry in the Vite manifest" when another
+chunk imported a component's module statically. The bundler then puts the module in that chunk
+(the entry, or the importing component's chunk), and Vite's manifest only has keys for entries,
+dynamic-import targets and shared chunks, never for a module folded into one of them.
+
+- The preset records each tag's chunk file (`chunks` in `.vite/gyral-components.json`, from the
+  bundle's module lists in `generateBundle`). The server uses the tag's own manifest key when
+  there is one, else the manifest entry whose file is that chunk, so the tag preloads the chunk
+  it is in, with its imports and CSS. A tag with neither (a build from before this change) loads
+  as before through the loader but isn't preloaded, with one warning per tag; nothing throws.
+- Components defined through a wrapper (`defineMemberForm({ tag })`, which calls `define()` with
+  a tag that isn't a literal at the call) can't be found by the source scan. The app lists them:
+  `components: { modules: { 'member-form': 'src/forms/member.ts' } }`, tag to module relative to
+  Vite's root; listed entries win over scanned ones. An option, not a comment marker next to the
+  call: it needs no parsing, can't drift out of a reformatted line, and is visible in one place
+  (the config). The generated element typings don't cover listed tags (the scan doesn't know
+  their class); such a module declares its own `HTMLElementTagNameMap` entry.
+
 ## Addendum: development server (gyral-1zd.22, 2026-10-09)
 
 Decision M8. Every SSR app wrote its own development server (seven copies across the audited

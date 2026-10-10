@@ -141,6 +141,24 @@ interface ComponentsManifest {
   readonly loaderImports?: readonly string[];
   /** Tag → the Vite manifest key of the module that defines it. */
   readonly modules: Readonly<Record<string, string>>;
+  /** Tag → the file of the chunk its module ended up in (builds since 0.3.1). */
+  readonly chunks?: Readonly<Record<string, string>>;
+}
+
+const warned = new Set<string>();
+
+/**
+ * The manifest key for a component's module: its own key, or, when another chunk imports the
+ * module statically and the bundler put it there (no key of its own), the key of that chunk.
+ */
+function componentKey(
+  manifest: ViteManifest,
+  key: string,
+  file: string | undefined,
+): string | undefined {
+  if (manifest[key] !== undefined) return key;
+  if (file === undefined) return undefined;
+  return Object.keys(manifest).find((k) => manifest[k]?.file === file);
 }
 
 /** The file the preset writes, next to `.vite/manifest.json`. */
@@ -158,7 +176,19 @@ export function componentAssets(
 ): ComponentAssets {
   const base = basePath(options.base);
   const modules = new Map<string, ComponentModule>();
-  for (const [tag, key] of Object.entries(components.modules)) {
+  for (const [tag, source] of Object.entries(components.modules)) {
+    const key = componentKey(manifest, source, components.chunks?.[tag]);
+    if (key === undefined) {
+      // Still loads (the loader imports the right chunk); only the preload hint is lost.
+      if (!warned.has(tag)) {
+        warned.add(tag);
+        console.warn(
+          `gyral: <${tag}>'s module (${source}) isn't in the Vite manifest; not preloaded`,
+        );
+      }
+      modules.set(tag, { preload: [], stylesheets: [] });
+      continue;
+    }
     const assets = clientAssets(manifest, key, [], options);
     modules.set(tag, {
       preload: assets.modulepreload.length === 0 ? [assets.entry] : assets.modulepreload,

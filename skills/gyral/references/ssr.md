@@ -274,7 +274,12 @@ export const createApp = (components?: ComponentAssets) => ({
 });
 ```
 
-Keep component modules under `src/` (the `include` option changes that). Tags rendered inside
+Keep component modules under `src/` (the `include` option changes that). The scan finds
+`export const X = define<…>()('my-tag', …)`; a component defined through a wrapper (a helper
+that calls `define()` with a tag it was given) is invisible to it, so list it:
+`gyralVitePreset({ components: { modules: { 'member-form': 'src/forms/member.ts' } } })`. A
+component module that another chunk imports statically (the entry, or another component) is
+bundled into that chunk; it still loads, and its preload is that chunk. Tags rendered inside
 the shadow root of a component the loader defined are found too, so a component doesn't have to
 import its shadow children (it still may). In browser tests and page scripts, `await
 componentsReady()` from `@gyral/core` waits until every rendered tag the loader knows is defined
