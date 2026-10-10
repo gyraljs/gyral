@@ -41,7 +41,7 @@ export function renderToString(value: ChildValue, options: RenderOptions = {}): 
 
 /**
  * An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one
- * component boundary per pull; `renderToStream`): load data first, since nothing is awaited
+ * component boundary per pull): load data first, since nothing is awaited
  * and there is no async or suspense streaming. Status and headers are final before the first
  * byte. `csp` sets the `Content-Security-Policy`
  * header: a string as is, or `contentSecurityPolicy()`'s options to build it now, with every

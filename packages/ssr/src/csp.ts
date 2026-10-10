@@ -24,12 +24,12 @@ export interface CspOptions {
    */
   readonly directives?: CspDirectives;
   /**
-   * The page's global styles, exactly as passed to `page({ styles })`, hashed too. In
+   * The page's global styles, exactly as passed to `renderPage({ styles })`, hashed too. In
    * `renderPage({ csp })` it defaults to the page's own `styles`.
    */
   readonly styles?: string | readonly string[];
   /**
-   * The page's inline head scripts, exactly as passed to `page({ headScripts })`, allowed in
+   * The page's inline head scripts, exactly as passed to `renderPage({ headScripts })`, allowed in
    * `script-src` by hash (a `script-src` given in `directives` is kept and the hashes appended;
    * without one it is `'self'` plus the hashes). In `renderPage({ csp })` it defaults to the
    * page's own `headScripts`.

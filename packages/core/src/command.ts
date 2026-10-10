@@ -72,7 +72,7 @@ export type DriverOverrides = Readonly<Record<string, AnyDriver>>;
 
 /**
  * A side effect described as data, plus pure mappers from its outcome to messages. Commands
- * that answer with no message (`focus()`, `emit()`, `navigate()`, `go()`) are `Command<never>`,
+ * that answer with no message (`focus()`, `call()`, `navigate()`) are `Command<never>`,
  * which fits wherever a `Command<Msg>` is expected: no type argument needed.
  */
 export interface Command<M> {

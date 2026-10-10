@@ -1,7 +1,7 @@
 {
   "name": "@gyral/time",
   "version": "0.3.0",
-  "description": "Gyral time: delays, debounces, periodic ticks and animation frames as commands.",
+  "description": "Gyral time: delays, debounces and wall-clock ticks (every) as commands.",
   "license": "MIT",
   "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/time#readme",

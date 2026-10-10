@@ -76,6 +76,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `CommandHandlers`     | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `CommandInfo`         | type  | supporting type |                                                                                                        |
 | `ComponentSpec`       | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
+| `componentsReady`     | value | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `Concurrency`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `css`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `CssValue`            | type  | supporting type |                                                                                                        |

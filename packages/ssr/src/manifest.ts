@@ -39,10 +39,10 @@ export function entryChunk(manifest: ViteManifest, entry: string, where: string)
 
 /** What a server-rendered page loads: the client entry, the modules to preload, the CSS. */
 export interface ClientAssets {
-  /** The entry chunk's URL, for `page({ scripts })`. */
+  /** The entry chunk's URL, for `renderPage({ scripts })`. */
   readonly entry: string;
   /**
-   * Chunks the entry is known to need, for `page({ modulepreload })`: the entry itself first
+   * Chunks the entry is known to need, for `renderPage({ modulepreload })`: the entry itself first
    * (when there is anything else), then its static imports and Gyral's lazily loaded hydration
    * chunk with its imports. Without the hints the browser
    * finds them only after it has fetched and parsed the entry (a server-rendered page would
@@ -50,7 +50,7 @@ export interface ClientAssets {
    */
   readonly modulepreload: readonly string[];
   /**
-   * The hashed CSS files of those chunks, for `page({ stylesheets })`: what Vite emitted for
+   * The hashed CSS files of those chunks, for `renderPage({ stylesheets })`: what Vite emitted for
    * CSS imported by the entry, its static imports and the `also` modules, each chunk's after
    * its imports' (module order), each file once.
    */

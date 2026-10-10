@@ -43,12 +43,12 @@ StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope
 - **Synchronous.** State is known before rendering (init is pure; data is loaded by the app or
   a form action first), so nothing in a template is awaited. A `Promise` value is an error.
 - **Chunked.** `render` yields at least at every component boundary. `@gyral/ssr`'s
-  `renderToStream`/`renderPage` pull chunks into a `ReadableStream` and run each pull inside
+  `renderPage` pulls chunks into a `ReadableStream` and run each pull inside
   the request's store scope, so ADR 0013's per-step isolation keeps working unchanged. This is
   pull-based output of a synchronous render, not async or suspense streaming: nothing waits
   for data mid-page, so docs say "chunked", not "streaming" (gyral-dyn.7).
-- `@gyral/ssr` keeps the serving side: `page()` (which writes the page's store seed and global
-  `<style>` elements itself), `renderToString`, `renderToStream`, `renderPage`,
+- `@gyral/ssr` keeps the serving side: `renderPage` (which writes the page's store seed and
+  global `<style>` elements itself), `renderToString`,
   `contentSecurityPolicy`, static generation and production serving (`@gyral/ssr/static`) and
   form actions. `serverHtml` is gone: `page()` is written with core's `html` (page templates
   are `server` templates, 01).
@@ -234,7 +234,7 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
 
 - `csp` takes `contentSecurityPolicy()`'s options. The header is the given directives, and
   `style-src` = the given one (default `'self'`) plus the hashes of every registered shadow
-  component's `<style>` and of each `page({ styles })` entry (as written, `</style` escaped);
+  component's `<style>` and of each `renderPage({ styles })` entry (as written, `</style` escaped);
   `styles` defaults to the page's own. It is cached per options object until the server
   registry changes: the cache keys on `registryVersion()`, bumped by every registration (so
   every change to the set of component CSS), and on the page `styles` (by identity). Until

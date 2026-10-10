@@ -39,9 +39,9 @@ export function navigate(url: string, options: NavigateOptions = {}): Command<ne
 /**
  * Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed
  * element (description, robots, canonical, meta, links, JSON-LD). Managed elements the new head
- * doesn't name are removed; unchanged ones are not written; content from `page({ extraHead })`
+ * doesn't name are removed; unchanged ones are not written; content from `renderPage({ extraHead })`
  * is never touched. The memory history records it instead. Build the head with one pure
- * function and pass the same function's result to the server's `page()`:
+ * function and pass the same function's result to the server's `renderPage()`:
  *
  *   Routed: (s, m) => [next, [setHead(pageHead(site.match(m.location.href), origin))]]
  */

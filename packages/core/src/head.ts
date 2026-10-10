@@ -1,5 +1,5 @@
 // The head model (ADR 0019): one description of a page's managed <head> elements, shared by the
-// server's page shell (@gyral/ssr `page()`) and the router's `setHead()`. Types and a pure
+// server's page shell (@gyral/ssr `renderPage()`) and the router's `setHead()`. Types and a pure
 // normalizer only, no DOM, so both halves agree on keys, order and duplicates.
 import { DEV } from '#view-dev';
 import { scriptSafeJson } from './script-json.js';
@@ -26,7 +26,7 @@ export interface HeadLink {
   readonly [attribute: string]: string;
 }
 
-/** A page's head: what `page()` writes on the server and `setHead()` applies on the client. */
+/** A page's head: what `renderPage()` writes on the server and `setHead()` applies on the client. */
 export interface Head {
   readonly title: string;
   readonly description?: string;
@@ -57,7 +57,7 @@ export interface HeadEntry {
   readonly text?: string;
 }
 
-// Belong to page() itself: changing them per navigation would unstyle the page, refetch
+// Belong to renderPage() itself: changing them per navigation would unstyle the page, refetch
 // modules, or apply policy too late. Checked in development only.
 const REFUSED_REL = /(^|\s)(stylesheet|preload|modulepreload|canonical)(\s|$)/i;
 
@@ -65,7 +65,7 @@ function check(head: Head): void {
   const refuse = (what: string): never => {
     throw new Error(
       `gyral head: ${what} is not a managed head entry (ADR 0019 "Keys, dedupe and order"). ` +
-        'Write it with page() options or extraHead.',
+        'Write it with renderPage() options or extraHead.',
     );
   };
   for (const m of head.meta ?? []) {
