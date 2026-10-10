@@ -63,6 +63,8 @@ export interface ModuleFacts {
   readonly texts: readonly string[];
   /** Specifiers through which the module may reach a `raw` export (see the header). */
   readonly rawSources: readonly string[];
+  /** Whether the module may give a component an error view (see `specError`). */
+  readonly errorView: boolean;
 }
 
 const stringOf = (node: Node | undefined): string | undefined => {
@@ -92,6 +94,100 @@ const isValue = (node: Node): boolean =>
 const bump = (counts: Map<string, number>, name: string): void => {
   counts.set(name, (counts.get(name) ?? 0) + 1);
 };
+
+const FUNCTION = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
+
+/** A callee named `define` (`define`, `ns.define`), or the inner call of `define<…>()(…)`. */
+function isDefine(callee: Node | undefined): boolean {
+  if (callee?.type === 'CallExpression') return isDefine(nodeAt(callee, 'callee'));
+  if (callee?.type === 'Identifier') return callee['name'] === 'define';
+  if (callee?.type === 'MemberExpression' && callee['computed'] !== true)
+    return nameOf(nodeAt(callee, 'property')) === 'define';
+  return false;
+}
+
+/**
+ * The `error` spec field (ADR 0024) by its position, not its name, because `error` is also a
+ * common state field, `catch (error)` binding and message name (gyral-1zd.29). It counts:
+ *   - an `error` key (any value) in a spec object passed to `define()`, inline or through a
+ *     `const` in the same module, spreads of such consts included;
+ *   - anywhere else, an `error` key whose value is a function (`error: (failure, s) => …`,
+ *     `error(failure, s) { … }`) or a shorthand `{ error }`, and an assignment of a function to
+ *     a member `x.error` (a spec built elsewhere and passed in).
+ * What it misses: a spec object built in another module whose `error` value isn't written as a
+ * function there (`export const spec = { error: someView }`); view/05 says to write the error
+ * view as a function in the spec.
+ */
+function specError(program: Node): boolean {
+  const objects = new Map<string, Node>();
+  let found = false;
+  const keyOf = (prop: Node): string | undefined =>
+    prop['computed'] === true ? undefined : nameOf(nodeAt(prop, 'key'));
+  const specHasError = (node: Node | undefined, depth = 0): boolean => {
+    if (node?.type === 'Identifier' && depth < 3) {
+      return specHasError(objects.get(node['name'] as string), depth + 1);
+    }
+    if (node?.type !== 'ObjectExpression') return false;
+    return nodesAt(node, 'properties').some((p) =>
+      p.type === 'SpreadElement'
+        ? specHasError(nodeAt(p, 'argument'), depth + 1)
+        : keyOf(p) === 'error',
+    );
+  };
+  const collect = (node: Node): void => {
+    if (node.type === 'VariableDeclarator') {
+      const id = nodeAt(node, 'id');
+      const init = nodeAt(node, 'init');
+      if (id?.type === 'Identifier' && init?.type === 'ObjectExpression')
+        objects.set(id['name'] as string, init);
+    }
+    for (const child of children(node)) collect(child);
+  };
+  const visit = (node: Node): void => {
+    if (found) return;
+    switch (node.type) {
+      case 'CallExpression':
+        if (isDefine(nodeAt(node, 'callee'))) {
+          const args = nodesAt(node, 'arguments');
+          if (args.some((a) => specHasError(a))) found = true;
+        }
+        break;
+      case 'Property':
+      case 'MethodDefinition':
+      case 'PropertyDefinition':
+        if (keyOf(node) === 'error') {
+          const value = nodeAt(node, 'value');
+          if (
+            node['shorthand'] === true ||
+            node['method'] === true ||
+            node.type === 'MethodDefinition' ||
+            (value !== undefined && FUNCTION.has(value.type))
+          ) {
+            found = true;
+          }
+        }
+        break;
+      case 'AssignmentExpression': {
+        const left = nodeAt(node, 'left');
+        const right = nodeAt(node, 'right');
+        if (
+          left?.type === 'MemberExpression' &&
+          left['computed'] !== true &&
+          nameOf(nodeAt(left, 'property')) === 'error' &&
+          right !== undefined &&
+          FUNCTION.has(right.type)
+        ) {
+          found = true;
+        }
+        break;
+      }
+    }
+    for (const child of children(node)) visit(child);
+  };
+  for (const statement of nodesAt(program, 'body')) collect(statement);
+  for (const statement of nodesAt(program, 'body')) visit(statement);
+  return found;
+}
 
 /** The facts the scan needs about a module (`program`, from `this.parse`). */
 export function factsOf(program: Node): ModuleFacts {
@@ -186,7 +282,7 @@ export function factsOf(program: Node): ModuleFacts {
   for (const [local, specifier] of namespaces) {
     if ((refs.get(local) ?? 0) > (safe.get(local) ?? 0)) reached.push(specifier);
   }
-  return { names, texts, rawSources: [...new Set(reached)] };
+  return { names, texts, rawSources: [...new Set(reached)], errorView: specError(program) };
 }
 
 /**
@@ -198,6 +294,7 @@ export function writes(facts: ModuleFacts, feature: Feature): boolean {
     return facts.texts.some((text) => text === 'command' || INTENT_ON_COMMAND.test(text));
   }
   if (feature === 'dialogs') return facts.texts.some((text) => TOGGLE_BINDING.test(text));
+  if (feature === 'errorView') return facts.errorView;
   const name = FIELDS[feature];
   return facts.names.has(name) || facts.texts.includes(name);
 }

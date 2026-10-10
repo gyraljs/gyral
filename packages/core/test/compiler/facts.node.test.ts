@@ -142,6 +142,39 @@ describe('facts: where raw may come from', () => {
       expect(uses('const update = { Errored: (s) => s };', 'errored')).toBe(true);
       expect(uses('const update = { Saved: (s) => s };', 'errored')).toBe(false);
     });
+    it('counts the error spec field by position only (gyral-1zd.29)', () => {
+      // A spec object passed to define(), inline or through a const (and its spreads).
+      expect(uses('define()("x", { view, error: errorView });', 'errorView')).toBe(true);
+      expect(
+        uses('const spec = { view, error: errorView }; define()("x", spec);', 'errorView'),
+      ).toBe(true);
+      expect(
+        uses('const base = { error: errorView }; define()("x", { ...base, view });', 'errorView'),
+      ).toBe(true);
+      expect(uses('ns.define()("x", { view, error: errorView });', 'errorView')).toBe(true);
+      // Elsewhere: a function value, a method, a shorthand, a member assignment of a function.
+      expect(uses('export const spec = { error: (f, s) => html`x` };', 'errorView')).toBe(true);
+      expect(uses('export const spec = { error(f, s) { return html`x`; } };', 'errorView')).toBe(
+        true,
+      );
+      expect(uses('const error = (f) => f; export const spec = { error };', 'errorView')).toBe(
+        true,
+      );
+      expect(uses('export const f = (spec) => { spec.error = () => html`x`; };', 'errorView')).toBe(
+        true,
+      );
+      // Not: a state field, a non-spec object, catch bindings, strings, message tags.
+      expect(
+        uses('const update = { Failed: (s, m) => ({ ...s, error: m.message }) };', 'errorView'),
+      ).toBe(false);
+      expect(uses('const init = () => ({ items: [], error: null });', 'errorView')).toBe(false);
+      expect(uses('const options = { error: "Enter a name." };', 'errorView')).toBe(false);
+      expect(uses('try { run(); } catch (error) { console.error(error); }', 'errorView')).toBe(
+        false,
+      );
+      expect(uses('const msg = { _tag: "error", level: "error" };', 'errorView')).toBe(false);
+      expect(uses('state.error = message;', 'errorView')).toBe(false);
+    });
     it("doesn't count the words in comments", () => {
       expect(uses('// dispose, error, Errored\nexport const x = 1;', 'disposal')).toBe(false);
       expect(uses('// Errored\nexport const x = 1;', 'errored')).toBe(false);
