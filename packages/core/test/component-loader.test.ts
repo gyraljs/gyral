@@ -3,6 +3,7 @@
 // never twice. Run in a real browser from the source the build generates.
 import { afterEach, describe, expect, it } from 'vitest';
 import { loaderSource } from '../src/compiler/loader-source.js';
+import { componentsReady } from '../src/index.js';
 
 const urls: string[] = [];
 afterEach(() => {
@@ -58,5 +59,36 @@ describe('component loader', () => {
     expect(loads()[now]).toBe(1);
     expect(loads()[later]).toBe(1);
     expect(customElements.get(never)).toBeUndefined();
+  });
+
+  it('loads tags a component renders in its shadow root, and componentsReady waits for them (gyral-1zd.29)', async () => {
+    const suffix = Math.random().toString(36).slice(2);
+    const outer = `ld-outer-${suffix}`;
+    const inner = `ld-inner-${suffix}`;
+    const deep = `ld-deep-${suffix}`;
+    // outer renders <inner> in its shadow root after a microtask; inner renders <deep> the same way.
+    const shadowDefiner = (tag: string, child: string): string =>
+      moduleUrl(`
+        customElements.define(${JSON.stringify(tag)}, class extends HTMLElement {
+          connectedCallback() {
+            const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
+            queueMicrotask(() => { root.innerHTML = '<${child}></${child}>'; });
+          }
+        });
+      `);
+    document.body.innerHTML = `<${outer}></${outer}>`;
+    const loader = loaderSource(
+      new Map([
+        [outer, shadowDefiner(outer, inner)],
+        [inner, shadowDefiner(inner, deep)],
+        [deep, definer(deep)],
+      ]),
+    );
+    await import(/* @vite-ignore */ moduleUrl(loader));
+    await componentsReady();
+    expect(customElements.get(outer)).toBeDefined();
+    expect(customElements.get(inner)).toBeDefined();
+    expect(customElements.get(deep)).toBeDefined();
+    expect(loads()[deep]).toBe(1);
   });
 });

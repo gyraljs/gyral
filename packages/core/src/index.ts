@@ -24,6 +24,7 @@ export type { ChildSource, OutputEvent, OutputSource, OutputsOf } from './childr
 export { define } from './define.js';
 export { intentsOf, OUTPUT_EVENT } from './intent.js';
 export { settled } from './settled.js';
+export { componentsReady } from './components-ready.js';
 export { GyralError, type ErrorPhase } from './errors.js';
 export { changed, defineStore, send } from './store.js';
 export type {
@@ -91,5 +92,5 @@ export type {
   TemplateResult,
 } from './view/index.js';
 
-// The head model (ADR 0019): shared by @gyral/ssr's page() and @gyral/router's setHead().
+// The head model (ADR 0019): shared by @gyral/ssr's renderPage() and @gyral/router's setHead().
 export type { Head, HeadLink, HeadMeta, JsonValue } from './head.js';

@@ -195,8 +195,13 @@ the page loads exactly the components it rendered.
   `<style>` hash: the header goes out before the body is rendered.
 - **Client.** The loader imports a tag's module the first time that tag is in the document, now
   or after a later mutation (one `querySelector` per pending tag, once per microtask), and
-  never twice. Components rendered inside a component's shadow root load with it, because its
-  module imports theirs (the existing convention). `hydrate:` strategies are unchanged: they
+  never twice. Since gyral-1zd.29 it also watches the shadow roots of the components it defined
+  (their nested roots too, with the same MutationObserver), so tags rendered there load without
+  the parent importing them; a removed host's root is dropped from the scan and its observer
+  registration is collected with it. The loader registers itself under
+  `Symbol.for('gyral.components')`, and core's `componentsReady()` awaits it: every rendered tag
+  it knows is defined, then `settled()` (tests and page scripts; plain `settled()` without the
+  loader). `hydrate:` strategies are unchanged: they
   decide when a loaded component hydrates.
 - **Serving.** `componentsFromManifest(clientDir)` reads a build; `productionServer` hands
   `components` to `createApp` and no longer needs a client entry. An app that also needs

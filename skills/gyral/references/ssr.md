@@ -274,8 +274,11 @@ export const createApp = (components?: ComponentAssets) => ({
 });
 ```
 
-Keep component modules under `src/` (the `include` option changes that). A component rendered
-inside another component's shadow root loads with it: its module imports theirs. For app-wide
+Keep component modules under `src/` (the `include` option changes that). Tags rendered inside
+the shadow root of a component the loader defined are found too, so a component doesn't have to
+import its shadow children (it still may). In browser tests and page scripts, `await
+componentsReady()` from `@gyral/core` waits until every rendered tag the loader knows is defined
+and the page has settled (in a test, import `virtual:gyral/components` first). For app-wide
 setup (`provideDrivers` at the page), keep a small client entry and pass it in `scripts`
 alongside `components`. A rendered tag no client module defines is a development warning.
 

@@ -2,9 +2,12 @@
 // first time that tag is in the document. No Node imports, so tests can run it in a browser.
 
 /**
- * The loader: imports a tag's module the first time that tag is in the document (now, or
- * after a mutation, checked once per microtask), then forgets it. Components a component
- * renders inside its shadow root load with it: its module imports theirs.
+ * The loader: imports a tag's module the first time that tag is rendered, in the document or in
+ * the shadow root of a component it defined (now, or after a mutation, checked once per
+ * microtask), then forgets it. It registers itself on `globalThis[Symbol.for('gyral.components')]`
+ * so `componentsReady()` (core) can wait until every rendered tag it knows is defined.
+ * Shadow roots are observed by the one shared MutationObserver; a removed host's root is
+ * dropped from the scan and its registration is collected with it.
  */
 export function loaderSource(tags: ReadonlyMap<string, string>): string {
   const entries = [...tags]
@@ -14,6 +17,9 @@ export function loaderSource(tags: ReadonlyMap<string, string>): string {
 const pending = new Map([
 ${entries}
 ]);
+const known = ${JSON.stringify([...tags.keys()].join(','))};
+const roots = new Set();
+const inflight = new Set();
 let queued = false;
 const observer = new MutationObserver(() => {
   if (!queued) {
@@ -21,17 +27,55 @@ const observer = new MutationObserver(() => {
     queueMicrotask(scan);
   }
 });
+function watch(root) {
+  for (const host of root.querySelectorAll(known)) {
+    const shadow = host.shadowRoot;
+    if (shadow !== null && !roots.has(shadow)) {
+      roots.add(shadow);
+      observer.observe(shadow, { childList: true, subtree: true });
+      watch(shadow);
+    }
+  }
+}
 function scan() {
   queued = false;
+  for (const root of roots) if (!root.host.isConnected) roots.delete(root);
+  if (known !== '') {
+    watch(document);
+    for (const root of [...roots]) watch(root);
+  }
   for (const [tag, load] of pending) {
-    if (customElements.get(tag) !== undefined) pending.delete(tag);
-    else if (document.querySelector(tag) !== null) {
+    if (customElements.get(tag) !== undefined) {
       pending.delete(tag);
-      void load();
+      continue;
     }
+    let found = document.querySelector(tag) !== null;
+    for (const root of roots) if (!found && root.querySelector(tag) !== null) found = true;
+    if (!found) continue;
+    pending.delete(tag);
+    const done = load()
+      .then(() => customElements.whenDefined(tag))
+      .then(() => {
+        // The upgraded host renders into its shadow root next: look there too.
+        if (!queued) {
+          queued = true;
+          queueMicrotask(scan);
+        }
+      })
+      .finally(() => inflight.delete(done));
+    inflight.add(done);
   }
   if (pending.size === 0) observer.disconnect();
 }
+async function ready() {
+  for (;;) {
+    scan();
+    if (inflight.size === 0) return;
+    await Promise.allSettled([...inflight]);
+    await new Promise((resolve) => setTimeout(resolve));
+  }
+}
+globalThis[Symbol.for('gyral.components')] = { ready };
 observer.observe(document.documentElement, { childList: true, subtree: true });
 scan();
 `;
