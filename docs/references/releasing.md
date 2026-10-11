@@ -104,7 +104,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 7. Switch gyral.dev from its internal tester tarballs to the verified npm release, remove
    its overrides/vendor directory, run its gate and deploy matching docs and llms files.
    Only after the stable registry installs and deployed docs pass may Context7 be submitted
-   or refreshed (gyral-b2g → gyral-7se.5).
+   or refreshed (gyral-b2g → gyral-7se.5). Use the [Context7 runbook](context7.md) to
+   submit the released corpus and record live component, form and driver retrieval.
 
 The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the first one,
 0.1.0, came from a `minor` changeset).
