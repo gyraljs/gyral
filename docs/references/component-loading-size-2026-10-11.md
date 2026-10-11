@@ -2,13 +2,14 @@
 
 The gyral-1zd.31 fix meets the shop's existing `lazy.ts` JavaScript size on all nine measured
 pages and in all emitted chunks, with matching admin grouping. These are byte measurements,
-not an LCP benchmark or a guarantee for every app.
+not an LCP benchmark or a guarantee for every app. The final candidate includes earlier audit
+fixes; this comparison does not isolate the loader change from those fixes.
 
 ## Comparison
 
 Baseline: gyral-shop `6214623`, manual loader, its unchanged `0.3.1-next.9` internal package
-cohort. Candidate: shop `42458f5` (`components-attempt-next9`), Gyral's gyral-1zd.31 fix packed
-as internal `0.3.1-next.31` tarballs, plus the admin overrides below. These packages were built
+cohort. Candidate: shop `42458f5` (`components-attempt-next9`), framework `3e1e2b5` (loader fix and prior audit fixes) packed
+as internal `0.3.1-next.33` tarballs, plus the admin overrides below. These packages were built
 locally for verification; none were published to npm or submitted to Context7.
 
 Each page uses a fresh Chromium context against the production server and a seeded throwaway
@@ -19,15 +20,15 @@ preloads. Every listed route returned 200 with no browser exception.
 
 | Page               | Manual gzip (B) | Automatic gzip (B) | Difference (B) | Scripts manual → automatic |
 | ------------------ | --------------: | -----------------: | -------------: | -------------------------- |
-| Home               |          34,821 |             34,430 |           −391 | 13 → 13                    |
-| Department         |          34,821 |             34,430 |           −391 | 13 → 13                    |
-| Category           |          44,106 |             43,657 |           −449 | 18 → 18                    |
-| Product            |          44,041 |             43,545 |           −496 | 20 → 20                    |
-| Search             |          44,106 |             43,657 |           −449 | 18 → 18                    |
-| Empty cart         |          37,075 |             36,650 |           −425 | 14 → 15                    |
-| Login              |          36,345 |             35,908 |           −437 | 16 → 17                    |
-| About              |          33,068 |             31,575 |         −1,493 | 11 → 11                    |
-| Contact            |          38,628 |             38,187 |           −441 | 18 → 19                    |
+| Home               |          34,821 |             34,407 |           −414 | 13 → 13                    |
+| Department         |          34,821 |             34,407 |           −414 | 13 → 13                    |
+| Category           |          44,106 |             43,639 |           −467 | 18 → 18                    |
+| Product            |          44,041 |             43,524 |           −517 | 20 → 20                    |
+| Search             |          44,106 |             43,639 |           −467 | 18 → 18                    |
+| Empty cart         |          37,075 |             36,629 |           −446 | 14 → 15                    |
+| Login              |          36,345 |             35,889 |           −456 | 16 → 17                    |
+| About              |          33,068 |             31,553 |         −1,515 | 11 → 11                    |
+| Contact            |          38,628 |             38,165 |           −463 | 18 → 19                    |
 | All emitted chunks |          91,205 |             90,308 |           −897 | —                          |
 
 ## Matching the existing admin grouping
