@@ -97,6 +97,18 @@ describe('api', () => {
     expect(findApi(corpus.api, 'prerender', 'ssr').matches[0]?.specifier).toBe('@gyral/ssr/static');
   });
 
+  it.each([
+    ['makeLocalStorageDriver', '@gyral/core/storage'],
+    ['makeIndexedDBDriver', '@gyral/core/indexeddb'],
+    ['makeEventSourceDriver', '@gyral/http/sse'],
+    ['makeWebSocketDriver', '@gyral/http/websocket'],
+  ])('finds %s at its optional public entry', (symbol, specifier) => {
+    const { matches } = findApi(corpus.api, symbol);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.specifier).toBe(specifier);
+    expect(matches[0]?.declaration).toContain(symbol);
+  });
+
   it("teaches 0.3's view layer from the sources, examples and skill, with no Lit left", () => {
     const at = (name: string) => findApi(corpus.api, name).matches.map((m) => m.specifier);
     expect(at('each')).toContain('@gyral/core');

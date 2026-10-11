@@ -77,6 +77,18 @@ const text = result.content.map((c) => c.text).join('');
 if (tools.length !== 7 || !text.includes("import { define } from '@gyral/core'")) {
   throw new Error('unexpected MCP answer: ' + tools.length + ' tools, ' + text.slice(0, 200));
 }
+for (const [symbol, entry] of [
+  ['makeLocalStorageDriver', '@gyral/core/storage'],
+  ['makeIndexedDBDriver', '@gyral/core/indexeddb'],
+  ['makeEventSourceDriver', '@gyral/http/sse'],
+  ['makeWebSocketDriver', '@gyral/http/websocket'],
+]) {
+  const answer = await client.callTool({ name: 'get_api', arguments: { symbol } });
+  const body = answer.content.map((c) => c.text).join('');
+  if (!body.includes(symbol) || !body.includes("from '" + entry + "'")) {
+    throw new Error('missing optional MCP API: ' + symbol + ' from ' + entry);
+  }
+}
 await client.close();
 console.log('mcp ok     gyral-mcp answered over stdio (' + tools.length + ' tools)');
 `,
