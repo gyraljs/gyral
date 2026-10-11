@@ -173,3 +173,55 @@ within the owner's instruction to complete this pilot with unlimited monetary sp
 The report retains initial attempts separately and states the total attempted denominator
 across revisions, alongside usage from both revisions. Comparative cells use the corrected
 protocol's trials only. Setup probes remain separately identified.
+
+## Completed pilot results — 2026-10-11
+
+All **36 corrected trials completed: 19 passed, 17 failed**, with no infrastructure
+failures. Every corrected failure reached the 24-request limit. Measured execution used
+source commit `8e0d1c419ca35ee9ccaa99863cd331b1ca6dfcda`, whose required
+[repository gate passed](https://github.com/gyraljs/gyral/actions/runs/38169918296).
+
+| Condition            | Feature | Bug | Form | Total |
+| -------------------- | ------- | --- | ---- | ----- |
+| Gyral ordinary docs  | 0/3     | 0/3 | 0/3  | 0/9   |
+| Gyral skill + MCP    | 0/3     | 2/3 | 0/3  | 2/9   |
+| React ordinary docs  | 3/3     | 2/3 | 3/3  | 8/9   |
+| Svelte ordinary docs | 3/3     | 3/3 | 3/3  | 9/9   |
+
+Sixteen Gyral failures made **no source edits** while exploring documentation/APIs.
+The failed React bug trial fixed the identity lookup but introduced a JSX syntax error;
+its final typecheck and build failed. A pass certifies the frozen type/build/browser
+contract, rather than complete consumer lint or code-quality coverage. The simple fixed
+agent loop did not expose its remaining request budget. These observations motivate
+agent/documentation calibration before another comparative study; three trials per cell
+and differing model familiarity do not support general framework rankings.
+
+| Condition            | Median tokens | Median tool calls | Median repairs | Median agent seconds |
+| -------------------- | ------------: | ----------------: | -------------: | -------------------: |
+| Gyral ordinary docs  |       808,648 |                26 |              0 |               97.617 |
+| Gyral skill + MCP    |       486,801 |                30 |              0 |               67.789 |
+| React ordinary docs  |        96,512 |                13 |              0 |               42.636 |
+| Svelte ordinary docs |        54,332 |                10 |              0 |               40.149 |
+
+All measured runs have complete actual provider counters: **12,539,436 tokens across
+578 requests**. The two preserved initial attempts consumed 493,204 tokens, making
+**38 completed attempts and 13,032,640 tokens** across revisions. Compatibility probes
+consumed another 666 tokens, separately excluded from measured totals. Dollar cost remains
+unavailable. The largest measured request reported 83,311 input tokens. Elapsed time
+includes API/tool overhead on a host with concurrent workloads; it is not a controlled
+framework runtime performance benchmark.
+
+The private review bundle is `2026-10-11-qwen38-v2.tar.gz`, SHA-256:
+
+```
+593d94052fc88d80cbfd103bc7c70fd7a161d7fab6562d0654a6cc0a09158a59
+```
+
+Start with its `report.html`: all 36 rows link to patches, transcripts, independent
+checks and screenshots when available. `summary.json` includes full distributions;
+`initial-attempts.html` links to both unchanged initial attempts. The bundle also retains
+frozen docs/skill/MCP context, registry lockfiles, environment provenance, the measured
+harness archive, all 24 reference/negative validation results and a per-file checksum
+manifest. All review links resolve, browser accessibility checks report zero violations,
+and a final credential scan passed. Report-only postprocessing omits links to absent
+screenshots; measured sources, outcomes, usage and transcripts remain unchanged.

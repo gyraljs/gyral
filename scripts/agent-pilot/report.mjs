@@ -84,7 +84,7 @@ export function report(output, plan) {
   save(join(output, 'summary.json'), summary);
   writeFileSync(
     join(output, 'initial-attempts.html'),
-    `<!doctype html><html lang="en"><meta charset="utf-8"><title>Initial pilot attempts</title><main><h1>Initial pilot attempts</h1><p>${escape(priorNotice)}</p><p>${escape(plan.invalidated?.reason ?? 'No earlier attempts.')}</p><p><a href="invalidated/report.html">Original evidence and outcomes</a> · <a href="report.html">Revised pilot report</a></p></main></html>`,
+    `<!doctype html><html lang="en"><meta charset="utf-8"><title>Initial pilot attempts</title><main><h1>Initial pilot attempts</h1><p>${escape(priorNotice)}</p><p>${escape(plan.invalidated?.reason ?? 'No earlier attempts.')}</p><p>${existsSync(join(output, 'invalidated/report.html')) ? '<a href="invalidated/report.html">Original evidence and outcomes</a> · ' : ''}<a href="report.html">Revised pilot report</a></p></main></html>`,
   );
   const rows = cells.map(
     (cell) =>
@@ -97,7 +97,7 @@ export function report(output, plan) {
   const table = results
     .map(
       (result) =>
-        `<tr><th scope="row"><a href="${result.id}/result.json">${escape(result.id)}</a></th><td>${passed(result) ? 'Pass' : result.infrastructure ? 'Infrastructure failure' : 'Fail'}</td><td>${escape(result.reason)}</td><td>${result.usage.totalTokens ?? 'Unavailable'}</td><td>${result.toolCalls}</td><td>${result.repairAttempts}</td><td>${Math.round(result.agentElapsedMs / 1000)}</td><td><a href="${result.id}/changes.patch">Patch</a> <a href="${result.id}/transcript.json">Transcript</a> <a href="${result.id}/final/grade.json">Checks</a> <a href="${result.id}/final/1.png">Screenshot</a></td></tr>`,
+        `<tr><th scope="row"><a href="${result.id}/result.json">${escape(result.id)}</a></th><td>${passed(result) ? 'Pass' : result.infrastructure ? 'Infrastructure failure' : 'Fail'}</td><td>${escape(result.reason)}</td><td>${result.usage.totalTokens ?? 'Unavailable'}</td><td>${result.toolCalls}</td><td>${result.repairAttempts}</td><td>${Math.round(result.agentElapsedMs / 1000)}</td><td><a href="${result.id}/changes.patch">Patch</a> <a href="${result.id}/transcript.json">Transcript</a> <a href="${result.id}/final/grade.json">Checks</a> ${existsSync(join(output, result.id, 'final/1.png')) ? `<a href="${result.id}/final/1.png">Screenshot</a>` : 'No browser screenshot'}</td></tr>`,
     )
     .join('\n');
   const aggregate = cells

@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { ordering } from '../agent-pilot/prompts.mjs';
@@ -7,6 +15,7 @@ import { safePath } from '../agent-pilot/tools.mjs';
 import { LIMITS, requestBody, usageSummary } from '../agent-pilot/provider.mjs';
 import { trial } from '../agent-pilot/agent.mjs';
 import { hashes, save } from '../agent-pilot/corpus.mjs';
+import { report } from '../agent-pilot/report.mjs';
 
 const directories = [];
 const temporary = () => {
@@ -19,6 +28,40 @@ afterEach(() => {
 });
 
 describe('agent pilot isolation and evidence', () => {
+  it('keeps report evidence links valid when a failed build has no screenshot or earlier batch', () => {
+    const root = temporary();
+    const plan = {
+      runs: [{ id: 'failed-build' }],
+      model: 'fake',
+      endpoint: 'https://example.invalid',
+    };
+    save(join(root, 'plan.json'), plan);
+    mkdirSync(join(root, 'failed-build/final'), { recursive: true });
+    save(join(root, 'failed-build/result.json'), {
+      id: 'failed-build',
+      condition: 'react-docs',
+      task: 'bug',
+      passed: false,
+      reason: 'request_limit',
+      toolCalls: 1,
+      repairAttempts: 0,
+      agentElapsedMs: 1,
+      usage: { totalTokens: 1 },
+    });
+    for (const file of [
+      'failed-build/changes.patch',
+      'failed-build/transcript.json',
+      'failed-build/final/grade.json',
+    ])
+      writeFileSync(join(root, file), '');
+    report(root, plan);
+    for (const file of ['report.html', 'initial-attempts.html']) {
+      const html = readFileSync(join(root, file), 'utf8');
+      for (const match of html.matchAll(/href="([^"]+)"/g))
+        expect(existsSync(join(root, match[1])), `${file}: ${match[1]}`).toBe(true);
+    }
+    expect(readFileSync(join(root, 'report.html'), 'utf8')).toContain('No browser screenshot');
+  });
   it('balances every trial block and uses a reproducible shuffled order', () => {
     const runs = ordering();
     expect(runs).toEqual(ordering());
