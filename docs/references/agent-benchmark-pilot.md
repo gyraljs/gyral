@@ -3,8 +3,8 @@
 Track this work in `gyral-7se.10`. The owner approved three tasks, four conditions and
 three independent trials per task/condition: **36 measured runs**. This protocol defines
 the pilot's behavioral contracts and measurements. Scaffolds, the browser oracle and a
-provider-specific runner still need implementation and a successful local dry run;
-there are no measured results yet.
+provider-specific runner are in `scripts/agent-pilot/`; `scripts/agent-pilot.mjs` is the
+entry point. The protected oracle and local validation must pass before measured runs.
 
 ## Conditions and versions
 
@@ -17,11 +17,17 @@ there are no measured results yet.
 
 Versions were checked against the npm registry on 2026-10-11. Install exact versions
 from npm in independent projects, without the renderer benchmark repository's overrides
-or vendor packages. Commit the generated lockfiles before freezing the corpus.
+or vendor packages. Preserve the generated lockfiles in the frozen corpus and results
+bundle, with their checksums in the execution manifest.
 
-Use one fixed agent/model/version/settings for every condition. These choices, the access
-method and a hard maximum total spend are pending the owner. Do not execute measured runs
-until they are recorded and the runner enforces the agreed limits. The assisted condition
+Use one fixed agent/model/settings for every condition: this repository's tool-loop agent,
+Blueclaw's `Qwen3.8-27B` through `https://openai.blueclaw.network/v1`, temperature 0.2,
+non-streaming Chat Completions. The owner corrected the original Qwen3.6 model selection;
+the corrected model passed tool-call and tool-result continuation probes. The provider's
+alias does not establish immutable model weights; retain its raw model/fingerprint fields.
+The owner explicitly authorized **unlimited monetary spend**, superseding the original
+hard-cost-cap requirement. No verified Blueclaw dollar price is available; retain actual
+usage and report cost as unavailable. The assisted condition
 adds access to the released skill and MCP; neither changes the Gyral version or scaffold.
 
 ## Task contracts
@@ -73,11 +79,15 @@ web access and unrelated globally installed skills/MCP servers to prevent contam
 
 Use three trial blocks. Each block contains all 12 task/condition combinations, shuffled
 with a recorded deterministic seed. Save the final ordering before starting. Give every
-run the same wall-clock, input/output-token and tool-call limits. Also enforce the hard
-total spend: reserve each run's worst-case priced usage before dispatch, count failed
-requests and cached/reasoning tokens according to provider billing, and stop if the next
-run could exceed the cap. A wall-clock timeout alone is not a cost limit. If the selected
-runner cannot expose or bound billable usage, fix that before execution.
+run the same limits: 15 minutes of agent work, 24 model requests, 60 tool calls, 8,192
+maximum output tokens per request and 65,536 cumulative completion tokens. Reserve a
+request's maximum completion before dispatch against that cumulative limit. The provider
+context limit is 131,072 tokens; a conservative 110,000-byte serialized-request guard
+prevents context growth without estimating or inventing provider token counts. Tools and
+the final independent grade have finite deadlines; cleanup can extend the agent deadline
+slightly. The final grade is outside the agent's 15-minute allocation. Count failed requests,
+keep all reported cached/reasoning usage fields and stop on missing usage. There is no
+monetary cap, by explicit owner authorization.
 
 Each result contains the condition/task/trial ID, exact model/agent and settings, source
 and context hashes, allowed tools, doc accesses and MCP calls, raw transcript, provider
@@ -98,7 +108,7 @@ to its local tests for grading; protect oracle execution with filesystem/process
 Before paid runs, verify every framework scaffold builds and typechecks, all three
 reference solutions pass the common oracle, incomplete feature/form scaffolds fail the
 expected checks, and every seeded bug fails the same identity regression. Exercise fresh
-workspace creation, context isolation, timeouts, cost-cap refusal and evidence capture
+workspace creation, context isolation, finite-limit refusal and evidence capture
 with a fake agent, including failure paths. A fake-agent run is harness validation and
 must not appear among the 36 measured trials.
 
@@ -114,3 +124,33 @@ time, usage availability and failures, with links to raw evidence and methodolog
 Separate the two Gyral conditions. Three trials per cell are exploratory; this pilot does
 not establish broad framework rankings or substantiate general "fewer tokens" claims.
 The existing browser renderer benchmark measures a different question.
+
+## Running and reviewing
+
+Use an installed Docker engine, the pinned Node image named in `corpus.mjs`, and the
+repository's Chromium installation. Rootless Docker maps container UID 0 to the host
+owner; ordinary Docker uses the host UID. Builds and the released MCP server run without
+network, capabilities or credentials, with read-only app/dependency mounts. Only the build
+output and temporary directory are writable. Model file tools can write only `src/` and
+cannot read the oracle, reference solutions, other trials or private configuration.
+Browser HTTP access is restricted to the app's loopback origin; WebSockets and service
+workers are blocked. No model-controlled package script is executed.
+
+```sh
+node scripts/agent-pilot.mjs prepare --out /private/pilot/corpus
+node scripts/agent-pilot.mjs validate --corpus /private/pilot/corpus --out /private/pilot/validation
+node scripts/agent-pilot.mjs freeze --corpus /private/pilot/corpus --validation /private/pilot/validation
+node scripts/agent-pilot.mjs run --corpus /private/pilot/corpus --out /private/pilot/results --credentials /private/provider.json
+```
+
+The private credential JSON contains `baseUrl`, `model` and `apiKey`; keep it outside the
+repository with mode 0600. The key goes only into the host HTTP authorization header.
+Run directories are new and fail rather than overwrite evidence. `run --resume` skips
+completed results, including failures, and refuses to replace an interrupted run.
+Changing the corpus, CLI, fixtures, prompts, tools or oracle invalidates the freeze.
+
+Open `results/report.html` for the condition/task table and every run's patch, transcript,
+provider usage, browser checks and screenshot. Source is in each run's `app/src/`, and the
+production build is in `final/dist/`. `report.md` and `summary.json` give portable summaries.
+Setup/compatibility probes and fake-agent tests are separate from the measured 36 runs.
+Context7 submission remains held until the owner provides its separate API key.

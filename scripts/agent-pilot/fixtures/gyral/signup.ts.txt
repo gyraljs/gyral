@@ -1,0 +1,46 @@
+import { define, html, focus } from '@gyral/core';
+
+type Errors = Partial<Record<'name' | 'email' | 'terms', string>>;
+type State = { name: string; email: string; terms: boolean; errors: Errors; welcome: string };
+type Msg = { _tag: 'Submit'; name: string; email: string; terms: boolean; errors: Errors };
+const App = define<State, Msg>()('pilot-app', {
+  init: () => ({ name: '', email: '', terms: false, errors: {}, welcome: '' }),
+  intent: {
+    Submit: ({ target }) => {
+      if (!(target instanceof HTMLFormElement)) return undefined;
+      const data = new FormData(target);
+      const name = String(data.get('name') ?? '').trim();
+      const email = String(data.get('email') ?? '');
+      const terms = data.has('terms');
+      const control = target.elements.namedItem('email');
+      const errors: Errors = {};
+      if (name.length < 2) errors.name = 'Enter at least two characters for Name.';
+      if (!(control instanceof HTMLInputElement) || !control.validity.valid) errors.email = 'Enter a valid Email.';
+      if (!terms) errors.terms = 'Agree to the terms.';
+      return { _tag: 'Submit', name, email, terms, errors };
+    }
+  },
+  update: {
+    Submit: (s, msg) => {
+      const first = msg.errors.name ? 'name' : msg.errors.email ? 'email' : msg.errors.terms ? 'terms' : undefined;
+      const next = { ...s, name: msg.name, email: msg.email, terms: msg.terms, errors: msg.errors, welcome: first ? '' : `Welcome ${msg.name}: ${msg.email}` };
+      return first ? [next, [focus(`#${first}`)]] : next;
+    }
+  },
+  view: (s, i) => html`
+    <h1>Sign up</h1>
+    <form novalidate data-intent=${i.Submit}>
+      <p role="alert">${Object.keys(s.errors).length ? 'Please correct the errors below.' : ''}</p>
+      <label for="name">Name</label>
+      <input id="name" name="name" autocomplete="name" value=${s.name} aria-invalid=${s.errors.name ? 'true' : undefined} aria-describedby=${s.errors.name ? 'name-error' : undefined}>
+      <p id="name-error" ?hidden=${!s.errors.name}>${s.errors.name}</p>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required autocomplete="email" value=${s.email} aria-invalid=${s.errors.email ? 'true' : undefined} aria-describedby=${s.errors.email ? 'email-error' : undefined}>
+      <p id="email-error" ?hidden=${!s.errors.email}>${s.errors.email}</p>
+      <label for="terms"><input id="terms" name="terms" type="checkbox" ?checked=${s.terms} aria-invalid=${s.errors.terms ? 'true' : undefined} aria-describedby=${s.errors.terms ? 'terms-error' : undefined}>I agree to the terms</label>
+      <p id="terms-error" ?hidden=${!s.errors.terms}>${s.errors.terms}</p>
+      <button type="submit">Sign up</button>
+    </form>
+    <p role="status">${s.welcome}</p>`
+});
+document.querySelector('main')?.append(new App());

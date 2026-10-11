@@ -1,0 +1,33 @@
+import { useState, useRef, type FormEvent } from 'react';
+type Errors = Partial<Record<'name' | 'email' | 'terms', string>>;
+export default function App() {
+  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [terms, setTerms] = useState(false);
+  const [errors, setErrors] = useState<Errors>({}); const [welcome, setWelcome] = useState('');
+  const nameRef = useRef<HTMLInputElement>(null); const emailRef = useRef<HTMLInputElement>(null); const termsRef = useRef<HTMLInputElement>(null);
+  function submit(event: FormEvent) {
+    event.preventDefault(); const next: Errors = {};
+    if (name.trim().length < 2) next.name = 'Enter at least two characters for Name.';
+    if (!emailRef.current?.validity.valid) next.email = 'Enter a valid Email.';
+    if (!terms) next.terms = 'Agree to the terms.';
+    setErrors(next);
+    const first = next.name ? nameRef : next.email ? emailRef : next.terms ? termsRef : undefined;
+    if (first) { first.current?.focus(); setWelcome(''); }
+    else { setName(name.trim()); setWelcome(`Welcome ${name.trim()}: ${email}`); }
+  }
+  return <>
+    <h1>Sign up</h1>
+    <form noValidate onSubmit={submit}>
+      <p role="alert">{Object.keys(errors).length ? 'Please correct the errors below.' : ''}</p>
+      <label htmlFor="name">Name</label>
+      <input id="name" ref={nameRef} autoComplete="name" value={name} onChange={event => setName(event.target.value)} aria-invalid={errors.name ? 'true' : undefined} aria-describedby={errors.name ? 'name-error' : undefined} />
+      <p id="name-error" hidden={!errors.name}>{errors.name}</p>
+      <label htmlFor="email">Email</label>
+      <input id="email" ref={emailRef} type="email" required autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} aria-invalid={errors.email ? 'true' : undefined} aria-describedby={errors.email ? 'email-error' : undefined} />
+      <p id="email-error" hidden={!errors.email}>{errors.email}</p>
+      <label htmlFor="terms"><input id="terms" ref={termsRef} type="checkbox" checked={terms} onChange={event => setTerms(event.target.checked)} aria-invalid={errors.terms ? 'true' : undefined} aria-describedby={errors.terms ? 'terms-error' : undefined} />I agree to the terms</label>
+      <p id="terms-error" hidden={!errors.terms}>{errors.terms}</p>
+      <button type="submit">Sign up</button>
+    </form>
+    <p role="status">{welcome}</p>
+  </>;
+}

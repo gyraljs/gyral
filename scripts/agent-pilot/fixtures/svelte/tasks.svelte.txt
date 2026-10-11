@@ -1,0 +1,23 @@
+<script lang="ts">
+  type Item = { id: number; title: string; done: boolean };
+  type Filter = 'All' | 'Active' | 'Completed';
+  let items = $state<Item[]>([]); let draft = $state(''); let filter = $state<Filter>('All'); let nextId = 1;
+  const filters: Filter[] = ['All', 'Active', 'Completed'];
+  let visible = $derived(items.filter(item => filter === 'All' || item.done === (filter === 'Completed')));
+  function add(event: SubmitEvent) {
+    event.preventDefault(); if (!draft.trim()) return;
+    items = [...items, { id: nextId++, title: draft.trim(), done: false }]; draft = '';
+  }
+  function toggle(id: number | undefined) { items = items.map(item => item.id === id ? { ...item, done: !item.done } : item); }
+</script>
+<h1>Task list</h1>
+<form onsubmit={add}>
+  <label for="new-task">New task</label><input id="new-task" bind:value={draft}>
+  <button type="submit">Add task</button>
+</form>
+<nav aria-label="Task filters">{#each filters as value}<button type="button" aria-pressed={value === filter} onclick={() => filter = value}>{value}</button>{/each}</nav>
+<p role="status">{items.filter(item => !item.done).length} active tasks</p>
+<ul>{#each visible as item, index (item.id)}<li>
+  <label><input type="checkbox" checked={item.done} onchange={() => toggle(__TOGGLE_ID__)}>{item.title}</label>
+  <button type="button" aria-label={`Delete ${item.title}`} onclick={() => items = items.filter(value => value.id !== item.id)}>Delete</button>
+</li>{/each}</ul>

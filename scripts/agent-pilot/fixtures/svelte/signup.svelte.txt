@@ -1,0 +1,28 @@
+<script lang="ts">
+  type Errors = Partial<Record<'name' | 'email' | 'terms', string>>;
+  let name = $state(''); let email = $state(''); let terms = $state(false);
+  let errors = $state<Errors>({}); let welcome = $state('');
+  let nameInput: HTMLInputElement; let emailInput: HTMLInputElement; let termsInput: HTMLInputElement;
+  function submit(event: SubmitEvent) {
+    event.preventDefault(); const next: Errors = {};
+    if (name.trim().length < 2) next.name = 'Enter at least two characters for Name.';
+    if (!emailInput.validity.valid) next.email = 'Enter a valid Email.';
+    if (!terms) next.terms = 'Agree to the terms.';
+    errors = next;
+    const first = next.name ? nameInput : next.email ? emailInput : next.terms ? termsInput : undefined;
+    if (first) { first.focus(); welcome = ''; }
+    else { name = name.trim(); welcome = `Welcome ${name}: ${email}`; }
+  }
+</script>
+<h1>Sign up</h1>
+<form novalidate onsubmit={submit}>
+  <p role="alert">{Object.keys(errors).length ? 'Please correct the errors below.' : ''}</p>
+  <label for="name">Name</label><input id="name" bind:this={nameInput} autocomplete="name" bind:value={name} aria-invalid={errors.name ? 'true' : undefined} aria-describedby={errors.name ? 'name-error' : undefined}>
+  <p id="name-error" hidden={!errors.name}>{errors.name}</p>
+  <label for="email">Email</label><input id="email" bind:this={emailInput} type="email" required autocomplete="email" bind:value={email} aria-invalid={errors.email ? 'true' : undefined} aria-describedby={errors.email ? 'email-error' : undefined}>
+  <p id="email-error" hidden={!errors.email}>{errors.email}</p>
+  <label for="terms"><input id="terms" bind:this={termsInput} type="checkbox" bind:checked={terms} aria-invalid={errors.terms ? 'true' : undefined} aria-describedby={errors.terms ? 'terms-error' : undefined}>I agree to the terms</label>
+  <p id="terms-error" hidden={!errors.terms}>{errors.terms}</p>
+  <button type="submit">Sign up</button>
+</form>
+<p role="status">{welcome}</p>
