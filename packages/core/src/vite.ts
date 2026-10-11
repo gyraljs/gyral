@@ -143,7 +143,7 @@ function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Plugin {
       // spec field whose machinery the build adds only when named (view/05).
       filter: {
         id: /\.[cm]?[jt]sx?$/,
-        code: /html|svg|viewTransition|renderOnFrame|states|subscriptions|\.value\s*\(/,
+        code: /html|svg|viewTransition|renderOnFrame|states|formAssociated|subscriptions|\.value\s*\(/,
       },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);

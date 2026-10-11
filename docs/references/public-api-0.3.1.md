@@ -101,10 +101,16 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `focus`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `FocusOptions`        | type  | supporting type |                                                                                                        |
 | `form`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `FormAssociation`     | type  | supporting type |                                                                                                        |
+| `FormControlValidity` | type  | supporting type |                                                                                                        |
+| `FormControlValue`    | type  | supporting type |                                                                                                        |
 | `FormDefinition`      | type  | supporting type |                                                                                                        |
+| `FormDisabled`        | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormFields`          | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormOptions`         | type  | supporting type |                                                                                                        |
+| `FormReset`           | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormResult`          | type  | supporting type |                                                                                                        |
+| `FormStateRestore`    | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormValue`           | type  | supporting type |                                                                                                        |
 | `FormValues`          | type  | documented      | [design-docs/0008-forms.md](../design-docs/0008-forms.md)                                              |
 | `GyralElement`        | type  | supporting type |                                                                                                        |

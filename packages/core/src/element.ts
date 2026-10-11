@@ -27,7 +27,7 @@ import {
   POST_STATES,
   type HostTask,
 } from './scheduler.js';
-import { checkSpecFeatures, customStates, errorView } from '#spec-features';
+import { checkSpecFeatures, customStates, errorView, formAssociation } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
 import {
@@ -143,6 +143,7 @@ export function elementClass<S, M extends Tagged, P>(
         Reflect.deleteProperty(this, name);
         self[name] = value;
       }
+      formAssociation?.create(this, this.#model, spec.formAssociated);
     }
 
     get state(): S {
@@ -283,6 +284,7 @@ export function elementClass<S, M extends Tagged, P>(
           hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
           this.#hydrating = false;
         } else render(view, root, this.#seen);
+        formAssociation?.sync(this, this.state, this.#model.ctx(), root);
       } catch (cause) {
         const error = this.#model.fail(cause, 'view', message(31, tag));
         this.#fallback(root, error, this.state);
@@ -349,5 +351,6 @@ export function elementClass<S, M extends Tagged, P>(
       });
     };
   }
+  formAssociation?.install(Element, spec.formAssociated !== undefined);
   return Element;
 }

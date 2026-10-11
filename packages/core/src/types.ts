@@ -5,6 +5,12 @@ import type { CommandInfo } from './invokers.js';
 import type { HydrateStrategy } from './islands.js';
 import type { Command, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
+import type {
+  FormAssociation,
+  FormDisabled,
+  FormReset,
+  FormStateRestore,
+} from './form-associated.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
 export interface Tagged {
@@ -176,6 +182,9 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
   readonly Errored?: Reducer<S, M, Errored, P>;
+  readonly FormReset?: Reducer<S, M, FormReset, P>;
+  readonly FormDisabled?: Reducer<S, M, FormDisabled, P>;
+  readonly FormStateRestore?: Reducer<S, M, FormStateRestore, P>;
 };
 
 /**
@@ -244,6 +253,8 @@ type UpdateField<S, M extends Tagged, P> = [M] extends [never]
 export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
 
 interface SpecBody<S, M extends Tagged, P, N extends string> {
+  /** Native form participation with pure value, restoration-state and validity projections. */
+  readonly formAssociated?: FormAssociation<S, P>;
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
   /**

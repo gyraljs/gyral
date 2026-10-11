@@ -3,6 +3,8 @@
 // Reached through core's `#spec-features` (spec-features.ts): compiled builds bundle it only
 // when a module names `states` (compiler/features.ts, gyral-c5d.12).
 
+import { internalsOf } from './element-internals.js';
+
 interface StateSetLike {
   add(name: string): void;
   delete(name: string): boolean;
@@ -18,7 +20,7 @@ const sets = new WeakMap<HTMLElement, StateSetLike | false>();
 export function syncStates(el: HTMLElement, states: Readonly<Record<string, boolean>>): void {
   let set = sets.get(el);
   if (set === undefined) {
-    const internals = el.attachInternals();
+    const internals = internalsOf(el);
     set = 'states' in internals ? internals.states : false;
     sets.set(el, set);
   }

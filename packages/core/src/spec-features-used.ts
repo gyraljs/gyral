@@ -10,6 +10,7 @@ import { DEV } from './view/index.js';
 export let viewTransitions: typeof Full.viewTransitions;
 export let frameLane: typeof Full.frameLane;
 export let customStates: typeof Full.customStates;
+export let formAssociation: typeof Full.formAssociation;
 export let subscriptions: typeof Full.subscriptions;
 export let errorView: typeof Full.errorView;
 export let errored: typeof Full.errored;
@@ -23,6 +24,9 @@ export const useFrameLane = ((lane) => {
 export const useCustomStates = ((sync) => {
   customStates = sync;
 }) satisfies typeof Full.useCustomStates;
+export const useFormAssociation = ((make) => {
+  formAssociation = make;
+}) satisfies typeof Full.useFormAssociation;
 export const useSubscriptions = ((make) => {
   subscriptions = make;
 }) satisfies typeof Full.useSubscriptions;
@@ -40,6 +44,7 @@ export const checkSpecFeatures = ((tag: string, spec: object): void => {
     viewTransition: viewTransitions,
     renderOnFrame: frameLane,
     states: customStates,
+    formAssociated: formAssociation,
     subscriptions,
     error: errorView,
   };

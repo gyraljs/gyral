@@ -2,6 +2,40 @@
 
 Status: **accepted** (2026-10-04). Client half: gyral-czi.3. Server half: gyral-4k7.2 (below).
 
+## Form-associated components (0.3.1, gyral-1zd.7)
+
+`formAssociated: { value, state?, validity? }` opts a `define()` spec into native form
+participation. Each function receives `(state, ctx)`; the projections are pure. `value`
+returns a string, File, FormData or null (omit the field). `state` optionally supplies a
+separate restoration value of the same shape; otherwise the submitted value is restored.
+`validity` returns `{ flags, message, anchor? }` or undefined to clear errors. `flags` uses
+native `ValidityStateFlags`; `anchor` is a selector in the component's render root, resolved
+by Gyral after rendering, for the browser's validation bubble. An invalid projection must
+provide a nonempty message, as required by `ElementInternals.setValidity()`.
+
+Gyral sets the constructor's static `formAssociated` flag and applies the projections with
+`ElementInternals.setFormValue()` and `setValidity()` after each successful render. Custom
+states and forms share one ElementInternals instance. The native `name`, `form` and
+`disabled` attributes keep their platform meanings; a disabled fieldset also disables the
+component. Reducers optionally handle `FormReset`, `FormDisabled { disabled }` and
+`FormStateRestore { state, mode }` (`mode` is `restore` or `autocomplete`). Reset policy
+belongs to the reducer; Gyral does not rerun init. Callbacks arriving before the first
+render are kept until that render succeeds, preserving SSR hydration before their updates.
+Components must mirror disabled state to their interactive controls in the view.
+
+The server renders the ordinary view and seed; it cannot register a form control without
+JavaScript. Forms that must submit before hydration use native fallback controls in their
+server/first-client view. Keep the fallback as the submitting control until a parsed input
+event has transferred its current value into the model; then remove its name (or disable a
+separate fallback control) and
+submit the model projection. Switching on `Hydrated` alone can lose pre-hydration edits:
+Gyral does not automatically read arbitrary fallback controls into model state. There is no
+automatic hidden input or validity polyfill. The form API is Baseline widely available; optional machinery
+is detected by the Vite compiler from the `formAssociated` field, like `states`.
+Sources: [HTML custom elements](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example),
+[setFormValue](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals/setFormValue),
+[setValidity](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals/setValidity).
+
 > **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): form state uses plain attribute bindings ([view/02-bindings.md](view/02-bindings.md)), `invalid()` is an element hook with a server half, and server output carries no Lit markers. Lit-specific text below describes 0.2.x.
 
 ## Context

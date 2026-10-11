@@ -26,6 +26,7 @@ export type Feature =
   | 'transitions'
   | 'frame'
   | 'states'
+  | 'forms'
   | 'subscriptions'
   | 'dialogs'
   | 'disposal'
@@ -37,6 +38,7 @@ export const FIELDS = {
   transitions: 'viewTransition',
   frame: 'renderOnFrame',
   states: 'states',
+  forms: 'formAssociated',
   subscriptions: 'subscriptions',
   disposal: 'dispose',
   errorView: 'error',

@@ -289,3 +289,23 @@ function contactForm(data: FormData, error: string): TemplateResult {
   </form>`;
 }
 ```
+
+# Native custom form controls (0.3.1)
+
+Use `formAssociated: { value: (s) => s.value }` in a component spec to participate in the
+owning form under the host's native `name` attribute. Return null to omit the control.
+`state` can project a separate string/File/FormData restoration value. Optional `validity`
+projects `{ flags: { customError: true }, message: 'Explain the problem', anchor: 'input' }`;
+return undefined to clear validity. The anchor selects a control in the component's root.
+Handle `FormReset`, `FormDisabled` and `FormStateRestore` in `update` when needed; the last
+message carries `state` and `mode` (`restore` or `autocomplete`). Mirror disabled state to
+inner controls. These reducers are optional; reset does not rerun init automatically.
+
+SSR renders the view without native custom-control registration. For submission before
+JavaScript, render a native fallback input in the server/first-client view. Submit null
+from the custom control until a parsed input event transfers the live value to the model;
+then switch to the enhanced mode and remove its name (or disable a separate fallback
+control) to avoid duplicate entries while keeping the interactive control usable.
+Switching on `Hydrated` alone can lose values typed before hydration; Gyral does not
+automatically read arbitrary fallback controls into model state. Keep value/validity projections pure; never attach
+ElementInternals in component code. Forms and `states` share Gyral's single attachment.

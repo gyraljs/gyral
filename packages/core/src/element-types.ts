@@ -37,6 +37,8 @@ export interface GyralElementClass<
   new (): GyralElement<S, M> & { -readonly [K in keyof P]: P[K] };
   readonly spec: ComponentSpec<S, M, P, N>;
   readonly tagName: string;
+  /** Native custom-element registration flag, true when the spec opts into forms. */
+  readonly formAssociated?: boolean;
   /** Type-only: the outputs this component emits (read by `child()`). */
   readonly outputs?: O;
   /** Type-only: the component's intent names, the keys of `intent` (read by `intentsOf()`). */

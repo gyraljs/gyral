@@ -104,6 +104,7 @@ export function createCompiler(settings: CompilerSettings): CompilerHooks {
       'transitions',
       'frame',
       'states',
+      'forms',
       'subscriptions',
       'dialogs',
       'disposal',

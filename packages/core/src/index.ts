@@ -51,6 +51,14 @@ export type {
   FormValues,
 } from './forms.js';
 export { invalid } from './hooks/invalid.js';
+export type {
+  FormAssociation,
+  FormControlValue,
+  FormControlValidity,
+  FormDisabled,
+  FormReset,
+  FormStateRestore,
+} from './form-associated.js';
 export { prop } from './prop.js';
 export type { Prop, PropGuard, PropKind, PropsOf } from './prop.js';
 export type { Definer, GyralElement, GyralElementClass } from './define.js';

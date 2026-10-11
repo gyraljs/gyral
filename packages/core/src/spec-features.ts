@@ -10,6 +10,7 @@
 // the build fills only for the fields some module names (use-*.ts, compiler/features.ts).
 import { frameLane as lane, type FrameLane } from './frame-lane.js';
 import { syncStates } from './states.js';
+import { formFeature } from './form-associated.js';
 import { renderErrorView, sendErrored } from './error-view.js';
 import { subscriptionSet } from './subscriptions.js';
 import { startTransition } from './transitions.js';
@@ -28,6 +29,7 @@ export type CustomStates = (el: HTMLElement, states: Readonly<Record<string, boo
 export const viewTransitions: ViewTransitions | undefined = startTransition;
 export const frameLane: FrameLane | undefined = lane;
 export const customStates: CustomStates | undefined = syncStates;
+export const formAssociation: typeof formFeature | undefined = formFeature;
 /** Makes a host's subscription set (`subscriptions`, ADR 0025). */
 export const subscriptions: typeof subscriptionSet | undefined = subscriptionSet;
 /** Renders a component's `error` view (ADR 0024). */
@@ -39,6 +41,7 @@ export const errored: typeof sendErrored | undefined = sendErrored;
 export const useViewTransitions: (run: ViewTransitions) => void = () => undefined;
 export const useFrameLane: (lane: FrameLane) => void = () => undefined;
 export const useCustomStates: (sync: CustomStates) => void = () => undefined;
+export const useFormAssociation: (make: typeof formFeature) => void = () => undefined;
 export const useSubscriptions: (make: typeof subscriptionSet) => void = () => undefined;
 export const useErrorView: (view: typeof renderErrorView) => void = () => undefined;
 export const useErrored: (send: typeof sendErrored) => void = () => undefined;
