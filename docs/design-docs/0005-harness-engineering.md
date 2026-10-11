@@ -69,3 +69,10 @@ practical in the full browser-and-Node gate. The existing test deadlines still a
 
 Use the project setting in `vitest.config.ts`, so `pnpm check` and direct Vitest runs share
 the same limit. Re-measure throughput and cold-build reliability before increasing it.
+
+## Addendum: failed documentation checks are rerunnable (gyral-457)
+
+`check-skill` extracts snippets into the generated `.skill-check/` directory and removes it
+in `finally`, including on type errors or extraction failures. ESLint ignores this temporary
+directory, so leftovers from an interrupted check cannot contaminate the next lint run.
+The harness verifies failed-compiler cleanup with an isolated fixture repository.
