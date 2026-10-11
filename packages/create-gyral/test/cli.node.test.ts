@@ -3,16 +3,10 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  detectPackageManager,
-  invalidPackageName,
-  isEmptyDir,
-  manifest,
-  nextSteps,
-  parse,
-  scaffold,
-  toPackageName,
-} from '../src/index.js';
+import { manifest, parse, scaffold } from '../src/index.js';
+import { invalidPackageName, toPackageName } from '../src/names.js';
+import { detectPackageManager, nextSteps } from '../src/package-manager.js';
+import { isEmptyDir } from '../src/scaffold.js';
 
 describe('parse', () => {
   it('reads a directory, a template and --yes', () => {

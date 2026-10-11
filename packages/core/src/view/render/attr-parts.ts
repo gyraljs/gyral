@@ -8,11 +8,13 @@
 // unchanged model never touches the control. Constructors only record nodes; hydration
 // (view/07-hydration.md) builds the same parts over server DOM and adopts this render's values
 // as committed (adopt-attr.ts), so edits made before scripts ran stay by the same rule.
+// `style` is written through the CSSOM, never `setAttribute`, so a strict CSP allows it.
 import { DEV } from '#view-dev';
 import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
+import { toggle } from './toggles.js';
 import { nothing, UNSET } from './values.js';
-import { badHook, warnTrue, warnValue } from './warn.js';
+import { badHook, warnFunctionProp, warnToggle, warnTrue, warnValue } from './warn.js';
 
 /** What every part of an instance implements: commit its value(s) from this render's values. */
 export interface Part {
@@ -41,6 +43,8 @@ export const TITLE = 8;
 export const TEXTAREA = 9;
 /** `${hook(…)}` in a start tag. */
 export const HOOK = 10;
+/** `?modal` on `<dialog>`, `?popover-open` on `[popover]`: opened and closed (toggles.ts). */
+export const TOGGLE = 11;
 
 /** Input types whose `value` is a submitted value, not state the user edits. */
 export const PLAIN = /^(checkbox|radio|hidden|button|submit|reset|image|file)$/;
@@ -72,6 +76,7 @@ export function attrKind(el: Element, name: string, bool: boolean): number {
   if (tag === 'input')
     return name === 'checked' ? CHECKED : name === 'indeterminate' ? STATE : BOOL;
   if (tag === 'option' && name === 'selected') return CHECKED;
+  if (name === 'modal' || name === 'popover-open') return TOGGLE;
   return name === 'open' && (tag === 'details' || tag === 'dialog') ? OPEN : BOOL;
 }
 
@@ -121,7 +126,7 @@ export class AttrPart implements Part {
         if (absent(v)) el.removeAttribute(this.name);
         else {
           if (DEV && isObject(v)) warnValue(this, v, `the attribute ${this.name}`);
-          el.setAttribute(this.name, typeof v === 'string' ? v : text(v));
+          this.write(typeof v === 'string' ? v : text(v));
         }
         return;
       case MULTI:
@@ -136,6 +141,7 @@ export class AttrPart implements Part {
       }
       case PROP:
         if (Object.is(v, this.value)) return;
+        if (DEV && typeof v === 'function') warnFunctionProp(this, el, this.name);
         this.value = v;
         live[this.name] = v;
         return;
@@ -168,6 +174,14 @@ export class AttrPart implements Part {
         if (el.hasAttribute('open') !== on) el.toggleAttribute('open', on);
         return;
       }
+      case TOGGLE: {
+        const on = truthy(v);
+        if (on === this.value) return;
+        this.value = on;
+        if (toggle !== undefined) toggle(this, this.name, on);
+        else if (DEV) warnToggle(el, this.name);
+        return;
+      }
       case TITLE:
       case TEXTAREA: {
         const s = textOf(this, v);
@@ -183,7 +197,20 @@ export class AttrPart implements Part {
     }
   }
 
-  /** MULTI: pieces joined with the static strings; `nothing` in any piece removes. */
+  /**
+   * Writes the attribute; `style` through the CSSOM (`.style.cssText`), which a strict CSP
+   * (`style-src` without `'unsafe-inline'`) allows where `setAttribute('style', …)` is blocked.
+   * HTML, SVG and MathML elements all have `.style`.
+   */
+  write(s: string): void {
+    if (this.name === 'style') (this.el as Element & ElementCSSInlineStyle).style.cssText = s;
+    else this.el.setAttribute(this.name, s);
+  }
+
+  /**
+   * MULTI: pieces joined with the static strings; `nothing` in any piece removes. With no
+   * pieces it is a static `style` attribute (01 "Normalization"): written once, at creation.
+   */
   private multi(values: readonly unknown[]): void {
     const pieces = this.pieces as unknown[];
     let changed = false;
@@ -194,12 +221,12 @@ export class AttrPart implements Part {
         changed = true;
       }
     }
-    if (!changed) return;
+    if (!changed && this.value !== UNSET) return;
     const joined = this.join(pieces);
     if (joined === this.value) return;
     this.value = joined;
     if (joined === null) this.el.removeAttribute(this.name);
-    else this.el.setAttribute(this.name, joined);
+    else this.write(joined);
   }
 
   /** The joined value of `pieces`, or null when one is `nothing`. */

@@ -1,10 +1,9 @@
-import { css, define, html, nothing } from '@gyral/core';
+import { command, css, define, html, nothing, type Head } from '@gyral/core';
 import {
-  back,
   listen,
-  makeRouter,
+  router,
   routes,
-  setTitle,
+  setHead,
   type RouteLocation,
   type RouteMatch,
 } from '@gyral/router';
@@ -50,27 +49,32 @@ const pages: Readonly<Record<Name, Page>> = {
 
 const order: readonly Name[] = ['home', 'about', 'contacts'];
 
-/** The document title for a route: one pure function, so a server could reuse it. */
-export const pageTitle = (route: Route | undefined): string =>
-  `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`;
+/**
+ * The document head for a route: one pure function, so a server could reuse it (ADR 0019).
+ * An unknown route is `noindex`; a known one names its canonical URL.
+ */
+export const pageHead = (route: Route | undefined, origin: string): Head => ({
+  title: `${route === undefined ? 'Page not found' : pages[route.name].nav} — Gyral routing`,
+  ...(route === undefined
+    ? { robots: 'noindex' }
+    : { canonical: new URL(route.path, origin).href }),
+});
 
-export const RoutingView = define<State, Msg>('gy-routing-view', {
-  // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
-  drivers: { router: makeRouter({ captureLinks: true }) },
-  // One streaming command: the current location now, then every change (ADR 0009).
-  init: () => [
-    { location: undefined, route: undefined },
-    [listen((location) => ({ _tag: 'Routed', location }))],
-  ],
+export const RoutingView = define<State, Msg>()('gy-routing-view', {
+  init: () => ({ location: undefined, route: undefined }),
+  // One subscription: the current location now, then every change (ADR 0009, ADR 0025).
+  subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   intent: {
-    Back: () => ({ _tag: 'Back' }),
+    Back: true,
   },
   update: {
     Routed: (_s, { location }) => {
       const route = app.match(location.href);
-      return [{ location, route }, [setTitle(pageTitle(route))]];
+      // A client-only app: the page's own origin is the canonical one.
+      return [{ location, route }, [setHead(pageHead(route, new URL(location.href).origin))]];
     },
-    Back: (s) => [s, [back()]],
+    // History back is a router input (the "History back and forward" recipe).
+    Back: (s) => [s, [command(router, { _tag: 'Traverse', delta: -1 })]],
   },
   // Cross-fade between pages (an enhancement: skipped without support or with reduced motion).
   // The first location is not a page change, so it renders directly.
@@ -190,9 +194,3 @@ export const RoutingView = define<State, Msg>('gy-routing-view', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-routing-view': InstanceType<typeof RoutingView>;
-  }
-}

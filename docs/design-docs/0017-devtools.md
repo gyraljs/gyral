@@ -35,7 +35,8 @@ must cost nothing in production and almost nothing in development when no panel 
 - Measured with `pnpm size` before and after: counter 150.2 KiB min / 49.3 KiB gzip both
   times; the largest change across all examples was +0.1 KiB (a few `void 0` arguments). A
   production build contains neither the global name nor the listener code.
-- `devtoolsEnabled` is exported so a panel can say "events only flow in development builds".
+- `devtoolsEnabled` tells a panel whether events flow (development builds only). Since 0.3.1 it
+  and `devtoolsLiveComponents` come from `@gyral/core/internal` (Gyral's own panel; no semver).
 
 ### The panel (`@gyral/devtools`)
 

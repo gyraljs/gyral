@@ -36,9 +36,16 @@ update maps or completion promises.
    hosts dirty, loop again within the same flush.
 6. Resolve waiting `settled()` promises.
 
-**Errors:** a view or reducer that throws is logged with its tag, its previous DOM stays, and the
-flush continues with the other hosts. Post-render work that throws is logged the same way. A
-development `HydrationMismatch` (07) is such an error: the host keeps the server's DOM.
+Post-commit client calls, including native modal/popover opening, can synchronously dispatch
+intents and mark hosts dirty (gyral-cps). Render those hosts before post-render commands run;
+`settled()` resolves only after both host renders and post-render work are drained. Focus
+commands returned by such an intent therefore see the DOM its new model produces.
+
+**Errors:** a host whose view throws is reported for that host (05 "Errors", ADR 0024): it
+renders its `error` view or keeps its previous DOM, and the flush continues with the other
+hosts. Reducers never throw into the flush (a failed reducer changes nothing). Post-render work
+that throws is reported the same way. A development `HydrationMismatch` (07) is such a failure:
+without an `error` view the host keeps the server's DOM.
 
 Outputs a child sends to its parent (`emit`, ADR 0010) are dispatched in a microtask, outside the
 child's render; the scheduler counts them as pending work, so `settled()` waits for them and for
@@ -47,15 +54,19 @@ the parent render they cause.
 **Loop guard:** more than 10 renders of one host, or 100 passes, in one flush means a cycle (two
 components feeding each other props or messages). Development throws, naming the tags involved:
 waiting `settled()` promises reject with the error, or, when nothing waits, it is thrown from the
-flush (an uncaught error). Production logs the error (without the explanation) and drops the
-remaining work, so the page doesn't freeze.
+flush (an uncaught error). Production reports the error (`reportError`, without the explanation)
+and drops the remaining work, so the page doesn't freeze.
 
 ## Post-render queue
 
 Everything that must happen after the DOM reflects the new state runs here, in this order, once
 per flush:
 
-1. Focus commands (`focus(selector)`), against the host's root.
+1. Focus commands (`focus(selector)`), against the host's root. With `{ wait: true }`, a
+   selector that matches nothing yet is kept: a `MutationObserver` on the host's root focuses
+   the target when a later render produces it, a newer focus command from the host replaces
+   it, and after one second it gives up with G0013. It is outside the scheduler's queues, so
+   `settled()` doesn't wait for it.
 2. Custom-state sync (`spec.states` → `ElementInternals.states`).
 3. `Hydrated` messages for hosts that finished their first client render (07).
 4. Starting `init` commands that waited for hydration (ADR 0012).
@@ -73,6 +84,9 @@ transition. The transition starts where the flush would have run (the microtask)
 support, or with `prefers-reduced-motion: reduce`, the flush runs as normal (`transitions.ts`).
 `settled()` waits for the transition's update callback, so focus and tests see the same DOM with
 or without a transition.
+Builds with the Vite preset bundle `transitions.ts` only when a module names
+`viewTransition` (05 "Features register themselves", gyral-c5d.12); otherwise every flush runs
+plainly, as without the API.
 
 ## Frame lane (opt-in)
 
@@ -80,7 +94,7 @@ For bursty sources: many messages per frame, each in its own task (a WebSocket f
 events, sensors), into a component whose render isn't trivial.
 
 ```ts
-define<State, Msg>('live-chart', {
+define<State, Msg>()('live-chart', {
   // init, intent, update, view …
   renderOnFrame: ['Ticked'],
 });
@@ -110,30 +124,65 @@ define<State, Msg>('live-chart', {
 - The lane belongs to the mark, not the host: `markDirty(task, onFrame)`; `element.ts` takes it
   from the message's tag (`host-model.ts`). The frame's callback hands its hosts to a microtask
   flush, which runs right after the callback, before that frame's style, layout and paint.
-- Cost: about 0.14 KiB gzip in every app (it ships whether or not a spec uses it); the size
-  budgets it pushed over were raised by that much (`scripts/size-budget.json`).
+- Cost: about 0.14 KiB gzip, now only in apps that use it (`frame-lane.ts`): builds with the
+  Vite preset bundle it only when a module names `renderOnFrame` (05 "Features register
+  themselves", gyral-c5d.12, 0.3.1); without it a `renderOnFrame` message renders in the
+  microtask flush. The runtime path (no build step) always has it. Until 0.3.1 every app
+  shipped it, and the size budgets it pushed over had been raised by that much.
 
 ## `settled()`
 
 ```ts
 import { settled } from '@gyral/core';
-await settled(); // no host is dirty, no flush is scheduled, no transition update is pending
+await settled(); // nothing to render, and messages have stopped arriving
 ```
 
-- One shared promise per quiet period, not one per element. When the scheduler is idle it
-  resolves after a few microtask turns (4), so follow-ups already resolving (a driver that
-  answered at once, an output on its way) reach the scheduler before quiet is judged.
+It resolves when the page is **quiet**: no host is dirty, no flush is scheduled, no
+transition update is pending, outputs and held loads have been delivered, and **no message has
+reached a host or a store for 8 microtask turns in a row**.
+
+- One shared promise per quiet period, not one per element.
+- **Messages, not commands.** A command that lives as long as its component (a streaming
+  driver watching a store, a `matchMedia` watch, a socket) never finishes, so `settled()`
+  doesn't wait for commands. It waits for what they deliver: every message dispatched to a host
+  (`HostModel.dispatch`) or a store (`send`), and every mark, counts as activity
+  (`noteActivity()` in the scheduler), and activity restarts the quiet window even when its
+  host has already rendered inside it. So a chain such as click → reducer → `play` command →
+  the store's synchronous dispatch → its watcher notifies → a microtask re-arms and emits →
+  `TableChanged` → render → the reducer answers with the next move … is waited for to the end,
+  as long as each step follows the previous one within 8 microtask turns.
+- Why 8: a driver that answers synchronously reaches its host about 3 turns after it ran, one
+  with a single `await` about 4; a store that notifies in a microtask plus a watcher that
+  re-arms in one adds 2 per step. 8 leaves room for a driver with a few `await`s.
+- **No timers.** It never advances timers or waits for them, and work that crosses a task
+  boundary (a `setTimeout`, `fetch`, a `message` event, IndexedDB) is outside it: tests drive
+  time with `@gyral/testing`'s `virtualTime` (or answer fakes) and then `await settled()`.
+  The frame lane is the exception that is waited for (a pending frame flush is scheduler work).
+- **Bounded.** More than 10,000 flushes or busy turns (turns in which messages arrived) without
+  a quiet window reject with an error naming the likely cause (a stream emitting without pause,
+  or components or drivers feeding each other messages), like the loop guard. A finite burst (a
+  progress stream, a few hundred values in a row) settles. A flush's loop-guard error rejects it too.
 - Code core loads lazily for rendering (the hydration code, 07 "Loading") counts as pending
   until the hosts waiting for it have started (`hold()` in the scheduler).
-- It covers rendering only. Driver work (HTTP, timers) is outside it; tests drive time with
-  `@gyral/testing`'s `virtualTime` and then `await settled()`.
 - `@gyral/testing`'s `hydrated()` releases the document's islands (if asked), then awaits
   `settled()`. No polling passes.
+- Cost: an idle `settled()` takes about 0.5 µs in Chromium (0.4 µs before 0.3.1); the
+  1,158-test suite showed no regression and no change in run time.
 - `settled()` first shipped while Lit still rendered (gyral-g1r.4), so tests moved to it before
   the renderer changed. Since Phase 3 `packages/core/src/settled.ts` implements it on the
-  scheduler (`packages/core/src/scheduler.ts`).
-- Replaces `el.updateComplete` everywhere (about 270 test sites, the scaffold's `AGENTS.md`, the
-  docs and the skill).
+  scheduler (`packages/core/src/scheduler.ts`). Replaces `el.updateComplete` everywhere.
+
+### Quiescence (gyral-c5d.6, 0.3.1)
+
+Until 0.3.1 `settled()` drained 4 microtask turns and looked at the scheduler only before and
+after: a message that arrived and rendered inside those turns was invisible, so a follow-up a
+few turns later was missed. An app migrated from Lit to Gyral 0.3, whose state lives in a
+TC39-signals store Gyral doesn't own, added `for (let n = 0; n < 20; n++) await
+Promise.resolve()` before `settled()` as insurance. Their chain itself (a watcher that notifies
+synchronously, re-armed in a microtask) already settled with 4 turns; the same chain over a
+store that notifies in a microtask, where each move is answered by the next, did not
+(`packages/core/test/settled-quiescence.test.ts`). Counting messages made the default strictly
+stronger at no measurable cost, so there is no option: `settled()` is the quiescence wait.
 
 ## Server
 

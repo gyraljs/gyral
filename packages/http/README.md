@@ -35,6 +35,20 @@ export const fetchUser = <M>(
 
 `@gyral/http/testing` exports `fakeHttp`, a scripted HTTP driver for tests.
 
+`@gyral/http/sse` (0.3.1) exports `makeEventSourceDriver(schema, { events?, withCredentials?,
+parse?, name? })`. It decodes default/named events, preserves event IDs, reports connection
+states and typed decoding/terminal failures, and cleans up on cancellation. Native
+EventSource owns GET/cookies/reconnection/Last-Event-ID; there is no headers/POST transport
+or extra retry loop. Imports/factories are SSR-safe. The fetch entry does not bundle it.
+See [the network feed guide](../../skills/gyral/references/network-streams.md).
+
+`@gyral/http/websocket` (0.3.1) exports `makeWebSocketDriver(schema, { encode, parse?, name?,
+maxBufferedBytes? })`: Connect streams and Send/Close commands on explicitly owned native
+sockets. Incoming data is decoded; outgoing buffering is bounded (64 KiB by default), with
+typed failures and native close metadata. Send success means browser enqueue. Reconnect
+through `retry()` explicitly; there is no offline queue or replay. Normal/intentional closes
+complete, and cancellation cleans up. The entry is optional and imports/factories are SSR-safe.
+
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the

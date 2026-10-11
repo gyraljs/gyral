@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
-import { defineForm, redirectedTo, type IntentRejected } from '@gyral/core';
+import { defineForm, type IntentRejected } from '@gyral/core';
 import { formAction, rejectWith, seeOther } from '../src/index.js';
 
 const Login = defineForm(
@@ -38,7 +38,7 @@ describe('formAction answering the JS path with JSON', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
     expect(res.headers.get('set-cookie')).toContain('sid=abc');
-    expect(redirectedTo(await res.json())).toBe('/account');
+    expect(await res.json()).toEqual({ _tag: 'Redirected', location: '/account' });
   });
 
   it('answers schema failures with 422 JSON, without echoing submitted values', async () => {
@@ -70,7 +70,7 @@ describe('formAction answering the JS path with JSON', () => {
     expect(seen.at(-1)).toMatchObject({
       intent: 'Login',
       issues: [{ path: '', message: 'Wrong email or password.' }],
-      values: { email: 'a@b.co', password: 'wrong' },
+      values: { email: 'a@b.co' }, // the password is never echoed
     });
     const ok = await submit({ email: 'a@b.co', password: 'right' }, 'text/html');
     expect(ok.status).toBe(303);

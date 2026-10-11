@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { settled } from '@gyral/core';
-import { run, step } from '@gyral/testing';
+import { mount as mountEl, run, step } from '@gyral/testing';
 import { BmiNested, bmiOf } from '../src/bmi-nested.js';
 import { LabeledSlider } from '../src/labeled-slider.js';
 
@@ -26,9 +26,7 @@ describe('pure', () => {
 
 describe('in the browser', () => {
   async function mount() {
-    const el = new BmiNested();
-    document.body.append(el);
-    await settled();
+    const { el } = await mountEl(BmiNested);
     const slider = (id: string) => {
       const found = el.shadowRoot?.querySelector(`#${id}`);
       if (!(found instanceof LabeledSlider)) throw new Error(`no slider #${id}`);

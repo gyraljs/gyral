@@ -1,4 +1,6 @@
 import { hydrated, mountSsr, type MountedSsr } from '@gyral/testing';
+import { provideDrivers } from '@gyral/core';
+import { makeRouter } from '@gyral/router';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 // The server's real output for /about (kept in sync by server.node.test.ts).
 import serverHtml from './fixtures/about.ssr.html?raw';
@@ -20,6 +22,8 @@ const settle = () => new Promise((r) => setTimeout(r, 20));
 beforeAll(() => {
   // The client's router reads the real URL; match what the server rendered.
   history.replaceState(null, '', '/about');
+  // As entry-client.ts does: the app's router captures link clicks.
+  provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) });
   page = mountSsr(serverHtml);
 });
 
@@ -59,7 +63,7 @@ describe('hydration', () => {
     expect(location.pathname).toBe('/');
     expect($('h1')?.textContent).toBe('The homepage');
     expect($('a[aria-current="page"]')?.getAttribute('href')).toBe('/');
-    // Same pageTitle() the server used for <title>.
+    // Same pageHead() the server used for its head.
     expect(document.title).toBe('The homepage — Gyral isomorphic');
   });
 });

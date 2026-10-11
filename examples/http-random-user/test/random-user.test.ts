@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { HttpError, HttpRequest } from '@gyral/http';
-import { randomDriver, settled } from '@gyral/core';
+import { settled } from '@gyral/core';
 import { fakeDriver, step } from '@gyral/testing';
 import { RandomUser } from '../src/random-user.js';
+import { randomDriver } from '../src/random.js';
 import { USER_COUNT, userUrl } from '../src/users.js';
 
 const ada = {

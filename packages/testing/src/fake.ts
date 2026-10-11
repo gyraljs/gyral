@@ -1,4 +1,4 @@
-import type { Concurrency, Driver, DriverContext, RetryPolicy } from '@gyral/core';
+import type { Concurrency, Driver, DriverContext } from '@gyral/core';
 
 /** One recorded `run` of a fake driver. */
 export interface FakeCall<I, O> {
@@ -23,11 +23,13 @@ export interface FakeDriver<I, O, E> extends Driver<I, O, E> {
   emitNext(output: O): void;
 }
 
+/** What a fake answers each call with (`FakeOptions.impl`). */
+export type FakeRun<I, O> = (input: I, ctx: DriverContext<O>) => O | Promise<O>;
+
 export interface FakeOptions<I, O, E> {
   /** Answer calls immediately. Without it, calls wait for `resolveNext`/`rejectNext`. */
-  readonly impl?: (input: I, ctx: DriverContext<O>) => O | Promise<O>;
+  readonly impl?: FakeRun<I, O>;
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
   readonly toError?: (cause: unknown) => E;
 }
 
@@ -43,11 +45,18 @@ function noop(): void {
  * A recording driver for DOM-level tests: `el.drivers = { http: fakeDriver(http) }`.
  * Pass a real driver to copy its name and concurrency, or just a name. Failures pass
  * through unchanged unless you give `toError`, so `rejectNext(error)` takes the typed error.
+ * A function as the second argument answers every call (`impl`):
+ *
+ *   el.drivers = { 'url-sync': fakeDriver<string | null, void>('url-sync', (q) => void urls.push(q)) };
+ *
+ * Fakes go into `el.drivers` and `provideDrivers` as they are, with no cast.
  */
 export function fakeDriver<I = unknown, O = unknown, E = unknown>(
   of: string | Driver<I, O, E>,
-  options: FakeOptions<I, O, E> = {},
+  optionsOrRun: FakeOptions<I, O, E> | FakeRun<I, O> = {},
 ): FakeDriver<I, O, E> {
+  const options: FakeOptions<I, O, E> =
+    typeof optionsOrRun === 'function' ? { impl: optionsOrRun } : optionsOrRun;
   const name = typeof of === 'string' ? of : of.name;
   const concurrency = options.concurrency ?? (typeof of === 'string' ? undefined : of.concurrency);
   const calls: MutableCall<I, O>[] = [];
@@ -71,33 +80,31 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
       });
       return impl(input, ctx);
     }
-    return new Promise<O>((resolveRun, rejectRun) => {
-      const call: MutableCall<I, O> = {
-        input,
-        signal: ctx.signal,
-        settled: false,
-        emit: ctx.emit,
-        resolve: (output) => {
-          call.settled = true;
-          resolveRun(output);
-        },
-        reject: (error) => {
-          call.settled = true;
-          // Deliberately not an Error: fakes reject with the driver's typed error (e.g. a
-          // tagged HttpError), which reaches onFailure unchanged when there is no toError.
-          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-          rejectRun(error);
-        },
-      };
-      calls.push(call);
-    });
+    const { promise, resolve: resolveRun, reject: rejectRun } = Promise.withResolvers<O>();
+    const call: MutableCall<I, O> = {
+      input,
+      signal: ctx.signal,
+      settled: false,
+      emit: ctx.emit,
+      resolve: (output) => {
+        call.settled = true;
+        resolveRun(output);
+      },
+      reject: (error) => {
+        call.settled = true;
+        // Deliberately not an Error: fakes reject with the driver's typed error (e.g. a
+        // tagged HttpError), which reaches onFailure unchanged when there is no toError.
+        rejectRun(error);
+      },
+    };
+    calls.push(call);
+    return promise;
   };
 
   return {
     name,
     run,
     ...(concurrency === undefined ? {} : { concurrency }),
-    ...(options.retry === undefined ? {} : { retry: options.retry }),
     ...(options.toError === undefined ? {} : { toError: options.toError }),
     calls,
     get inputs() {

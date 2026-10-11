@@ -1,4 +1,5 @@
-import type { Concurrency, Driver, RetryPolicy } from '@gyral/core';
+import { type Concurrency, type Driver } from '@gyral/core';
+import { devtoolsEnabled as DEV } from '@gyral/core/internal';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -17,11 +18,6 @@ export interface HttpRequest {
    * `IntentRejected`). A body that doesn't match leaves `detail` unset; `body` is always kept.
    */
   readonly errorSchema?: StandardSchemaV1;
-  /**
-   * Adds a CSRF token read from `<meta name=…>` when the request runs (keeps reducers pure).
-   * The header defaults to `x-csrf-token`.
-   */
-  readonly csrf?: { readonly meta: string; readonly header?: string };
 }
 
 /** Every way a request can fail. Delivered to `onFailure`, never thrown into the view. */
@@ -37,6 +33,8 @@ export type HttpError =
       readonly detail?: unknown;
     }
   | { readonly _tag: 'HttpNetworkError'; readonly url: string; readonly message: string }
+  /** The attempt took longer than the driver's `timeoutMs`. */
+  | { readonly _tag: 'HttpTimeoutError'; readonly url: string; readonly timeoutMs: number }
   | {
       readonly _tag: 'HttpDecodeError';
       readonly url: string;
@@ -53,17 +51,22 @@ export interface HttpDriverOptions {
   readonly name?: string;
   /**
    * Default headers for every request through this driver: app-level concerns such as a CSRF
-   * token or an API key, so components and stores never read the DOM themselves. Per-request
-   * `headers` win over these.
+   * token or an API key, so components and stores never read the DOM themselves. This is the
+   * one place a CSRF token is configured (ADR 0022). Per-request `headers` win over these.
    *
-   *   el.drivers = { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) };
+   *   provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) });
    */
   readonly headers?: HeaderSource;
   /** Resolves relative URLs. Default: the document location. */
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
   readonly concurrency?: Concurrency;
-  readonly retry?: RetryPolicy;
+  /**
+   * Aborts a request that takes longer than this, failing with `HttpTimeoutError`. Applies per
+   * attempt: under `retry(…)` each attempt gets the full time. Default: no limit.
+   */
+  readonly timeoutMs?: number;
+  // No retry option: wrap the driver instead, `retry(makeHttpDriver(…), policy)` (ADR 0022).
 }
 
 /** Carries a typed HttpError through the driver's rejection path. */
@@ -104,6 +107,25 @@ export function csrfFromMeta(
   };
 }
 
+let warned = false;
+
+/**
+ * Development only: warns once when a non-GET request goes out while the page carries a CSRF
+ * `<meta>` whose token no header carries (the driver has no `csrfFromMeta` header source).
+ */
+const checkToken = (method: string, headers: Readonly<Record<string, string>>): void => {
+  if (warned || method === 'GET' || typeof document === 'undefined') return;
+  const token = document
+    .querySelector('meta[name="csrf-token"],meta[name="csrf"]')
+    ?.getAttribute('content');
+  if (token == null || Object.values(headers).includes(token)) return;
+  warned = true;
+  console.warn(
+    `Gyral http: a ${method} request carries no CSRF token, but the page has a CSRF <meta>. ` +
+      "Give the driver a header source: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }).",
+  );
+};
+
 const resolveHeaders = (
   source: HeaderSource | undefined,
   req: HttpRequest,
@@ -127,21 +149,29 @@ export function makeHttpDriver(
 ): Driver<HttpRequest, unknown, HttpError> {
   const doFetch = options.fetch ?? ((input, init) => fetch(input, init));
 
-  const run = async (req: HttpRequest, { signal }: { signal: AbortSignal }): Promise<unknown> => {
-    const url = new URL(req.url, options.baseUrl ?? location.href).href;
+  const urlOf = (req: HttpRequest): string =>
+    new URL(req.url, options.baseUrl ?? location.href).href;
+
+  const attempt = async (
+    req: HttpRequest,
+    { signal }: { signal: AbortSignal },
+  ): Promise<unknown> => {
+    const url = urlOf(req);
     const { body: payload } = req;
     const asJson = payload !== undefined && !isFormBody(payload);
+    const method = req.method ?? 'GET';
+    const headers = {
+      accept: 'application/json',
+      // Form bodies set their own content type (with the multipart boundary).
+      ...(asJson ? { 'content-type': 'application/json' } : {}),
+      ...resolveHeaders(options.headers, req),
+      ...req.headers,
+    };
+    if (DEV) checkToken(method, headers);
     const init: RequestInit = {
-      method: req.method ?? 'GET',
+      method,
       signal,
-      headers: {
-        accept: 'application/json',
-        // Form bodies set their own content type (with the multipart boundary).
-        ...(asJson ? { 'content-type': 'application/json' } : {}),
-        ...resolveHeaders(options.headers, req),
-        ...(req.csrf === undefined ? {} : csrfFromMeta(req.csrf.meta, req.csrf.header)()),
-        ...req.headers,
-      },
+      headers,
       ...(payload === undefined ? {} : { body: asJson ? JSON.stringify(payload) : payload }),
     };
     let response: Response;
@@ -170,6 +200,27 @@ export function makeHttpDriver(
     return result.value;
   };
 
+  const { timeoutMs } = options;
+  // A timer, not AbortSignal.timeout(), so fake timers in tests control it.
+  const run =
+    timeoutMs === undefined
+      ? attempt
+      : async (req: HttpRequest, { signal }: { signal: AbortSignal }): Promise<unknown> => {
+          const timer = new AbortController();
+          const id = setTimeout(() => {
+            timer.abort();
+          }, timeoutMs);
+          try {
+            return await attempt(req, { signal: AbortSignal.any([signal, timer.signal]) });
+          } catch (cause) {
+            throw timer.signal.aborted && !signal.aborted
+              ? new HttpFailure({ _tag: 'HttpTimeoutError', url: urlOf(req), timeoutMs })
+              : cause;
+          } finally {
+            clearTimeout(id);
+          }
+        };
+
   return {
     name: options.name ?? 'http',
     run,
@@ -178,9 +229,19 @@ export function makeHttpDriver(
         ? cause.error
         : { _tag: 'HttpNetworkError', url: '', message: messageOf(cause) },
     ...(options.concurrency === undefined ? {} : { concurrency: options.concurrency }),
-    ...(options.retry === undefined ? {} : { retry: options.retry }),
   };
 }
+
+/**
+ * The failures worth retrying: network errors, timeouts, 408, 429 and 5xx. Pass it as
+ * `retry(…, { retryIf: retryableHttpError })`. A 4xx other than 408/429 means the request
+ * itself is wrong, and decoding errors won't change on a retry. `Retry-After` isn't read.
+ */
+export const retryableHttpError = (error: HttpError): boolean =>
+  error._tag === 'HttpNetworkError' ||
+  error._tag === 'HttpTimeoutError' ||
+  (error._tag === 'HttpStatusError' &&
+    (error.status >= 500 || error.status === 408 || error.status === 429));
 
 /** The default driver. Substitute it by name: `el.drivers = { http: makeHttpDriver({...}) }`. */
 export const http = makeHttpDriver();

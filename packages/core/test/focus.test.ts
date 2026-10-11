@@ -9,7 +9,7 @@ type Msg = { readonly _tag: 'Next' } | { readonly _tag: 'Edit' } | { readonly _t
 
 const spec = {
   init: (): State => ({ page: 1, editing: false }),
-  intent: { Next: () => ({ _tag: 'Next' }) as const },
+  intent: { Next: true as const },
   update: {
     Next: (s: State): [State, ReturnType<typeof focus>[]] => [
       { ...s, page: s.page + 1 },
@@ -29,8 +29,8 @@ const spec = {
   `,
 };
 
-const Shadowed = define<State, Msg>('test-focus', spec);
-const Light = define<State, Msg>('test-focus-light', { ...spec, shadow: false });
+const Shadowed = define<State, Msg>()('test-focus', spec);
+const Light = define<State, Msg>()('test-focus-light', { ...spec, shadow: false });
 
 afterEach(() => {
   document.body.replaceChildren();

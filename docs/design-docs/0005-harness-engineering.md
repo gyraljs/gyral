@@ -56,3 +56,23 @@ in isomorphic, http-random-user, http-search-github and autocomplete-search, and
 overflow in hello-lastname (a `fieldset`'s min-content width) and autocomplete-search (the
 page's `border-box` reset doesn't reach into shadow roots). All are fixed, and all 19
 examples pass.
+
+## Addendum: bounded Node build-test workers (gyral-a53, 2026-10-11)
+
+The Node test project runs real Vite fixture builds and limits itself to two workers,
+after the browser projects (`sequence.groupOrder: 1`). Vitest requires separate sequence
+groups for projects with different worker limits.
+With the default worker count on a 12-CPU machine, two full-gate runs hit the five-second
+test deadline in compiler/build checks (one timeout, then twenty); the isolated SVG suite
+with two workers passed in 1.91 seconds. Bounded concurrency makes these build checks
+practical in the full browser-and-Node gate. The existing test deadlines still apply.
+
+Use the project setting in `vitest.config.ts`, so `pnpm check` and direct Vitest runs share
+the same limit. Re-measure throughput and cold-build reliability before increasing it.
+
+## Addendum: failed documentation checks are rerunnable (gyral-457)
+
+`check-skill` extracts snippets into the generated `.skill-check/` directory and removes it
+in `finally`, including on type errors or extraction failures. ESLint ignores this temporary
+directory, so leftovers from an interrupted check cannot contaminate the next lint run.
+The harness verifies failed-compiler cleanup with an isolated fixture repository.

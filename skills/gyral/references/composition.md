@@ -30,7 +30,7 @@ const loadBio = (userId: string) =>
     onSuccess: (body) => ({ _tag: 'Bio', bio: body.bio }),
   });
 
-export const UserCard = define<State, Msg, Props>('my-user-card', {
+export const UserCard = define<State, Msg, Props>()('my-user-card', {
   props: { userId: prop.string({ required: true }) },
   init: (props) => [{ draft: '', bio: '' }, [loadBio(props.userId)]],
   intent: { Draft: ({ value }) => ({ _tag: 'Draft', text: value ?? '' }) },
@@ -52,25 +52,29 @@ export const UserCard = define<State, Msg, Props>('my-user-card', {
 ## Child components: outputs up with `emit`, `child()` in the parent
 
 The child declares an output union `O` (4th type parameter) and returns `emit(output)` as a
-command. The parent puts `data-intent` on the child element and parses outputs with
+command. Build that `emit` with `outputs<O>()` (a module-level constant, like
+`intentsOf<typeof C>()`):
+it is core's `emit`, typed by the union, so an output of the wrong shape fails to compile. The
+parent puts `data-intent` on the child element and parses outputs with
 `child(ChildClass, (output, el) => msg)`; `el` is the typed child element (read its props).
 
 ```ts
 import * as v from 'valibot';
-import { child, define, each, emit, html, intents, prop } from '@gyral/core';
+import { child, define, each, html, outputs, prop } from '@gyral/core';
 
 // Child: owns its own state; reports removal up.
 type ItemOut = { readonly _tag: 'Removed' };
 type ItemMsg = { readonly _tag: 'Remove' };
+const emit = outputs<ItemOut>(); // emit({ _tag: 'Remvoed' }) would not compile
 const ItemData = v.object({ id: v.number(), label: v.string() });
 interface ItemProps {
   readonly item: v.InferOutput<typeof ItemData>;
 }
 
-export const Item = define<object, ItemMsg, ItemProps, ItemOut>('my-item', {
+export const Item = define<object, ItemMsg, ItemProps, ItemOut>()('my-item', {
   props: { item: prop.value(ItemData, { required: true }) },
   init: () => ({}),
-  intent: { Remove: () => ({ _tag: 'Remove' }) },
+  intent: { Remove: true },
   update: { Remove: (s) => [s, [emit({ _tag: 'Removed' })]] },
   view: (_s, i, { props }) => html`
     ${props.item.label} <button type="button" data-intent=${i.Remove}>Remove</button>
@@ -82,9 +86,8 @@ interface ListState {
   readonly items: readonly { readonly id: number; readonly label: string }[];
 }
 type ListMsg = { readonly _tag: 'ItemOut'; readonly id: number; readonly out: ItemOut };
-const listIntents = intents<ListMsg>();
 
-export const List = define<ListState, ListMsg>('my-list', {
+export const List = define<ListState, ListMsg>()('my-list', {
   init: () => ({
     items: [
       { id: 1, label: 'One' },
@@ -97,13 +100,14 @@ export const List = define<ListState, ListMsg>('my-list', {
   update: {
     ItemOut: (s, m) => ({ items: s.items.filter((it) => it.id !== m.id) }),
   },
-  view: (s) =>
+  view: (s, i) =>
     html`<ul>
       ${each(
         s.items,
         (it) => it.id,
-        // Rows are pure: the intent name is a module constant (listIntents above).
-        (it) => html`<li><my-item .item=${it} data-intent=${listIntents.ItemOut}></my-item></li>`,
+        // A pure row: the intent name arrives through `pick` (the row's second argument).
+        (it, name) => html`<li><my-item .item=${it} data-intent=${name}></my-item></li>`,
+        () => i.ItemOut,
       )}
     </ul>`,
 });
@@ -111,6 +115,87 @@ export const List = define<ListState, ListMsg>('my-list', {
 
 For a component that contains itself (a folder tree) or is defined later, pass a function:
 `child(() => Folder, …)` and annotate the constant as `GyralElementClass<S, M, P, O>`.
+
+Don't annotate the mapper as `(out): Msg => …`: an intent must produce its own variant, so the
+whole union fails with a long `IntentParser<…>` error. Leave the return type off inside the spec
+(as above), or annotate `Extract<ListMsg, { _tag: 'ItemOut' }>` (plus `| undefined` when it
+ignores some outputs); a mapper defined outside the spec needs `_tag: 'ItemOut' as const`.
+
+### Who hears an output, and slotted children
+
+An output goes to the **direct parent** only (0.3.1). It fires the intent on the child's host,
+where the parent's `data-intent` sits, never an intent on an ancestor; once that parser takes it
+(returns a message), the event stops there. So a grandparent never mistakes a grandchild's
+output for its child's, and parsers need no `event.target` checks. A parser that returns
+`undefined` lets it go on.
+
+Content you slot into a shadow-DOM child (a card, a dialog shell) stays **yours**: the intents,
+forms and child components you write between `<my-card>` and `</my-card>` belong to your
+component, as if the card weren't there. A slotted `<form data-intent=${i.Save}>` gets its
+`FormData` and its native submit cancelled; a slotted child's outputs reach your `child()`
+parser.
+
+```ts
+import { define, html } from '@gyral/core';
+
+interface State {
+  readonly title: string;
+}
+type Msg = { readonly _tag: 'Save'; readonly title: string };
+
+// <my-card> is a shadow-DOM component whose view is `<article><slot></slot></article>`.
+export const Editor = define<State, Msg>()('my-editor', {
+  init: () => ({ title: '' }),
+  intent: {
+    Save: ({ formData }) => {
+      const title = formData?.get('title');
+      return { _tag: 'Save', title: typeof title === 'string' ? title : '' };
+    },
+  },
+  update: { Save: (_s, m) => ({ title: m.title }) },
+  view: (s, i) => html`
+    <my-card>
+      <form data-intent=${i.Save}>
+        <input name="title" value=${s.title} />
+        <button>Save</button>
+      </form>
+    </my-card>
+  `,
+});
+```
+
+A light-DOM child (`shadow: false`) is different: its children are what it rendered, so they
+are its own.
+
+### Outputs to a parent that isn't Gyral
+
+An output is a `gyral-output` `CustomEvent` (`OUTPUT_EVENT`) dispatched on the child's host in a
+microtask; `detail` is the output. It bubbles but isn't composed, so it stays in the tree the
+child sits in (and stops at a Gyral parent that takes it). Plain DOM code, or a component from
+another library, listens for it on the child or an ancestor in that tree:
+
+```ts
+import { define, html, OUTPUT_EVENT, outputs, type OutputEvent, type OutputsOf } from '@gyral/core';
+
+type RatingOut = { readonly _tag: 'Rated'; readonly stars: number };
+const emit = outputs<RatingOut>();
+
+export const Rating = define<object, { readonly _tag: 'Rate' }, object, RatingOut>()('my-rating', {
+  init: () => ({}),
+  intent: { Rate: true },
+  update: { Rate: (s) => [s, [emit({ _tag: 'Rated', stars: 5 })]] },
+  view: (_s, i) => html`<button type="button" data-intent=${i.Rate}>★★★★★</button>`,
+});
+
+// Page script (or another library's component): listen on the child or an ancestor.
+document.querySelector('#reviews')?.addEventListener(OUTPUT_EVENT, (event) => {
+  const { detail } = event as OutputEvent<OutputsOf<typeof Rating>>;
+  console.log(`${String(detail.stars)} stars from`, event.target); // the <my-rating>
+});
+```
+
+The other direction works too: any custom element talks to a Gyral parent by dispatching
+`new CustomEvent(OUTPUT_EVENT, { detail: { _tag: 'Picked', … }, bubbles: true })` on itself.
 
 Keep a child's own UI state inside the child; the parent owns only what it must coordinate.
 Don't reach into a child's state from the parent; ask with props, listen with outputs.
@@ -152,11 +237,11 @@ interface BadgeState {
 }
 type BadgeMsg = { readonly _tag: 'Buy' };
 
-export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>('my-buy', {
+export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>()('my-buy', {
   props: { sku: prop.string({ required: true }) },
   stores: [cart],
   init: () => ({ bumped: false }),
-  intent: { Buy: () => ({ _tag: 'Buy' }) },
+  intent: { Buy: true },
   update: {
     Buy: (s, _m, { props }) => [s, [send(cart, { _tag: 'Add', sku: props.sku })]],
     StoreChanged: (s, m) => {
@@ -173,6 +258,6 @@ export const BuyButton = define<BadgeState, BadgeMsg, { readonly sku: string }>(
 
 - One store instance per page in the browser, per request on the server (pass instances to
   `renderPage({ stores: [cart.instance(seed)] })`, see ssr.md), per test
-  (`testStore(cart)`).
+  (`cart.instance()`).
 - Store names key seeds and overrides: keep them unique.
 - A store may `send` to another store; writes are always commands, never direct mutation.

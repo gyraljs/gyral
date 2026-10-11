@@ -1,5 +1,17 @@
 # @gyral/mcp
 
+## 0.3.1
+
+### Patch Changes
+
+- Refresh the bundled documentation for the final 0.3.1 API, including forms, routing,
+  storage, native network streams, modal timing, security, accessibility and migration.
+- Include `@gyral/core/storage`, `@gyral/core/indexeddb`, `@gyral/http/sse` and
+  `@gyral/http/websocket` in API lookup, with their factories and public types.
+- Align scaffolding and snippet checking with two-call `define`, current driver/subscription
+  patterns and the simplified public surface. Remove obsolete class-field configuration.
+- Keep server/corpus APIs public and tool implementation helpers internal.
+
 ## 0.3.0
 
 ### Minor Changes

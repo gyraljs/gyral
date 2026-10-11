@@ -1,6 +1,6 @@
 # @gyral/time
 
-Gyral time: delays, debounces, periodic ticks and animation frames as commands, so timing logic stays in pure update functions and tests run on virtual time.
+Gyral time: delays, debounces, wall-clock ticks (`every`) and animation frames as commands, so timing logic stays in pure update functions and tests run on virtual time.
 
 ## Install
 
@@ -17,6 +17,9 @@ import { debounce, delay } from '@gyral/time';
 //   Typed: (s, m) => [{ ...s, query: m.text }, [debounce(300, { _tag: 'Search' })]],
 //   Saved: (s) => [{ ...s, toast: true }, [delay(2000, { _tag: 'HideToast' })]],
 ```
+
+`delay` and `debounce` run on a delay-only driver (also named `time`, so tests substitute it
+the same way), so an app that only delays doesn't bundle the `every` code.
 
 ## Documentation
 

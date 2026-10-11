@@ -1,16 +1,20 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
-import type { AnyDriver, Command, Concurrency, DriverOverrides, RetryPolicy } from '../command.js';
+import type { AnyDriver, Command, Concurrency } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
 import { providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
+import { unprovided } from './token.js';
 
 // The command interpreter (ADR 0015: hand-written, no runtime dependencies). Each running command is a task with its own AbortController; lanes hold the
-// latest task per key. Interruption is `controller.abort()`, retry schedules are timers
-// that cancel on abort, and `queue` chains on the previous task's promise.
+// latest task per key. Interruption is `controller.abort()`,
+// and `queue` chains on the previous task's promise. A driver runs once: retries are a driver
+// wrapper (retry.ts, ADR 0022).
 
 /** Runs commands for one connected element. Disposed on disconnect. */
 export interface Interpreter<M> {
   readonly run: (cmd: Command<M>) => void;
+  /** Aborts the running task of `lane`, if any (subscriptions.ts: a subscription that left). */
+  readonly cancel: (lane: string) => void;
   readonly dispose: () => void;
 }
 
@@ -22,6 +26,13 @@ interface Task {
 
 /** Reports one command's lifecycle to devtools (ADR 0017); undefined in production. */
 type Report = ((phase: CommandPhase, result?: unknown) => void) | undefined;
+
+/**
+ * Reports a failure to the owner (ADR 0024): `40` a mapper threw, `41` a driver failed and the
+ * command has no `onFailure`, `43` nothing provides a driver token. The owner builds the message
+ * and reports it.
+ */
+export type CommandFailure = (cause: unknown, code: 40 | 41 | 43, driver: string) => void;
 
 /** Rejects when `signal` aborts. Marked handled so a losing race never reports it. */
 const aborted = (signal: AbortSignal): Promise<never> => {
@@ -37,55 +48,37 @@ const aborted = (signal: AbortSignal): Promise<never> => {
   return promise;
 };
 
-/** Waits `ms`, or rejects as soon as `signal` aborts. */
-const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
-  Promise.race([
-    new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, ms);
-      signal.addEventListener(
-        'abort',
-        () => {
-          clearTimeout(timer);
-        },
-        { once: true },
-      );
-    }),
-    aborted(signal),
-  ]);
-
-/** Delay before retry number `retry` (0-based): fixed, or doubling from `delayMs`. */
-const delayFor = (policy: RetryPolicy, retry: number): number => {
-  const base = policy.delayMs ?? 0;
-  return policy.backoff === 'exponential' ? base * 2 ** retry : base;
-};
-
-async function attemptWithRetry(
+/** Runs the driver once; an abort settles it at once, even if the driver ignores the signal. */
+const attempt = (
   driver: AnyDriver,
   cmd: Command<unknown>,
   signal: AbortSignal,
   emit: (output: unknown) => void,
-): Promise<unknown> {
-  const policy = driver.retry;
-  for (let retry = 0; ; retry += 1) {
-    try {
-      // The input type was erased by command(); it was built for this driver's name.
-      const result = Promise.resolve(driver.run(cmd.input as never, { signal, emit }));
-      return await Promise.race([result, aborted(signal)]);
-    } catch (cause) {
-      if (signal.aborted || policy === undefined || retry >= policy.times) throw cause;
-      await sleep(delayFor(policy, retry), signal);
-    }
-  }
-}
+): Promise<unknown> =>
+  // The input type was erased by command(); it was built for this driver's name.
+  Promise.race([
+    Promise.resolve(driver.run(cmd.input as never, { signal, emit })),
+    aborted(signal),
+  ]);
 
-/** Maps a result to a message and dispatches it; a throwing mapper is logged, not fatal. */
-const deliver = <M>(map: () => M | undefined, dispatch: (msg: M) => void): void => {
+/**
+ * Maps a result to a message and dispatches it. A throwing mapper is reported (ADR 0024) and
+ * sends nothing; the reducer's own failures are the owner's (dispatch reports them).
+ */
+const deliver = <M>(
+  map: () => M | undefined,
+  dispatch: (msg: M) => void,
+  failed: CommandFailure,
+  driver: string,
+): void => {
+  let msg: M | undefined;
   try {
-    const msg = map();
-    if (msg !== undefined) dispatch(msg);
+    msg = map();
   } catch (defect) {
-    console.error('gyral: command mapper threw', defect);
+    failed(defect, 40, driver);
+    return;
   }
+  if (msg !== undefined) dispatch(msg);
 };
 
 async function execute<M>(
@@ -94,10 +87,12 @@ async function execute<M>(
   signal: AbortSignal,
   dispatch: (msg: M) => void,
   report: Report,
+  failed: CommandFailure,
 ): Promise<void> {
   let settled = false;
+  const name = driver.name;
   const emit = (output: unknown): void => {
-    if (!settled && !signal.aborted) deliver(() => cmd.onSuccess(output), dispatch);
+    if (!settled && !signal.aborted) deliver(() => cmd.onSuccess(output), dispatch, failed, name);
   };
   if (DEVTOOLS_ENABLED && report !== undefined) {
     signal.addEventListener(
@@ -110,30 +105,31 @@ async function execute<M>(
   }
   let output: unknown;
   try {
-    output = await attemptWithRetry(driver, cmd, signal, emit);
+    output = await attempt(driver, cmd, signal, emit);
   } catch (cause) {
     if (signal.aborted) return; // interrupted: reported by the abort listener
     settled = true;
     const error = driver.toError === undefined ? cause : driver.toError(cause);
     if (DEVTOOLS_ENABLED) report?.('failed', error);
     if (cmd.onFailure === undefined) {
-      console.warn(`gyral: unhandled failure from driver "${driver.name}"`, error);
+      failed(error, 41, name);
       return;
     }
     const onFailure = cmd.onFailure;
-    deliver(() => onFailure(error), dispatch);
+    deliver(() => onFailure(error), dispatch, failed, name);
     return;
   }
   if (signal.aborted) return;
   settled = true;
   if (DEVTOOLS_ENABLED) report?.('settled', output);
-  deliver(() => cmd.onSuccess(output), dispatch);
+  deliver(() => cmd.onSuccess(output), dispatch, failed, name);
 }
 
 export function makeInterpreter<M>(
   resolve: (driver: AnyDriver) => AnyDriver,
   dispatch: (msg: M) => void,
-  trace?: CommandTrace,
+  trace: CommandTrace | undefined,
+  failed: CommandFailure,
 ): Interpreter<M> {
   const reporter = (driver: string, lane: string, policy: Concurrency, input: unknown): Report =>
     trace === undefined
@@ -167,7 +163,7 @@ export function makeInterpreter<M>(
     const body = async (): Promise<void> => {
       if (after !== undefined) await after.done;
       if (!controller.signal.aborted) {
-        await execute(driver, cmd, controller.signal, guardedDispatch, report);
+        await execute(driver, cmd, controller.signal, guardedDispatch, report, failed);
       }
     };
     task.done = body().finally(() => {
@@ -182,6 +178,10 @@ export function makeInterpreter<M>(
   const run = (cmd: Command<M>): void => {
     if (!active) return;
     const driver = resolve(cmd.driver);
+    if (driver.run === unprovided) {
+      failed(undefined, 43, driver.name);
+      return;
+    }
     const lane = cmd.key ?? driver.name;
     const policy = cmd.concurrency ?? driver.concurrency ?? 'merge';
     const previous = lanes.get(lane);
@@ -202,6 +202,10 @@ export function makeInterpreter<M>(
     );
   };
 
+  const cancel = (lane: string): void => {
+    lanes.get(lane)?.controller.abort();
+  };
+
   const dispose = (): void => {
     active = false;
     for (const task of all) task.controller.abort();
@@ -209,25 +213,22 @@ export function makeInterpreter<M>(
     lanes.clear();
   };
 
-  return { run, dispose };
+  return { run, cancel, dispose };
 }
 
 /**
  * A component's interpreter (registered by `command()`, features.ts). Drivers resolve by name:
- * el.drivers → nearest provider → spec.drivers → the command's own (gyral-czi.35).
+ * el.drivers → nearest provider → the command's own (gyral-czi.35; ADR 0006 "Driver tokens").
  */
 export const hostInterpreter = <M>(
   el: FeatureHost,
-  drivers: DriverOverrides | undefined,
   dispatch: (msg: M) => void,
   trace: CommandTrace | undefined,
+  failed: CommandFailure,
 ): Interpreter<M> =>
   makeInterpreter(
-    (driver) =>
-      el.drivers[driver.name] ??
-      providedDriver(el, driver.name) ??
-      drivers?.[driver.name] ??
-      driver,
+    (driver) => el.drivers[driver.name] ?? providedDriver(el, driver.name) ?? driver,
     dispatch,
     trace,
+    failed,
   );

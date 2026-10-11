@@ -8,12 +8,12 @@ export interface State {
 // Messages: everything that can happen to the state.
 export type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 
-export const Counter = define<State, Msg>('app-counter', {
+export const Counter = define<State, Msg>()('app-counter', {
   init: () => ({ count: 0 }),
   // Intent: DOM events on elements marked with data-intent become messages.
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   // Update: pure functions from (state, message) to the next state.
   update: {
@@ -57,9 +57,3 @@ export const Counter = define<State, Msg>('app-counter', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'app-counter': InstanceType<typeof Counter>;
-  }
-}

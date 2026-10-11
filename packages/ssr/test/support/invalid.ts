@@ -11,9 +11,9 @@ type Msg = { readonly _tag: 'Save' } | { readonly _tag: 'Reject' } | { readonly 
 
 const taken = (): Readonly<Record<string, readonly string[]>> => ({ email: ['Email is taken'] });
 
-export const Signup = define<State, Msg>('test-invalid-form', {
+export const Signup = define<State, Msg>()('test-invalid-form', {
   init: () => ({ errors: taken(), saves: 0 }),
-  intent: { Save: () => ({ _tag: 'Save' }) },
+  intent: { Save: true },
   update: {
     Save: (s) => ({ ...s, saves: s.saves + 1 }),
     Reject: (s) => ({ ...s, errors: taken() }), // a new array: invalid() applies it again

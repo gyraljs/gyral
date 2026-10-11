@@ -16,7 +16,7 @@ import { define, html } from '@gyral/core';
 
 type Msg = { _tag: 'Increment' } | { _tag: 'Decrement' };
 
-define<{ count: number }, Msg>('gy-counter', {
+define<{ count: number }, Msg>()('gy-counter', {
   init: () => ({ count: 0 }),
   intent: {
     Increment: () => ({ _tag: 'Increment' }),
@@ -44,7 +44,8 @@ define<{ count: number }, Msg>('gy-counter', {
 
 Using Gyral in your own app (packages, Vite preset, template compiler, server rendering):
 [docs/references/consumer-setup.md](docs/references/consumer-setup.md). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md).
+[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md). Behavior changes in
+0.3.1: [docs/references/migrating-0.3.0-to-0.3.1.md](docs/references/migrating-0.3.0-to-0.3.1.md).
 
 ## Using Gyral with AI coding agents
 
@@ -79,7 +80,7 @@ pnpm install
 pnpm exec playwright install chromium
 pnpm check                                   # the full gate
 pnpm examples                                # run every example; index at http://localhost:5100
-pnpm --filter @gyral-examples/counter dev    # run an example
+pnpm --filter @gyral-examples/hello-world dev    # run an example
 pnpm ci:local                                # run CI locally (Docker + gh act)
 ```
 

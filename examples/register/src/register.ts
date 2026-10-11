@@ -1,3 +1,4 @@
+import '../../shared/devtools.js'; // ?devtools opens the panel (dev only)
 import {
   css,
   define,
@@ -32,11 +33,6 @@ export interface Props {
   readonly welcome: string | undefined;
 }
 
-const SECRET = new Set(['password', 'confirm']);
-
-const refill = (values: FormFields = {}): FormFields =>
-  Object.fromEntries(Object.entries(values).filter(([key]) => !SECRET.has(key)));
-
 const text = (values: FormFields, key: string): string => {
   const value = values[key];
   return typeof value === 'string' ? value : '';
@@ -45,7 +41,7 @@ const text = (values: FormFields, key: string): string => {
 // Client-side (form()) and server-side (submitForm → 422) rejections arrive the same way.
 const rejected = (s: State, m: IntentRejected): State => ({
   ...s,
-  values: m.values === undefined ? s.values : refill(m.values),
+  values: m.values ?? s.values, // secret fields are never in m.values
   errors: fieldErrors(m.issues),
   pending: undefined,
 });
@@ -92,7 +88,7 @@ const fieldView = (s: State, f: FieldSpec) => {
   </p>`;
 };
 
-export const Register = define<State, Msg, Props>('gy-register', {
+export const Register = define<State, Msg, Props>()('gy-register', {
   props: { welcome: prop.string() },
   init: (props) => ({ values: {}, errors: {}, welcome: props.welcome, pending: undefined }),
   intent: {
@@ -174,9 +170,3 @@ export const Register = define<State, Msg, Props>('gy-register', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-register': InstanceType<typeof Register>;
-  }
-}

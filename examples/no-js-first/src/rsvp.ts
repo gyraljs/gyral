@@ -1,11 +1,12 @@
+import '../../shared/devtools.js'; // ?devtools opens the panel (dev only)
 import {
   define,
-  each,
   field,
   fieldErrors,
   form,
   html,
   invalid,
+  keyed,
   nothing,
   prop,
   type FormFields,
@@ -86,8 +87,8 @@ const textField = (
   </p>`;
 };
 
-/** The form, as a list row: it reads only what `pick` passes it (view/03-lists.md). */
-const rsvpForm = (_sent: number, { s, join, checked }: FormArgs) =>
+/** The form; keyed by the number of replies sent (view/03-lists.md "keyed"). */
+const rsvpForm = ({ s, join, checked }: FormArgs) =>
   html`<form data-intent=${join} action="/" method="post">
     ${textField(s, checked, { name: 'name', label: 'Name', type: 'text', autocomplete: 'name' })}
     ${textField(s, checked, { name: 'email', label: 'Email', type: 'email', autocomplete: 'email' })}
@@ -114,9 +115,15 @@ interface FormArgs {
   readonly checked: string;
 }
 
-export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
+/**
+ * The attendees prop's check. Declared once and passed by name, so production builds, which never
+ * check property sets, drop it (view/05-element.md "When props are validated").
+ */
+const Attendees = v.array(v.object({ name: v.string(), guests: v.number() }));
+
+export const Rsvp = define<State, Msg, Props>()('gy-rsvp', {
   props: {
-    attendees: prop.value(v.array(v.object({ name: v.string(), guests: v.number() })), {
+    attendees: prop.value(Attendees, {
       default: [],
     }),
     joined: prop.string(),
@@ -188,12 +195,7 @@ export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
     </p>
     ${
       // Keyed by the number of replies sent: a new reply gets a fresh form element.
-      each(
-        [s.sent],
-        (n) => n,
-        rsvpForm,
-        () => ({ s, join: i.Join, checked: i.Checked }),
-      )
+      keyed(s.sent, rsvpForm({ s, join: i.Join, checked: i.Checked }))
     }
     <p class="joined" role="status">
       ${s.joined === undefined ? '' : html`You're on the list, <strong>${s.joined}</strong>!`}
@@ -207,9 +209,3 @@ export const Rsvp = define<State, Msg, Props>('gy-rsvp', {
   `,
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-rsvp': InstanceType<typeof Rsvp>;
-  }
-}

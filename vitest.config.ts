@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { gyralVitePreset } from './packages/core/src/vite.js';
+import { renderOnServer } from './packages/testing/src/vitest.js';
 
 export default defineConfig({
   test: {
@@ -13,12 +14,19 @@ export default defineConfig({
           name: 'browser',
           include: ['packages/*/test/**/*.test.ts', 'examples/*/test/**/*.test.ts'],
           // Server-rendering tests run in Node (the `node` project below).
-          exclude: ['**/*.node.test.ts', '**/*.prod.test.ts', '**/node_modules/**'],
+          exclude: [
+            '**/*.node.test.ts',
+            '**/*.prod.test.ts',
+            '**/*.client-only.test.ts',
+            '**/node_modules/**',
+          ],
           browser: {
             enabled: true,
             headless: true,
             provider: playwright(),
             instances: [{ browser: 'chromium' }],
+            // Real server markup for hydration tests (@gyral/testing/vitest).
+            commands: { renderOnServer },
           },
         },
       },
@@ -28,10 +36,7 @@ export default defineConfig({
         // behaviour that differs between builds is covered (view/07-hydration.md "Testing"):
         // every package's and example's hydration tests.
         ...gyralVitePreset(),
-        resolve: {
-          ...gyralVitePreset().resolve,
-          conditions: ['module', 'browser', 'production'],
-        },
+        resolve: { conditions: ['module', 'browser', 'production'] },
         test: {
           name: 'browser-prod',
           include: [
@@ -44,12 +49,31 @@ export default defineConfig({
             headless: true,
             provider: playwright(),
             instances: [{ browser: 'chromium' }],
+            commands: { renderOnServer },
+          },
+        },
+      },
+      {
+        // Client-only builds (view/07-hydration.md "Client-only builds"): the preset's
+        // clientOnly option resolves core with the gyral-client-only condition.
+        ...gyralVitePreset({ clientOnly: true }),
+        test: {
+          name: 'browser-client-only',
+          include: ['packages/*/test/**/*.client-only.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
           },
         },
       },
       {
         test: {
           name: 'node',
+          // Real Vite fixture builds compete for CPU; avoid cold-build timeout starvation.
+          maxWorkers: 2,
+          sequence: { groupOrder: 1 },
           include: [
             'scripts/test/**/*.test.mjs',
             'packages/*/test/**/*.node.test.ts',

@@ -9,6 +9,7 @@
     "packages/*/test",
     "packages/*/bench",
     "examples/*/src",
+    "examples/*/.gyral/elements.d.ts",
     "examples/shared",
     "examples/*/test",
     "examples/*/server",

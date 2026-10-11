@@ -1,21 +1,28 @@
+import type { GyralError } from './errors.js';
 import type { Prop } from './prop.js';
 import type { ChildValue, Styles } from './view/index.js';
 import type { CommandInfo } from './invokers.js';
 import type { HydrateStrategy } from './islands.js';
-import type { DriverOverrides, Next } from './command.js';
+import type { Command, Next } from './command.js';
 import type { AnyStore, StoreChanged, StoreRef } from './store.js';
+import type {
+  FormAssociation,
+  FormDisabled,
+  FormReset,
+  FormStateRestore,
+} from './form-associated.js';
 
 /** Every message is a tagged object; the tag is also the intent name used in markup. */
 export interface Tagged {
   readonly _tag: string;
 }
 
-/** What the intent layer sees when a `data-intent` element fires its trigger event. */
+/** What the intent layer sees when an element's intent fires. */
 export interface IntentInput {
-  /** The `data-intent` value (a message tag). */
+  /** The intent's name (a message tag): the `data-intent-<event>` or `data-intent` value. */
   readonly name: string;
   readonly event: Event;
-  /** The element carrying `data-intent`. */
+  /** The element carrying the intent attribute (`event.currentTarget` is Gyral's root). */
   readonly target: Element;
   /** `value` of the input, select, textarea or button that carries the intent. */
   readonly value: string | undefined;
@@ -23,7 +30,10 @@ export interface IntentInput {
   readonly checked: boolean | undefined;
   /** Submitted data (including the submitter button) when the intent is on a `<form>`. */
   readonly formData: FormData | undefined;
-  /** The output a child component emitted, when the intent is on a child element. */
+  /**
+   * `detail` of any `CustomEvent`: a Gyral child's output, or the event of another custom
+   * element (a map's `marker-select`). Unknown until the parser checks it (a guard, a schema).
+   */
   readonly detail: unknown;
   /** `KeyboardEvent.key` for `keydown`/`keyup` intents. */
   readonly key: string | undefined;
@@ -44,6 +54,16 @@ export interface Ctx<P> {
   readonly read: StoreReader;
 }
 
+/**
+ * What an intent parser gets besides the input: the reducers' context plus the component's
+ * current state, read-only. Parsers decide synchronously (`preventDefault()`), and where the
+ * user is often decides it: Tab leaves a grid only from its last cell.
+ */
+export interface ParserCtx<P, S = unknown> extends Ctx<P> {
+  /** The state when the event fires. */
+  readonly state: Readonly<S>;
+}
+
 /** Framework message: declared props changed after the first render (ADR 0007). */
 export interface PropsChanged<P> {
   readonly _tag: 'PropsChanged';
@@ -61,6 +81,18 @@ export interface Hydrated {
   readonly _tag: 'Hydrated';
   /** `true` when the instance resumed from server-rendered markup (a hydration seed). */
   readonly serverRendered: boolean;
+}
+
+/**
+ * Framework message (ADR 0024): an update, an intent parser or a command of this component
+ * failed. The failure was reported (`reportError`, or claimed by an ancestor's boundary) and
+ * changed nothing; reduce it to show an error state or to reset. A failure while reducing
+ * `Errored` is reported and not sent again.
+ */
+export interface Errored {
+  readonly _tag: 'Errored';
+  readonly phase: 'update' | 'parse' | 'command';
+  readonly error: GyralError;
 }
 
 /** One validation problem. `path` is dot-joined and matches the field's `name`. */
@@ -90,15 +122,50 @@ type ParseResult<M> = M | IntentRejected | undefined;
 
 /**
  * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
- * ignore it. May be async because schema validation may be.
+ * decline it: a synchronous `undefined` passes the event to the next intent outward for the
+ * same event (view/05-element.md "Declining"). May be async because schema validation may be;
+ * an async parser keeps the event. `ctx` is the read-only context reducers get (props as
+ * they are when the event fires, `read(store)`) plus `state`, the component's state at that
+ * moment; parsers that don't need it take one parameter.
  */
-export type IntentParser<M> = (input: IntentInput) => ParseResult<M> | Promise<ParseResult<M>>;
+export type IntentParser<M, P = unknown, S = unknown> = (
+  input: IntentInput,
+  ctx: ParserCtx<P, S>,
+) => ParseResult<M> | Promise<ParseResult<M>>;
 
-type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
+type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
 
-/** Intent parsers keyed by the message tag they produce. Messages from drivers need none. */
-export type Intents<M extends Tagged> = {
-  readonly [K in M['_tag']]?: IntentParser<Variant<M, K>>;
+/**
+ * The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
+ * variant; any other name is an intent of its own whose parser may produce any message.
+ */
+export type ParserFor<M extends Tagged, P, K, S = unknown> = string extends K
+  ? // The wide form (any intent name), which every specific spec is assignable to.
+    IntentParser<M, P, S> | true | TrueOnlyForFieldlessMessage
+  : K extends M['_tag']
+    ? IntentParser<Variant<M, K>, P, S> | TagOnly<Variant<M, K>>
+    : IntentParser<M, P, S>;
+
+/**
+ * `true` in the intent table: the intent sends its own tag, `{ _tag: K }` (as Elm's `onClick
+ * Deal` names the message itself). Only for a variant with no field besides `_tag`; for any
+ * other the type names the rule.
+ */
+type TagOnly<V> = [Exclude<keyof V, '_tag'>] extends [never] ? true : TrueOnlyForFieldlessMessage;
+
+interface TrueOnlyForFieldlessMessage {
+  readonly 'true only sends a message with no fields besides _tag; write a parser': never;
+}
+
+/**
+ * Intent parsers keyed by intent name (ADR 0001, ADR 0023). The keys are the component's
+ * intent names: `define<State, Msg>()(tag, { intent: { Archive: …, Increment: … } })` gives the
+ * view `i.Archive` and `i.Increment`. A key that is a message tag must return that variant; any
+ * other key may return any message (several controls that change one thing can also share one
+ * intent and tell themselves apart by `name`). Messages from drivers need no parser.
+ */
+export type Intents<M extends Tagged, P = unknown, N extends string = string, S = unknown> = {
+  readonly [K in N]: ParserFor<M, P, K, S>;
 };
 
 type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
@@ -114,10 +181,17 @@ export type Update<S, M extends Tagged, P = object> = {
   readonly IntentRejected?: Reducer<S, M, IntentRejected, P>;
   readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
   readonly Hydrated?: Reducer<S, M, Hydrated, P>;
+  readonly Errored?: Reducer<S, M, Errored, P>;
+  readonly FormReset?: Reducer<S, M, FormReset, P>;
+  readonly FormDisabled?: Reducer<S, M, FormDisabled, P>;
+  readonly FormStateRestore?: Reducer<S, M, FormStateRestore, P>;
 };
 
-/** Typed intent names handed to the view, so `data-intent=${i.Increment}` is checked. */
-export type IntentNames<M extends Tagged> = { readonly [K in M['_tag']]: K };
+/**
+ * A component's intent names, the keys of its `intent` object, as the view's `i` and as
+ * `intentsOf<typeof C>()`, so `data-intent=${i.Increment}` is checked (ADR 0023).
+ */
+export type IntentNames<N extends string> = { readonly [K in N]: K };
 
 /**
  * The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per
@@ -138,17 +212,63 @@ type InitField<S, M extends Tagged, P> = Stateless extends S
   ? { readonly init?: Init<S, M, P> }
   : { readonly init: Init<S, M, P> };
 
-export type ComponentSpec<S, M extends Tagged, P> = SpecBody<S, M, P> & InitField<S, M, P>;
+/**
+ * A component spec. `N` is the component's intent names, the keys of `intent` (ADR 0023).
+ */
+export type ComponentSpec<S, M extends Tagged, P, N extends string = string> = SpecBody<
+  S,
+  M,
+  P,
+  N
+> &
+  IntentField<S, M, P, N> &
+  UpdateField<S, M, P> &
+  InitField<S, M, P>;
 
-interface SpecBody<S, M extends Tagged, P> {
+interface IntentField<S, M extends Tagged, P, N extends string> {
+  /**
+   * INTENT: platform events to messages, keyed by intent name (ADR 0023). `Key: true` sends
+   * `{ _tag: 'Key' }`. Omit it when the component handles no events.
+   */
+  readonly intent?: Intents<M, P, N, S>;
+}
+
+// `update` is required (and exhaustive) whenever the component has messages.
+type UpdateField<S, M extends Tagged, P> = [M] extends [never]
+  ? {
+      /** MODEL: pure state transitions (only framework messages for a component without any). */
+      readonly update?: Update<S, M, P>;
+    }
+  : {
+      /** MODEL: pure state transitions, one reducer per message tag. */
+      readonly update: Update<S, M, P>;
+    };
+
+/**
+ * `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
+ * `delegatesFocus: true`: focusing the host, or clicking a non-focusable part of it, focuses its
+ * first focusable element, and `:focus` matches the host while focus is inside; the server
+ * writes `shadowrootdelegatesfocus` on the declarative shadow root (view/05-element.md "Focus").
+ */
+export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
+
+interface SpecBody<S, M extends Tagged, P, N extends string> {
+  /** Native form participation with pure value, restoration-state and validity projections. */
+  readonly formAssociated?: FormAssociation<S, P>;
   /** The component's inputs, declared with `prop.*` builders. */
   readonly props?: PropDeclarations<P>;
-  /** INTENT: platform events to messages. */
-  readonly intent: Intents<M>;
-  /** MODEL: pure state transitions. */
-  readonly update: Update<S, M, P>;
-  /** VIEW: pure function of state and props. Name intents in markup; never attach closures. */
-  readonly view: (state: S, intents: IntentNames<M>, ctx: Ctx<P>) => ChildValue;
+  /**
+   * VIEW: pure function of state and props. Name intents in markup; never attach closures.
+   * (A method, so a class typed with fewer intent names, e.g. `GyralElementClass<S, M, P, O>`
+   * for a recursive component, still accepts it.)
+   */
+  view(state: S, intents: IntentNames<N>, ctx: Ctx<P>): ChildValue;
+  /**
+   * What to show when `init` or the view throws (ADR 0024): `state` is `undefined` when `init`
+   * threw. Without it, a failed first render leaves the host empty and a failed later render
+   * keeps its previous DOM. A fallback that throws too is reported and the previous DOM stays.
+   */
+  error?(failure: GyralError, state: S | undefined): ChildValue;
   /**
    * Shadow-root styles: `css` values, plain CSS strings, or arrays of them, nested freely.
    * Each maps to one shared `CSSStyleSheet`. Ignored (with a warning) when `shadow: false`.
@@ -158,18 +278,15 @@ interface SpecBody<S, M extends Tagged, P> {
    * `false` renders the view as the element's own light-DOM children (ADR 0014): document CSS
    * applies, and the server writes plain children instead of a `<template shadowrootmode>`.
    * For page-level components (listings, articles). No `<slot>`s and no `styles`. Default `true`.
+   * An object configures the shadow root (`{ delegatesFocus: true }`).
    */
-  readonly shadow?: boolean;
+  readonly shadow?: ShadowOption;
   /**
    * When a server-rendered instance hydrates (gyral-4k7.4): `load` (default), `idle`,
    * `visible` (scrolled into view) or `interaction` (first pointer/focus). Client-only
    * renders are unaffected.
    */
   readonly hydrate?: HydrateStrategy;
-  /** Extra event types that may trigger intents via `data-intent-on` (e.g. `pointerdown`). */
-  readonly events?: readonly string[];
-  /** Driver substitutions by name, for every instance (ADR 0006). */
-  readonly drivers?: DriverOverrides;
   /**
    * Stores this component reads with `ctx.read(store)` and writes with `send(store, msg)`.
    * Their changes re-render it (and reach the optional `StoreChanged` reducer). ADR 0013.
@@ -194,4 +311,13 @@ interface SpecBody<S, M extends Tagged, P> {
    * `gy-x:state(loading)`. Applied after each render; feature-detected; not on the server.
    */
   readonly states?: (state: S) => Readonly<Record<string, boolean>>;
+  /**
+   * The long-lived commands that should be running now (ADR 0025): polling, clocks, sockets,
+   * store or media-query watches. Evaluated after init, every update and every props change;
+   * the runtime starts lanes that appear, aborts lanes that disappear, and restarts a lane whose
+   * input changed (compared by JSON text). They stop with the host's other commands on removal
+   * and start again from the current state when it is attached again:
+   * `subscriptions: (s, p) => (s.live ? [every(30_000, (now) => ({ _tag: 'Tick', now }))] : [])`.
+   */
+  readonly subscriptions?: (state: S, props: P) => readonly Command<M>[];
 }

@@ -4,6 +4,7 @@
 // types, local names, text lengths), and a host whose DOM doesn't match is rebuilt alone: its
 // root is cleared and rendered fresh, with a warning, while its siblings stay hydrated.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { collectErrors } from '../collect-errors.js';
 import { define, html, settled } from '../../src/index.js';
 import { renderToString } from '../../src/server.js';
 import {
@@ -118,12 +119,12 @@ describe('what each build detects', () => {
 type Msg = { readonly _tag: 'Inc' };
 const counter = {
   init: () => ({ n: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) as const },
+  intent: { Inc: true as const },
   update: { Inc: (s: { n: number }) => ({ n: s.n + 1 }) },
   view: (s: { n: number }) => html`<button data-intent="Inc">n ${s.n}</button>`,
 };
-define<{ n: number }, Msg>('test-mm-shadow', counter);
-define<{ n: number }, Msg>('test-mm-light', { ...counter, shadow: false });
+define<{ n: number }, Msg>()('test-mm-shadow', counter);
+define<{ n: number }, Msg>()('test-mm-light', { ...counter, shadow: false });
 
 describe('a host whose server DOM does not match', () => {
   const page = (tag: string, n: number) =>
@@ -133,8 +134,8 @@ describe('a host whose server DOM does not match', () => {
     (tag.endsWith('light') ? '' : '</template>') +
     `</${tag}>`;
 
-  it('fails alone; its siblings hydrate (development throws, production rebuilds it)', async () => {
-    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('fails alone; its siblings hydrate (development reports it, production rebuilds it)', async () => {
+    const collected = collectErrors();
     const warnings = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const root = container();
     const broken = page('test-mm-shadow', 2).replace('<button', '<a').replace('</button>', '</a>');
@@ -148,17 +149,20 @@ describe('a host whose server DOM does not match', () => {
     (good?.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
     await settled();
     expect(good?.shadowRoot?.textContent).toBe('n 2');
-    const reported = [...errors.mock.calls, ...warnings.mock.calls].flat().map(String).join('\n');
+    collected.stop();
+    const reported = [collected.text(), ...warnings.mock.calls.flat().map(String)].join('\n');
     expect(reported).toMatch(
       /hydration mismatch in <test-mm-shadow>.*expected <button>, found <a>/,
     );
     expect(reported).toMatch(/hydration mismatch in <test-mm-light>/);
     if (DEV) {
-      expect(errors).toHaveBeenCalled(); // thrown, logged by the scheduler
+      expect(collected.errors[0]?.phase).toBe('view'); // thrown, reported for the host (ADR 0024)
       expect(bad?.shadowRoot?.querySelector('a')).not.toBeNull(); // left as the server wrote it
     } else {
-      expect(errors).not.toHaveBeenCalled();
-      expect(reported).toMatch(/<test-mm-shadow> was rendered fresh/);
+      expect(collected.errors).toEqual([]);
+      // G0063 (production: the code, the tag and the docs URL), then the mismatch itself.
+      expect(reported).toMatch(/Gyral G0063 test-mm-shadow https:\/\/gyral\.dev\/errors\/#G0063/);
+      expect(reported).toMatch(/expected <button>, found <a>\. Gyral G0062 https:/);
       expect(bad?.shadowRoot?.innerHTML).toBe('<button data-intent="Inc">n 2</button>');
       expect(bad?.state.n).toBe(2); // resumed from its seed
       expect(light?.innerHTML).toBe('<button data-intent="Inc">n 3</button>');

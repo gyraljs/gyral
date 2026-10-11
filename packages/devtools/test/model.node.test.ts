@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { DevEvent } from '@gyral/core';
+import { defineForm } from '@gyral/core';
+import { type DevEvent } from '@gyral/core/internal';
 import { initialPanel, MAX_ROWS, preview, receive, visibleRows } from '../src/model.js';
 
 const el = {} as Element;
@@ -86,6 +87,25 @@ describe('panel model (ADR 0017)', () => {
     expect(visibleRows({ ...s, kinds: ['store'] })).toHaveLength(1);
   });
 
+  it('shows failures as error rows (ADR 0024)', () => {
+    const s = receive(initialPanel(), [
+      {
+        kind: 'error',
+        component: comp(1),
+        phase: 'update',
+        msg: 'Add',
+        message: '<x-card> update for "Add" failed',
+        error: new Error('boom'),
+        at,
+      },
+      { kind: 'error', phase: 'store', message: 'store failed', error: 'x', at },
+    ]);
+    expect(s.rows.map((r) => `${r.kind}:${r.who}:${r.what}:${r.detail}`)).toEqual([
+      'error:<x-card>#1:update failed (Add):Error: boom',
+      'error:gyral:store failed:"x"',
+    ]);
+  });
+
   it('keeps at most MAX_ROWS rows', () => {
     const many: DevEvent[] = Array.from({ length: MAX_ROWS + 10 }, (_, i) => ({
       kind: 'store',
@@ -107,5 +127,25 @@ describe('panel model (ADR 0017)', () => {
     expect(preview({ f: () => 1 })).toBe('{"f":"[function]"}');
     expect(preview('x'.repeat(500), 10)).toHaveLength(10);
     expect(preview(undefined)).toBe('undefined');
+  });
+
+  it('redacts secret form fields in previews (state, rejections, FormData)', () => {
+    // Any Standard Schema; only the secret list matters here.
+    const schema = {
+      '~standard': { version: 1, vendor: 'test', validate: (value: unknown) => ({ value }) },
+    } as const;
+    defineForm(schema, { secret: ['card'] });
+    const state = {
+      values: { email: 'ada@example.com', card: '4111111111111111', password: 'hunter2' },
+    };
+    expect(preview(state, 500)).toBe(
+      '{"values":{"email":"ada@example.com","card":"[secret]","password":"[secret]"}}',
+    );
+    const data = new FormData();
+    data.append('email', 'ada@example.com');
+    data.append('card', '4111111111111111');
+    expect(preview({ form: data }, 500)).toBe(
+      '{"form":{"email":["ada@example.com"],"card":"[secret]"}}',
+    );
   });
 });

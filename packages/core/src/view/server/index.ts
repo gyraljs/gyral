@@ -1,12 +1,14 @@
 // The server renderer (view/06-server.md "API"): synchronous, chunked, runtime-agnostic (no
-// DOM, no Node-only APIs: a JavaScript SHA-256 for the style hashes). `@gyral/core/server` wraps these,
+// DOM, no Node-only APIs: a JavaScript SHA-256 for the style hashes). `@gyral/core/internal/server` wraps these,
 // registering recorded specs first; code outside view/ may import only this module of view/server/.
 import { DEV } from '../flags.js';
 import { serverComponents } from '../registry.js';
 import type { ChildValue } from '../render/values.js';
 import { expand, styleText } from './component.js';
 import { sha256 } from './sha256.js';
-import { ROOT, Writer, type Item } from './writer.js';
+import { ROOT, Writer, type Item, type StyleValues } from './writer.js';
+
+export type { StyleValues };
 
 export interface ServerRenderOptions {
   /**
@@ -15,7 +17,29 @@ export interface ServerRenderOptions {
    * export condition, as for the client), off otherwise.
    */
   readonly dev?: boolean;
+  /**
+   * Collects every `style` attribute value the render writes, decoded (as the DOM sees it),
+   * each mapped to where it was first written (template `loc` or id): static, bound,
+   * multi-part and element-hook values; not `raw()` markup. For hashing them into a CSP
+   * (ADR 0020). The markup is the same with or without it.
+   */
+  readonly styleAttributes?: StyleValues;
+  /**
+   * Hears each component whose `init` or view threw (ADR 0024; core's `GyralError`): the page
+   * goes on with that component's error view, or nothing. Default `console.error`. Throwing
+   * from it ends the render with that error.
+   */
+  readonly onError?: (error: unknown) => void;
+  /**
+   * Collects the tag of every Gyral component the render writes, in document order, so a page
+   * can load exactly those components' client modules (automatic component loading).
+   */
+  readonly tags?: Set<string>;
 }
+
+const logError = (error: unknown): void => {
+  console.error(error);
+};
 
 function push(stack: Item[], items: readonly Item[]): void {
   for (let i = items.length - 1; i >= 0; i--) stack.push(items[i] as Item);
@@ -28,13 +52,19 @@ function push(stack: Item[], items: readonly Item[]): void {
  */
 export function* render(value: ChildValue, options: ServerRenderOptions = {}): Iterable<string> {
   const dev = options.dev ?? DEV;
-  const root = new Writer(dev, undefined);
+  const styles = options.styleAttributes;
+  const onError = options.onError ?? logError;
+  const tags = options.tags;
+  const root = new Writer(dev, undefined, styles);
   root.child(value, undefined, ROOT);
   const stack: Item[] = [];
   push(stack, root.done());
   for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
     if (typeof item === 'string') yield item;
-    else push(stack, expand(item, dev));
+    else {
+      tags?.add(item.component.tag);
+      push(stack, expand(item, dev, styles, onError));
+    }
   }
 }
 

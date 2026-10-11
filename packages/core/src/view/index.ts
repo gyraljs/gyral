@@ -1,7 +1,16 @@
 // The view layer's entry point for the rest of core (ADR 0018 "Where it lives"): code outside
 // view/ imports only this module. @gyral/core's index re-exports the public part of it.
 export { DEV } from '#view-dev';
-export { html, compiled, isTemplateResult, templateOf, type TemplateResult } from './template.js';
+export { codeName, docsLink, message, type MessageCode } from './message.js';
+export {
+  html,
+  svg,
+  compiled,
+  compiledSvg,
+  isTemplateResult,
+  templateOf,
+  type TemplateResult,
+} from './template.js';
 export { templateElement } from './template-element.js';
 export { normalize, analyze, type Analysis } from './normalize/normalize.js';
 export { checkTemplate, type TemplateIssue } from './normalize/check.js';
@@ -23,10 +32,22 @@ export { render, renderBatch } from './render/render.js';
 export type { Markup, SeenMarkup } from './render/seen.js';
 export { HydrationMismatch } from './render/mismatch.js';
 export { each } from './render/list.js';
+export { keyed } from './render/keyed.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';
 export { defineHook } from './render/hook-part.js';
-export type { HookAttributes, HookResult, HookSpec } from './render/hooks.js';
+export { useToggles } from './render/toggles.js';
+export { applyToggle } from './render/modal.js';
+export { commitTracked } from './render/dispose.js';
+export {
+  flushHooks,
+  onHookFailure,
+  suspendHooks,
+  useDisposableHooks,
+  type HookAttributes,
+  type HookResult,
+  type HookSpec,
+} from './render/hooks.js';
 export {
   css,
   isStyleSource,
@@ -36,13 +57,19 @@ export {
   type StyleSource,
   type Styles,
 } from './styles.js';
-export { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, SEED_ATTRIBUTE } from './attributes.js';
+export {
+  ERROR_ATTRIBUTE,
+  ISLAND_ATTRIBUTE,
+  LIGHT_ATTRIBUTE,
+  SEED_ATTRIBUTE,
+} from './attributes.js';
 export {
   registerServerComponent,
   registerServerProvider,
   serverComponent,
   serverComponents,
   serverProvider,
+  serverRegistryVersion,
   type ServerComponent,
   type ServerProvider,
   type ServerRenderInput,

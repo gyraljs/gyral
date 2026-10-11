@@ -1,9 +1,10 @@
 # Components: `define()`
 
-`define<S, M, P, O>(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
+`define<S, M, P, O>()(tag, spec)` compiles a spec into a plain custom element (an `HTMLElement`
 subclass), registers it under `tag`, and returns the class. Type parameters: `S` state, `M`
 message union, `P` props (default `object`; inferred from the `prop.*` builders when you pass
-no type arguments), `O` outputs a child emits to its parent (default `never`). Rendering goes
+no type arguments), `O` outputs a child emits to its parent (default `never`; emit them with
+`const emit = outputs<O>()`, composition.md). Rendering goes
 through one global scheduler: reducers run at once, the DOM updates in a microtask; tests
 `await settled()`.
 
@@ -17,10 +18,8 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `view(state, intents, ctx)`       | yes                          | Pure template; `ctx.props`, `ctx.read(store)`                                   |
 | `props`                           | no                           | `prop.*` builders (Standard Schema), with the `required`/`default` rule         |
 | `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
-| `shadow`                          | no                           | `false` renders into light DOM (page-level content). Default `true`             |
+| `shadow`                          | no                           | `false`: light DOM (page content); `{ delegatesFocus: true }`. Default `true`   |
 | `hydrate`                         | no                           | `'load'` (default), `'idle'`, `'visible'`, `'interaction'` for SSR islands      |
-| `events`                          | no                           | Extra event types a bound `data-intent-on=${…}` may produce (see intent.md)     |
-| `drivers`                         | no                           | Driver substitutions by name for every instance                                 |
 | `stores`                          | no                           | Stores this component reads and writes                                          |
 | `viewTransition(prev, next, msg)` | no                           | `true` renders that change inside a View Transition                             |
 | `states(state)`                   | no                           | Boolean custom states for CSS: `:host(:state(loading))`                         |
@@ -48,10 +47,10 @@ interface State {
 }
 type Msg = { readonly _tag: 'Bump' };
 
-export const Stepper = define<State, Msg, Props>('my-stepper', {
+export const Stepper = define<State, Msg, Props>()('my-stepper', {
   props,
   init: () => ({ value: 0 }),
-  intent: { Bump: () => ({ _tag: 'Bump' }) },
+  intent: { Bump: true },
   update: {
     Bump: (s, _m, { props: p }) => ({ value: Math.min(s.value + p.step, p.maxValue) }),
   },
@@ -72,17 +71,55 @@ export const Stepper = define<State, Msg, Props>('my-stepper', {
 | `prop.json(schema, opts?)`  | `JSON.parse`, then the schema       | kebab-case     |
 | `prop.value(schema, opts?)` | none: property only (`.items=${…}`) | none           |
 
+`prop.json` and `prop.value` also take a plain type guard instead of a schema:
+`prop.value(isFilter, { required: true })` with `const isFilter = (u: unknown): u is Filter => …`.
+
 Options: `schema` (refines `string`/`number`/`boolean`, e.g. `v.picklist([...])`),
-`attribute` (a name, or `false` for property only), `required`, `default`. Any Standard Schema
+`attribute` (a name, or `false` for property only), `required`, `default`, and `equals` for
+`prop.json`/`prop.value` (below). Any Standard Schema
 library works (valibot, zod, …); schemas must be synchronous and should validate, not transform.
 
 - **Attributes are always validated** (they're external strings). Property sets and hydration
   seeds are validated in development only. An invalid value is logged and treated as missing.
+- **A property set keeps the object it was given** (`el.item === item`): development checks it
+  and stores the input, production skips the schema. So schemas for properties must check, not
+  decode (no `Date` parsing, defaults or key stripping there); a type guard is enough.
 - No reflection: props never write attributes. State that CSS needs goes through `states`.
 - Objects and arrays travel as properties: `prop.value(v.array(Item), { default: [] })` and
   `.items=${s.items}` in the parent.
 - Don't name props after built-in element properties (`hidden`, `title`, `id`): it's an error
   in development, because setting them changes platform behaviour.
+
+A `default` replaces only `undefined`: setting a defaulted prop to `undefined` (or removing its
+attribute) brings the default back, so `undefined` can't mean "nobody on purpose". Use `null`
+for that, with a nullable schema: `owner: prop.value(v.nullable(User), { default: team })`,
+then `.owner=${null}` (or `prop.json(…)` and the attribute `owner="null"`).
+
+### When a prop counts as changed
+
+A new value that equals the old one changes nothing: no re-render, no `PropsChanged` (0.3.1).
+`prop.json` compares the JSON (`JSON.stringify`), so a parent that writes
+`.range=${{ min: s.min, max: s.max }}` with a fresh object every render is fine.
+`prop.value` compares with `Object.is` (it can hold anything: class instances, functions, DOM
+nodes); give it `equals` when you know what "the same" means. It receives the old and new value
+(`undefined` when unset):
+
+```ts
+import { prop } from '@gyral/core';
+
+interface Sort {
+  readonly key: string;
+  readonly dir: 1 | -1;
+}
+const isSort = (u: unknown): u is Sort => typeof u === 'object' && u !== null && 'key' in u;
+
+export const props = {
+  sort: prop.value(isSort, { equals: (a, b) => a?.key === b?.key && a?.dir === b?.dir }),
+};
+```
+
+Otherwise, keep bound objects stable in the parent: build them in the reducer (state) rather
+than in the view, so an unchanged object is the same object.
 
 ## Stateless components
 
@@ -91,10 +128,8 @@ library works (valibot, zod, …); schemas must be synchronous and should valida
 ```ts
 import { define, html, prop, type Stateless } from '@gyral/core';
 
-export const Badge = define<Stateless, never, { readonly text: string }>('my-badge', {
+export const Badge = define<Stateless, never, { readonly text: string }>()('my-badge', {
   props: { text: prop.string({ default: '' }) },
-  intent: {},
-  update: {},
   view: (_s, _i, { props }) => html`<span class="badge">${props.text}</span>`,
 });
 ```
@@ -110,9 +145,7 @@ trusted author code, never user input. Theme through inherited custom properties
 ```ts
 import { css, define, html, type Stateless } from '@gyral/core';
 
-export const Card = define<Stateless, never>('my-card', {
-  intent: {},
-  update: {},
+export const Card = define<Stateless, never>()('my-card', {
   view: () => html`<article part="card"><slot></slot></article>`,
   styles: css`
     @layer component {
@@ -141,10 +174,8 @@ Gyral host, so nested components keep their own intents.
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 
-export const AboutPage = define<Stateless, never>('my-about-page', {
+export const AboutPage = define<Stateless, never>()('my-about-page', {
   shadow: false,
-  intent: {},
-  update: {},
   view: () => html`
     <h1>About us</h1>
     <p>Plain children of the element: indexable and styled by the page.</p>
@@ -160,9 +191,9 @@ import { css, define, html } from '@gyral/core';
 type State = { readonly _tag: 'Idle' } | { readonly _tag: 'Loading' };
 type Msg = { readonly _tag: 'Start' } | { readonly _tag: 'Done' };
 
-export const Loader = define<State, Msg>('my-loader', {
+export const Loader = define<State, Msg>()('my-loader', {
   init: () => ({ _tag: 'Idle' }),
-  intent: { Start: () => ({ _tag: 'Start' }) },
+  intent: { Start: true },
   update: {
     Start: () => ({ _tag: 'Loading' }),
     Done: () => ({ _tag: 'Idle' }),
@@ -187,23 +218,28 @@ export const Loader = define<State, Msg>('my-loader', {
 
 ## Typing the tag
 
-Declare the tag so `document.createElement('my-…')` and `querySelector` are typed:
+`gyralVitePreset()` writes `.gyral/elements.d.ts` with an `HTMLElementTagNameMap` entry for
+every **exported** two-call `define` in `src` (at the start of `vite`, `vite build` and Vitest,
+and again when a file changes), so `document.createElement('my-hello')` and `querySelector`
+return the component's class. Gitignore `.gyral/` and add `".gyral/elements.d.ts"` to tsconfig
+`include` (spelled out: TypeScript's wildcards skip dot-folders). Type checks that run without
+Vite write it first with the CLI: `"typecheck": "gyral-types && tsc --noEmit"`. Don't
+hand-write `declare global { interface HTMLElementTagNameMap … }` blocks any more.
 
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 
-export const Hello = define<Stateless, never>('my-hello', {
-  intent: {},
-  update: {},
+// Exported, so the generated file can import its type.
+export const Hello = define<Stateless, never>()('my-hello', {
   view: () => html`<p>Hello</p>`,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'my-hello': InstanceType<typeof Hello>;
-  }
-}
 ```
+
+Options: `gyralVitePreset({ types: { dirs: ['src', 'lib'], out: 'types/elements.d.ts' } })`,
+or `types: false` to write nothing. Limits: only `export const X = define…()('tag', …)` is
+recognised (a component built some other way keeps a hand-written entry); a component's
+outputs aren't turned into typed events, because an intent parser can't know which element or
+event fired it; use `child(Component, …)` for typed outputs instead.
 
 The class also carries `.spec` (the spec you passed), which `@gyral/testing` uses:
 `step(Hello.spec, …)`.

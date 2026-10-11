@@ -36,13 +36,12 @@ const strings: StandardSchemaV1<readonly string[]> = {
   },
 };
 
-const Seeded = define<State, Msg, Props>('test-seeded', {
+const Seeded = define<State, Msg, Props>()('test-seeded', {
   props: { label: prop.string(), items: prop.value(strings) },
   init: (p) => [
     { title: `init:${p.label ?? ''}`, heard: [], renders: 0 },
     [command(sync, p.label ?? '', { onSuccess: (value) => ({ _tag: 'Heard', value }) })],
   ],
-  intent: {},
   update: { Heard: (s, m) => ({ ...s, heard: [...s.heard, m.value] }) },
   view: (s, _i, { props }) => {
     firstRenderState ??= s;

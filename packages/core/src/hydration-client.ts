@@ -6,6 +6,7 @@ import {
   DEV,
   hydrate,
   HydrationMismatch,
+  message,
   render,
   type ChildValue,
   type SeenMarkup,
@@ -38,7 +39,7 @@ export function hydrateRoot(
     if (!(error instanceof HydrationMismatch)) throw error;
     if (DEVTOOLS_ENABLED) devMismatch(host, tag, error.message);
     if (DEV) throw error;
-    console.warn(`${error.message} <${tag}> was rendered fresh.`);
+    console.warn(message(63, tag), error.message);
     root.replaceChildren();
     render(view, root, seen);
   }

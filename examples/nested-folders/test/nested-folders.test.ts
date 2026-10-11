@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { settled } from '@gyral/core';
-import { run, step } from '@gyral/testing';
+import { mount as mountEl, run, step } from '@gyral/testing';
 import { Folder } from '../src/folder.js';
 
 type FolderEl = InstanceType<typeof Folder>;
@@ -50,11 +50,8 @@ describe('in the browser', () => {
   };
 
   async function mount() {
-    const root = document.createElement('gy-folder');
-    root.setAttribute('folder-id', '1');
-    document.body.append(root);
-    await settled();
-    return root;
+    const { el } = await mountEl('gy-folder', { attrs: { 'folder-id': '1' } });
+    return el;
   }
 
   it('the root folder cannot remove itself', async () => {

@@ -1,6 +1,7 @@
 // In-memory history: tests and servers route without touching window.location (ADR 0009).
 import { capturedUrl, linkCapture } from './links.js';
 import { locationStream } from './stream.js';
+import type { Head } from '@gyral/core';
 import type { Source } from './source.js';
 
 export interface MemoryOptions {
@@ -25,7 +26,7 @@ export function createMemorySource(options: MemoryOptions): Source {
   const base = new URL(options.origin ?? 'http://localhost');
   let entries = [new URL(options.initial ?? '/', base)];
   let index = 0;
-  let title = '';
+  let head: Head | undefined;
   const at = (): URL => entries[index] ?? base;
   const stream = locationStream(at);
 
@@ -69,10 +70,10 @@ export function createMemorySource(options: MemoryOptions): Source {
       index = next;
       stream.notify();
     },
-    setTitle: (text) => {
-      title = text;
+    setHead: (next) => {
+      head = next;
     },
-    snapshot: () => ({ href: at().href, title, length: entries.length }),
+    snapshot: () => ({ href: at().href, head, length: entries.length }),
     dispose: () => {
       capture.dispose();
       stream.clear();

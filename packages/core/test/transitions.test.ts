@@ -3,9 +3,8 @@ import { define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Go'; readonly page: string } | { readonly _tag: 'Tick' };
 
-const Pages = define<{ readonly page: string; readonly ticks: number }, Msg>('test-transitions', {
+const Pages = define<{ readonly page: string; readonly ticks: number }, Msg>()('test-transitions', {
   init: () => ({ page: 'home', ticks: 0 }),
-  intent: {},
   update: {
     Go: (s, m) => ({ ...s, page: m.page }),
     Tick: (s) => ({ ...s, ticks: s.ticks + 1 }),

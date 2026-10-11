@@ -11,14 +11,14 @@ export interface Props {
   readonly start: number;
 }
 
-export const Counter = define<State, Msg, Props>('app-counter', {
+export const Counter = define<State, Msg, Props>()('app-counter', {
   // Props are inputs (attributes or properties). The server-rendered value travels to the
   // browser in the hydration seed, so the page starts where the server left it.
   props: { start: prop.number({ default: 0 }) },
   init: (props) => ({ count: props.start }),
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   update: {
     Increment: (s) => ({ count: s.count + 1 }),
@@ -60,9 +60,3 @@ export const Counter = define<State, Msg, Props>('app-counter', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'app-counter': InstanceType<typeof Counter>;
-  }
-}

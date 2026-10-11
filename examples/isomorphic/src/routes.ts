@@ -1,3 +1,4 @@
+import type { Head } from '@gyral/core';
 import { routes } from '@gyral/router';
 
 // One route table for the server (status, title) and the client (which page to show).
@@ -23,7 +24,23 @@ export const titles = {
   about: 'Read more about us',
 } as const;
 
-export const pageTitle = (path: string): string => {
+/**
+ * The site's public origin, for canonical URLs. Configuration, never the request's Host header,
+ * which a client or proxy can set (ADR 0019).
+ */
+export const ORIGIN = 'https://iso.example';
+
+/**
+ * The page's head for a path: the server's `renderPage()` and the client's `setHead()` both
+ * call it, so a client navigation leaves the same head as a page load (ADR 0019).
+ */
+export const pageHead = (path: string): Head => {
   const match = site.match(path);
-  return `${match === undefined ? 'Page not found' : titles[match.name]} — Gyral isomorphic`;
+  return {
+    title: `${match === undefined ? 'Page not found' : titles[match.name]} — Gyral isomorphic`,
+    description: 'A Gyral app rendered on the server and hydrated in the browser.',
+    ...(match === undefined
+      ? { robots: 'noindex' }
+      : { canonical: new URL(match.path, ORIGIN).href }),
+  };
 };

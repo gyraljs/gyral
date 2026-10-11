@@ -16,7 +16,10 @@ and no VM: the renderer walks template objects (01) and writes strings.
 - Runtime-agnostic: no Node-only APIs (no `node:crypto`, no `Buffer`), so it runs in
   Node, Deno and Workers alike.
 
-## API (`@gyral/core/server`)
+## API (core's internal server entry, `@gyral/core/internal/server`)
+
+Since 0.3.1 this entry is internal (gyral-1zd.24): apps render through `@gyral/ssr`
+(`renderPage`, `renderToString`, `styleHashes`), which builds on it.
 
 ```ts
 render(value: ChildValue, options?: { dev?: boolean }): Iterable<string>; // synchronous chunks
@@ -25,6 +28,7 @@ styleHashes(): Promise<readonly string[]>; // 'sha256-…' for every registered 
 styleHash(text: string): Promise<string>; // the same hash for any <style> text (Phase 4)
 styleHashSync(text: string): string; // the same, synchronously (2026-10-06)
 componentStyles(): ReadonlyMap<string, string>; // tag → <style> text of registered components
+registryVersion(): number; // changes on every registration (0.3.1, gyral-g1r.23)
 development: boolean; // core resolved with the `development` condition (`dev`'s default)
 StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope (Phase 4)
 ```
@@ -39,10 +43,12 @@ StoreRegistry, withStoreScope; // re-exported for @gyral/ssr's per-request scope
 - **Synchronous.** State is known before rendering (init is pure; data is loaded by the app or
   a form action first), so nothing in a template is awaited. A `Promise` value is an error.
 - **Chunked.** `render` yields at least at every component boundary. `@gyral/ssr`'s
-  `renderToStream`/`renderPage` pull chunks into a `ReadableStream` and run each pull inside
-  the request's store scope, so ADR 0013's per-step isolation keeps working unchanged.
-- `@gyral/ssr` keeps the serving side: `page()` (which writes the page's store seed and global
-  `<style>` elements itself), `renderToString`, `renderToStream`, `renderPage`,
+  `renderPage` pulls chunks into a `ReadableStream` and run each pull inside
+  the request's store scope, so ADR 0013's per-step isolation keeps working unchanged. This is
+  pull-based output of a synchronous render, not async or suspense streaming: nothing waits
+  for data mid-page, so docs say "chunked", not "streaming" (gyral-dyn.7).
+- `@gyral/ssr` keeps the serving side: `renderPage` (which writes the page's store seed and
+  global `<style>` elements itself), `renderToString`,
   `contentSecurityPolicy`, static generation and production serving (`@gyral/ssr/static`) and
   form actions. `serverHtml` is gone: `page()` is written with core's `html` (page templates
   are `server` templates, 01).
@@ -64,6 +70,11 @@ The server writes the template HTML (01), putting each value in at its hole:
 - Lists: rows one after another, **no markers** (03). Empty strings and `nothing` write
   nothing; hydration creates what it needs (07).
 - `raw(html)`: an anchor comment, then the string verbatim (02).
+- **svg templates** (0.3.1, 01 "svg templates"): written like any template, their HTML as is
+  inside the parent's `<svg>` (self-closing tags, attribute names as written, anchors and
+  development markers as usual), so the browser's parser builds SVG elements from it. Escaping
+  is the same: in SVG content the parser decodes character references in text and attribute
+  values as in HTML, and `<title>`/`<style>`/`<script>` inside SVG are not raw text there.
 - **Page shells:** a `server` template (01) has no anchors in its HTML, and a `raw()` value in
   one of its own holes is written without its start anchor: hydration never walks a shell.
   Templates nested in a shell's holes are ordinary templates and keep theirs. With 01's
@@ -84,7 +95,7 @@ The server writes the template HTML (01), putting each value in at its hole:
   `textarea`/`title` content follows the client's flattening exactly (objects as `String(v)`,
   with the development warning).
 
-### How the walk streams (Phase 4)
+### How the walk is chunked (Phase 4)
 
 The walk is plain recursion over segments that appends to one string. When it meets a Gyral
 component it writes the start tag and its attributes, then **defers** the rest (seed, shadow
@@ -104,6 +115,17 @@ nested components again) when it reaches one. So:
 
 ### Errors (Phase 4)
 
+**A component that throws** (ADR 0024): its `init`, its initial messages or its view. The
+component renders `spec.error(failure, state)` (or nothing, also when that throws too) and its
+start tag gets `data-gyral-error` instead of a seed; the browser starts it fresh rather than
+hydrating it. The rest of the page renders. The render's `onError(error)` option hears each
+`GyralError` (default `console.error`); throwing from it ends the render with that error.
+`@gyral/ssr`'s `onError: 'throw'` renders `renderPage` to a string first, so it throws before any
+byte is sent.
+
+The renderer's own errors below throw when they are in the page itself; inside a component's
+view they make that component fail as above.
+
 Always (the markup would be wrong otherwise):
 
 - a `Promise` in any hole (child, attribute, text content);
@@ -118,6 +140,10 @@ In development (`dev`):
   there: the parser would foster-parent it out of the table, so the page would differ from
   the client's DOM (rule 7). Static text at a nested template's root is not checked;
 - other objects in child holes, non-hooks in hook holes, bad or duplicate `each` keys;
+- an svg template written outside SVG content (at a view's root, or in a hole whose parent is
+  an HTML element, `<foreignObject>`, `<desc>` or `<title>`): the parser would make HTML
+  elements of it. The child op's `svg` flag (01) says where SVG content is; a template's
+  root-level holes inherit their instance's place (0.3.1);
 - warnings, once per call site: `true` in a child hole, objects in attributes or text content.
 
 ### Development markers
@@ -208,9 +234,12 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
 
 - `csp` takes `contentSecurityPolicy()`'s options. The header is the given directives, and
   `style-src` = the given one (default `'self'`) plus the hashes of every registered shadow
-  component's `<style>` and of each `page({ styles })` entry (as written, `</style` escaped);
-  `styles` defaults to the page's own. It is cached per options object until another
-  component registers.
+  component's `<style>` and of each `renderPage({ styles })` entry (as written, `</style` escaped);
+  `styles` defaults to the page's own. It is cached per options object until the server
+  registry changes: the cache keys on `registryVersion()`, bumped by every registration (so
+  every change to the set of component CSS), and on the page `styles` (by identity). Until
+  0.3.1 it keyed on the number of styled components, which a registration could leave
+  unchanged in principle (gyral-g1r.23).
 - Hashing is synchronous for this (`styleHashSync`, a small SHA-256 in JavaScript,
   `view/server/sha256.ts`, checked against `node:crypto`): WebCrypto's `digest` is
   asynchronous and `renderPage` returns its `Response` synchronously. Hashes are cached per
@@ -220,11 +249,18 @@ return renderPage({ title, body, styles, csp: { directives: { 'default-src': "'s
   when it is called. A string `csp` is set as is; in development `renderPage` warns, once per
   component, when a header that allows styles by hash (and not `'unsafe-inline'`) lacks the
   hash of a registered component.
-- `style` attributes and hand-written `<style>` elements in `head` are not covered.
+- Hand-written `<style>` elements in `extraHead` are not covered; `style` attributes are covered
+  only with `styleAttributes: 'hash'` (below).
   Verified (Phase 4) with a real header in Chromium 153, Firefox 155 and WebKit 26.6: a hashed
   `<style>` in a declarative shadow root applies, an unhashed one is blocked, and adopted
   constructed sheets are not affected (`style-src` doesn't apply to them). The Chromium case is
   a test (`core/test/view/server-csp.test.ts`).
+- A strict `style-src` blocks the server's `style` attributes; hydration then writes them
+  through the CSSOM (0.3.1, 08 "Style attributes under a strict CSP"). With
+  `csp: { styleAttributes: 'hash' }` (ADR 0020), `renderPage` renders the page to a string
+  first, collecting every `style` value the writer emits (`render`'s `styleAttributes`
+  option), and adds `style-src-attr 'unsafe-hashes'` plus their hashes, so they apply on first
+  paint. The writer's output is the same with or without collection.
 
 ## Conformance (Phase 4)
 
@@ -247,4 +283,4 @@ within one template.
 | Shadow roots in HTML  | `<template shadowrootmode="open">`  | widely (since 2026-08-20) |
 | Style hashes          | SHA-256 in JavaScript (synchronous) | any runtime               |
 | CSP for inline styles | `style-src 'sha256-…'`              | widely (CSP)              |
-| Streaming             | `ReadableStream` (in `@gyral/ssr`)  | server runtimes           |
+| Chunked output        | `ReadableStream` (in `@gyral/ssr`)  | server runtimes           |

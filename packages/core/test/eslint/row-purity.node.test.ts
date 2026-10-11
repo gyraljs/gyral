@@ -3,7 +3,7 @@
 // locals, module-level bindings, imports and globals, and every each() has a key function.
 import type { RuleTester } from 'eslint';
 import { describe } from 'vitest';
-import { rowPurityRule } from '../../src/eslint/index.js';
+import { rowPurityRule } from '../../src/eslint/row-purity-rule.js';
 import { spanOf, tester, tsTester } from './helpers.js';
 
 const IMPORT = "import { each, html } from '@gyral/core';\n";

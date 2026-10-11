@@ -4,6 +4,7 @@ import type { HttpError, HttpRequest } from '@gyral/http';
 import {
   fakeDriver,
   inputsFor,
+  mount as mountEl,
   resolve,
   step,
   virtualTime,
@@ -24,12 +25,11 @@ const repo = (id: number, name: string) => ({
 async function mount({ realDebounce = false } = {}) {
   // Every request waits until the test answers it. No network.
   const github = fakeDriver<HttpRequest, unknown, HttpError>('http');
-  const el = new GithubSearch();
-  el.drivers = realDebounce
-    ? { http: github }
-    : { http: github, time: fakeDriver(timeDriver, { impl: () => undefined }) };
-  document.body.append(el);
-  await settled();
+  const { el } = await mountEl(GithubSearch, {
+    drivers: realDebounce
+      ? { http: github }
+      : { http: github, time: fakeDriver(timeDriver, { impl: () => undefined }) },
+  });
   return { el, github };
 }
 

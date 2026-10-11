@@ -41,6 +41,8 @@ export default tseslint.config(
       'archive/**',
       '.beads/**',
       '.pnpm-store/**',
+      // Extracted docs are typechecked by check-skill, never linted as application source.
+      '.skill-check/**',
       '.claude/worktrees/**',
       '**/dist/**',
       // App templates are type-checked and linted as generated apps by `pnpm verify:create`.

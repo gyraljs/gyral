@@ -5,6 +5,8 @@
 //   pnpm size --json          → machine-readable output
 //   pnpm size --check         → fail when a bundle exceeds scripts/size-budget.json (all chunks
 //                               under "budgets", the initial chunk under "initial")
+//   pnpm size --client-only   → also build the server-rendered examples client-only (rows
+//                               "<name> (clientOnly)", gyralVitePreset({ clientOnly: true }))
 // Each example is built once with Vite in production mode and the Gyral preset (its template
 // compiler and the gyral-compiled condition, view/01-templates.md), all chunks concatenated:
 // budgets measure what apps built with the preset ship. The `initial` column is what a page
@@ -13,7 +15,9 @@
 // `gzip`; a client-only app never fetches the hydration chunk (view/07-hydration.md). The "view" row builds
 // scripts/size/view-entry.js (render, html, compiled, each, raw, nothing, defineHook) with the
 // `gyral-compiled` condition, so the runtime template preparer is left out; its budget is the
-// top-level "view" key.
+// top-level "view" key. An example with no server (no `server/` directory) is built client-only
+// (gyralVitePreset({ clientOnly: true }), view/07 "Client-only builds"): that is how such an
+// app ships, without the hydration chunk it would never fetch (gyral-1zd.24).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
@@ -29,20 +33,32 @@ else process.env.NODE_ENV = nodeEnv;
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const check = args.includes('--check');
+const clientOnly = args.includes('--client-only');
+const CLIENT_ONLY_SUFFIX = ' (clientOnly)';
 const wanted = args.filter((a) => !a.startsWith('--'));
 const BUDGET_FILE = 'scripts/size-budget.json';
 /** A bundle this far under its budget should get a lower budget (the ratchet). */
 const SLACK_KIB = 0.5;
 
-/** The browser entry of an example: its index.html, or a client entry for SSR examples. */
+/**
+ * The browser entry of an example: its index.html, or a client entry for SSR examples. An SSR
+ * example built with `gyralVitePreset({ components: true })` has none: the preset adds its
+ * loader (`COMPONENTS`).
+ */
 function entryOf(dir) {
   if (existsSync(join(dir, 'index.html'))) return join(dir, 'index.html');
   const client = join(dir, 'src', 'entry-client.ts');
-  return existsSync(client) ? client : undefined;
+  if (existsSync(client)) return client;
+  const config = join(dir, 'vite.config.ts');
+  return existsSync(config) && /components:\s*true/.test(readFileSync(config, 'utf8'))
+    ? COMPONENTS
+    : undefined;
 }
+const COMPONENTS = 'components';
 
-async function bundleBytes(root, entry, conditions) {
-  const preset = presetModule.gyralVitePreset();
+async function bundleBytes(root, entry, conditions, presetOptions = {}) {
+  if (entry === COMPONENTS) presetOptions = { ...presetOptions, components: true };
+  const preset = presetModule.gyralVitePreset(presetOptions);
   const output = await build({
     root,
     logLevel: 'silent',
@@ -50,7 +66,12 @@ async function bundleBytes(root, entry, conditions) {
     mode: 'production',
     plugins: preset.plugins,
     resolve: conditions === undefined ? preset.resolve : { ...preset.resolve, conditions },
-    build: { write: false, minify: true, modulePreload: false, rollupOptions: { input: entry } },
+    build: {
+      write: false,
+      minify: true,
+      modulePreload: false,
+      rollupOptions: entry === COMPONENTS ? {} : { input: entry },
+    },
   });
   const outputs = Array.isArray(output) ? output : [output];
   const chunks = outputs.flatMap((o) => o.output).filter((chunk) => chunk.type === 'chunk');
@@ -59,12 +80,17 @@ async function bundleBytes(root, entry, conditions) {
     min: raw.length,
     gzip: gzipSync(raw, { level: 9 }).length,
     brotli: brotliCompressSync(raw, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }).length,
-    initial: gzipSync(Buffer.from(initialCode(chunks)), { level: 9 }).length,
+    initial: gzipSync(Buffer.from(initialCode(chunks, entry === COMPONENTS)), { level: 9 }).length,
   };
 }
 
-/** The entry chunks and everything they import statically, in output order. */
-function initialCode(chunks) {
+/**
+ * The entry chunks and everything they import statically, in output order. With automatic
+ * component loading, what a page rendering every component preloads: the loader, each
+ * component's module (the loader's dynamic imports) and core's hydration chunk, with their
+ * static imports.
+ */
+function initialCode(chunks, components = false) {
   const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
   const wanted = new Set();
   const visit = (chunk) => {
@@ -72,7 +98,14 @@ function initialCode(chunks) {
     wanted.add(chunk);
     for (const name of chunk.imports) visit(byName.get(name));
   };
-  for (const chunk of chunks) if (chunk.isEntry) visit(chunk);
+  for (const chunk of chunks) {
+    if (!chunk.isEntry) continue;
+    visit(chunk);
+    if (components) for (const name of chunk.dynamicImports) visit(byName.get(name));
+  }
+  if (components) {
+    for (const chunk of chunks) if (/hydration-client/.test(chunk.fileName)) visit(chunk);
+  }
   return chunks
     .filter((chunk) => wanted.has(chunk))
     .map((chunk) => chunk.code)
@@ -83,20 +116,28 @@ const examples = readdirSync('examples', { withFileTypes: true })
   .filter((e) => e.isDirectory() && (wanted.length === 0 || wanted.includes(e.name)))
   .map((e) => ({ name: e.name, root: resolve('examples', e.name) }))
   .map((e) => ({ ...e, entry: entryOf(e.root) }))
-  .filter((e) => e.entry !== undefined);
+  .filter((e) => e.entry !== undefined)
+  // No server: the app is client-only, and is measured the way it ships.
+  .map((e) => (existsSync(join(e.root, 'server')) ? e : { ...e, options: { clientOnly: true } }));
 
 const budgetFile = JSON.parse(readFileSync(BUDGET_FILE, 'utf8'));
 const budgets = { ...budgetFile.budgets, view: budgetFile.view };
 const initialBudgets = budgetFile.initial;
 const VIEW_CONDITIONS = ['gyral-compiled', 'module', 'browser', 'production'];
 const targets = [...examples];
+for (const e of examples) {
+  if (clientOnly && e.options === undefined) {
+    targets.push({ ...e, name: e.name + CLIENT_ONLY_SUFFIX, options: { clientOnly: true } });
+  }
+}
 if (wanted.length === 0 || wanted.includes('view')) {
   const root = resolve('.');
   targets.push({ name: 'view', root, entry: resolve('scripts/size/view-entry.js') });
 }
 const rows = [];
 for (const t of targets) {
-  const size = await bundleBytes(t.root, t.entry, t.name === 'view' ? VIEW_CONDITIONS : undefined);
+  const conditions = t.name === 'view' ? VIEW_CONDITIONS : undefined;
+  const size = await bundleBytes(t.root, t.entry, conditions, t.options);
   rows.push({
     example: t.name,
     minKb: size.min / 1024,
@@ -113,16 +154,17 @@ if (json) {
 } else {
   const kb = (n) => (n === undefined ? '-' : n.toFixed(1)).padStart(8);
   console.log(
-    `${'example'.padEnd(22)}${'min'.padStart(8)}${'gzip'.padStart(8)}${'brotli'.padStart(8)}${'initial'.padStart(8)}${'budget'.padStart(8)}`,
+    `${'example'.padEnd(30)}${'min'.padStart(8)}${'gzip'.padStart(8)}${'brotli'.padStart(8)}${'initial'.padStart(8)}${'budget'.padStart(8)}`,
   );
   for (const r of rows) {
     console.log(
-      `${r.example.padEnd(22)}${kb(r.minKb)}${kb(r.gzipKb)}${kb(r.brotliKb)}${kb(r.initialKb)}${kb(r.budgetKb)}`,
+      `${r.example.padEnd(30)}${kb(r.minKb)}${kb(r.gzipKb)}${kb(r.brotliKb)}${kb(r.initialKb)}${kb(r.budgetKb)}`,
     );
   }
   console.log(
     'Sizes in KiB. gzip/brotli: all chunks; initial: gzip of the entry and its static imports ' +
-      '(no lazy chunks). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
+      '(no lazy chunks; a components build: the loader, every component module and the ' +
+      'hydration chunk). budget: max gzip KiB (all chunks) from scripts/size-budget.json, which ' +
       'also caps `initial`.',
   );
 }

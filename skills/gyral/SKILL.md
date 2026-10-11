@@ -23,11 +23,11 @@ interface State {
 }
 type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Decrement' };
 
-export const Counter = define<State, Msg>('my-counter', {
+export const Counter = define<State, Msg>()('my-counter', {
   init: () => ({ count: 0 }),
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Decrement: () => ({ _tag: 'Decrement' }),
+    Increment: true,
+    Decrement: true,
   },
   update: {
     Increment: (s) => ({ count: s.count + 1 }),
@@ -43,28 +43,36 @@ export const Counter = define<State, Msg>('my-counter', {
 
 ## Golden rules
 
-1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`). The tag is also the
-   intent name in markup. `update` must have a reducer for **every** tag (exhaustive by type).
+1. **Messages are tagged unions** (`{ readonly _tag: 'Name'; … }`), and `update` must have a
+   reducer for **every** tag (exhaustive by type). Components are `define<State, Msg>()(tag,
+spec)` (two calls): the keys of `intent` are the intent names markup uses. A key that is a
+   tag parses into that variant; any other key may produce any message (intent.md).
 2. **Views are pure and name intents; they never attach closures.** Write
    `data-intent=${i.Save}`, never `@click=${() => …}`. The trigger is the element's default
    event (button → click, form → submit, input/textarea → input, select/checkbox → change,
    child component → its outputs); override with `data-intent-on="keydown"`.
 3. **Reducers are pure.** No `fetch`, timers, `Math.random`, `Date.now`, DOM or `localStorage`
    in `update`/`init`/`view`. Return `[nextState, [command, …]]` and let a driver do it.
-4. **Intent parsers validate.** Return a message, `undefined` (ignore the event) or let
-   `form()`/`field()` produce `IntentRejected`. Never trust `value` without checking it.
+4. **Intent parsers validate.** Return a message, `undefined` (decline: the next intent outward
+   gets the event) or let `form()`/`field()` produce `IntentRejected`. Never trust `value`
+   without checking it.
 5. **Props are read-only context** (`ctx.props`), declared with `prop.*` builders
    (Standard Schema; attributes are kebab-case and always validated). They enter state only
    through `init(props)` and the optional `PropsChanged` reducer.
-6. **State, props and store state must be JSON-serializable.** They travel to the browser in
-   hydration seeds (no `Map`, class instances, functions or `Date` objects in state).
+6. **Server-rendered state is JSON.** State, props and store state of anything rendered on
+   the server travel to the browser in hydration seeds, so they must survive a JSON round trip
+   (no `Map`, class instances, functions or `Date` objects; the server warns). Client-only
+   components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
+   still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
-   `defineHook`, `invalid`, `labelledBy`). Spread `gyralVitePreset()` into the Vite/Vitest
-   config: `vite build` then compiles templates and checks their rules; add
-   `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor.
+   `defineHook`, `invalid`). Spread `gyralVitePreset()`
+   into the Vite/Vitest config: `vite build` then compiles templates and checks their rules; add
+   `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor. An app no
+   server renders passes `{ clientOnly: true }` to leave the hydration code out (about 1 KiB).
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
-   arguments and module constants; name intents with a module-level `const i = intents<Msg>()`
-   and pass view values (the selection) through `pick`. Form state uses
+   arguments and module constants; name intents with a module-level
+   `const i = intentsOf<typeof C>()` (give such a row a `TemplateResult` return type) and pass
+   view values (the selection) through `pick`. Form state uses
    attributes (`value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`), never `.value=`;
    they are written only when the model's value changes, so other renders keep user edits.
 9. **Test the model without a DOM** (`step`, `run` from `@gyral/testing`) and the element in a
@@ -85,7 +93,7 @@ https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.
 
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
-`strict`, `moduleResolution: "bundler"`, `useDefineForClassFields: false`.
+`strict`, `moduleResolution: "bundler"`.
 
 ## Decision tables
 
@@ -95,8 +103,10 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Comes from the parent → a prop (`props` + `ctx.props`; copy into state via `PropsChanged`).
 - Several components read and change it (cart, session) → a store (`defineStore`, `stores`,
   `ctx.read(store)`, `send(store, msg)`).
-- A child must tell its parent something → an output (`emit()` in the child, `child()` intent
-  in the parent).
+- A child must tell its parent something → an output (`const emit = outputs<Out>()` in the
+  child, `child()` intent in the parent; plain DOM listens for `OUTPUT_EVENT`).
+- It already lives outside Gyral (a signals store, Redux, XState, a socket) → keep it there;
+  read it with a `subscription()` command, write with a plain driver (outside-stores.md).
 
 **Which concurrency for a command?** (per lane = `key`, default the driver name)
 
@@ -104,20 +114,26 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 - Ordered saves → `queue`. Independent fire-and-forget → `merge` (default).
 
 **Which package?** HTTP → `@gyral/http` (`get`, `request`, `submitForm`). Timers →
-`@gyral/time` (`delay`, `debounce`, `periodic`, `animationFrames`). URLs → `@gyral/router`
-(`listen`, `navigate`, `routes`). Randomness → `random()`/`randomInt()` in core. Anything else →
-`defineDriver()` + `command()`.
+`@gyral/time` (`delay`, `debounce`, `every`). URLs → `@gyral/router`
+(`listen`, `navigate`, `routes`). Randomness → a small driver (effects-and-drivers.md
+"Recipes"). A store or feed
+Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in core
+(`references/outside-stores.md`). Anything else → `defineDriver()` + `command()`.
 
 ## References (read on demand)
 
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
-- `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages
-- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, `labelledBy`), `focus`
+- `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages, `subscriptions` for long-lived work
+- `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, with `dispose` for teardown), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
+- `references/browser-storage.md` — optional localStorage and IndexedDB drivers, typed decoding, watches, transactions, migrations, SSR ordering
+- `references/network-streams.md` — optional native EventSource/WebSocket drivers, typed codecs, connection lifetime and transport limits
+- `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
-- `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR tests
+- `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR/hydration tests (`renderOnServer`, golden fixtures)
+- `references/errors.md` — what happens when init, a reducer, the view, a parser, a command or a hook throws; `spec.error`, `Errored`, parent boundaries (`data-intent-on="error"`), `reportError` and monitoring, server isolation
 - `references/devtools.md` — the dev-only timeline panel
 - `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes

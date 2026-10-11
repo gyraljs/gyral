@@ -15,7 +15,7 @@ let propsChanged = 0;
 const spec = {
   props: { label: prop.string({ default: '' }) },
   init: (): State => ({ count: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) as const },
+  intent: { Inc: true as const },
   update: {
     Inc: (s: State) => ({ count: s.count + 1 }),
     PropsChanged: (s: State) => {
@@ -27,7 +27,7 @@ const spec = {
     html`<button data-intent=${i.Inc}>${props.label}:${s.count}</button>`,
 };
 type P = { readonly label: string };
-define<State, Msg, P>('test-eh-shadow', {
+define<State, Msg, P>()('test-eh-shadow', {
   ...spec,
   styles: css`
     button {
@@ -35,8 +35,8 @@ define<State, Msg, P>('test-eh-shadow', {
     }
   `,
 });
-define<State, Msg, P>('test-eh-light', { ...spec, shadow: false });
-define<State, Msg, P>('test-eh-island', { ...spec, hydrate: 'interaction' });
+define<State, Msg, P>()('test-eh-light', { ...spec, shadow: false });
+define<State, Msg, P>()('test-eh-island', { ...spec, hydrate: 'interaction' });
 
 type Live = HTMLElement & { readonly state: State };
 
@@ -133,10 +133,8 @@ describe('each host hydrates on its own (07)', () => {
       '</template></test-eh-shadow>',
       '</template><b>slotted x</b></test-eh-shadow>',
     );
-    define<object, never>('test-eh-parent', {
+    define<object>()('test-eh-parent', {
       init: () => ({}),
-      intent: {},
-      update: {},
       view: () => parentView('x'),
     });
     const root = mount(page);
@@ -163,10 +161,8 @@ describe('each host hydrates on its own (07)', () => {
     const late = root.querySelector('test-eh-late') as Live;
     const child = late.shadowRoot?.querySelector('test-eh-shadow') as Live;
     expect(child.hasAttribute('data-gyral-seed')).toBe(false);
-    define<object, never>('test-eh-late', {
+    define<object>()('test-eh-late', {
       init: () => ({}),
-      intent: {},
-      update: {},
       view: () => parentView('y'),
     });
     const errors = vi.spyOn(console, 'error');

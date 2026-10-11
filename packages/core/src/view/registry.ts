@@ -1,5 +1,5 @@
 // The server registry (view/05-element.md "Registration", view/06-server.md "Components").
-// Outside the browser `define()` records each spec (server-specs.ts); `@gyral/core/server`
+// Outside the browser `define()` records each spec (server-specs.ts); `@gyral/core/internal/server`
 // turns them into entries here (server-component.ts `registerRecordedSpecs`) before each
 // render, and its renderer (view/server/) looks start tags up and renders the component in
 // place. Providers (`<gyral-stores>`, ADR 0013) register a scope for their subtree. Plain data
@@ -15,6 +15,12 @@ export interface ServerRendering {
    * unless it equals `init(props)`'s state. JSON-serializable.
    */
   readonly seed: { readonly state?: unknown; readonly props: Readonly<Record<string, unknown>> };
+  /**
+   * Set when `init` or the view threw (ADR 0024): `view` is the component's error view (or
+   * nothing), the host is marked `data-gyral-error` with no seed, and the renderer reports this
+   * value (core's `GyralError`, opaque here) through its `onError` option.
+   */
+  readonly failed?: unknown;
 }
 
 /** The input of one server render, gathered from the start tag (06 "Components"). */
@@ -38,20 +44,33 @@ export interface ServerComponent {
   readonly tag: string;
   /** `shadow: false` (ADR 0014): render as light-DOM children, not `<template shadowrootmode>`. */
   readonly light: boolean;
+  /** `shadow: { delegatesFocus: true }`: the declarative root gets `shadowrootdelegatesfocus`. */
+  readonly delegatesFocus?: boolean;
   /** CSS texts for the declarative shadow root's `<style>` (08). Empty for light components. */
   readonly styles: readonly string[];
   /** The island strategy (07): anything but `load` adds `defer-hydration` and `data-gyral-hydrate`. */
   readonly hydrate: 'load' | 'idle' | 'visible' | 'interaction';
   /** Parses props (validated as in the browser), runs `init` (commands dropped) and the view. */
   render(input: ServerRenderInput): ServerRendering;
+  /** The error rendering for a view value that failed while being written (ADR 0024). */
+  fallback?(cause: unknown): ServerRendering;
 }
 
 const components = new Map<string, ServerComponent>();
+let version = 0;
 
 /** Records a component. A tag registered twice keeps its first entry, as `customElements` does. */
 export function registerServerComponent(component: ServerComponent): void {
-  if (!components.has(component.tag)) components.set(component.tag, component);
+  if (components.has(component.tag)) return;
+  components.set(component.tag, component);
+  version++;
 }
+
+/**
+ * Changes whenever the registry does (a component, and so its CSS, is added): caches derived
+ * from the registry (the CSP header of `@gyral/ssr`'s `renderPage`) key on it.
+ */
+export const serverRegistryVersion = (): number => version;
 
 /** The component registered under `tag`, if any. */
 export const serverComponent = (tag: string): ServerComponent | undefined => components.get(tag);

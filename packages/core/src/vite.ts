@@ -6,20 +6,25 @@
 // runner. The compiler is a plugin applied in `vite build` only, so dev servers and test runs
 // keep the runtime template path; its implementation (./compiler/) loads on the first build
 // hook, with `require` (Node loads ES modules with it too): a module runner that loaded this
-// file may be closed by then, and would reject a dynamic import().
+// file may be closed by then, and would reject a dynamic import(). Public: the preset,
+// gyralTemplateCompiler and gyralClientOnly (docs/references/public-api-0.3.1.md); the other
+// plugins and constants here are internal.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ConfigEnv, EnvironmentOptions, Plugin } from 'vite';
+import type { FeatureHooks } from './compiler/features.js';
 import type { CompilerHooks } from './compiler/hooks.js';
+import type { LocatorHooks } from './compiler/locate.js';
 
 export interface TemplateCompilerOptions {
   /**
-   * Module specifiers whose `html` export is the view layer's tag (default
+   * Module specifiers whose `html` (and `svg`) exports are the view layer's tags (default
    * `DEFAULT_TEMPLATE_SOURCES`). An import matches when its specifier is listed, or when it
    * resolves to the same module as a listed one; core's own view modules always match. A
-   * source other than '@gyral/core' must also export `compiled`.
+   * source other than '@gyral/core' must also export `compiled` (and `compiledSvg` when it
+   * exports `svg`).
    */
   readonly sources?: readonly string[];
   /**
@@ -30,38 +35,48 @@ export interface TemplateCompilerOptions {
 }
 
 /** Where the view layer's `html` comes from: core's main entry (ADR 0018, Phase 3). */
-export const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
+const DEFAULT_TEMPLATE_SOURCES: readonly string[] = ['@gyral/core'];
 
 /** The resolve condition that maps core's `#prepare` to its stub (ADR 0017's mechanism). */
-export const COMPILED_CONDITION = 'gyral-compiled';
+const COMPILED_CONDITION = 'gyral-compiled';
+/** The client's resolve condition in client-only builds (view/07 "Client-only builds"). */
+const CLIENT_ONLY_CONDITION = 'gyral-client-only';
 /** Vite 8's default resolve conditions (`defaultClientConditions`, server ones without browser). */
-export const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
-export const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
+const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
+const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
 
 /**
- * Adds the `gyral-compiled` condition to an environment, on top of the app's conditions or
- * Vite's defaults: Vite replaces the defaults when a config names any condition.
+ * Adds `condition` (default `gyral-compiled`) to an environment, on top of the app's
+ * conditions or Vite's defaults: Vite replaces the defaults when a config names any condition.
+ * `clientOnly`: only to environments that build for the browser.
  */
 function addCondition(
   name: string,
   config: EnvironmentOptions,
   env: ConfigEnv & { isSsrTargetWebworker?: boolean },
+  condition = COMPILED_CONDITION,
+  clientOnly = false,
 ): void {
   const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
   const client = consumer === 'client' || env.isSsrTargetWebworker === true;
+  if (clientOnly && consumer !== 'client') return;
   const current = config.resolve?.conditions ?? (client ? CLIENT_CONDITIONS : SERVER_CONDITIONS);
-  if (!current.includes(COMPILED_CONDITION)) {
-    config.resolve = { ...config.resolve, conditions: [...current, COMPILED_CONDITION] };
+  if (!current.includes(condition)) {
+    config.resolve = { ...config.resolve, conditions: [...current, condition] };
   }
 }
 
-/**
- * The compiler's hooks. From core's TypeScript source (this workspace, `link:` checkouts) they
- * load through Vite's module runner, as a vite.config.ts would; from the published package,
- * with require.
- */
-async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHooks> {
-  const settings = {
+/** The compiled entry of this copy of core, next to this module. */
+const OWN_COMPILED = fileURLToPath(
+  new URL(
+    import.meta.url.endsWith('.ts') ? './view/compiled.ts' : './view/compiled.js',
+    import.meta.url,
+  ),
+);
+
+/** The settings both plugins pass to their lazily loaded implementation. */
+function settingsOf(options: TemplateCompilerOptions) {
+  return {
     sources: options.sources ?? DEFAULT_TEMPLATE_SOURCES,
     parse5:
       options.parse5 === false
@@ -70,25 +85,35 @@ async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHook
           ? options.parse5
           : 'parse5',
   };
+}
+
+/**
+ * A module of ./compiler/. From core's TypeScript source (this workspace, `link:` checkouts) it
+ * loads through Vite's module runner, as a vite.config.ts would; from the published package,
+ * with require.
+ */
+async function loadCompiler<M>(name: string): Promise<M> {
   const require = createRequire(import.meta.url);
-  if (!import.meta.url.endsWith('.ts')) {
-    return (require('./compiler/hooks.js') as typeof import('./compiler/hooks.js')).createCompiler(
-      settings,
-    );
-  }
+  if (!import.meta.url.endsWith('.ts')) return require(`./compiler/${name}.js`) as M;
   const { runnerImport } = require('vite') as typeof import('vite');
   const nodeEnv = process.env['NODE_ENV']; // the runner sets it when unset; the build owns it
-  const { module } = await runnerImport<typeof import('./compiler/hooks.js')>(
-    fileURLToPath(new URL('./compiler/hooks.ts', import.meta.url)),
+  const { module } = await runnerImport<M>(
+    fileURLToPath(new URL(`./compiler/${name}.ts`, import.meta.url)),
     { configFile: false, logLevel: 'silent' },
   );
   if (nodeEnv === undefined) delete process.env['NODE_ENV'];
   else process.env['NODE_ENV'] = nodeEnv;
-  return module.createCompiler(settings);
+  return module;
+}
+
+/** The compiler's hooks (`vite build`). */
+async function loadHooks(options: TemplateCompilerOptions): Promise<CompilerHooks> {
+  const hooks = await loadCompiler<typeof import('./compiler/hooks.js')>('hooks');
+  return hooks.createCompiler({ ...settingsOf(options), ownEntry: OWN_COMPILED });
 }
 
 /** The template compiler alone (`gyralVitePreset()` includes it). */
-export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Plugin {
+function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Plugin {
   let hooks: CompilerHooks | undefined;
   const ready = (): CompilerHooks => {
     if (hooks === undefined) throw new Error('gyral: the template compiler is not loaded yet');
@@ -106,8 +131,20 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
     buildStart(input) {
       return ready().buildStart.call(this, input);
     },
+    // The registration modules of spec-field features (./compiler/features.ts).
+    resolveId(source, importer, opts) {
+      return ready().resolveId.call(this, source, importer, opts);
+    },
+    load(id, opts) {
+      return ready().load.call(this, id, opts);
+    },
     transform: {
-      filter: { id: /\.[cm]?[jt]sx?$/, code: 'html' },
+      // Modules naming a template tag (html or svg; core's template module names both), or a
+      // spec field whose machinery the build adds only when named (view/05).
+      filter: {
+        id: /\.[cm]?[jt]sx?$/,
+        code: /html|svg|viewTransition|renderOnFrame|states|formAssociated|subscriptions|\.value\s*\(/,
+      },
       handler(code, id, opts) {
         return ready().transform.call(this, code, id, opts);
       },
@@ -118,8 +155,43 @@ export function gyralTemplateCompiler(options: TemplateCompilerOptions = {}): Pl
   };
 }
 
-/** Gyral's packages: the dev server runs them through Vite, never Node (view/06). */
-export const GYRAL_PACKAGES = /^@gyral\//;
+/**
+ * Development source locations (view/01-templates.md "Source locations"): in `vite serve` (the
+ * dev server, Vitest) each html`…` and svg`…` call site of the template sources tells the
+ * runtime where it was written, so template rule errors and hydration mismatches name
+ * `file:line:col` (./compiler/locate.ts, loaded on the first hook). `vite build` compiles
+ * templates instead.
+ */
+function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
+  let hooks: LocatorHooks | undefined;
+  const ready = (): LocatorHooks => {
+    if (hooks === undefined) throw new Error('gyral: the template locator is not loaded yet');
+    return hooks;
+  };
+  return {
+    name: 'gyral:template-locations',
+    enforce: 'pre',
+    apply: 'serve',
+    async configResolved(config) {
+      const locate = await loadCompiler<typeof import('./compiler/locate.js')>('locate');
+      hooks = locate.createLocator(settingsOf(options).sources);
+      await hooks.configResolved.call(this, config);
+    },
+    transform: {
+      // Modules naming a template tag (html or svg), as the compiler's filter.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /html|svg/ },
+      handler(code, id, opts) {
+        return ready().transform.call(this, code, id, opts);
+      },
+    },
+  };
+}
+
+/**
+ * Gyral's packages: the dev server runs them through Vite, never Node (view/06). The feature
+ * scan's scope (./compiler/scope.ts) uses the same pattern.
+ */
+const GYRAL_PACKAGES = /^@gyral\//;
 
 type Manifest = Partial<Record<'dependencies' | 'devDependencies' | 'peerDependencies', object>>;
 
@@ -143,7 +215,7 @@ function installed(root: string, name: string): Manifest | undefined {
  * The app's direct dependencies that depend on a Gyral package (a design system, say). They
  * import `@gyral/core`, so they must share the copy the dev server runs.
  */
-export function gyralDependents(root: string): string[] {
+function gyralDependents(root: string): string[] {
   const app = manifest(join(root, 'package.json'));
   const names = Object.keys({ ...app?.dependencies, ...app?.devDependencies });
   return names.filter((name) => {
@@ -164,7 +236,7 @@ export function gyralDependents(root: string): string[] {
  * out of externalization in server environments: Vite resolves them with its conditions
  * (`development` in dev), and they all share one copy of core. `vite build` is unaffected.
  */
-export function gyralDevServer(): Plugin {
+function gyralDevSsr(): Plugin {
   let root = process.cwd();
   return {
     name: 'gyral:dev-server',
@@ -180,16 +252,117 @@ export function gyralDevServer(): Plugin {
   };
 }
 
+/**
+ * Client-only builds (view/07-hydration.md "Client-only builds", gyral-c5d.11), for apps no
+ * server renders: the browser environment resolves core with the `gyral-client-only`
+ * condition, so the bundle carries no hydration code (no seed reading, no hydration chunk and
+ * its import()), and in `vite build` the invoker-command fallback only when a module that can
+ * affect Gyral components (the app's own, or a package that reaches a Gyral package) may use
+ * command intents (./compiler/features.ts). With no other import(), Vite's preload helper goes
+ * too. Server-rendered markup met anyway renders fresh (development warns). Dev servers and
+ * test runs get the condition too, and always keep the invoker fallback.
+ */
+function gyralClientOnly(): Plugin {
+  let hooks: FeatureHooks | undefined;
+  let root = process.cwd();
+  return {
+    name: 'gyral:client-only',
+    enforce: 'pre',
+    configEnvironment(name, config, env) {
+      addCondition(name, config, env, CLIENT_ONLY_CONDITION, true);
+    },
+    async configResolved(config) {
+      root = config.root;
+      if (config.command !== 'build') return;
+      const features = await loadCompiler<typeof import('./compiler/features.js')>('features');
+      hooks = features.createFeatures(['invokers'], OWN_COMPILED);
+    },
+    async buildStart() {
+      await hooks?.buildStart((source, importer) => this.resolve(source, importer), root);
+    },
+    resolveId(source) {
+      return hooks?.resolveId(source) ?? null;
+    },
+    load(id) {
+      return hooks?.load(id) ?? null;
+    },
+    transform: {
+      // features.ts FEATURE_HINTS.invokers: any import or export may reach `raw`.
+      filter: { id: /\.[cm]?[jt]sx?$/, code: /data-intent-on|command|raw|import|export/i },
+      async handler(code, id) {
+        if (hooks === undefined || this.environment.config.consumer !== 'client') return null;
+        const imports = await hooks.inject(code, id, {
+          parse: (text, lang) => this.parse(text, { lang }),
+          resolve: (source, importer) => this.resolve(source, importer),
+        });
+        // Appended after the last line: no code moves, so the incoming source map holds.
+        return imports === '' ? null : { code: code + imports, map: null };
+      },
+    },
+  };
+}
+
+/** Where the preset looks for components and writes their typings (gyral-1zd.25). */
+export interface ElementTypesOptions {
+  /** Source directories to scan, relative to the Vite root. Default `['src']`. */
+  readonly dirs?: readonly string[];
+  /** The declaration file to write, relative to the Vite root. Default `.gyral/elements.d.ts`. */
+  readonly out?: string;
+}
+
+/**
+ * Writes `HTMLElementTagNameMap` entries for every exported `define()` component (a
+ * `.gyral/elements.d.ts` to gitignore and include in tsconfig) at the start of a build, dev
+ * server or test run, and again when a source file changes. ./compiler/tag-map imports Node
+ * built-ins only, so Node's require loads it, from TypeScript source too: no module runner,
+ * which may be closed by the time a build starts (see loadCompiler).
+ */
+function gyralElementTypes(options: ElementTypesOptions): Plugin {
+  const source = import.meta.url.endsWith('.ts')
+    ? './compiler/tag-map.ts'
+    : './compiler/tag-map.js';
+  const tagMap = createRequire(import.meta.url)(source) as typeof import('./compiler/tag-map.js');
+  return tagMap.elementTypesPlugin(options);
+}
+
 export interface GyralViteOptions {
+  /**
+   * Generated element typings (`.gyral/elements.d.ts`, see `ElementTypesOptions`), or `false`
+   * to write none. Default: on, scanning `src`.
+   */
+  readonly types?: ElementTypesOptions | false;
   /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
+  /**
+   * The app is never server-rendered: leave the hydration code out of the browser bundle
+   * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
+   */
+  readonly clientOnly?: boolean;
+  /**
+   * Automatic component loading (ADR 0016 addendum): every component defined under `include`
+   * gets a client module the build splits out, and a loader (`virtual:gyral/components`, added
+   * to the client build's input) imports a tag's module once that tag is in the page.
+   * `renderPage({ components })` then links exactly the components a page rendered, so pages
+   * need no client entry of their own and no side-effect imports. Default off.
+   */
+  readonly components?: boolean | ComponentsOptions;
+}
+
+export interface ComponentsOptions {
+  /** Directories (relative to Vite's root) whose modules' `define()` tags are found. Default `['src']`. */
+  readonly include?: readonly string[];
+  /**
+   * Tag → module (relative to Vite's root) for components the scan can't find: those defined
+   * through a wrapper such as `defineMemberForm({ tag: 'member-form' })`, which calls
+   * `define()` itself. Listed entries win over scanned ones.
+   */
+  readonly modules?: Readonly<Record<string, string>>;
 }
 
 export interface GyralViteConfig {
   readonly plugins: Plugin[];
-  readonly resolve: { readonly dedupe: string[] };
   readonly optimizeDeps: { readonly include: string[] };
 }
 
@@ -202,8 +375,53 @@ export interface GyralViteConfig {
  */
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
   return {
-    plugins: [gyralTemplateCompiler(options.compiler), gyralDevServer()],
-    resolve: { dedupe: [] },
+    plugins: [
+      // Before the compiler: its feature scan reads the author's templates, not compiled ones.
+      ...(options.clientOnly === true ? [gyralClientOnly()] : []),
+      gyralTemplateCompiler(options.compiler),
+      gyralTemplateLocations(options.compiler),
+      gyralDevSsr(),
+      ...(options.components === undefined || options.components === false
+        ? []
+        : [gyralComponents(options.components === true ? {} : options.components)]),
+      ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
+    ],
     optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
+  };
+}
+
+type Hook = (this: unknown, ...args: unknown[]) => unknown;
+
+/**
+ * Automatic component loading (`gyralVitePreset({ components })`): a shell whose hooks run
+ * ./compiler/components.ts, loaded on the first hook (`config`) like the compiler.
+ */
+function gyralComponents(options: ComponentsOptions): Plugin {
+  let impl: Plugin | undefined;
+  const run = (name: keyof Plugin) =>
+    function (this: unknown, ...args: unknown[]): unknown {
+      const hook = impl?.[name] as Hook | undefined;
+      return hook?.call(this, ...args) ?? null;
+    };
+  const hook = <K extends keyof Plugin>(name: K) => run(name) as NonNullable<Plugin[K]>;
+  return {
+    name: 'gyral:components',
+    api: {
+      tags: (): ReadonlyMap<string, string> =>
+        (impl?.api as { tags?: () => ReadonlyMap<string, string> } | undefined)?.tags?.() ??
+        new Map(),
+    },
+    async config(...args) {
+      const components =
+        await loadCompiler<typeof import('./compiler/components.js')>('components');
+      impl = components.createComponents(options);
+      return run('config').apply(this, args) as undefined;
+    },
+    configResolved: hook('configResolved'),
+    buildStart: hook('buildStart'),
+    resolveId: hook('resolveId'),
+    load: hook('load'),
+    configureServer: hook('configureServer'),
+    generateBundle: hook('generateBundle'),
   };
 }

@@ -1,9 +1,11 @@
 // fast-check generators for "server equals client" (view/README.md "Conformance", property 1):
 // template results nesting templates, keyed lists, arrays, attributes (single, multi, boolean,
-// with null/nothing), text with special characters, raw(), live form state, tables, and Gyral
-// components in shadow and light mode with property-hole props and slotted children.
+// with null/nothing), text with special characters, raw(), live form state, tables, Gyral
+// components in shadow and light mode with property-hole props and slotted children, and svg
+// fragments (svg`…`, view/01 "svg templates") inside an <svg>: nested, conditional, keyed rows,
+// camelCase elements and attributes, text, <foreignObject> with HTML.
 import fc from 'fast-check';
-import { each, html, nothing, raw, type ChildValue } from '../../src/view/index.js';
+import { each, html, nothing, raw, svg, type ChildValue } from '../../src/view/index.js';
 
 type Attr = string | number | boolean | null | undefined | typeof nothing;
 
@@ -66,13 +68,64 @@ const T = {
   shadow: (label: Attr, items: readonly string[], v: ChildValue) =>
     html`<cf-shadow label=${label} .items=${items}>${v}</cf-shadow>`,
   light: (n: number) => html`<cf-light n=${n}></cf-light>`,
+  graphic: (box: Attr, v: ChildValue) => html`<svg viewBox=${box}>${v}</svg>`,
 };
 
-const rows = (child: fc.Arbitrary<ChildValue>): fc.Arbitrary<Row[]> =>
-  fc.uniqueArray(fc.record({ k: fc.nat(20), v: child }), {
+/** svg fragments: SVG content only, so they go inside `T.graphic`'s <svg>. */
+const S = {
+  group: (a: Attr, v: ChildValue) => svg`<g class=${a}>${v}</g>`,
+  shape: (d: Attr, r: Attr) => svg`<path d=${d} transform="rotate(${r})" />`,
+  label: (x: Attr, v: ChildValue) => svg`<text x=${x}>${v}<tspan dy="1">-</tspan></text>`,
+  clip: (w: Attr) =>
+    svg`<clipPath id="c"><rect width=${w} /></clipPath><use xlink:href="#c" href=${w} />`,
+  gradient: (a: Attr, b: Attr) =>
+    svg`<linearGradient gradientTransform=${a}><stop offset="0" stop-color="red" /><stop
+        offset="1"
+        stop-color="${b} x"
+    /></linearGradient>`,
+  pair: (a: ChildValue, b: ChildValue) => svg`${a}<circle r="1" />${b} and`,
+  foreign: (a: Attr, v: ChildValue) =>
+    svg`<foreignObject width="9" height="9">${html`<div class=${a}>${v}</div>`}</foreignObject>`,
+};
+
+const svgLeaf: fc.Arbitrary<ChildValue> = fc.oneof(
+  text,
+  fc.constantFrom<ChildValue>(null, undefined, false, nothing, 42),
+);
+
+/** svg content for an <svg>'s child hole. */
+const svgView: fc.Arbitrary<ChildValue> = fc.letrec<{ v: ChildValue }>((tie) => {
+  const child = tie('v');
+  return {
+    v: fc.oneof(
+      { depthSize: 'small', withCrossShrink: true },
+      svgLeaf,
+      fc.tuple(attr, child).map(([a, v]) => S.group(a, v)),
+      fc.tuple(attr, attr).map(([d, r]) => S.shape(d, r)),
+      fc.tuple(attr, svgLeaf).map(([x, v]) => S.label(x, v)),
+      attr.map(S.clip),
+      fc.tuple(attr, attr).map(([a, b]) => S.gradient(a, b)),
+      fc.tuple(child, child).map(([a, b]) => S.pair(a, b)),
+      fc.tuple(attr, leaf).map(([a, v]) => S.foreign(a, v)),
+      fc.tuple(flag, child).map(([on, v]) => (on ? v : nothing)),
+      fc.array(child, { maxLength: 3 }),
+      rows(child).map((rs) =>
+        each(
+          rs,
+          (r) => r.k,
+          (r) => svg`<g data-k=${r.k}>${r.v}</g>`,
+        ),
+      ),
+    ),
+  };
+}).v;
+
+function rows(child: fc.Arbitrary<ChildValue>): fc.Arbitrary<Row[]> {
+  return fc.uniqueArray(fc.record({ k: fc.nat(20), v: child }), {
     selector: (r) => r.k,
     maxLength: 4,
   });
+}
 
 /** A generated template result (or a plain child value at the leaves). */
 export const view: fc.Arbitrary<ChildValue> = fc.letrec<{ v: ChildValue }>((tie) => {
@@ -96,6 +149,7 @@ export const view: fc.Arbitrary<ChildValue> = fc.letrec<{ v: ChildValue }>((tie)
         .tuple(attr, fc.array(text, { maxLength: 3 }), child)
         .map(([a, items, v]) => T.shadow(a, items, v)),
       fc.nat(3).map(T.light),
+      fc.tuple(attr, svgView).map(([box, v]) => T.graphic(box, v)),
     ),
   };
 }).v;

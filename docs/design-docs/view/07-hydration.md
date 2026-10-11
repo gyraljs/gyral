@@ -52,7 +52,62 @@ The walk, the mismatch messages and islands live in one internal module
   chunk once the first seeded host connects. No bytes change; client-only pages, which aren't
   rendered by `page()`, still never fetch the chunk. Checked by the isomorphic example's production
   test (`examples/isomorphic/test/prod.node.test.ts`) and
-  `packages/ssr/test/modulepreload.node.test.ts`.
+  `packages/ssr/test/modulepreload.node.test.ts`. The same walk collects the chunks' hashed CSS
+  as `css` for `page({ stylesheets })`, and `createApp` also gets `assets(modules)`, which
+  returns `{ modulepreload, stylesheets }` for a route (0.3.1, gyral-dyn.2; ADR 0016 "Hashed
+  stylesheets").
+
+## Client-only builds (gyral-c5d.11, 0.3.1)
+
+An app no server renders can say so: `gyralVitePreset({ clientOnly: true })`. The browser environment then resolves core with the
+`gyral-client-only` condition (dev server, Vitest and `vite build`; server environments are
+untouched):
+
+- `#hydration-loader` resolves to `hydration-off.ts`: no seed reading, no `import()` of the
+  hydration code, so no hydration chunk. Without other `import()`s Vite's preload helper (about
+  0.5 KiB gzip) leaves the bundle too. Measured on hello-world: 8.90 → 7.85 KiB gzip initial,
+  11.28 → 7.85 all chunks.
+- **Server-rendered markup met anyway** (a misconfigured app) renders fresh: a seeded host drops
+  its seed and runs `init` from its attributes, its root is cleared as after a failed load
+  ("Loading"), so a view is never doubled, and a `defer-hydration` island starts at once.
+  Development warns once, naming `clientOnly`; production renders fresh silently (the warning
+  would cost every client-only app its text, and dev servers and tests show it).
+- **The invoker-command fallback** (ADR 0003 tier 3, 05 "Intent events") stays reachable only
+  when the build may need it: `#invoker-fallback` resolves to a slot that `use-invokers.ts`
+  fills, and the preset's client-only plugin adds that module to the build when a module that
+  can affect Gyral components (the app's own source, and installed packages that reach a
+  `@gyral/*` package through their dependencies: 05 "Features register themselves") may make
+  a root listen for `command`. In its AST (comments never count), that is:
+  - a template or string whose markup has `data-intent-on="command"` (quoted or not, the
+    attribute's name in any case) or a bound `data-intent-on` (it listens for every intent
+    event);
+  - a string that is exactly `"command"` (`events: ['command']`, a `setAttribute`);
+  - Gyral's `raw` (its markup is read at run time, so it may hold `data-intent-on`): a
+    referenced import of `raw` (any alias) from `@gyral/core` (or a specifier that resolves
+    into core: an alias, a path), a namespace import of core read other than as
+    `ns.<other export>`, a re-export of its `raw` or `export *` from it, or a dynamic
+    `import()` of it. A module that re-exports core's `raw` counts itself, so `raw` imported
+    through a re-exporting module (the app's own, a design system's) is seen there. A function
+    of another package that happens to be called `raw`, or a dynamic `import()` of another
+    Gyral package (`@gyral/devtools`), doesn't count.
+
+  `data-intent-on` values only reach a root through Gyral templates and `raw()`, so a package
+  that reaches no Gyral package can't make a root listen for `command` (markup it produces
+  goes through a `raw()` call in a scanned module). The scan reads the authored source (the
+  plugin runs before the template compiler) and over-approximates. Development (the
+  `development` condition) always keeps the fallback. The mechanism is the build-time
+  detection of 05 "Features register themselves". Before 0.3.1 shipped, the scan read every
+  module's raw text: in one app a function named `raw` in a dependency and the word "states"
+  in dependencies' comments kept the fallback, Vite's preload helper and custom states
+  (873 B gzip per page).
+
+- Apps without the option are unchanged (the loader moved behind a conditional import, about
+  10-20 B gzip in every app).
+
+Tested in `core/test/client-only.client-only.test.ts` (the `browser-client-only` Vitest project)
+and `core/test/compiler/client-only.node.test.ts` (builds); `pnpm size` builds every
+example without a server client-only, the way such an app ships (gyral-1zd.24; `--client-only`
+adds client-only rows for the server-rendered ones).
 
 ## Each component hydrates on its own
 
@@ -105,6 +160,14 @@ what comes next, because it has the template object and this render's values.
 | child hole: `raw()`          | its start anchor, then nodes up to the hole's reference node | records the range                                                                    |
 | nested Gyral host            | that element                                                 | records its parts on the host; walks a shadow host's light children only (above)     |
 
+**svg templates** (0.3.1, 01 "svg templates") are walked like any template: the template's
+content was parsed inside an `<svg>` and the server's markup inside the page's `<svg>`, so both
+sides have SVG elements with the parser's names, and the walk's local-name check compares
+`clipPath` with `clipPath` (case kept on both sides). Development markers before svg instances
+are checked and removed as usual. In development, an svg template whose DOM parent isn't SVG
+content is a mismatch ("expected an svg template inside SVG content"); production checks
+structure only, as everywhere.
+
 **Merged text.** The HTML parser joins adjacent text: `Hi ${name}!` arrives as one Text node
 `Hi Bob` before the anchor. The walk splits it with `splitText` at the known lengths (static
 `"Hi "`, then the value `"Bob"`). Lengths are known exactly: the parser decodes character
@@ -126,6 +189,12 @@ until the first change; since 2026-10-06 that is simply the rule for every rende
 `?indeterminate` is the exception: no attribute carries it (06), so the walk sets the property
 from the model (the user can't set it; a click clears it). `?open` is kept too: the user may
 toggle a `<details>` before scripts run.
+
+**Style attributes** (0.3.1, gyral-dyn.5) are adopted like any attribute, then one write may
+follow: an element whose adopted `style` value has no inline declarations had its attribute
+blocked by a strict CSP, so the walk writes the value through the CSSOM (08 "Style attributes
+under a strict CSP"). The development check runs first, and skips a `style` attribute without
+declarations (Firefox empties a blocked one).
 
 ### The walk's algorithm (Phase 5)
 
@@ -165,7 +234,7 @@ toggle a `<details>` before scripts run.
 
 ### The server markup the walk meets (from Phase 4)
 
-What `@gyral/core/server` writes (06), as input for the walk. The points left open in Phase 4
+What `@gyral/core/internal/server` writes (06), as input for the walk. The points left open in Phase 4
 are resolved (marked **Phase 5**).
 
 - A host's root starts with its view: in a shadow root after the one `<style>` (when the
@@ -220,9 +289,9 @@ deployment.
 - Messages, for example:
   `gyral: hydration mismatch in <shop-cart> at ul[1] › li[2] › #text[0]: expected text "3", found text "4".`
   Development adds the explanation; production keeps the path and the expected/found part (useful in
-  field reports). The `(template at file:line:col)` part appears only for a template object that
-  carries `loc`; runtime and compiled objects don't (01 "The template object"), so in apps the tag
-  and path locate the mismatch.
+  field reports). The `(template at file:line:col)` part appears for a template object that
+  carries `loc`: development runtime templates do since 0.3.1 (01 "Source locations"); compiled
+  and production ones don't, so there the tag and path locate the mismatch.
 
 No in-place patching of a mismatched DOM: rebuilding one component is simple and predictable.
 
@@ -243,11 +312,25 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
   document), so it hydrates on its own at load; only the island itself waits. Put widgets
   that should wait inside the island's own view as islands too.
 
+## Preloads under a service worker (gyral-dyn.11, 0.3.1)
+
+Chrome 152–153 may warn "preload … not used because it is a cross-world service worker
+resource mismatch" and fetch the module again from the worker when DevTools or a test driver
+is attached. It is a browser bug, fixed in Chrome 154; the page works the same. If your tests
+run Playwright's bundled Chromium, upgrade to a build ≥ 154.
+
+No change to `@gyral/ssr`: the preload does go through the worker, and Gyral's markup isn't
+involved (Chromium CL 8007646 introduced it, CL 8254944 fixed it). Leaving the preloads out
+doesn't avoid it on 153 either: the entry script is fetched twice anyway.
+
 ## Testing
 
 - `@gyral/testing`'s `mountSsr` keeps parsing server output with `setHTMLUnsafe` (Chromium-only
   tests; newly available is fine there).
 - `hydrated()` releases islands if asked, then awaits `settled()` (04).
+- Server markup comes from golden fixtures written by Node tests, or on demand from
+  `renderOnServer` (`@gyral/testing/vitest`, a Vitest browser command that renders with
+  `@gyral/core/internal/server` in Node; gyral-dyn.8).
 - Every hydration test runs against development and production builds of core (the
   `browser-prod` Vitest project stays).
 - **Phase 5:** `core/test/view/walk-hydration.test.ts` (the walk), `mismatch-hydration.test.ts`

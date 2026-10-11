@@ -72,6 +72,35 @@ describe('template errors (view/09)', () => {
     expect(() => normalize(t`<meter .value=${0}></meter>`)).not.toThrow();
   });
 
+  it('rule 14: boolean attributes bound as strings', () => {
+    // The shipped bug: selected="false" still selects the option.
+    expectRule(
+      t`<option value="x" selected=${false}></option>`,
+      14,
+      'selected=${…}',
+      '?selected=${…}',
+    );
+    expectRule(t`<input disabled=${0}>`, 14, '?disabled=${…}', '"false"');
+    expectRule(t`<details open="${0}"></details>`, 14, '?open=${…}');
+    expectRule(t`<input DISABLED=${0}>`, 14, '?disabled=${…}');
+    expectRule(t`<video muted="a ${0}"></video>`, 14, '?muted=${…}');
+    // Fine: the boolean form, static attributes, custom elements, SVG, and hidden="until-found".
+    expect(() => normalize(t`<option value="x" ?selected=${false}></option>`)).not.toThrow();
+    expect(() => normalize(t`<option value="x" selected></option>`)).not.toThrow();
+    expect(() => normalize(t`<my-panel open=${0}></my-panel>`)).not.toThrow();
+    expect(() => normalize(t`<div hidden=${'until-found'}></div>`)).not.toThrow();
+  });
+
+  it('rule 4: dialog and popover state only as ?modal / ?popover-open where they fit', () => {
+    expectRule(t`<dialog modal=${0}></dialog>`, 4, '?modal=${…}');
+    expectRule(t`<dialog .modal=${0}></dialog>`, 4, '?modal=${…}');
+    expectRule(t`<div ?modal=${0}></div>`, 4, 'only a <dialog>');
+    expectRule(t`<div ?popover-open=${0}></div>`, 4, 'popover attribute');
+    expectRule(t`<div popover popover-open=${0}></div>`, 4, '?popover-open=${…}');
+    expect(() => normalize(t`<dialog ?modal=${0}></dialog>`)).not.toThrow();
+    expect(() => normalize(t`<p popover="manual" ?popover-open=${0}></p>`)).not.toThrow();
+  });
+
   it('rule 5: unquoted multi-part attributes, and static text with ? or .', () => {
     expectRule(t`<b class=a${0}></b>`, 5, 'without quotes', 'class="a ${…}"');
     expectRule(t`<b class=${0}a></b>`, 5, 'without quotes');
@@ -158,7 +187,7 @@ describe('template errors (view/09)', () => {
   });
 
   it('rule 10: SVG-only elements outside <svg>', () => {
-    expectRule(t`<g>${0}</g>`, 10, '<g> is an SVG element outside an <svg>', 'Wrap it');
+    expectRule(t`<g>${0}</g>`, 10, '<g> is an SVG element outside an <svg>', 'svg`<g', 'wrap it');
     expectRule(t`<div><path d=${0}></path></div>`, 10, '<path>');
     expect(() => normalize(t`<svg><g><path d=${0}></path></g></svg>`)).not.toThrow();
   });

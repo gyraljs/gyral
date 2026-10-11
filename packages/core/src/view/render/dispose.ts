@@ -1,0 +1,78 @@
+// Disposable hooks (view/02-bindings.md "Widgets with a lifecycle"): hooks whose spec has
+// `dispose`, and the tracking behind it. A disposable hook is tracked per render root from its commit
+// (`track`), with the spec and arguments to dispose (`kept`, `keptArgs`). After each render of
+// a root commits, before its client calls, `run` disposes every tracked hook whose element left
+// the root (Gyral removed it: a cleared part, a replaced instance, a removed row; moves keep it
+// inside) or whose position no longer holds it (`nothing`, another hook); a disposable hook
+// replacing one disposes the old one in `track`. When the host disconnects, `run(root, true)`
+// disposes the root's hooks and marks them `off`: the render on reconnect re-commits them from
+// scratch (`prev` undefined) or, for skipped rows, `run` queues their `client` again. Nothing
+// here is bundled unless it is registered (`#spec-features`, or use-disposal.ts when a module
+// names `dispose`: gyral-c5d.2, gyral-1zd.24), and nothing runs until such a hook commits.
+import { commitHook } from './hook-part.js';
+import {
+  committing,
+  queueHook,
+  useDisposal,
+  type HookPart,
+  type HookResult,
+  type HookSpec,
+} from './hooks.js';
+
+/** Parts committed since their root's hooks last ran, with that root. */
+let fresh: [HookPart, Node | undefined][] = [];
+const live = new WeakMap<Node, Set<HookPart>>();
+
+const dispose = (p: HookPart): void => {
+  (p.kept as HookSpec<readonly unknown[]>).dispose?.(p.el, p.keptArgs as readonly unknown[]);
+};
+
+function run(root: Node, disconnect?: boolean): boolean {
+  let tracked = live.get(root);
+  if (disconnect !== true) {
+    // Inside a flush several roots commit before their hooks run: keep the others' parts.
+    const rest: [HookPart, Node | undefined][] = [];
+    for (const entry of fresh) {
+      const [p, owner] = entry;
+      if (owner !== root) {
+        if (p.el.isConnected) rest.push(entry);
+        continue;
+      }
+      if (!root.contains(p.el)) continue; // left over from a render that threw
+      if (tracked === undefined) live.set(root, (tracked = new Set()));
+      tracked.add(p);
+    }
+    fresh = rest;
+  }
+  if (tracked === undefined) return false;
+  for (const p of tracked) {
+    const off = p.off;
+    p.off = disconnect;
+    if (disconnect === true || !root.contains(p.el) || p.spec !== p.kept) {
+      if (disconnect !== true) tracked.delete(p);
+      if (off !== true) dispose(p);
+    } else if (off === true) {
+      p.prev = undefined; // a skipped row's hook: client again, from scratch
+      queueHook(p);
+    }
+  }
+  return tracked.size > 0;
+}
+
+/** A disposable hook committed at `part`: tracks it, and turns disposal on. */
+function track(part: HookPart): void {
+  useDisposal(run);
+  // Replaced by this one, unless a disconnect disposed it already.
+  if (part.off !== true && part.kept !== undefined && part.kept !== part.spec) dispose(part);
+  part.off = false;
+  part.kept = part.spec ?? undefined;
+  part.keptArgs = part.args;
+  fresh.push([part, committing()]);
+}
+
+/** Commits a disposable hook, then tracks it for removal and disconnects. */
+export function commitTracked(part: HookPart, result: HookResult): void {
+  if (part.off === true) part.spec = null; // disposed by a disconnect: start over, always queued
+  commitHook(part, result);
+  track(part);
+}

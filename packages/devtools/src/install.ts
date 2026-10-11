@@ -4,7 +4,7 @@ import {
   devtoolsLiveComponents,
   type DevEvent,
   type DevtoolsHook,
-} from '@gyral/core';
+} from '@gyral/core/internal';
 import { DevtoolsPanel, PANEL_TAG } from './panel.js';
 
 export interface DevtoolsOptions {

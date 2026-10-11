@@ -1,5 +1,47 @@
 # @gyral/core
 
+## 0.3.1
+
+### Patch Changes
+
+This release includes API removals and behavior changes. Read the
+[0.3.0 → 0.3.1 migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md) before upgrading, and keep the nine
+Gyral packages on the same version.
+
+- Components use `define<State, Msg>()(tag, spec)` with typed intent names, tag-only intents,
+  parser state access and typed outputs. A declined intent bubbles to the next matching
+  intent; child outputs stop at their direct consuming parent.
+- Declarative `subscriptions` reconcile long-lived commands, with typed `subscription()`
+  builders, cancellation and stable command lanes. Drivers resolve through the host/root
+  override boundary; retry supports predicates, backoff and jitter.
+- Views gain `svg` templates, `keyed` replacement, disposable `defineHook` hooks, delegated
+  shadow focus, `focus(..., { wait: true })` and post-render `call` commands. Hooks run after
+  child renders and dispose when their owned elements are removed.
+- Native modal/popover bindings open after DOM insertion and child renders. Conditional
+  insertion, keyed replacement, initial opening and hydration follow the same ordering.
+  Intents dispatched by native focus complete their renders before focus commands and `settled`.
+- Opt-in `formAssociated` components project native values and validity and receive reset,
+  disabled and restoration messages. Native SSR fallback controls can preserve edits made
+  before hydration without duplicate form entries.
+- Optional `@gyral/core/storage` provides schema-decoded localStorage operations and change
+  subscriptions. Optional `@gyral/core/indexeddb` provides typed records, bounded queries,
+  synchronous migrations and atomic transaction batches. Neither adds code to unused apps.
+- Forms validate and refill through their definitions, retain user edits until model values
+  change, and redact password/passcode/CSRF fields plus explicitly named secrets. Shared head
+  data covers title, metadata, canonical URLs and JSON-LD across server rendering and routing.
+- The Vite preset supports client-only builds, automatic component modules, explicit wrapper
+  module mappings and generated element typings. Entry-imported components stay in their
+  entry; loader/preload work and spec features are reduced when unused.
+- Unified `GyralError` reporting, `Errored` reducers and error views handle failures in the
+  browser and server. Production diagnostics use stable codes linked to the public reference.
+  Strict CSP style bindings use CSSOM; seeded hydration and Trusted Types paths are verified.
+- Compiler/runtime/lint template rules agree, including boolean bindings written as `?name`.
+  Public exports have a checked inventory; duplicate/internal helper APIs are removed as
+  described in the migration guide.
+
+The lockstep release also adds optional/catch-all routes in `@gyral/router` and native
+EventSource/WebSocket entries in `@gyral/http`; see those packages' changelogs.
+
 ## 0.3.0
 
 ### Minor Changes

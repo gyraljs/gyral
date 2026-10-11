@@ -35,8 +35,15 @@ const fixture = {
   ].join('\n'),
 };
 
+// SSR builds keep the server-only fields: `segments`, and `staticStyles` when there are any.
 const strip = (t: TemplateObject, segments: boolean, production: boolean): object =>
-  segments ? { ...clientObject(t), segments: t.segments } : clientObject(t, production);
+  segments
+    ? {
+        ...clientObject(t),
+        segments: t.segments,
+        ...(t.staticStyles === undefined ? {} : { staticStyles: t.staticStyles }),
+      }
+    : clientObject(t, production);
 
 describe('compiled templates equal runtime ones (corpus)', () => {
   it('has a corpus to compare', () => {

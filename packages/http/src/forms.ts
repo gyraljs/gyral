@@ -1,25 +1,17 @@
 // The JS path of a server-validated form (ADR 0008, "Round trip"): post the submission to the
 // same route `formAction` serves, and turn a 422 rejection into the component's IntentRejected.
-import {
-  command,
-  intentRejectedSchema,
-  type Command,
-  type Concurrency,
-  type IntentRejected,
-} from '@gyral/core';
+import { command, type Command, type Concurrency, type IntentRejected } from '@gyral/core';
+import { intentRejectedSchema } from '@gyral/core/internal';
 import { http, type HttpError, type HttpRequest } from './driver.js';
 
 export interface SubmitFormOptions<MS, MF> {
   readonly method?: 'POST' | 'PUT' | 'PATCH';
   /**
-   * CSRF token for this submission: `{ meta: 'csrf-token' }` reads `<meta name="csrf-token">`
-   * when the request runs (the same mechanism as `csrfFromMeta`); `{ token }` sends a known
-   * value. The header defaults to `x-csrf-token`. Omit it when the app gave the http driver
-   * default headers (`makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`).
+   * A CSRF token the app already holds, for this submission only. The header defaults to
+   * `x-csrf-token`. A token from a `<meta>` is configured once, on the driver:
+   * `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })` (ADR 0022).
    */
-  readonly csrf?:
-    | { readonly meta: string; readonly header?: string }
-    | { readonly token: string; readonly header?: string };
+  readonly csrf?: { readonly token: string; readonly header?: string };
   /** The server's success answer, e.g. `{ _tag: 'Redirected', location }` (see `redirectedTo`). */
   readonly onSuccess: (body: unknown) => MS | undefined;
   /** Any failure except a 422 `IntentRejected`, which goes to the `IntentRejected` reducer. */
@@ -40,7 +32,6 @@ const isRejected = (error: HttpError): error is HttpError & { readonly detail: I
  * (server-only checks: duplicate email, wrong password) is dispatched as `IntentRejected`.
  *
  *   Register: (s, m) => [{ ...s, busy: true }, [submitForm('/register', m.form, {
- *     csrf: { meta: 'csrf-token' },
  *     onSuccess: (body) => ({ _tag: 'Registered', location: redirectedTo(body) }),
  *     onFailure: () => ({ _tag: 'Failed' }),
  *   })]],
@@ -51,15 +42,12 @@ export function submitForm<MS, MF = MS>(
   options: SubmitFormOptions<MS, MF>,
 ): Command<MS | MF | IntentRejected> {
   const { csrf, onSuccess, onFailure } = options;
-  const headers =
-    csrf !== undefined && 'token' in csrf ? { [csrf.header ?? 'x-csrf-token']: csrf.token } : {};
   const req: HttpRequest = {
     url,
     method: options.method ?? 'POST',
     body: formData,
-    headers,
+    headers: csrf === undefined ? {} : { [csrf.header ?? 'x-csrf-token']: csrf.token },
     errorSchema: intentRejectedSchema,
-    ...(csrf !== undefined && 'meta' in csrf ? { csrf } : {}),
   };
   return command<HttpRequest, unknown, HttpError, MS, MF | IntentRejected>(http, req, {
     onSuccess,
@@ -67,4 +55,17 @@ export function submitForm<MS, MF = MS>(
     key: options.key ?? `form:${url}`,
     concurrency: options.concurrency ?? 'exhaust',
   });
+}
+
+/** A server's JSON answer to a valid form post that would have redirected without JS. */
+export interface FormRedirected {
+  readonly _tag: 'Redirected';
+  readonly location: string;
+}
+
+/** The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. */
+export function redirectedTo(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const { _tag, location } = body as { readonly _tag?: unknown; readonly location?: unknown };
+  return _tag === 'Redirected' && typeof location === 'string' ? location : undefined;
 }

@@ -1,4 +1,4 @@
-import { css, define, each, html } from '@gyral/core';
+import { css, define, html, keyed } from '@gyral/core';
 
 // The model only counts runs; the motion is a CSS animation the browser runs on its own
 // (no per-frame state, no JS timer, no coordinates tweened in JS).
@@ -71,19 +71,17 @@ export type Msg = { readonly _tag: 'Animate' };
 /** One run's element; keyed by the run number, so each run gets a fresh one. */
 const target = (run: number) => html`<div class=${run === 0 ? 'target' : 'target moving'}></div>`;
 
-export const Animation = define<State, Msg>('gy-animation', {
+export const Animation = define<State, Msg>()('gy-animation', {
   init: () => ({ runs: 0 }),
-  intent: { Animate: () => ({ _tag: 'Animate' }) },
+  intent: { Animate: true },
   update: { Animate: (s) => ({ runs: s.runs + 1 }) },
   view: (s, i) => html`
     <button type="button" data-intent=${i.Animate}>Animate it!</button>
     <div class="stage" aria-hidden="true">
-      ${each(
+      ${
         // A new key per run replaces the element, which restarts the CSS animation.
-        [s.runs],
-        (run) => run,
-        target,
-      )}
+        keyed(s.runs, target(s.runs))
+      }
     </div>
   `,
   styles: css`
@@ -139,9 +137,3 @@ export const Animation = define<State, Msg>('gy-animation', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-animation': InstanceType<typeof Animation>;
-  }
-}

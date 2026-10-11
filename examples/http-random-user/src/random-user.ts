@@ -1,5 +1,6 @@
-import { css, define, html, randomInt } from '@gyral/core';
+import { css, define, html } from '@gyral/core';
 import type { HttpError } from '@gyral/http';
+import { randomInt } from './random.js';
 import { fetchUser, USER_COUNT, type User } from './users.js';
 
 export type State =
@@ -20,18 +21,20 @@ const describeError = (error: HttpError): string => {
       return `The server answered ${String(error.status)} ${error.statusText}.`;
     case 'HttpNetworkError':
       return 'Could not reach the server. Check your connection.';
+    case 'HttpTimeoutError':
+      return 'The server took too long to answer.';
     case 'HttpDecodeError':
       return 'The server sent a user we could not read.';
   }
 };
 
-export const RandomUser = define<State, Msg>('gy-random-user', {
+export const RandomUser = define<State, Msg>()('gy-random-user', {
   init: () => ({ _tag: 'Idle' }),
   intent: {
-    GetRandom: () => ({ _tag: 'GetRandom' }),
+    GetRandom: true,
   },
   update: {
-    // Randomness is an effect (gyral-czi.10): ask the random driver, so tests can fix it.
+    // Randomness is an effect: ask the random driver (src/random.ts), so tests can fix it.
     // Clicks while loading are ignored: any in-flight answer is "a random user".
     GetRandom: (s) =>
       s._tag === 'Loading'
@@ -157,10 +160,4 @@ function userCard(user: User) {
       <dd>${user.company.name}</dd>
     </dl>
   </article>`;
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-random-user': InstanceType<typeof RandomUser>;
-  }
 }

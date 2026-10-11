@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, emit, html, prop, runInit, settled, type Stateless } from '../src/index.js';
+import { define, html, prop, settled, type Stateless } from '../src/index.js';
+import { emit } from '../src/internal.js';
+import { runInit } from '../src/internal.js';
 
 type Out = { readonly _tag: 'Picked'; readonly value: string };
 type BadgeMsg = { readonly _tag: 'Pick' };
 
 // Stateless: no init, a pure view of its props that only reports up.
-const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>('test-badge', {
+const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>()('test-badge', {
   props: { label: prop.string({ required: true }) },
-  intent: { Pick: () => ({ _tag: 'Pick' }) },
+  intent: { Pick: true },
   update: { Pick: (s, _m, { props }) => [s, [emit({ _tag: 'Picked', value: props.label })]] },
   view: (_s, i, { props }) =>
     html`<button
@@ -23,7 +25,7 @@ const Badge = define<Stateless, BadgeMsg, { readonly label: string }, Out>('test
 // (view/02-bindings.md), written only when the model's value changes, so a refused edit stays
 // in the control (the model didn't change) and an accepted one is the control's value.
 type FieldMsg = { readonly _tag: 'Typed'; readonly value: number };
-const Capped = define<{ readonly value: number }, FieldMsg>('test-capped', {
+const Capped = define<{ readonly value: number }, FieldMsg>()('test-capped', {
   init: () => ({ value: 5 }),
   intent: { Typed: ({ value }) => ({ _tag: 'Typed', value: Number(value) }) },
   update: { Typed: (s, m) => (m.value > 10 ? s : { value: m.value }) },
@@ -48,9 +50,7 @@ describe('ergonomics', () => {
 
   it('still requires init when {} is not a valid state', () => {
     // @ts-expect-error: `init` is required for components with state
-    define<{ readonly n: number }, never>('test-needs-init', {
-      intent: {},
-      update: {},
+    define<{ readonly n: number }>()('test-needs-init', {
       view: () => html``,
     });
   });

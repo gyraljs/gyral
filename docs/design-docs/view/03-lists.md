@@ -63,13 +63,15 @@ In select-row, 998 of 1,000 rows cost one comparison each; only the old and new 
 ## Rows must be pure
 
 Skipping is only correct if a row's output depends on nothing but `(item, picked)` and module
-constants. Intent names are such constants: `intents<Msg>()` (gyral-g1r.19) returns the same
-names object the view gets as `i`, as a module-level constant, so rows name intents without
-passing them through `pick`:
+constants. Intent names are such constants: `intentsOf<typeof Todos>()` (gyral-g1r.19; ADR 0023
+in 0.3.1) returns the same names object the view gets as `i`, as a module-level constant, so
+rows name intents without passing them through `pick`. A row that uses it declares its return
+type, and the view uses its own `i`; otherwise the row, the view and the component's type infer
+each other in a circle:
 
 ```ts
-const i = intents<Msg>();
-const Row = (t: Todo, selected: boolean) =>
+const i = intentsOf<typeof Todos>();
+const Row = (t: Todo, selected: boolean): TemplateResult =>
   html`<li class=${selected ? 'selected' : ''}>
     <input type="checkbox" value=${t.id} ?checked=${t.done} data-intent=${i.Toggle} />
   </li>`;
@@ -97,6 +99,16 @@ Two guards:
   can be the value: `each(tags, (t) => t, Tag)`.
 - Duplicate keys are a development error. In production they are handled best effort (matched
   by position where the scan can), never crashing.
+
+### `keyed(key, value)`: one value with a key (0.3.1)
+
+`keyed(key, value)` is `each([value], () => key, (v) => v)`: a one-row list. While the key stays
+the same, the row updates in place like any other child value (its value is a new template
+result on each render, so it always re-renders); when the key changes, the old row's DOM and
+nested component state are removed and a new row is created. It replaces the one-item `each`
+apps wrote to restart an element, clear a form or reset a child (gyral-1zd.25). Being a
+`ListResult`, it needs nothing new on the server or in hydration, and it's tree-shaken with the
+keyed list code.
 
 ## Reconciliation
 

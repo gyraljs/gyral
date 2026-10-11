@@ -1,19 +1,29 @@
-// Finds a module's `html` call sites for the template compiler (view/01-templates.md
+// Finds a module's `html` and `svg` call sites for the template compiler (view/01-templates.md
 // "Compiled"). Two steps, because matching an import against the configured sources may need
 // module resolution (async, in the plugin): `htmlImports` lists the candidate imports, and
 // `findUses` walks the module, scope-aware, for every reference to the matching bindings:
-//   - html`…` (or ns.html`…` for `import * as ns`) is a call site;
+//   - html`…` (or ns.html`…` for `import * as ns`) is a call site, and so is svg`…`;
 //   - any other reference (`const h = html`, `html(strings)`, `ns[x]`, `{ html } = ns`) is a
 //     leftover the compiler can't follow: an error, since it would reach the runtime preparer;
 //   - `export { html }` re-exports it: a warning here, an error in generateBundle when an
-//     uncompiled `html` survives in the bundle.
+//     uncompiled `html` survives in the bundle. Everything said of `html` holds for `svg`.
 import { children, nodeAt, nodesAt, scopeNames, type Node } from './ast.js';
 
-/** `import { html as local } from 'specifier'`, or `import * as local from 'specifier'`. */
+/** The template tags the compiler rewrites. */
+export type Tag = 'html' | 'svg';
+const TAGS: readonly string[] = ['html', 'svg'];
+const tagOf = (name: string | undefined): Tag | undefined =>
+  name !== undefined && TAGS.includes(name) ? (name as Tag) : undefined;
+
+/**
+ * `import { html as local } from 'specifier'` (`tag` says which tag, html or svg), or
+ * `import * as local from 'specifier'` (no `tag`: `ns.html` and `ns.svg` both are).
+ */
 export interface HtmlImport {
   readonly local: string;
   readonly namespace: boolean;
   readonly specifier: string;
+  readonly tag?: Tag;
 }
 
 export interface Imports {
@@ -23,8 +33,12 @@ export interface Imports {
 }
 
 export interface Uses {
-  /** TaggedTemplateExpression nodes whose tag is a matching binding. */
-  readonly sites: readonly { readonly node: Node; readonly binding: HtmlImport }[];
+  /** TaggedTemplateExpression nodes whose tag is a matching binding, and which tag it is. */
+  readonly sites: readonly {
+    readonly node: Node;
+    readonly binding: HtmlImport;
+    readonly tag: Tag;
+  }[];
   /** Other references; `exported`: an `export { html }` specifier. */
   readonly leftovers: readonly { readonly node: Node; readonly exported: boolean }[];
 }
@@ -43,7 +57,10 @@ const specifierOf = (node: Node): string | undefined => nameOf(nodeAt(node, 'sou
 const isValue = (node: Node): boolean =>
   node['importKind'] !== 'type' && node['exportKind'] !== 'type';
 
-/** Imports of `html` (named) and namespace imports, plus `export { html } from` re-exports. */
+/**
+ * Imports of `html` and `svg` (named) and namespace imports, plus `export { html } from`
+ * re-exports (of either tag).
+ */
 export function htmlImports(program: Node): Imports {
   const imports: HtmlImport[] = [];
   const reexports: { node: Node; specifier: string }[] = [];
@@ -56,13 +73,14 @@ export function htmlImports(program: Node): Imports {
         if (local === undefined || !isValue(s)) continue;
         if (s.type === 'ImportNamespaceSpecifier') {
           imports.push({ local, namespace: true, specifier });
-        } else if (s.type === 'ImportSpecifier' && nameOf(nodeAt(s, 'imported')) === 'html') {
-          imports.push({ local, namespace: false, specifier });
+        } else if (s.type === 'ImportSpecifier') {
+          const tag = tagOf(nameOf(nodeAt(s, 'imported')));
+          if (tag !== undefined) imports.push({ local, namespace: false, specifier, tag });
         }
       }
     } else if (statement.type === 'ExportNamedDeclaration') {
       const html = nodesAt(statement, 'specifiers').find(
-        (s) => isValue(s) && nameOf(nodeAt(s, 'local')) === 'html',
+        (s) => isValue(s) && tagOf(nameOf(nodeAt(s, 'local'))) !== undefined,
       );
       if (html !== undefined) reexports.push({ node: html, specifier });
     }
@@ -76,7 +94,7 @@ const unparen = (node: Node | undefined): Node | undefined =>
 /** Every use of `bindings` in `program`, skipping names that a nested scope redeclares. */
 export function findUses(program: Node, bindings: readonly HtmlImport[]): Uses {
   const byName = new Map(bindings.map((b) => [b.local, b]));
-  const sites: { node: Node; binding: HtmlImport }[] = [];
+  const sites: { node: Node; binding: HtmlImport; tag: Tag }[] = [];
   const leftovers: { node: Node; exported: boolean }[] = [];
   const scopes: Set<string>[] = [];
 
@@ -86,15 +104,16 @@ export function findUses(program: Node, bindings: readonly HtmlImport[]): Uses {
     return byName.get(name);
   };
 
-  /** The binding a tag refers to: `html` itself, or `ns.html`. */
-  const tagBinding = (tag: Node | undefined): HtmlImport | undefined => {
+  /** The binding a tag refers to, and which tag: `html` itself, or `ns.html` (or svg). */
+  const tagBinding = (tag: Node | undefined): { binding: HtmlImport; tag: Tag } | undefined => {
     if (tag?.type === 'Identifier') {
       const b = binding(tag);
-      return b?.namespace === false ? b : undefined;
+      return b?.tag === undefined ? undefined : { binding: b, tag: b.tag };
     }
     if (tag?.type !== 'MemberExpression' || tag['computed'] === true) return undefined;
     const b = binding(nodeAt(tag, 'object'));
-    return b?.namespace === true && nameOf(nodeAt(tag, 'property')) === 'html' ? b : undefined;
+    const name = tagOf(nameOf(nodeAt(tag, 'property')));
+    return b?.namespace === true && name !== undefined ? { binding: b, tag: name } : undefined;
   };
 
   const walkAll = (nodes: readonly Node[]): void => {
@@ -122,7 +141,7 @@ export function findUses(program: Node, bindings: readonly HtmlImport[]): Uses {
         const tag = unparen(nodeAt(node, 'tag'));
         const b = tagBinding(tag);
         if (b === undefined) break;
-        sites.push({ node, binding: b });
+        sites.push({ node, ...b });
         walkAll(nodesAt(nodeAt(node, 'quasi') ?? node, 'expressions'));
         return;
       }
@@ -131,8 +150,8 @@ export function findUses(program: Node, bindings: readonly HtmlImport[]): Uses {
         const b = binding(object);
         const computed = node['computed'] === true;
         if (b !== undefined) {
-          // ns.other is fine; ns.html outside a tag, or ns[expr], can't be followed.
-          if (!b.namespace || computed || nameOf(nodeAt(node, 'property')) === 'html') {
+          // ns.other is fine; ns.html (or ns.svg) outside a tag, or ns[expr], can't be followed.
+          if (!b.namespace || computed || tagOf(nameOf(nodeAt(node, 'property'))) !== undefined) {
             leftovers.push({ node, exported: false });
           }
         } else walkAll(nodesAt(node, 'object'));

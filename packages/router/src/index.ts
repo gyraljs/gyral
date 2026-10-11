@@ -1,8 +1,11 @@
-import { command, type Command } from '@gyral/core';
-import { router, type RouteLocation, type RouterInput } from './driver.js';
+import { command, type Command, type Head } from '@gyral/core';
+import { router, type AfterNavigation, type RouteLocation, type RouterInput } from './driver.js';
+import { applyHead } from './internal/head.js';
+import { headSlot } from './internal/head-slot.js';
 
 export { makeRouter, router } from './driver.js';
 export type {
+  AfterNavigation,
   RouteLocation,
   RouterDriver,
   RouterInput,
@@ -11,41 +14,41 @@ export type {
 } from './driver.js';
 export type { MemoryOptions } from './memory.js';
 export type { LocationLike } from './stream.js';
-export { capturedUrl } from './links.js';
 export { routes } from './routes.js';
 export type { Matcher, Params, RouteMatch, RouteTable, Routes } from './routes.js';
 
-type Output = RouteLocation | undefined;
+const fireAndForget = (input: RouterInput): Command<never> => command(router, input);
 
-const fireAndForget = (input: RouterInput): Command<never> =>
-  command<RouterInput, Output, unknown, never>(router, input, { onSuccess: () => undefined });
-
-/** Navigates in-app (pushes a history entry, or replaces the current one). */
-export function navigate(
-  url: string,
-  options: { readonly replace?: boolean } = {},
-): Command<never> {
-  return fireAndForget({ _tag: 'Navigate', url, replace: options.replace ?? false });
-}
-
-/** Moves through history by `delta` entries (`-1` is back). */
-export function go(delta: number): Command<never> {
-  return fireAndForget({ _tag: 'Traverse', delta });
+/** Options of `navigate()`. */
+export interface NavigateOptions extends Partial<AfterNavigation> {
+  /** Replace the current history entry instead of pushing one. Default `false`. */
+  readonly replace?: boolean;
 }
 
 /**
- * Sets the document title (the memory history records it instead). Compute the title with a
- * pure function of state, and call the same function in the server's document template, so
- * server and client titles come from one source:
- *
- *   Routed: (s, m) => [next, [setTitle(pageTitle(m.location.pathname))]]
+ * Navigates in-app (pushes a history entry, or replaces the current one). In the browser, once
+ * the new page has rendered, a push scrolls to the `#fragment` target or the top and resets
+ * focus, as the browser does for a page load (ADR 0009 "Scroll and focus"); `scroll: false` or
+ * `focusReset: false` leaves that to the app. A `replace` (keeping the query in sync with a
+ * search box) leaves scroll and focus alone unless `scroll: true` / `focusReset: true`.
  */
-export function setTitle(title: string): Command<never> {
-  return fireAndForget({ _tag: 'Title', title });
+export function navigate(url: string, options: NavigateOptions = {}): Command<never> {
+  return fireAndForget({ _tag: 'Navigate', url, ...options, replace: options.replace ?? false });
 }
 
-export const back = (): Command<never> => go(-1);
-export const forward = (): Command<never> => go(1);
+/**
+ * Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed
+ * element (description, robots, canonical, meta, links, JSON-LD). Managed elements the new head
+ * doesn't name are removed; unchanged ones are not written; content from `renderPage({ extraHead })`
+ * is never touched. The memory history records it instead. Build the head with one pure
+ * function and pass the same function's result to the server's `renderPage()`:
+ *
+ *   Routed: (s, m) => [next, [setHead(pageHead(site.match(m.location.href), origin))]]
+ */
+export function setHead(head: Head): Command<never> {
+  headSlot.apply ??= applyHead;
+  return fireAndForget({ _tag: 'Head', head });
+}
 
 /**
  * Streams the current location, then every URL change, as messages until the component
@@ -54,7 +57,7 @@ export const forward = (): Command<never> => go(1);
  *   init: () => [initial, [listen((location) => ({ _tag: 'Routed', location }))]]
  */
 export function listen<M>(toMsg: (location: RouteLocation) => M | undefined): Command<M> {
-  return command<RouterInput, Output, unknown, M>(
+  return command(
     router,
     { _tag: 'Listen' },
     {

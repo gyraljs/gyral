@@ -1,9 +1,9 @@
 import {
-  runInit,
   type AnyStoreInstance,
   type Command,
   type ComponentSpec,
   type Ctx,
+  type Errored,
   type Hydrated,
   type IntentRejected,
   type Next,
@@ -12,6 +12,7 @@ import {
   type StoreReader,
   type Tagged,
 } from '@gyral/core';
+import { runInit } from '@gyral/core/internal';
 
 /** A reducer result, normalised: the new state plus the commands it asked for. */
 export interface Stepped<S, M> {
@@ -20,9 +21,16 @@ export interface Stepped<S, M> {
 }
 
 /** Any message `update` accepts: the component's own, or a framework message. */
-export type StepMessage<M, P> = M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated;
+export type StepMessage<M, P> =
+  M | PropsChanged<P> | IntentRejected | StoreChanged | Hydrated | Errored;
 
-const FRAMEWORK = new Set(['PropsChanged', 'IntentRejected', 'StoreChanged', 'Hydrated']);
+const FRAMEWORK = new Set([
+  'PropsChanged',
+  'IntentRejected',
+  'StoreChanged',
+  'Hydrated',
+  'Errored',
+]);
 
 /** `ctx.read` over the given store instances (ADR 0013); unknown stores fail loudly. */
 export function readerOf(stores: readonly AnyStoreInstance[]): StoreReader {
@@ -59,8 +67,21 @@ export function initial<S, M extends Tagged, P>(
 }
 
 /**
+ * The commands `spec.subscriptions` asks to keep running for `state` and `props` (ADR 0025),
+ * without a DOM: `subscriptionsFor(Clock.spec, { live: true })`. A spec without the field gives
+ * none. Assert their inputs with `inputsFor`, as for any commands.
+ */
+export function subscriptionsFor<S, M extends Tagged, P>(
+  spec: ComponentSpec<S, M, P>,
+  state: NoInfer<S>,
+  props: NoInfer<P> = {} as P,
+): ReadonlyArray<Command<M>> {
+  return spec.subscriptions?.(state, props) ?? [];
+}
+
+/**
  * Feeds one message through `update` without a DOM. Framework messages (`PropsChanged`,
- * `IntentRejected`, `StoreChanged`, `Hydrated`) without a reducer leave state unchanged, as in
+ * `IntentRejected`, `StoreChanged`, `Hydrated`, `Errored`) without a reducer leave state unchanged, as in
  * the element. `stores` are the instances `ctx.read()` sees.
  */
 export function step<S, M extends Tagged, P>(
@@ -72,7 +93,7 @@ export function step<S, M extends Tagged, P>(
   stores: readonly AnyStoreInstance[] = [],
 ): Stepped<S, M> {
   // Sound: the reducer is looked up by the message's own tag.
-  const reducers = spec.update as unknown as Readonly<
+  const reducers = (spec.update ?? {}) as unknown as Readonly<
     Record<string, AnyReducer<S, M, P> | undefined>
   >;
   const reducer = reducers[msg._tag];

@@ -4,7 +4,9 @@
 import { createHash } from 'node:crypto';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { describe, expect, it, vi } from 'vitest';
-import { ISLAND_ATTRIBUTE, LIGHT_ATTRIBUTE, css, define, html, prop } from '../../src/index.js';
+import { css, define, html, prop } from '../../src/index.js';
+import { LIGHT_ATTRIBUTE } from '../../src/internal.js';
+import { ISLAND_ATTRIBUTE } from '../../src/internal.js';
 import { SEED_ATTRIBUTE } from '../../src/hydration.js';
 import * as written from '../../src/view/attributes.js';
 import { render, renderToString, styleHashes } from '../../src/server.js';
@@ -21,7 +23,7 @@ interface Props {
   readonly tags: readonly string[];
 }
 
-define<{ readonly count: number }, Msg, Props>('srv-counter', {
+define<{ readonly count: number }, Msg, Props>()('srv-counter', {
   props: {
     start: prop.number({ default: 0 }),
     label: prop.string({ default: '' }),
@@ -29,7 +31,6 @@ define<{ readonly count: number }, Msg, Props>('srv-counter', {
     tags: prop.value(list, { default: [] }),
   },
   init: (p) => ({ count: p.start }),
-  intent: {},
   update: { Add: (s, m) => ({ count: s.count + m.n }) },
   view: (s, _i, { props }) =>
     html`<p>${props.label}: ${s.count} ${props.open ? 'open' : 'shut'} ${props.tags.join()}</p>`,
@@ -43,11 +44,9 @@ define<{ readonly count: number }, Msg, Props>('srv-counter', {
   ],
 });
 
-define<{ readonly n: number }, never>('srv-light', {
+define<{ readonly n: number }>()('srv-light', {
   shadow: false,
   init: () => ({ n: 1 }),
-  intent: {},
-  update: {},
   view: (s) =>
     html`<section>
       <h2>Light ${s.n}</h2>
@@ -55,12 +54,16 @@ define<{ readonly n: number }, never>('srv-light', {
     </section>`,
 });
 
-define<{ readonly n: number }, never>('srv-island', {
+define<{ readonly n: number }>()('srv-island', {
   hydrate: 'visible',
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<i>later</i>`,
+});
+
+define<{ readonly n: number }>()('srv-focus', {
+  shadow: { delegatesFocus: true },
+  init: () => ({ n: 0 }),
+  view: () => html`<input aria-label="Name" />`,
 });
 
 const prod = (v: unknown) => renderToString(v as never, { dev: false });
@@ -142,6 +145,13 @@ describe('components (06 "Components")', () => {
     );
   });
 
+  it('mark a focus-delegating shadow root with shadowrootdelegatesfocus (gyral-dyn.26)', () => {
+    expect(prod(html`<srv-focus></srv-focus>`)).toContain(
+      '<template shadowrootmode="open" shadowrootdelegatesfocus><input aria-label="Name">',
+    );
+    expect(prod(html`<srv-island></srv-island>`)).not.toContain('shadowrootdelegatesfocus');
+  });
+
   it('write unregistered custom elements as plain elements', () => {
     expect(prod(html`<other-el a="1" b=${2} .c=${3}>${'x'}</other-el>`)).toBe(
       '<other-el a="1" b="2">x</other-el>',
@@ -156,20 +166,24 @@ describe('components (06 "Components")', () => {
 
 describe('host attributes', () => {
   it('are spelled the same by the server renderer and the client', () => {
-    expect({ ...written }).toEqual({ SEED_ATTRIBUTE, LIGHT_ATTRIBUTE, ISLAND_ATTRIBUTE });
+    // ERROR_ATTRIBUTE: the client reads view/'s constant itself (element.ts, ADR 0024).
+    expect({ ...written }).toEqual({
+      SEED_ATTRIBUTE,
+      LIGHT_ATTRIBUTE,
+      ISLAND_ATTRIBUTE,
+      ERROR_ATTRIBUTE: 'data-gyral-error',
+    });
   });
 });
 
 describe('streaming (06 "API")', () => {
   it('yields at every component boundary and renders each component only when pulled', () => {
     let rendered = 0;
-    define<{ readonly n: number }, never>('srv-counted', {
+    define<{ readonly n: number }>()('srv-counted', {
       init: () => {
         rendered++;
         return { n: rendered };
       },
-      intent: {},
-      update: {},
       view: (s) => html`<b>${s.n}</b>`,
     });
     const chunks = render(

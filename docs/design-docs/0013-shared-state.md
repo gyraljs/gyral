@@ -53,7 +53,7 @@ export const cart = defineStore<Cart, CartMsg>('cart', {
 });
 
 // any component, anywhere in the tree
-define<State, Msg, Props>('cart-badge', {
+define<State, Msg, Props>()('cart-badge', {
   stores: { cart },                                       // declares what it reads
   view: (s, i, { stores }) => html`<span>${stores.cart.lines.length}</span>`,
   update: {
@@ -71,7 +71,7 @@ define<State, Msg, Props>('cart-badge', {
 - **Write:** `send(store, msg)` is a command. A store's `update` may return commands (for
   example, persist the cart), run by the store's own interpreter. Stores never touch the DOM.
 - **Test:** `store.spec.update` is pure (`step()` works on it). Components get a fresh store
-  instance per test (`el.stores = { cart: testStore(cart, initial) }`), the same way
+  instance per test (`el.stores = { cart: cart.instance(initial) }`), the same way
   `el.drivers` substitutes drivers.
 - **SSR:** the request handler creates a **per-request** instance
   (`page({ stores: [cart.instance(initial)] })`). Components read it synchronously during the
@@ -109,7 +109,7 @@ The declaration is an array, `stores: [cart]`. Reading a store that isn't declar
 an error naming the fix, because an undeclared store would never trigger re-renders.
 
 ```ts
-define<State, Msg>('cart-badge', {
+define<State, Msg>()('cart-badge', {
   stores: [cart],
   view: (s, i, { read }) => html`${count(read(cart))}`,
   update: {
@@ -152,9 +152,9 @@ define<State, Msg>('cart-badge', {
   its `init` commands in a `setTimeout(0)`, after the hydrating renders. This is the same
   reason ADR 0012 defers component `init` commands.
 - **Testing** (`@gyral/testing`):
-  - `testStore(store, initial?)` gives a fresh instance for a test.
+  - `store.instance(initial?)` gives a fresh instance for a test (0.3.1 removed `testStore`).
   - `stepStore(store, state, msg)` runs a store reducer purely.
-  - `sentTo(commands, store)` lists the messages a reducer's commands `send()` to that store.
+  - `inputsFor(commands, store)` lists the messages a reducer's commands `send()` to that store (0.3.1 folded `sentTo` into it).
   - `step(spec, state, msg, props, [instances])` and `run(…, { stores })` give reducers a
     working `ctx.read`.
   - `resetDocumentStores()` (core) clears the document default between tests.

@@ -1,0 +1,229 @@
+/// <reference types="node" />
+// `@gyral/ssr/node` (gyral-dyn.6, ADR 0016 "Node adapter"): mounts a fetch handler,
+// `(request) => Response`, on `node:http`, so a Node app needs neither Hono nor its own glue.
+// Node-only, on its own subpath; everything behind it speaks web Request and Response.
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
+
+/**
+ * What `toNodeListener` passes as the handler's second argument (gyral-dyn.29): the Node request
+ * and the client's address. `{ incoming }` is the shape Hono's Node adapter uses, so
+ * `getConnInfo` from `@hono/node-server/conninfo` works unchanged.
+ */
+export interface NodeEnv {
+  /** The Node request, for anything `Request` doesn't carry (socket, TLS details). */
+  readonly incoming: IncomingMessage;
+  /**
+   * The peer's IP address (`req.socket.remoteAddress`), or `undefined` once the socket is gone.
+   * Behind a proxy this is the proxy: read `X-Forwarded-For` only when the proxy is known.
+   */
+  readonly remoteAddress: string | undefined;
+}
+
+/**
+ * A fetch handler: `productionServer(…).fetch`, a Hono app's `fetch`, or a plain function. Under
+ * `toNodeListener` it also receives a {@link NodeEnv}; handlers that don't need it ignore it.
+ */
+export type FetchHandler = (request: Request, env: NodeEnv) => Response | Promise<Response>;
+
+export interface NodeListenerOptions {
+  /**
+   * The origin request URLs are built on, e.g. `https://example.com` behind a proxy. Default:
+   * `http://` (`https://` on a TLS socket) plus the request's `Host` header, which the client
+   * chooses: set it when the app writes absolute URLs (canonical links, redirects).
+   */
+  readonly origin?: string;
+  /**
+   * Called when the handler throws or the response body fails, before the 500 (or, once the
+   * headers are out, before the connection is cut). Default: `console.error`.
+   */
+  readonly onError?: (error: unknown, request: Request) => void;
+}
+
+/** A Node `request` listener: `createServer(toNodeListener(app.fetch))`. */
+export type NodeListener = (req: IncomingMessage, res: ServerResponse) => void;
+
+function requestUrl(req: IncomingMessage, origin: string | undefined): URL {
+  const base =
+    origin ??
+    `${'encrypted' in req.socket ? 'https' : 'http'}://${req.headers.host ?? 'localhost'}`;
+  const target = req.url ?? '/';
+  // Absolute-form (proxies) keeps only its path and query. Either is appended to the origin,
+  // never resolved against it, so "//evil.example/x" stays a path.
+  const path = target.startsWith('/')
+    ? target
+    : ((url) => `${url.pathname}${url.search}`)(new URL(target));
+  return new URL(`${new URL(base).origin}${path}`);
+}
+
+/**
+ * The request body as a web stream that starts reading `req` only when the handler reads it.
+ * A body the handler never touches stays unconsumed, so Node discards it after the response
+ * and the keep-alive socket can carry the next request.
+ */
+function lazyBody(req: IncomingMessage): ReadableStream<Uint8Array> {
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  return new ReadableStream<Uint8Array>(
+    {
+      async pull(controller) {
+        reader ??= (Readable.toWeb(req) as ReadableStream<Uint8Array>).getReader();
+        const { done, value } = await reader.read();
+        if (done) controller.close();
+        else controller.enqueue(value);
+      },
+      cancel: (reason) => reader?.cancel(reason),
+    },
+    { highWaterMark: 0 },
+  );
+}
+
+function toRequest(req: IncomingMessage, url: URL, signal: AbortSignal): Request {
+  const headers = new Headers();
+  const raw = req.rawHeaders;
+  for (let i = 0; i + 1 < raw.length; i += 2) {
+    const name = raw[i] ?? '';
+    if (!name.startsWith(':')) headers.append(name, raw[i + 1] ?? '');
+  }
+  const method = req.method ?? 'GET';
+  const body = method === 'GET' || method === 'HEAD' ? undefined : lazyBody(req);
+  return new Request(url, {
+    method,
+    headers,
+    signal,
+    ...(body === undefined ? {} : { body, duplex: 'half' as const }),
+  });
+}
+
+function writeHead(res: ServerResponse, response: Response): void {
+  const headers: Record<string, string | string[]> = {};
+  response.headers.forEach((value, name) => {
+    if (name !== 'set-cookie') headers[name] = value;
+  });
+  // Joined with ", " a cookie list is unreadable (dates contain commas): one header each.
+  const cookies = response.headers.getSetCookie();
+  if (cookies.length > 0) headers['set-cookie'] = cookies;
+  if (response.statusText === '') res.writeHead(response.status, headers);
+  else res.writeHead(response.status, response.statusText, headers);
+}
+
+/** Resolves when `res` can take more data, or the client has gone. */
+const drained = (res: ServerResponse, signal: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    const done = (): void => {
+      res.off('drain', done);
+      signal.removeEventListener('abort', done);
+      resolve();
+    };
+    res.on('drain', done);
+    signal.addEventListener('abort', done);
+  });
+
+/**
+ * Writes the body one chunk per read, waiting for `drain` when Node's buffer is full, so the
+ * stream is pulled only as fast as the client takes it. A client that leaves cancels the
+ * stream (a pending read ends); a stream that fails rejects, for the caller to report.
+ */
+async function send(
+  res: ServerResponse,
+  body: ReadableStream<Uint8Array>,
+  signal: AbortSignal,
+): Promise<void> {
+  const reader = body.getReader();
+  const cancel = (): void => void reader.cancel().catch(() => undefined);
+  const gone = (): boolean => signal.aborted;
+  // Gone before the first byte: an abort listener added now would never fire.
+  if (gone()) {
+    cancel();
+    return;
+  }
+  signal.addEventListener('abort', cancel);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (gone()) return;
+      if (done) break;
+      if (!res.write(value)) await drained(res, signal);
+    }
+    res.end();
+  } finally {
+    signal.removeEventListener('abort', cancel);
+  }
+}
+
+const fail = (res: ServerResponse, status: number, text: string): void => {
+  res.writeHead(status, {
+    'content-type': 'text/plain; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  res.end(text);
+};
+
+/**
+ * A `node:http` request listener that runs `fetch` for each request:
+ * - the `Request` gets the method, URL (on `origin`), headers and, for methods other than
+ *   `GET`/`HEAD`, the body as a stream; its `signal` aborts when the client disconnects;
+ * - the `Response` body is piped with backpressure (a slow client pauses the stream, so a
+ *   `renderPage` body renders as fast as it is read) and cancelled on disconnect;
+ * - `HEAD` sends the headers only; each `set-cookie` stays its own header;
+ * - an unparsable request target is a 400; a throwing handler a 500 (`onError` sees it);
+ * - the handler's second argument is a {@link NodeEnv}: `{ incoming, remoteAddress }`.
+ */
+export function toNodeListener(
+  fetch: FetchHandler,
+  options: NodeListenerOptions = {},
+): NodeListener {
+  const report = options.onError;
+  // A throwing reporter must not become an unhandled rejection (which ends the process).
+  const onError = (error: unknown, request: Request): void => {
+    try {
+      if (report === undefined) console.error(error);
+      else report(error, request);
+    } catch (reportError) {
+      console.error(reportError);
+    }
+  };
+  return (req, res) => {
+    const controller = new AbortController();
+    res.on('close', () => {
+      if (!res.writableFinished) controller.abort();
+    });
+    let sent: Request;
+    try {
+      sent = toRequest(req, requestUrl(req, options.origin), controller.signal);
+    } catch {
+      fail(res, 400, 'Bad request');
+      return;
+    }
+    void (async () => {
+      try {
+        const response = await fetch(sent, {
+          incoming: req,
+          remoteAddress: req.socket.remoteAddress,
+        });
+        // A body the handler started reading but didn't finish can't be skipped without
+        // reading it: close the connection after this response instead of stalling the next.
+        if (sent.bodyUsed && !req.complete) res.shouldKeepAlive = false;
+        writeHead(res, response);
+        if (req.method === 'HEAD' || response.body === null) {
+          await response.body?.cancel();
+          res.end();
+          return;
+        }
+        await send(res, response.body, controller.signal);
+      } catch (error) {
+        if (controller.signal.aborted) return; // the client went away: nobody to answer
+        onError(error, sent);
+        if (!res.headersSent) fail(res, 500, 'Internal server error');
+        else res.destroy(); // a cut connection, not a response that looks complete
+      }
+    })();
+  };
+}
+
+export {
+  gyralDevServer,
+  type DevApp,
+  type DevServer,
+  type DevServerContext,
+  type DevServerOptions,
+} from './dev.js';

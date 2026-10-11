@@ -9,7 +9,7 @@ import { Instance } from './instance.js';
 import { clearList, commitItems, type List } from './list.js';
 import { EACH, isList, isRaw, MARKUP, nothing } from './values.js';
 import type { RawRange } from './raw.js';
-import { badChild, warnTrue } from './warn.js';
+import { badChild, checkSvgParent, warnTrue } from './warn.js';
 
 /** What a child part holds. */
 export const EMPTY = 0;
@@ -186,7 +186,9 @@ export class ChildPart {
   }
 
   private create(result: TemplateResult, source: unknown): void {
-    const instance = new Instance(templateOf(result), source, this);
+    const template = templateOf(result);
+    if (DEV && template.svg) checkSvgParent(this.parent());
+    const instance = new Instance(template, source, this);
     instance.update(result.values);
     instance.insert(this.parent(), this.end());
     this.kind = INSTANCE;

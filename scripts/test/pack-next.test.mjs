@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { prereleaseManifest } from '../lib/pack-next.mjs';
+import { defaultPrerelease, prereleaseManifest } from '../lib/pack-next.mjs';
 
 describe('pack:next manifests', () => {
   it('pins every Gyral entry to the prerelease, dev dependencies included', () => {
@@ -31,5 +31,12 @@ describe('pack:next manifests', () => {
       name: '@gyral/time',
       version: '0.3.0-next.3',
     });
+  });
+
+  it('defaults to the next patch prerelease, which sorts after the release', () => {
+    expect(defaultPrerelease('0.3.0')).toBe('0.3.1-next.0');
+    expect(defaultPrerelease('1.9.9')).toBe('1.9.10-next.0');
+    expect(defaultPrerelease('0.3.1-next.4')).toBe('0.3.2-next.0');
+    expect(() => defaultPrerelease('next')).toThrow("can't derive");
   });
 });

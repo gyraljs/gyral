@@ -19,6 +19,12 @@ The 0.2 snippets below are `text` blocks; every 0.3 snippet typechecks against t
   `@gyral/core` has no runtime dependencies at all.
 - Keep Lit only if the app has its own Lit elements: any custom element still works next to
   Gyral components, but Gyral no longer installs or dedupes Lit for you.
+- In a mixed app, a parent that isn't a Gyral component (a Lit element, page script, another
+  library) hears a Gyral child's outputs as `gyral-output` events: listen for `OUTPUT_EVENT`
+  (exported from `@gyral/core` since 0.3.1) on the child or an ancestor in the same tree, and
+  read the output from `event.detail` (`OutputEvent<OutputsOf<typeof Child>>` types it). The
+  event bubbles but isn't composed. A non-Gyral child talks to a Gyral parent by dispatching
+  `OUTPUT_EVENT` with a tagged `detail` and `bubbles: true` (ADR 0010).
 - Optional build-time peers of `@gyral/core`: `vite` ^8 (preset and compiler), `parse5`
   (an extra markup check in `vite build`) and `eslint` 9 or 10 (the plugin).
 
@@ -34,7 +40,7 @@ Everything a view needs comes from `@gyral/core`:
 | `repeat`, `keyed`                                                | `each(items, key, row, pick?)`                            |
 | `live`, `liveBoolean`, `textarea()`, `textareaMarkup`            | plain bindings (see Form state)                           |
 | `classMap`, `styleMap`                                           | strings: `class=${…}`, `style="--w: ${w}px"`              |
-| `svg` templates                                                  | inline `<svg>` inside `html`                              |
+| `svg` templates                                                  | inline `<svg>` in `html`; `svg` is back in 0.3.1          |
 | `unsafeHTML` (from `lit/directives`)                             | `raw(markup)`: trusted markup only                        |
 | `directive`, `ElementDirective`                                  | `defineHook({ client, server? })` (see Hooks)             |
 | `serverHtml` (`@gyral/ssr`)                                      | `html` from `@gyral/core`                                 |
@@ -152,7 +158,7 @@ interface Props {
   readonly items: readonly string[];
 }
 
-export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump' }, Props>(
+export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump' }, Props>()(
   'my-stepper',
   {
     props: {
@@ -161,7 +167,7 @@ export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump
       items: prop.value(v.array(v.string()), { default: [] }), // property only
     },
     init: () => ({ value: 0 }),
-    intent: { Bump: () => ({ _tag: 'Bump' }) },
+    intent: { Bump: true },
     update: { Bump: (s, _m, { props }) => ({ value: s.value + props.step }) },
     view: (s, i, { props }) =>
       html`<button type="button" data-intent=${i.Bump}>${props.label}: ${s.value}</button>
@@ -173,11 +179,12 @@ export const Stepper = define<{ readonly value: number }, { readonly _tag: 'Bump
 `prop.boolean()` is presence-based and defaults to `false`; `prop.json(schema)` parses JSON
 from an attribute. `PropsChanged` and props as `ctx.props` are unchanged.
 
-## Lists: `each`, pure rows, `pick` and `intents`
+## Lists: `each`, pure rows, `pick` and `intentsOf`
 
 `each(items, key, row, pick?)` replaces `repeat` and `keyed`. A row re-renders only when its
 item or its `pick` result changes, so a row may read only its arguments and module-level
-values. Name intents in rows with a module-level `intents<Msg>()`; pass view values (the
+values. Name intents in rows with a module-level `intentsOf<typeof C>()` (0.3.1; 0.3.0 had
+`intents<Msg>()`) and give such a row a `TemplateResult` return type; pass view values (the
 selection) through `pick`. ESLint's `gyral/each-row-purity` names every read to move.
 
 ```text
@@ -188,7 +195,7 @@ ${repeat(s.todos, (t) => t.id, (t) =>
 ```
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
 interface Todo {
   readonly id: number;
@@ -200,14 +207,14 @@ interface State {
 }
 type Msg = { readonly _tag: 'Pick'; readonly id: number };
 
-const i = intents<Msg>();
+const i = intentsOf<typeof Todos>();
 
-const Row = (t: Todo, selected: boolean) =>
+const Row = (t: Todo, selected: boolean): TemplateResult =>
   html`<li class=${selected ? 'selected' : ''}>
     <button type="button" value=${t.id} data-intent=${i.Pick}>${t.text}</button>
   </li>`;
 
-export const Todos = define<State, Msg>('my-todos', {
+export const Todos = define<State, Msg>()('my-todos', {
   init: () => ({ todos: [{ id: 1, text: 'Write docs' }], selected: 1 }),
   intent: { Pick: ({ value }) => ({ _tag: 'Pick', id: Number(value) }) },
   update: { Pick: (s, m) => ({ ...s, selected: m.id }) },
@@ -282,7 +289,10 @@ children for their `<slot>`s.
 
 `await settled()` (from `@gyral/core`) waits until every component has rendered, view
 transitions and lazily loaded code included. It replaces `await el.updateComplete` and loops
-over several elements.
+over several elements. Since 0.3.1 it also waits until messages stop arriving (a store watched
+by a streaming driver, notifying or re-arming in microtasks), so drop any
+`await Promise.resolve()` loops before it; commands that never end don't block it, and timers
+are still yours to advance.
 
 ```ts
 import { settled } from '@gyral/core';
@@ -314,7 +324,7 @@ export function home(): Response {
   return renderPage({
     title: 'Home',
     styles,
-    head: html`<link rel="icon" href="/favicon.svg" />`, // was serverHtml`…`
+    extraHead: html`<link rel="icon" href="/favicon.svg" />`, // was head: serverHtml`…`; `head` in 0.3.0
     body: html`<my-home></my-home>`,
     scripts: ['/src/entry-client.ts'],
     csp: { directives: { 'default-src': "'self'" } }, // built when the page renders

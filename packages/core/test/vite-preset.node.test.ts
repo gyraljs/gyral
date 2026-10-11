@@ -3,12 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveConfig, type UserConfig } from 'vite';
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_TEMPLATE_SOURCES,
-  GYRAL_PACKAGES,
-  gyralDependents,
-  gyralVitePreset,
-} from '../src/vite.js';
+import { gyralVitePreset } from '../src/vite.js';
+
+/** Gyral's packages, as the dev-server plugin keeps them out of SSR externalization. */
+const GYRAL_PACKAGES = /^@gyral\//;
 
 const noExternal = async (
   command: 'build' | 'serve',
@@ -25,8 +23,17 @@ const noExternal = async (
 
 describe('gyralVitePreset() (gyral-a7r)', () => {
   it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
-    const [compiler, devServer, ...rest] = gyralVitePreset().plugins;
+    const [compiler, locations, devServer, types, ...rest] = gyralVitePreset().plugins;
     expect(rest).toEqual([]);
+    // Generated element typings (gyral-1zd.25); `types: false` leaves the plugin out.
+    expect(types?.name).toBe('gyral:element-types');
+    expect(gyralVitePreset({ types: false }).plugins.map((p) => p.name)).not.toContain(
+      'gyral:element-types',
+    );
+    // Development source locations for runtime templates (view/01 "Source locations").
+    expect(locations?.name).toBe('gyral:template-locations');
+    expect(locations?.apply).toBe('serve');
+    expect(locations?.enforce).toBe('pre');
     expect(devServer?.name).toBe('gyral:dev-server');
     expect(devServer?.apply).toBe('serve');
     expect(compiler?.name).toBe('gyral:template-compiler');
@@ -34,13 +41,9 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(compiler?.enforce).toBe('pre');
   });
 
-  it("compiles @gyral/core's html by default (ADR 0018, Phase 3)", () => {
-    expect(DEFAULT_TEMPLATE_SOURCES).toEqual(['@gyral/core']);
-  });
-
   it('pre-bundles nothing by default, and extra modules without duplicates', () => {
     expect(gyralVitePreset().optimizeDeps.include).toEqual([]);
-    expect(gyralVitePreset().resolve.dedupe).toEqual([]);
+    expect(gyralVitePreset()).not.toHaveProperty('resolve'); // nothing to dedupe since Lit left
     const include = gyralVitePreset({ optimize: ['a', 'b', 'a'] }).optimizeDeps.include;
     expect(include).toEqual(['a', 'b']);
   });
@@ -50,8 +53,6 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(serve['ssr']).toEqual([GYRAL_PACKAGES]);
     expect(serve['client']).toEqual([]);
     expect((await noExternal('build', { environments: { ssr: {} } }))['ssr']).toEqual([]);
-    expect(GYRAL_PACKAGES.test('@gyral/core')).toBe(true);
-    expect(GYRAL_PACKAGES.test('gyral-ish')).toBe(false);
   });
 
   it("keeps the app's own noExternal", async () => {
@@ -61,8 +62,8 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
   });
 });
 
-describe('gyralDependents()', () => {
-  it("lists the app's dependencies that depend on a Gyral package", () => {
+describe("the dev server and the app's Gyral-based dependencies", () => {
+  it("also keeps the app's dependencies that depend on a Gyral package out of externalization", async () => {
     const root = mkdtempSync(join(tmpdir(), 'gyral-dependents-'));
     const pkg = (dir: string, manifest: object): void => {
       mkdirSync(join(root, dir), { recursive: true });
@@ -76,8 +77,9 @@ describe('gyralDependents()', () => {
       pkg('node_modules/ds', { peerDependencies: { '@gyral/core': '*' } });
       pkg('node_modules/kit', { dependencies: { '@gyral/router': '*' } });
       pkg('node_modules/plain', { dependencies: { other: '*' } });
-      expect(gyralDependents(root)).toEqual(['ds', 'kit']);
-      expect(gyralDependents(join(root, 'nowhere'))).toEqual([]);
+      expect((await noExternal('serve', { root }))['ssr']).toEqual([GYRAL_PACKAGES, 'ds', 'kit']);
+      const nowhere = join(root, 'nowhere');
+      expect((await noExternal('serve', { root: nowhere }))['ssr']).toEqual([GYRAL_PACKAGES]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

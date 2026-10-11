@@ -61,7 +61,7 @@ function step(s: State): Next<State, Msg> {
   return canRedo(history) ? [{ ...s, history }, [nextStep]] : { ...s, history, playing: false };
 }
 
-export const Editor = define<State, Msg>('gy-pixel-editor', {
+export const Editor = define<State, Msg>()('gy-pixel-editor', {
   init: () => ({ history: emptyHistory, tool: 'ink', playing: false }),
   intent: {
     Paint: ({ target }) => {
@@ -70,11 +70,11 @@ export const Editor = define<State, Msg>('gy-pixel-editor', {
     },
     Pick: ({ value }) =>
       value === 'eraser' || isColor(value) ? { _tag: 'Pick', tool: value } : undefined,
-    Undo: () => ({ _tag: 'Undo' }),
-    Redo: () => ({ _tag: 'Redo' }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Undo: true,
+    Redo: true,
+    Clear: true,
     Scrub: ({ value }) => ({ _tag: 'Scrub', to: Number(value) }),
-    Replay: () => ({ _tag: 'Replay' }),
+    Replay: true,
     // Ctrl/⌘+Z undoes; Ctrl/⌘+Shift+Z or Ctrl+Y redoes.
     Shortcut: ({ event, key }) => {
       if (!(event instanceof KeyboardEvent) || !(event.ctrlKey || event.metaKey)) return;
@@ -180,9 +180,3 @@ export const Editor = define<State, Msg>('gy-pixel-editor', {
   },
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-pixel-editor': InstanceType<typeof Editor>;
-  }
-}

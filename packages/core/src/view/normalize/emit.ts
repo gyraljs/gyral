@@ -1,7 +1,8 @@
 // Emits the template object's markup from the normalizer's tree (view/01-templates.md steps 3
-// and 4): the client HTML (bound attributes removed, anchors added by view/02-bindings.md's
-// anchor rule), the server segments (types.ts), the part table with child-index paths, and the
-// shape of the DOM the browser must build (checked by prepare.ts).
+// and 4): the client HTML (bound attributes and static `style` attributes removed, anchors
+// added by view/02-bindings.md's anchor rule), the server segments (types.ts), the part table
+// with child-index paths, and the shape of the DOM the browser must build (prepare.ts).
+import { SVG_HTML_POINT } from './svg.js';
 import type { ElementNode, TreeNode } from './tree.js';
 import {
   ATTR_PART,
@@ -27,6 +28,8 @@ export interface Emitted {
   readonly parts: PartSpec[];
   readonly segments: Segment[];
   readonly shape: Shape;
+  /** The decoded values of the template's non-empty static `style` attributes (types.ts). */
+  readonly staticStyles: string[];
 }
 
 class Emitter {
@@ -36,11 +39,17 @@ class Emitter {
   html = '';
   readonly parts: PartSpec[] = [];
   readonly segments: Segment[] = [];
+  readonly staticStyles: string[] = [];
 
   /** Static markup: appended to the HTML and to the last string segment. */
   out(text: string): void {
-    if (text === '') return;
     this.html += text;
+    this.serverOut(text);
+  }
+
+  /** Static markup only the server writes: appended to the last string segment. */
+  serverOut(text: string): void {
+    if (text === '') return;
     const last = this.segments.length - 1;
     const prev = this.segments[last];
     if (typeof prev === 'string') this.segments[last] = prev + text;
@@ -51,8 +60,8 @@ class Emitter {
     this.segments.push(segment);
   }
 
-  /** `parent`: the parent element's name; undefined at the template root. */
-  children(nodes: readonly TreeNode[], path: Path, parent?: string): Shape {
+  /** `parent`: the parent element; undefined at the template root. */
+  children(nodes: readonly TreeNode[], path: Path, parent?: ElementNode): Shape {
     const shape: ShapeNode[] = [];
     nodes.forEach((node, k) => {
       switch (node.type) {
@@ -89,10 +98,13 @@ class Emitter {
     k: number,
     path: Path,
     shape: ShapeNode[],
-    parent: string | undefined,
+    parent: ElementNode | undefined,
   ): void {
     const next = nodes[k + 1];
-    this.op(parent === undefined ? { k: 'child' } : { k: 'child', in: parent });
+    if (parent === undefined) this.op({ k: 'child' });
+    else if (parent.ns === 'svg' && !SVG_HTML_POINT.test(parent.name)) {
+      this.op({ k: 'child', in: parent.name, svg: true });
+    } else this.op({ k: 'child', in: parent.name });
     if (next === undefined) {
       this.parts.push([nodes.length === 1 ? CHILD_SOLE : CHILD_END, path]);
       return;
@@ -104,14 +116,25 @@ class Emitter {
   }
 
   private element(el: ElementNode, path: Path): ShapeNode {
+    // `open` is the server's start tag; `client` leaves a static style to a part (below).
     let open = `<${el.raw}`;
+    let client = open;
     for (const a of el.attrs) {
-      if (a.kind === 'static') open += a.value === null ? ` ${a.name}` : ` ${a.name}=${a.value}`;
+      if (a.kind !== 'static') continue;
+      const attr = a.value === null ? ` ${a.name}` : ` ${a.name}=${a.value}`;
+      open += attr;
+      if (a.css !== undefined && a.css !== '' && !this.staticStyles.includes(a.css)) {
+        this.staticStyles.push(a.css);
+      }
+      // The CSSOM applies it under a strict CSP, where Firefox blocks the attribute in a
+      // <template>'s HTML: a multi-attribute with no holes (attr-parts.ts writes it once).
+      if (a.css !== undefined && !this.server)
+        this.parts.push([MULTI_PART, path, 'style', [a.css]]);
+      else client += attr;
     }
-    if (el.props !== undefined) {
-      this.html += open;
-      this.op({ k: 'open', tag: el.name, html: open, attrs: el.props });
-    } else this.out(open);
+    this.html += client;
+    if (el.props !== undefined) this.op({ k: 'open', tag: el.name, html: open, attrs: el.props });
+    else this.serverOut(open);
     for (const a of el.attrs) {
       if (a.kind === 'static') continue;
       if (a.kind === 'hook') {
@@ -142,7 +165,7 @@ class Emitter {
     ) {
       this.out('\n');
     }
-    const shape = this.children(el.children, path, el.name);
+    const shape = this.children(el.children, path, el);
     if (el.props !== undefined) {
       this.html += `</${el.raw}>`;
       this.op({ k: 'close', tag: el.name });
@@ -158,5 +181,6 @@ class Emitter {
 export function emit(root: readonly TreeNode[], server: boolean): Emitted {
   const e = new Emitter(server);
   const shape = e.children(root, []);
-  return { html: e.html, parts: e.parts, segments: e.segments, shape };
+  const { html, parts, segments, staticStyles } = e;
+  return { html, parts, segments, shape, staticStyles };
 }

@@ -47,12 +47,12 @@ export interface State {
 
 export type Msg = { readonly _tag: 'Increment' } | { readonly _tag: 'Reset' };
 
-export const ${name} = define<State, Msg>('${tag}', {
+export const ${name} = define<State, Msg>()('${tag}', {
   init: () => ({ count: 0 }),
   // Intent: parse platform events into typed messages (button → click by default).
   intent: {
-    Increment: () => ({ _tag: 'Increment' }),
-    Reset: () => ({ _tag: 'Reset' }),
+    Increment: true,
+    Reset: true,
   },
   // Model: one pure reducer per message. Return [state, [command]] for side effects.
   update: {
@@ -134,7 +134,7 @@ const FIELDS = [
   { name: 'email', label: 'Email', type: 'email', autocomplete: 'email' },
 ] as const;
 
-export const ${name} = define<State, Msg>('${tag}', {
+export const ${name} = define<State, Msg>()('${tag}', {
   init: () => ({ values: {}, errors: {}, done: false }),
   intent: {
     // Invalid submissions never become Submit: they arrive as IntentRejected.
@@ -195,10 +195,8 @@ function ssrPage(tag: string, name: string, description: string | undefined): Sc
   const page = `${comment(description)}import { define, html, type Stateless } from '@gyral/core';
 
 // Page-level content uses light DOM: crawlers and document CSS see plain children.
-export const ${name} = define<Stateless, never>('${tag}', {
+export const ${name} = define<Stateless, never>()('${tag}', {
   shadow: false,
-  intent: {},
-  update: {},
   view: () => html\`
     <h1>${name}</h1>
     <p>Rendered on the server, hydrated in place. Put interactive widgets inside as their own components.</p>

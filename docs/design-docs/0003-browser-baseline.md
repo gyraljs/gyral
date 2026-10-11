@@ -23,7 +23,9 @@ skill) may be used only as **progressive enhancement**: feature-detect in JS, or
 | Overlays       | `<dialog>`, `popover` (check status when used) | Anchor positioning                                                                                       |
 | Shared state   | Stores (ADR 0013)                              | Native TC39 signals when they ship                                                                       |
 | Page changes   | Plain re-render                                | View Transitions (`viewTransition`)                                                                      |
-| State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`)                                                                     |
+| State styling  | ARIA attributes / markup                       | Custom states (`states`, `:state()`); skipped where only `--`-prefixed names work (Chromium 90–124)      |
+| HTML parsing   | Template HTML and `raw()` as strings           | Trusted Types policy `gyral` where `trustedTypes` exists; plain strings if the page's CSP refuses it     |
+| Focus          | Focus commands on the host's own content       | `shadow: { delegatesFocus: true }` (client and `shadowrootdelegatesfocus` on the server)                 |
 
 Check a feature's current status in `web-features` / MDN before relying on it, and record the
 answer here.
@@ -44,12 +46,21 @@ its fallback falls into one of three tiers:
 - **Never patch globals.** Fallbacks are private to Gyral and never change `window`.
 - A lazily loaded tier-3 fallback makes that path asynchronous at startup on old browsers only
   (for example, the router matches its first route a moment later).
+- A tier-3 fallback's `import()` is part of every build that may reach it, even where no browser
+  fetches it (Vite adds its preload helper for it). A build may leave it out only when it can
+  tell no code can need it: client-only builds keep the invoker-command shim only when a module
+  may make a root listen for `command` (view/07-hydration.md "Client-only builds", 0.3.1); when
+  the build can't tell (a bound `data-intent-on`, `raw()` markup), the fallback stays.
 
 Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 
 | Primitive                                                             | Newly available | Widely available |
 | --------------------------------------------------------------------- | --------------- | ---------------- |
 | Declarative shadow DOM                                                | 2024-02-20      | 2026-08-20 (now) |
+| `Promise.withResolvers()`                                             | 2024-03-05      | 2026-09-05 (now) |
+| `AbortSignal.any()`                                                   | 2024-03-19      | 2026-09-19 (now) |
+| `AbortSignal.timeout()`                                               | 2024-04-18      | 2026-10-18       |
+| `shadowrootdelegatesfocus` (declarative shadow DOM)                   | 2024-03-22      | 2026-09-22 (now) |
 | Custom states (`:state()`)                                            | 2024-05-17      | 2026-11-17       |
 | `popover`                                                             | 2025-01-27      | 2027-07-27       |
 | `<details name>`                                                      | 2024-09-03      | 2027-03-03       |
@@ -57,8 +68,13 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 | View Transitions                                                      | 2025-10-14      | 2028-04-14       |
 | Invoker commands                                                      | 2025-12-12      | 2028-06-12       |
 | Navigation API                                                        | 2026-01-13      | 2028-07-13       |
+| Trusted Types (`trustedTypes.createPolicy`)                           | 2026-02-24      | 2028-08-24       |
 | CSS `@scope`                                                          | 2026-03-24      | 2028-09-24       |
 | `moveBefore`, `requestIdleCallback`, `scheduler.yield`, Sanitizer API | not Baseline    | —                |
+
+The [2026-10-11 native-first audit](../references/native-first-audit-2026-10-11.md)
+records every package's choices and the fallbacks retained. Native timeout signals do not
+replace timers that must be cancelled on completion or controlled with virtual time.
 
 ## CSS is checked too (gyral-8ht.5)
 

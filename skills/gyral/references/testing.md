@@ -26,7 +26,7 @@ type Msg =
   | { readonly _tag: 'Typed'; readonly query: string }
   | { readonly _tag: 'Hits'; readonly hits: readonly string[] };
 
-const Search = define<State, Msg>('test-search', {
+const Search = define<State, Msg>()('test-search', {
   init: () => ({ query: '', hits: [] }),
   intent: { Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }) },
   update: {
@@ -74,27 +74,36 @@ describe('search model', () => {
   `StoreChanged`) work too.
 - `commandsFor(commands, driver)` / `inputsFor(commands, driver)` filter by driver name;
   `resolve(command, output)` / `reject(command, error)` give the resulting message.
-- Stores: `stepStore(store, state, msg)`, `testStore(store, initial?)` (an instance to pass in
-  `stores`), `sentTo(commands, store)` (messages a reducer sends to a store).
-- Pure update functions make property tests easy: `@gyral/testing/arbitraries` builds
-  fast-check arbitraries.
+- `outputsIn(commands, Component)` returns the outputs a reducer sent to the parent (`outputs<O>()`'s
+  emit), typed by the class's output union (or `outputsIn<Out>(commands)`).
+  `focusTargetsIn(commands)` returns each `focus()` request as
+  `{ selector, preventScroll?, select?, wait? }`, and `callsIn(commands)` each `call()` request
+  as `{ selector, method, args }`. Never filter on driver names such as `'@gyral/emit'`: they
+  are core internals.
+- Stores: `stepStore(store, state, msg)`; `store.instance(initial?)` gives a fresh instance to
+  pass in `stores`; `inputsFor(commands, store)` lists the messages a reducer `send()`s to it.
+- Calling a parser directly: `parse(Component, 'Intent', input, { props, state, stores })`
+  builds the `ctx` for you (no casts).
+- Pure update functions make property tests easy with fast-check: generate messages, run
+  `step`, assert invariants on the state.
 
 ## Element tests (browser)
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest';
-import { define, html, settled } from '@gyral/core';
+import { define, html } from '@gyral/core';
 import { get } from '@gyral/http';
 import { fakeHttp } from '@gyral/http/testing';
+import { mount, type Mounted } from '@gyral/testing';
 
 interface State {
   readonly name: string;
 }
 type Msg = { readonly _tag: 'Load' } | { readonly _tag: 'Got'; readonly name: string };
 
-const Who = define<State, Msg>('test-who', {
+const Who = define<State, Msg>()('test-who', {
   init: () => ({ name: '' }),
-  intent: { Load: () => ({ _tag: 'Load' }) },
+  intent: { Load: true },
   update: {
     Load: (s) => [
       s,
@@ -110,65 +119,166 @@ const Who = define<State, Msg>('test-who', {
     html`<button type="button" data-intent=${i.Load}>Load</button> <output>${s.name}</output>`,
 });
 
+let who: Mounted<InstanceType<typeof Who>> | undefined;
 afterEach(() => {
-  document.body.replaceChildren();
+  who?.dispose();
 });
 
 it('loads the user when clicked', async () => {
   const api = fakeHttp(); // requests wait until the test answers them
-  const el = new Who();
-  el.drivers = { http: api };
-  document.body.append(el);
-  await settled();
+  // Drivers are set before the element connects; mount waits for the first render.
+  who = await mount(Who, { drivers: { http: api } });
 
-  el.shadowRoot?.querySelector('button')?.click();
-  await vi.waitFor(() => {
-    expect(api.requests.map((r) => r.url)).toEqual(['/api/me']);
-  });
+  await who.click('button');
+  expect(api.requests.map((r) => r.url)).toEqual(['/api/me']);
   api.respondNext({ body: { name: 'Ada' } });
   await vi.waitFor(() => {
-    expect(el.shadowRoot?.querySelector('output')?.textContent).toBe('Ada');
+    expect(who?.$('output')?.textContent).toBe('Ada');
   });
 });
 ```
 
-- `await settled()` (from `@gyral/core`) waits until every component has rendered: child props,
-  outputs reaching parents, focus commands and view transitions included. It doesn't wait for
-  drivers: answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`.
+- `await settled()` (from `@gyral/core`) waits until every component has rendered and messages
+  have stopped arriving: child props, outputs reaching parents, focus commands, view
+  transitions, and chains of messages a few microtasks apart (a stream re-arming in a
+  microtask, a store notifying in one, a driver that answers at once) included. Commands that
+  never end (a store watch, a socket) don't block it; it never waits for timers or the network:
+  answer fakes, `vi.waitFor` or `time.advance(…)` first, then `await settled()`. No
+  `await Promise.resolve()` loops before it.
 - `fakeDriver(driverOrName, { impl? })` records any driver's calls: `calls`, `inputs`,
   `resolveNext(output)`, `rejectNext(error)`, `emitNext(output)` (streaming); each call has its
-  `signal`, so you can assert that `switch` aborted it.
+  `signal`, so you can assert that `switch` aborted it. `fakeDriver(name, run)` answers every
+  call with `run`: `fakeDriver<string | null, undefined>('url-sync', (query) => void urls.push(query))`.
+- Drivers and fakes need **no cast** anywhere drivers are substituted (`el.drivers`,
+  `provideDrivers`): any `Driver<I, O, E>`, from `defineDriver`, `subscription`
+  or `fakeDriver`, is assignable to `AnyDriver`. Never write `as AnyDriver`. Type a driver map
+  as `DriverOverrides` (or `Record<string, AnyDriver>`), not
+  `Record<string, Driver<unknown, unknown>>`, which rejects drivers with a typed input.
+- A driver token (`defineDriver<I, O, E>('session')`) has no implementation: a test supplies
+  one by name like any fake (`el.drivers = { session: fakeDriver('session', (move) => …) }`,
+  `mountSsr`, `mount`). A token nothing provides is reported as G0043; catch it with
+  `collectErrors()` when that is what the test checks.
+- Removing an element stops its commands **one microtask later** (a move in the same task keeps
+  them): after `el.remove(); await Promise.resolve();` every running call's `signal.aborted`
+  is `true` and its `abort` listeners have run. Test reconnects by removing, awaiting a turn and
+  appending again: `subscriptions` starts again from the current state.
+- `subscriptionsFor(spec, state, props?)` returns the commands `subscriptions` asks to keep
+  running for a state, without a DOM; check them with `inputsFor`.
 - `fakeHttp({ respond? })` (from `@gyral/http/testing`) runs the real HTTP driver against a
   fake `fetch`, so schemas and error mapping are exercised: `respondNext`,
   `reply(status, body)`, `failNext()`.
-- `withDrivers(container, { http: fake })` provides fakes to every component below a container.
+- `provideDrivers(container, { http: fake })` (from `@gyral/core`) provides fakes to every component below a container.
 - `virtualTime()` fakes timers: `await time.advance(500)`, `time.runAll()`, `time.restore()`.
-- Dispatch input events as the browser does: set `input.value`, then
+- **Deliberate failures:** Gyral reports what a component throws with `reportError` (ADR 0024,
+  `errors.md`), which Vitest counts as an uncaught error and fails the run on. Wrap such tests
+  in `collectErrors()` from `@gyral/testing`: `const collected = collectErrors();` … then
+  `collected.stop()` and assert on `collected.errors` (`GyralError`s with `component`, `phase`,
+  `msg`, `cause`). `step(spec, state, { _tag: 'Errored', phase, error })` tests an `Errored`
+  reducer without a DOM.
+- `mount(Component | 'tag', { props, attrs, drivers, stores, light?, parent? })` creates the
+  element, sets drivers and stores before it connects and props before its first render,
+  appends it and awaits `settled()`. It returns `{ el, $, $$, type, click, settled, dispose }`:
+  `$`/`$$` query the shadow root (the light DOM with `light: true`), `type(sel, text)` sets a
+  control's value and fires `input` and `change`, `click(sel)` clicks; both then await
+  `settled()` and throw naming the selector when nothing matches. With a runner's global
+  `afterEach` (Vitest `globals: true`, Jest, Mocha) mounted elements are removed after each
+  test; otherwise call `dispose()` yourself.
+- `parse(Component, 'Intent', { value: '3' }, { props, state, stores })` runs one intent parser
+  without a DOM or casts: the input needs only the fields the parser reads, `state` defaults to
+  the initial state, and the result is typed by the parser (a message, `IntentRejected`, or
+  `undefined` when it ignores or declines the event). Use it for parsers whose decision depends
+  on props or state (which keys a listbox takes over, when Tab leaves a grid).
+- Without `mount`, dispatch input events as the browser does: set `input.value`, then
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 
-## SSR tests
+## SSR tests (hydration)
 
-`hydrated(page, { releaseIslands? })` releases islands if asked, then awaits `settled()`; it
-fails on console errors and warnings (a hydration mismatch is one) and on elements that never
-upgraded. Run SSR tests against production builds of core too: mismatches are reported
-differently there (a warning and a fresh render instead of an error).
+A hydration test mounts real server markup (`mountSsr(html)`), imports the component modules so
+they upgrade and hydrate in place, then `await hydrated(page)`. `hydrated` releases islands if
+asked (`{ releaseIslands: true }`), then awaits `settled()`; it fails on console errors and
+warnings (a hydration mismatch is one) and on elements that never upgraded.
+
+The browser can't render that markup itself: there `define()` registers custom elements instead
+of server specs, and client builds drop the server half of compiled templates. Get it from
+Node, one of two ways:
+
+1. **`renderOnServer`** (Vitest browser mode, from `@gyral/testing/vitest`; needs `vitest` 4.1 or 5): a
+   Vitest browser command that runs in Vitest's Node process, loads a module through the
+   project's Vite server (same preset, development build) and renders it with
+   Gyral's server renderer. Use it for component and page hydration tests: no files to sync,
+   props per test.
+2. **Golden fixture:** a Node test (`*.node.test.ts`) calls the real server and writes the
+   HTML with `toMatchFileSnapshot('./fixtures/page.ssr.html')`; the browser test imports it with
+   `?raw`. Use it when the markup needs the whole server stack (routing, data loading, page
+   shell, a built server), when markup changes should be reviewed in diffs, or outside Vitest
+   browser mode. Regenerate with `vitest -u`.
+
+Register the command (spread the preset into each Vitest project as usual):
 
 ```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import { playwright } from '@vitest/browser-playwright';
+import { gyralVitePreset } from '@gyral/core/vite';
+import { renderOnServer } from '@gyral/testing/vitest';
+
+export default defineConfig({
+  ...gyralVitePreset(),
+  test: {
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright(),
+      instances: [{ browser: 'chromium' }],
+      commands: { renderOnServer },
+    },
+  },
+});
+```
+
+```text
+// test/counter-hydration.test.ts (browser); src/counter.ts exports `Counter` (define()).
 import { expect, it } from 'vitest';
+import { commands } from 'vitest/browser';
+import { settled } from '@gyral/core';
 import { hydrated, mountSsr } from '@gyral/testing';
 
-it('hydrates the server page in place with no console problems', async () => {
-  const response = await fetch('/'); // or call your app's fetch handler directly
-  const page = mountSsr(await response.text());
-  const before = page.root.querySelector('my-home');
+it('hydrates the server markup in place and stays interactive', async () => {
+  const page = mountSsr(
+    await commands.renderOnServer({
+      module: '../src/counter.ts', // relative to the test file
+      export: 'Counter',
+      props: { start: 3 },
+    }),
+  );
+  const host = page.root.querySelector('my-counter');
+  const button = host?.shadowRoot?.querySelector('button');
+  await import('../src/counter.js'); // after mounting, as on a page load
   await hydrated(page);
-  expect(page.root.querySelector('my-home')).toBe(before); // same node: no re-render
-  expect(page.problems).toEqual([]);
+  expect(host?.shadowRoot?.querySelector('button')).toBe(button); // adopted, not re-rendered
+  button?.click();
+  await settled();
+  expect(host?.shadowRoot?.querySelector('output')?.textContent).toBe('4');
   page.unmount();
 });
 ```
 
-`mountSsr(html)` parses a server document (Declarative Shadow DOM included) into the test page;
-`hydrated(page)` waits until every component has hydrated and fails on undefined elements.
-Server-only tests (status codes, markup, `formAction`) run in Node by calling the app's `fetch`
-handler with a `Request`.
+- `export` (default `'default'`): a `define()` class (rendered with `props` as properties), a
+  function of `props` returning (or resolving to) a template result, an HTML string or a
+  `Response` (`renderPage(…)` from `@gyral/ssr`, an app's `fetch`: whole pages with store seeds),
+  or a template result. `props` must be JSON. `dev: false` renders production markup.
+- Server modules stay loaded between calls (like a dev server): pass per-test data as props.
+  The first call loads the module graph and can take seconds under a parallel run: give those
+  tests a longer timeout (`{ timeout: 60_000 }`).
+- Types come with `@gyral/testing/vitest`; when the tsconfig doesn't include
+  `vitest.config.ts`, add `import type {} from '@gyral/testing/vitest';` to the test.
+- Don't `fetch('/')` from a browser test for server markup: that reaches Vitest's own server,
+  not your app.
+- Run hydration tests against production builds of core too (a Vitest project with
+  `resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
+  re-renders that component instead of throwing.
+
+`mountSsr(html, { stores?, metas? })` parses a server document or fragment (Declarative Shadow
+DOM included) into the test page, restoring the store seed and named `<meta>`s. Server-only
+tests (status codes, markup, `formAction`) run in Node by calling the app's `fetch` handler with
+a `Request`.

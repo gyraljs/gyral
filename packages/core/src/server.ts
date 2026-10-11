@@ -1,10 +1,15 @@
-// `@gyral/core/server` (docs/design-docs/view/06-server.md): renders template results and Gyral
+// `@gyral/core/internal/server` (docs/design-docs/view/06-server.md): renders template results and Gyral
 // components to HTML without a DOM. Server-only: never import it from client code. Every
 // render first registers the specs define() recorded outside the browser, and the
 // `<gyral-stores>` provider.
 import { registerRecordedSpecs } from './server-component.js';
 import { storesProvider } from './stores-provider.js';
-import { DEV, registerServerProvider, type ChildValue } from './view/index.js';
+import {
+  DEV,
+  registerServerProvider,
+  serverRegistryVersion,
+  type ChildValue,
+} from './view/index.js';
 import {
   componentStyles as styles,
   render as renderChunks,
@@ -13,9 +18,10 @@ import {
   styleHashes as hashes,
   styleHashSync,
   type ServerRenderOptions,
+  type StyleValues,
 } from './view/server/index.js';
 
-export type { ServerRenderOptions };
+export type { ServerRenderOptions, StyleValues };
 export { styleHash, styleHashSync };
 
 /**
@@ -62,4 +68,14 @@ export function styleHashes(): Promise<readonly string[]> {
 export function componentStyles(): ReadonlyMap<string, string> {
   prepare();
   return styles();
+}
+
+/**
+ * A number that changes whenever a component registers with the server renderer (recorded
+ * specs registered first), so its CSS, and the `<style>` hashes a CSP lists, may have changed.
+ * Caches built from `componentStyles()` key on it.
+ */
+export function registryVersion(): number {
+  prepare();
+  return serverRegistryVersion();
 }

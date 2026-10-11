@@ -3,7 +3,7 @@
 // about. Expected messages come from normalize() itself, so they can't drift apart.
 import { RuleTester } from 'eslint';
 import { describe } from 'vitest';
-import { templateRule } from '../../src/eslint/index.js';
+import { templateRule } from '../../src/eslint/template-rule.js';
 import { runtimeMessage, spanOf, tester, tsTester } from './helpers.js';
 
 const IMPORT = "import { html } from '@gyral/core';\n";
@@ -45,6 +45,8 @@ describe('gyral/template', () => {
       `${IMPORT}export const v = (s) => html\`<p class="a \${s.c}">\${s.text}</p>\`;`,
       `${IMPORT}export const v = (s) => html\`<ul>\${s.items.map((n) => html\`<li>\${n}</li>\`)}</ul>\`;`,
       `${IMPORT}export const v = (s) => html\`<my-input .value=\${s.v}></my-input><input value=\${s.v}>\`;`,
+      // Per-event intent attributes, bound and static (gyral-dyn.15).
+      `${IMPORT}export const v = (s, i) => html\`<li data-intent-pointerdown=\${i.Grab} data-intent-keydown="Key" data-intent-on="focusin focusout" data-intent=\${i.Focus}></li>\`;`,
       // Rule 11 is the runtime's: a page shell is fine on the server.
       `${IMPORT}export const page = (b) => html\`<!doctype html><html><body>\${b}</body></html>\`;`,
       // Not Gyral's html: another library's, a shadowing local, an untagged template.
@@ -69,6 +71,8 @@ describe('gyral/template', () => {
       // 4: form state as a property
       bad('<input type="checkbox" .checked=${x}>', '<input type="checkbox" .checked=${x}>'),
       bad('<details .open=${x}></details>', '<details .open=${x}>'),
+      // 14: a boolean attribute bound as a string (selected="false" still selects)
+      bad('<option value="a" selected=${x}></option>', '<option value="a" selected=${x}>'),
       // 5: unquoted multi-part attributes, static text with ? or .
       bad('<b class=a${x}></b>', '${x}'),
       bad('<b ?hidden="x ${x}"></b>', '>'),
@@ -132,6 +136,67 @@ describe('gyral/template', () => {
       {
         code: "import { html } from '@gyral/core';\nexport const v = html`<p>\\x`;",
         errors: [{ messageId: 'escape' }],
+      },
+    ],
+  });
+
+  // Views attach no closures (view/02 "Properties", gyral-g1r.28): a function written in a hole.
+  tester.run('gyral/template: closures in holes', templateRule, {
+    valid: [
+      `${IMPORT}const go = () => 1;\nexport const v = html\`<button .onclick=\${go}>x</button>\`;`,
+      `${IMPORT}export const v = (xs) => html\`<ul>\${xs.map((x) => html\`<li>\${x}</li>\`)}</ul>\`;`,
+    ],
+    invalid: [
+      {
+        code: `${IMPORT}export const v = html\`<button .onclick=\${() => 1}>x</button>\`;`,
+        errors: [{ messageId: 'closure', line: 2, column: 42 }],
+      },
+      {
+        code: `${IMPORT}export const v = html\`<p>\${function () {}}</p><i title=\${() => 2}></i>\`;`,
+        errors: [{ messageId: 'closure' }, { messageId: 'closure' }],
+      },
+      {
+        // svg templates too (view/01 "svg templates").
+        code: "import { svg } from '@gyral/core';\nexport const v = svg`<g .onclick=${() => 1}></g>`;",
+        errors: [{ messageId: 'closure', line: 2, column: 36 }],
+      },
+    ],
+  });
+
+  // svg templates (view/01 "svg templates"): the same engine, with the top level as SVG content.
+  const SVG = "import { svg } from '@gyral/core';\n";
+  const NESTED =
+    "import { html, svg as s } from '@gyral/core';\nexport const v = html`<svg>${s`<g><input></g>`}</svg>`;";
+  tester.run('gyral/template: svg templates', templateRule, {
+    valid: [
+      `${SVG}export const v = (s) => svg\`<path d=\${s.d} /><g class=\${s.c}>\${s.t}</g>\`;`,
+      `${SVG}export const v = (s) => svg\`<foreignObject><p>\${s.t}</p></foreignObject>\`;`,
+      'import * as g from \'@gyral/core\';\nexport const v = g.svg`<circle r="1" />`;',
+      // Not Gyral's svg.
+      "import { svg } from 'other-renderer';\nexport const v = svg`<div></div>`;",
+    ],
+    invalid: [
+      {
+        code: `${SVG}export const v = (x) => svg\`<g>\${x}</g><div>\${x}</div>\`;`,
+        errors: [
+          {
+            message: runtimeMessage(['<g>', '</g><div>', '</div>'], true),
+            ...spanOf(
+              `${SVG}export const v = (x) => svg\`<g>\${x}</g><div>\${x}</div>\`;`,
+              '<div>',
+            ),
+          },
+        ],
+      },
+      {
+        code: `${SVG}export const v = (x) => svg\`<use xlink:href=\${x} />\`;`,
+        errors: [{ message: runtimeMessage(['<use xlink:href=', ' />'], true) }],
+      },
+      {
+        code: NESTED,
+        errors: [
+          { message: runtimeMessage(['<g><input></g>'], true), ...spanOf(NESTED, '<input>') },
+        ],
       },
     ],
   });

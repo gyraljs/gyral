@@ -1,17 +1,151 @@
 // Forms, client half (docs/design-docs/0008-forms.md). Schemas are any Standard Schema v1.
 import type { StandardSchemaV1 } from '@standard-schema/spec';
+import { DEV } from '#view-dev';
 import type { FieldIssue, FormFields, IntentInput, IntentParser, IntentRejected } from './types.js';
+
+type In<Schema extends StandardSchemaV1> = StandardSchemaV1.InferInput<Schema>;
+type Out<Schema extends StandardSchemaV1> = StandardSchemaV1.InferOutput<Schema>;
+
+/** The definition's field names, when its input is an object; otherwise any string. */
+export type FieldName<Schema extends StandardSchemaV1> =
+  In<Schema> extends Readonly<Record<string, unknown>> ? keyof In<Schema> & string : string;
+
+export interface FormOptions<Schema extends StandardSchemaV1> {
+  /**
+   * Fields whose submitted values are never sent back: not in `IntentRejected.values`, not in
+   * `values()`, not in the devtools timeline. Any posted field name may be listed, including
+   * fields outside the schema. Names containing `password`, `passcode`, `csrf` or `xsrf` are
+   * secret without being listed (the browser never restores a password field either, and a
+   * CSRF token must come fresh from the server, not from the echo).
+   */
+  readonly secret?: readonly (FieldName<Schema> | (string & {}))[];
+}
+
+/**
+ * A form's submitted text values, keyed by the definition's fields, for re-rendering the form
+ * with what was typed (sticky fields). The same shape as `IntentRejected.values`: repeated names
+ * (and `name[]`) are arrays; `File`s and secret fields are left out.
+ */
+export type FormValues<Schema extends StandardSchemaV1> =
+  In<Schema> extends Readonly<Record<string, unknown>>
+    ? { readonly [K in keyof In<Schema> & string]?: string | readonly string[] }
+    : FormFields;
+
+export type FormResult<T> =
+  | { readonly ok: true; readonly data: T }
+  | { readonly ok: false; readonly rejected: IntentRejected };
 
 /** A form's schema, shared by the client component and (with `@gyral/ssr`) the server route. */
 export interface FormDefinition<Schema extends StandardSchemaV1> {
   readonly _tag: 'FormDefinition';
   readonly schema: Schema;
+  /** The fields listed as secret (names containing `password`, `passcode`, `csrf` or `xsrf` are secret too). */
+  readonly secret: readonly string[];
+  /**
+   * Validates submitted form data exactly as `form()` does; the server's `formAction` uses it,
+   * so both paths produce the same `IntentRejected` (`intent` defaults to `''`).
+   */
+  readonly validate: (
+    data: FormData,
+    intent?: string,
+  ) => FormResult<Out<Schema>> | Promise<FormResult<Out<Schema>>>;
+  /** The submitted text values without secrets: what a re-rendered form may show again. */
+  readonly values: (data: FormData) => FormValues<Schema>;
+}
+
+// Every secret name a definition declared, for redacting previews (the devtools timeline).
+const declaredSecrets = /* @__PURE__ */ new Set<string>();
+
+const DEFAULT_SECRET = /password|passcode|csrf|xsrf/i;
+
+/** Whether `name` is never echoed: declared secret by a form, or a password-like name. */
+export function isSecretField(name: string): boolean {
+  return DEFAULT_SECRET.test(name) || declaredSecrets.has(name);
+}
+
+// Words that suggest a secret; an unlisted field named with one gets a development warning.
+const SUSPECT = /* @__PURE__ */ new Set([
+  'password',
+  'passcode',
+  'token',
+  'secret',
+  'card',
+  'cvc',
+  'cvv',
+  'ssn',
+  'pin',
+]);
+const warned = /* @__PURE__ */ new Set<string>();
+
+function warnUnmarked(key: string): void {
+  if (warned.has(key)) return;
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/);
+  if (!words.some((w) => SUSPECT.has(w))) return;
+  warned.add(key);
+  console.warn(
+    `Gyral: form field "${key}" looks secret but isn't listed in defineForm(schema, { secret }); ` +
+      'its value is echoed back after a rejection.',
+  );
+}
+
+/**
+ * The text values of a parsed submission, for re-filling the form after a rejection: Files and
+ * the fields `secret` names (or that look like passwords) are left out.
+ */
+function stickyValues(
+  data: Readonly<Record<string, FormValue>>,
+  secret: readonly string[],
+): FormFields {
+  const out: Record<string, string | readonly string[]> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (DEFAULT_SECRET.test(key) || secret.includes(key)) continue;
+    if (DEV) warnUnmarked(key);
+    if (typeof value === 'string') out[key] = value;
+    else if (Array.isArray(value)) out[key] = value.filter((v) => typeof v === 'string');
+  }
+  return out;
+}
+
+function validate<Schema extends StandardSchemaV1>(
+  schema: Schema,
+  secret: readonly string[],
+  intent: string,
+  data: FormData,
+): FormResult<Out<Schema>> | Promise<FormResult<Out<Schema>>> {
+  const raw = formDataToObject(data);
+  const settle = (result: StandardSchemaV1.Result<Out<Schema>>): FormResult<Out<Schema>> =>
+    result.issues === undefined
+      ? { ok: true, data: result.value }
+      : {
+          ok: false,
+          rejected: {
+            _tag: 'IntentRejected',
+            intent,
+            issues: toIssues(result.issues, ''),
+            values: stickyValues(raw, secret),
+          },
+        };
+  const result = schema['~standard'].validate(raw);
+  return result instanceof Promise ? result.then(settle) : settle(result);
 }
 
 export function defineForm<Schema extends StandardSchemaV1>(
   schema: Schema,
+  options: FormOptions<Schema> = {},
 ): FormDefinition<Schema> {
-  return { _tag: 'FormDefinition', schema };
+  const secret: readonly string[] = options.secret ?? [];
+  // Only the devtools timeline reads these, and it only runs in development.
+  if (DEV) for (const name of secret) declaredSecrets.add(name);
+  return {
+    _tag: 'FormDefinition',
+    schema,
+    secret,
+    validate: (data, intent = '') => validate(schema, secret, intent, data),
+    values: (data) => stickyValues(formDataToObject(data), secret) as FormValues<Schema>,
+  };
 }
 
 export type FormValue = FormDataEntryValue | readonly FormDataEntryValue[];
@@ -21,7 +155,7 @@ export type FormValue = FormDataEntryValue | readonly FormDataEntryValue[];
  * Repeated names become arrays; a `name[]` suffix always yields an array (named `name`).
  * Values stay strings (or Files): the schema coerces them.
  */
-export function formDataToObject(data: FormData): Readonly<Record<string, FormValue>> {
+function formDataToObject(data: FormData): Readonly<Record<string, FormValue>> {
   const out: Record<string, FormValue> = {};
   for (const key of new Set(data.keys())) {
     const values = data.getAll(key);
@@ -46,7 +180,6 @@ function toIssues(
   });
 }
 
-type Out<Schema extends StandardSchemaV1> = StandardSchemaV1.InferOutput<Schema>;
 type Parsed<M> = M | IntentRejected | undefined;
 
 function parse<Schema extends StandardSchemaV1, M>(
@@ -64,47 +197,6 @@ function parse<Schema extends StandardSchemaV1, M>(
   return result instanceof Promise ? result.then(settle) : settle(result);
 }
 
-/** The text fields of a parsed form, for re-filling it after a rejection. */
-export function formFields(data: Readonly<Record<string, FormValue>>): FormFields {
-  const out: Record<string, string | readonly string[]> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string') out[key] = value;
-    else if (Array.isArray(value)) out[key] = value.filter((v) => typeof v === 'string');
-  }
-  return out;
-}
-
-const schemaOf = <Schema extends StandardSchemaV1>(
-  definition: FormDefinition<Schema> | Schema,
-): Schema => ('_tag' in definition ? definition.schema : definition);
-
-export type FormResult<T> =
-  | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly rejected: IntentRejected };
-
-/**
- * Validates submitted form data exactly as `form()` does. The no-JS server path
- * (`formAction` in `@gyral/ssr`) uses it, so both paths produce the same `IntentRejected`.
- */
-export function validateForm<Schema extends StandardSchemaV1>(
-  definition: FormDefinition<Schema> | Schema,
-  intent: string,
-  data: FormData,
-): FormResult<Out<Schema>> | Promise<FormResult<Out<Schema>>> {
-  const raw = formDataToObject(data);
-  const values = formFields(raw);
-  const rejected = (issues: readonly FieldIssue[]): FormResult<Out<Schema>> => ({
-    ok: false,
-    rejected: { _tag: 'IntentRejected', intent, issues, values },
-  });
-  const settle = (result: StandardSchemaV1.Result<Out<Schema>>): FormResult<Out<Schema>> =>
-    result.issues === undefined
-      ? { ok: true, data: result.value }
-      : rejected(toIssues(result.issues, ''));
-  const result = schemaOf(definition)['~standard'].validate(raw);
-  return result instanceof Promise ? result.then(settle) : settle(result);
-}
-
 /**
  * Intent parser for a `<form data-intent>` submission, validated by a schema. `toMsg` also
  * gets the raw `FormData`, for sending the submission to the server (`submitForm` in
@@ -113,13 +205,16 @@ export function validateForm<Schema extends StandardSchemaV1>(
 export function form<Schema extends StandardSchemaV1, M>(
   definition: FormDefinition<Schema> | Schema,
   toMsg: (data: Out<Schema>, formData: FormData) => M | undefined,
-): IntentParser<M> {
+): (input: IntentInput) => ReturnType<IntentParser<M>> {
   return (input: IntentInput) => {
     const { formData } = input;
     if (formData === undefined) return undefined;
     const toParsed = (r: FormResult<Out<Schema>>): Parsed<M> =>
       r.ok ? toMsg(r.data, formData) : r.rejected;
-    const result = validateForm(definition, input.name, formData);
+    const result = ('_tag' in definition ? definition : defineForm(definition)).validate(
+      formData,
+      input.name,
+    );
     return result instanceof Promise ? result.then(toParsed) : toParsed(result);
   };
 }
@@ -131,7 +226,7 @@ export function form<Schema extends StandardSchemaV1, M>(
 export function field<Schema extends StandardSchemaV1, M>(
   schema: Schema,
   toMsg: (value: Out<Schema>) => M | undefined,
-): IntentParser<M> {
+): (input: IntentInput) => ReturnType<IntentParser<M>> {
   return (input: IntentInput) => {
     const name = input.target.getAttribute('name') ?? input.name;
     return parse(schema, input.checked ?? input.value, input.name, name, toMsg);
@@ -191,16 +286,3 @@ export const intentRejectedSchema: StandardSchemaV1<unknown, IntentRejected> = {
     },
   },
 };
-
-/** A server's JSON answer to a valid form post that would have redirected without JS. */
-export interface FormRedirected {
-  readonly _tag: 'Redirected';
-  readonly location: string;
-}
-
-/** The `location` of a `FormRedirected` answer (`formAction` in `@gyral/ssr`), if it is one. */
-export function redirectedTo(body: unknown): string | undefined {
-  return isRecord(body) && body['_tag'] === 'Redirected' && typeof body['location'] === 'string'
-    ? body['location']
-    : undefined;
-}

@@ -9,7 +9,7 @@ import { scaffold, validTag } from './scaffold.js';
 import type { Corpus } from './types.js';
 
 export interface ToolOptions {
-  /** Where check_snippet resolves TypeScript and @gyral/* (the agent's project). */
+  /** Where check_snippet resolves TypeScript and `@gyral/*` (the agent's project). */
   readonly projectDir: string;
 }
 
@@ -117,7 +117,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       title: 'Read a Gyral example',
       description: "An example's description, link and the full source of its component files.",
       inputSchema: {
-        name: z.string().min(1).describe('Example name from list_examples, e.g. "counter".'),
+        name: z.string().min(1).describe('Example name from list_examples, e.g. "hello-world".'),
       },
       annotations: readOnly,
     },

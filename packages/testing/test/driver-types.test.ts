@@ -1,0 +1,189 @@
+// Drivers and fakes go wherever drivers are substituted with no cast (gyral-dyn.20): typed
+// inputs, outputs and errors, `toError`, `retry`, a run that names its `DriverContext<O>`,
+// subscriptions and fakes, into `el.drivers`, `provideDrivers` and a
+// `DriverOverrides` map.
+import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
+import {
+  command,
+  define,
+  defineDriver,
+  html,
+  provideDrivers,
+  retry,
+  settled,
+  subscription,
+  type AnyDriver,
+  type Driver,
+  type DriverContext,
+  type DriverOverrides,
+} from '@gyral/core';
+import { fakeDriver, type FakeDriver } from '../src/index.js';
+
+afterEach(() => {
+  document.body.replaceChildren();
+});
+
+const urls: (string | null)[] = [];
+const savedQuery = defineDriver<undefined, string | null>({
+  name: 'saved-query',
+  run: () => 'gyral',
+});
+const urlSync = defineDriver<string | null, undefined>({
+  name: 'url-sync',
+  run: (query) => void urls.push(query),
+  concurrency: 'queue',
+});
+const clipboard = defineDriver<string, undefined, string>({
+  name: 'clipboard',
+  run: () => Promise.resolve(undefined),
+  toError: (cause) => (cause instanceof Error ? cause.message : String(cause)),
+});
+const retried = retry(clipboard, { times: 2, delayMs: 10, backoff: 'exponential' });
+const ticks = defineDriver<number, number>({
+  name: 'ticks',
+  run: (from: number, ctx: DriverContext<number>) => {
+    ctx.emit(from + 1);
+    return from;
+  },
+});
+const session = subscription<{ readonly turn: number }>('session', () => () => {});
+
+type Msg = { readonly _tag: 'Restored'; readonly query: string };
+const Search = define<{ readonly query: string }, Msg>()('test-driver-types-search', {
+  init: () => [
+    { query: '' },
+    [
+      command(savedQuery, undefined, {
+        onSuccess: (query) => (query === null ? undefined : { _tag: 'Restored', query }),
+      }),
+    ],
+  ],
+  update: { Restored: (_s, m) => ({ query: m.query }) },
+  view: (s) => html`<output>${s.query}</output>`,
+});
+
+describe('driver substitution needs no cast', () => {
+  it('takes typed drivers and fakes in el.drivers', async () => {
+    const el = new Search();
+    el.drivers = {
+      'saved-query': defineDriver<undefined, string | null>({
+        name: 'saved-query',
+        run: () => 'web',
+      }),
+      'url-sync': defineDriver<string | null, undefined>({
+        name: 'url-sync',
+        run: () => undefined,
+      }),
+      clipboard: fakeDriver<string, undefined, string>('clipboard', () => undefined),
+      ticks,
+      session,
+    };
+    document.body.append(el);
+    await settled();
+    expect(el.state).toEqual({ query: 'web' });
+  });
+
+  it('takes them in provideDrivers and a DriverOverrides map', async () => {
+    const fake = fakeDriver<undefined, string | null>('saved-query', () => 'from-tree');
+    const overrides: DriverOverrides = { 'saved-query': fake, urlSync, clipboard, ticks, session };
+    const all: Record<string, AnyDriver> = { savedQuery, urlSync, clipboard, ticks, session };
+    const container = document.createElement('main');
+    document.body.append(container);
+    provideDrivers(document.createElement('section'), all)();
+    const stop = provideDrivers(container, overrides);
+    const el = new Search();
+    container.append(el);
+    await settled();
+    expect(el.state).toEqual({ query: 'from-tree' });
+    expect(fake.inputs).toEqual([undefined]);
+    stop();
+  });
+
+  it('types every driver shape as assignable to AnyDriver', () => {
+    expectTypeOf(savedQuery).toExtend<AnyDriver>();
+    expectTypeOf(urlSync).toExtend<AnyDriver>();
+    expectTypeOf(clipboard).toExtend<AnyDriver>();
+    expectTypeOf(retried).toEqualTypeOf<Driver<string, undefined, string>>();
+    expectTypeOf(ticks).toExtend<AnyDriver>();
+    expectTypeOf(session).toExtend<AnyDriver>();
+    expectTypeOf(fakeDriver(clipboard)).toExtend<AnyDriver>();
+    expectTypeOf<FakeDriver<{ readonly id: number }, string, Error>>().toExtend<AnyDriver>();
+    // The trap: a map typed with `unknown` inputs rejects drivers whose input is typed.
+    // @ts-expect-error: Driver<string | null, undefined> takes only its own input
+    const wrong: Record<string, Driver<unknown, unknown>> = { urlSync };
+    expect(wrong).toBeDefined();
+  });
+});
+
+describe('fakeDriver(name, run)', () => {
+  it('answers every call with run and records the inputs', async () => {
+    const seen: (string | null)[] = [];
+    const fake = fakeDriver<string | null, undefined>('url-sync', (q) => void seen.push(q));
+    expectTypeOf(fake).toEqualTypeOf<FakeDriver<string | null, undefined, unknown>>();
+    await fake.run('A1', { signal: new AbortController().signal, emit: () => {} });
+    expect(seen).toEqual(['A1']);
+    expect(fake.inputs).toEqual(['A1']);
+    expect(fake.name).toBe('url-sync');
+  });
+
+  it('infers input and output from run', () => {
+    const fake = fakeDriver('length', (text: string) => text.length);
+    expectTypeOf(fake).toEqualTypeOf<FakeDriver<string, number, unknown>>();
+    // @ts-expect-error: run returns a number
+    fakeDriver<string, string>('length', (text: string) => text.length);
+  });
+});
+
+// A driver token (ADR 0006 "Driver tokens"): typed commands, no implementation of its own.
+interface Move {
+  readonly card: number;
+}
+const game = defineDriver<Move, number, string>('game');
+type GameMsg = { readonly _tag: 'Turn'; readonly turn: number } | { readonly _tag: 'Lost' };
+const Table = define<{ readonly turn: number }, GameMsg>()('test-driver-types-table', {
+  init: () => [
+    { turn: 0 },
+    [
+      command(
+        game,
+        { card: 7 },
+        {
+          onSuccess: (turn) => ({ _tag: 'Turn', turn }),
+          onFailure: () => ({ _tag: 'Lost' }),
+        },
+      ),
+    ],
+  ],
+  update: { Turn: (_s, m) => ({ turn: m.turn }), Lost: (s) => s },
+  view: (s) => html`<p>${s.turn}</p>`,
+});
+
+describe('driver tokens', () => {
+  it('are typed drivers that a fake supplies by name, with no cast', async () => {
+    expectTypeOf(game).toEqualTypeOf<Driver<Move, number, string>>();
+    expectTypeOf(game).toExtend<AnyDriver>();
+    const fake = fakeDriver<Move, number, string>('game', (move) => move.card * 2);
+    const el = new Table();
+    el.drivers = { game: fake };
+    document.body.append(el);
+    await settled();
+    expect(el.state.turn).toBe(14);
+    expect(fake.inputs).toEqual([{ card: 7 }]);
+  });
+
+  it('take a fake from provideDrivers like any other driver', async () => {
+    const root = document.createElement('div');
+    const stop = provideDrivers(root, { game: fakeDriver('game', (move: Move) => move.card) });
+    const el = new Table();
+    root.append(el);
+    document.body.append(root);
+    await settled();
+    expect(el.state.turn).toBe(7);
+    stop();
+  });
+
+  it('type the command input from the token', () => {
+    // @ts-expect-error: a Move has a numeric card
+    command(game, { card: 'seven' });
+  });
+});

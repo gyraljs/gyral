@@ -5,8 +5,9 @@
 import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
 import type { DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
+import { fail, type GyralError } from './errors.js';
 import { HostModel, type ModelCommand } from './host-model.js';
-import { hydrationCode, takeSeed, whenHydrationLoads } from './hydration.js';
+import { hydrationCode, takeSeed, whenHydrationLoads } from '#hydration-loader';
 import {
   DEFAULT_EVENTS,
   eventsOf,
@@ -17,7 +18,7 @@ import {
 } from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
-import type { PropFeature, PropTable } from './props.js';
+import type { PropFeature, PropTable, propertyValue } from './props.js';
 import {
   afterRender,
   markDirty,
@@ -26,12 +27,27 @@ import {
   POST_STATES,
   type HostTask,
 } from './scheduler.js';
-import { stateSync, type StateSync } from './states.js';
+import { checkSpecFeatures, customStates, errorView, formAssociation } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
-import { render, sheetsFor, type Markup } from './view/index.js';
+import {
+  DEV,
+  ERROR_ATTRIBUTE,
+  message,
+  onHookFailure,
+  render,
+  sheetsFor,
+  suspendHooks,
+  type Markup,
+} from './view/index.js';
 
 const DEFER = 'defer-hydration';
+
+// A hook that throws is reported for the host owning the render root (ADR 0024).
+onHookFailure((error, root) => {
+  const host = root instanceof ShadowRoot ? root.host : (root as Element);
+  fail(error, 'hook', message(75, host.localName), { host, tag: host.localName });
+});
 
 type Bag = Record<string, unknown>;
 /** The element class for `spec` (not yet registered); define() types it for the spec. */
@@ -43,11 +59,17 @@ export function elementClass<S, M extends Tagged, P>(
   const names = Object.keys(table);
   // Registered by the prop builders (features.ts): set whenever a component declares props.
   const props = features.props as PropFeature;
+  /** Property sets and seeds: checked in development, kept as given in production (05). */
+  const checked = (props: PropFeature): typeof propertyValue =>
+    props.propertyValue as typeof propertyValue;
   const attrs = new Map<string, string>();
   const light = isLight(spec);
   let sheets: CSSStyleSheet[] | undefined;
-  const parsers = spec.intent as Readonly<Record<string, IntentParser<M> | undefined>>;
+  const parsers = (spec.intent ?? {}) as Readonly<
+    Record<string, IntentParser<M> | true | undefined>
+  >;
   const model = spec as unknown as ComponentSpec<S, Tagged, P>;
+  if (DEV) checkSpecFeatures(tag, spec);
 
   class Element extends HTMLElement implements GyralElement<S, M> {
     static readonly spec = spec;
@@ -68,7 +90,7 @@ export function elementClass<S, M extends Tagged, P>(
             return this.#values[name];
           },
           set(this: Element, value: unknown) {
-            this.#write(name, props.propertyValue(tag, name, table[name], value));
+            this.#write(name, DEV ? checked(props)(tag, name, table[name], value) : value);
           },
         });
       }
@@ -88,7 +110,6 @@ export function elementClass<S, M extends Tagged, P>(
     #hydrating = false;
     /** init's commands for a server-rendered host: started after its first render. */
     #afterInit: readonly ModelCommand[] = [];
-    #states: StateSync | false | undefined;
     #task: HostTask = {
       tag,
       depth: 0,
@@ -122,6 +143,7 @@ export function elementClass<S, M extends Tagged, P>(
         Reflect.deleteProperty(this, name);
         self[name] = value;
       }
+      formAssociation?.create(this, this.#model, spec.formAssociated);
     }
 
     get state(): S {
@@ -153,6 +175,8 @@ export function elementClass<S, M extends Tagged, P>(
 
     disconnectedCallback(): void {
       this.#model.disconnect();
+      // Element hooks' dispose; they run client again after the render on reconnect (02).
+      if (suspendHooks(this.#root)) this.#stale = true;
       if (DEVTOOLS_ENABLED) devConnect(this, tag, false);
     }
 
@@ -167,7 +191,8 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #write(name: string, value: unknown): void {
-      if (Object.is(this.#values[name], value)) return;
+      // The prop's `equals` (prop.ts): `Object.is`, the same JSON for prop.json, or the option.
+      if (table[name]?.equals(this.#values[name], value)) return;
       this.#values[name] = value;
       if (this.#model.ready) this.#invalidate();
     }
@@ -180,7 +205,7 @@ export function elementClass<S, M extends Tagged, P>(
       for (const [name, value] of Object.entries(seed.props)) {
         const def = table[name];
         if (def === undefined || this.#values[name] !== undefined) continue;
-        this.#values[name] = props.propertyValue(tag, name, def, value, 'the seed');
+        this.#values[name] = DEV ? checked(props)(tag, name, def, value, 'the seed') : value;
       }
       this.#afterInit = this.#model.resume(seed);
       this.#serverRendered = true;
@@ -202,18 +227,24 @@ export function elementClass<S, M extends Tagged, P>(
     }
 
     #start(): void {
-      const root = light ? this : (this.shadowRoot ?? this.attachShadow({ mode: 'open' }));
+      // `shadow: { delegatesFocus }` (05 "Focus"); `true` and `undefined` spread nothing.
+      const root = light
+        ? this
+        : (this.shadowRoot ??
+          this.attachShadow({ ...(spec.shadow as object | undefined), mode: 'open' }));
       this.#root = root;
       this.#hydrating = this.#serverRendered && hydrationCode != null && root.hasChildNodes();
       sheets ??= light ? [] : sheetsFor(spec.styles);
       // Rendering fresh: a shadow root without a seed (hand-written DSD) or a server-rendered
       // host whose hydration code failed to load starts empty.
+      // A host that failed on the server (ADR 0024) starts fresh: its content is a fallback.
+      const failedOnServer = this.hasAttribute(ERROR_ATTRIBUTE);
+      if (failedOnServer) this.removeAttribute(ERROR_ATTRIBUTE);
       if (!this.#hydrating) {
-        if (!light || this.#serverRendered) root.replaceChildren();
+        if (!light || this.#serverRendered || failedOnServer) root.replaceChildren();
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       this.#listen(DEFAULT_EVENTS);
-      if (spec.events !== undefined) this.#listen(spec.events);
       this.#state(); // init, unless resumed from a seed
       this.#connect();
     }
@@ -240,12 +271,32 @@ export function elementClass<S, M extends Tagged, P>(
       }
       this.#stale = false;
       this.#model.syncProps(names);
-      const view = spec.view(this.state, intentNames as IntentNames<M>, this.#model.ctx());
-      if (this.#hydrating) {
-        hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
-        this.#hydrating = false;
-      } else render(view, root, this.#seen);
-      if (spec.states !== undefined) afterRender(POST_STATES, this.#syncStates);
+      const failure = this.#model.failure;
+      if (failure !== undefined) {
+        // init threw (ADR 0024): the error view, once; nothing else runs for this host.
+        if (!this.#rendered) this.#fallback(root, failure, undefined);
+        this.#rendered = true;
+        return;
+      }
+      try {
+        const view = spec.view(this.state, intentNames as IntentNames<string>, this.#model.ctx());
+        if (this.#hydrating) {
+          hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
+          this.#hydrating = false;
+        } else render(view, root, this.#seen);
+        formAssociation?.sync(this, this.state, this.#model.ctx(), root);
+      } catch (cause) {
+        const error = this.#model.fail(cause, 'view', message(31, tag));
+        this.#fallback(root, error, this.state);
+        return; // the first-render steps wait for a render that succeeds
+      }
+      const states = spec.states;
+      const sync = customStates;
+      if (states !== undefined && sync !== undefined) {
+        afterRender(POST_STATES, () => {
+          sync(this, states(this.state));
+        });
+      }
       if (this.#rendered) return;
       this.#rendered = true;
       if (DEVTOOLS_ENABLED) devHydrated(this, tag, this.#serverRendered);
@@ -262,14 +313,24 @@ export function elementClass<S, M extends Tagged, P>(
           this.#model.run(commands);
         });
       }
+      if (spec.subscriptions !== undefined) {
+        afterRender(POST_INIT, () => {
+          this.#model.subscribe();
+        });
+      }
     }
 
-    #syncStates = (): void => {
-      // ElementInternals is attached lazily, once, when the first states sync needs it (05).
-      this.#states ??= stateSync(this.attachInternals());
-      if (this.#states !== false && spec.states !== undefined)
-        this.#states(spec.states(this.state));
-    };
+    /**
+     * Renders `spec.error` (ADR 0024). Without one the root keeps what it shows; a fallback that
+     * throws too is reported and changes nothing.
+     */
+    #fallback(root: ShadowRoot | HTMLElement, error: GyralError, state: S | undefined): void {
+      if (spec.error === undefined || errorView === undefined) return;
+      const view = (failure: GyralError, at: never): unknown => spec.error?.(failure, at);
+      if (errorView(view, root, error, state, this.#hydrating, this.#seen, this, tag)) {
+        this.#hydrating = false;
+      }
+    }
 
     /** Intent event types this host's root listens for (view/05-element.md "Intent events"). */
     #listening = new Set<string>();
@@ -285,10 +346,11 @@ export function elementClass<S, M extends Tagged, P>(
 
     #onEvent = (event: Event): void => {
       if (this.#root === undefined) return;
-      handleIntent(event, this.#root, parsers, tag, (msg) => {
+      handleIntent(event, this.#root, parsers, tag, this.#model, (msg) => {
         if (msg !== undefined && this.isConnected) this.#model.dispatch(msg);
       });
     };
   }
+  formAssociation?.install(Element, spec.formAssociated !== undefined);
   return Element;
 }

@@ -67,13 +67,12 @@ const modeSchema = {
   },
 };
 
-export const Panel = define<State, Msg, Props>('gy-search-panel', {
+export const Panel = define<State, Msg, Props>()('gy-search-panel', {
   props: {
     query: prop.string({ default: '' }),
     mode: prop.string({ schema: modeSchema, default: 'naive' }),
   },
   init: () => ({ results: undefined, requests: [] }),
-  intent: {},
   update: {
     Found: (s, m) => found(s, m.results),
     PropsChanged: typed,
@@ -114,9 +113,3 @@ export const Panel = define<State, Msg, Props>('gy-search-panel', {
   },
   styles: panelStyles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-search-panel': InstanceType<typeof Panel>;
-  }
-}

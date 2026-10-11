@@ -15,10 +15,22 @@ import { navigate, routes } from '@gyral/router';
 
 export const site = routes({ home: '/', product: '/products/:id' });
 
-site.match('/products/42'); // { name: 'product', params: { id: '42' } }
+site.match('/products/42/'); // { name: 'product', params: { id: '42' }, path: '/products/42' }
 
 // In an update: [state, [navigate('/products/42')]]
+// Filters in the URL, without a new history entry; a replace doesn't move scroll or focus:
+// [state, [navigate('?q=shoes&sort=price', { replace: true })]]
 ```
+
+`setHead(head)` makes the document's head (title, description, canonical, robots, meta, links,
+JSON-LD, `lang`, `dir`) match a `Head` after a navigation: pass it the same value the server
+gives `renderPage()` (from `@gyral/ssr`), so a client navigation leaves the same head
+as a page load.
+
+After a push renders, the router scrolls to the `#fragment` target or the top, restores the
+position on back and forward, and resets focus; pass `scroll: false` / `focusReset: false` to
+`navigate` or `makeRouter` to manage them yourself. A `replace` leaves scroll and focus alone
+unless you pass `scroll: true` / `focusReset: true`.
 
 ## Documentation
 
@@ -33,3 +45,13 @@ consumer setup guide (packages, Vite preset, server rendering):
 
 MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and
 the Gyral logo are trademarks of Mike Zupper.
+
+## Optional parameters and catch-all routes (0.3.1)
+
+`routes({ product: '/products/:id?', docs: '/docs/:path*', notFound: '/:path*' })` infers
+`id?: string` and `path: readonly string[]`. `href('product', {})` omits the optional
+segment; `href('docs', { path: ['a/b', 'x y'] })` yields `/docs/a%2Fb/x%20y`.
+Catch-all captures can be empty arrays and preserve encoded slashes within one item.
+First matching route wins; put the not-found catch-all last and explicitly return HTTP 404
+from the server. Native URLPattern, the fallback and SSR agree, including the root path.
+Ambiguous optional omissions and invalid/missing href parameters throw (ADR 0009).

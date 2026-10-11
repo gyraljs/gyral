@@ -2,15 +2,16 @@ import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { html, nothing } from '@gyral/core';
 import type { IntentRejected } from '@gyral/core';
-import { formAction, rejectWith, renderPage, seeOther } from '@gyral/ssr';
+import { formAction, rejectWith, renderPage, seeOther, type ComponentAssets } from '@gyral/ssr';
 import '../src/rsvp.js'; // registers <gy-rsvp> so the server can render it
 import { RsvpForm, type Attendee } from '../src/schema.js';
 
 export interface AppOptions {
-  /** URL of the client entry module (Vite dev: the source path; prod: the built asset). */
-  readonly clientEntry: string;
-  /** Production: chunks to preload with the entry (its imports and the hydration chunk). */
-  readonly modulepreload?: readonly string[];
+  /**
+   * The components' client modules (dev: from gyralDevServer; prod: from productionServer):
+   * each page loads exactly the components it rendered. Tests leave it out.
+   */
+  readonly components?: ComponentAssets | undefined;
   /**
    * The replies so far. The dev server re-creates the app on every request (to follow source
    * edits), so it creates this once and passes it in; otherwise each app starts its own.
@@ -51,7 +52,7 @@ function page(options: AppOptions, { attendees, joined, rejected }: View, status
     {
       title: 'RSVP: Web Platform Meetup — Gyral no-js-first',
       description: 'An RSVP form that works without JavaScript and gets better with it.',
-      head,
+      extraHead: head,
       body: html`<main>
         <h1>Web Platform Meetup</h1>
         <p>Thursday at 18:30. Say you're coming:</p>
@@ -61,8 +62,7 @@ function page(options: AppOptions, { attendees, joined, rejected }: View, status
           .initialMessages=${rejected === undefined ? [] : [rejected]}
         ></gy-rsvp>
       </main>`,
-      scripts: [options.clientEntry],
-      modulepreload: options.modulepreload ?? [],
+      ...(options.components === undefined ? {} : { components: options.components }),
     },
     { status },
   );

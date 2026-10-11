@@ -13,9 +13,10 @@ import type { Corpus } from '../src/types.js';
 const pkgDir = fileURLToPath(new URL('..', import.meta.url));
 let corpus: Corpus;
 
+// Building the corpus is CPU-bound (several seconds when the suite runs in parallel).
 beforeAll(() => {
   corpus = buildCorpus(parseLlmsFull);
-});
+}, 60_000);
 
 describe('docs', () => {
   it('parses every page of llms-full.txt with sections and site anchors', () => {
@@ -83,7 +84,9 @@ describe('api', () => {
     if (define === undefined || matches.length !== 1) throw new Error('expected one define');
     const text = formatApi(define);
     expect(text).toContain("from '@gyral/core'");
-    expect(text).toContain('function define<');
+    // Both call forms (ADR 0023): the overloads are listed one after the other.
+    expect(text).toContain('function define(): <');
+    expect(text).toContain('>(): Definer<S, M, P, O>;');
     expect(text).toContain('Compiles a Model-View-Intent spec');
   });
 
@@ -94,11 +97,23 @@ describe('api', () => {
     expect(findApi(corpus.api, 'prerender', 'ssr').matches[0]?.specifier).toBe('@gyral/ssr/static');
   });
 
+  it.each([
+    ['makeLocalStorageDriver', '@gyral/core/storage'],
+    ['makeIndexedDBDriver', '@gyral/core/indexeddb'],
+    ['makeEventSourceDriver', '@gyral/http/sse'],
+    ['makeWebSocketDriver', '@gyral/http/websocket'],
+  ])('finds %s at its optional public entry', (symbol, specifier) => {
+    const { matches } = findApi(corpus.api, symbol);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.specifier).toBe(specifier);
+    expect(matches[0]?.declaration).toContain(symbol);
+  });
+
   it("teaches 0.3's view layer from the sources, examples and skill, with no Lit left", () => {
     const at = (name: string) => findApi(corpus.api, name).matches.map((m) => m.specifier);
     expect(at('each')).toContain('@gyral/core');
     expect(at('prop')).toContain('@gyral/core');
-    expect(at('renderToString')).toContain('@gyral/core/server');
+    expect(at('renderToString')).toContain('@gyral/ssr');
     expect(at('clientAssetsFromManifest')).toContain('@gyral/ssr/static');
     expect(corpus.api.some((e) => e.specifier === '@gyral/core/eslint')).toBe(true);
     for (const gone of ['repeat', 'liveBoolean', 'serverHtml', 'unsafeCSS']) {
@@ -118,16 +133,16 @@ describe('api', () => {
 
 describe('examples', () => {
   it('lists every example with a description', () => {
-    expect(corpus.examples.length).toBeGreaterThanOrEqual(20);
-    expect(listExamples(corpus.examples)).toContain('**counter**: Counter.');
+    expect(corpus.examples.length).toBeGreaterThanOrEqual(19);
+    expect(listExamples(corpus.examples)).toContain('**hello-world**: Hello world.');
   });
 
   it('returns the component source', () => {
-    const counter = findExample(corpus.examples, 'counter');
-    if (counter === undefined) throw new Error('expected the counter example');
-    expect(counter.components.map((f) => f.path)).toEqual(['src/counter.ts']);
-    expect(counter.otherFiles).toContain('src/main.ts');
-    expect(formatExample(counter)).toContain("define<State, Msg>('gy-counter'");
+    const hello = findExample(corpus.examples, 'hello-world');
+    if (hello === undefined) throw new Error('expected the hello-world example');
+    expect(hello.components.map((f) => f.path)).toEqual(['src/hello.ts']);
+    expect(hello.otherFiles).toContain('src/main.ts');
+    expect(formatExample(hello)).toContain("define<State, Msg>()('gy-hello'");
   });
 });
 

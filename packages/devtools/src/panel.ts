@@ -1,6 +1,7 @@
 // <gyral-devtools>: the in-page panel (ADR 0017). A Gyral component itself; install.ts filters
 // its own events out of the stream so it never watches itself.
-import { define, devtoolsEnabled, each, html, nothing, prop } from '@gyral/core';
+import { define, each, html, nothing, prop } from '@gyral/core';
+import { devtoolsEnabled } from '@gyral/core/internal';
 import {
   componentLabel,
   initialPanel,
@@ -12,7 +13,7 @@ import {
   type RowKind,
 } from './model.js';
 import { panelStyles } from './styles.js';
-import type { DevEvent } from '@gyral/core';
+import type { DevEvent } from '@gyral/core/internal';
 
 export const PANEL_TAG = 'gyral-devtools';
 
@@ -65,15 +66,15 @@ const LaneRow = (l: Lane) =>
     <td>${l.inFlight}</td>
   </tr>`;
 
-export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boolean }>(PANEL_TAG, {
+export const DevtoolsPanel = define<PanelState, PanelMsg, { readonly open: boolean }>()(PANEL_TAG, {
   props: { open: prop.boolean() },
   init: (props) => initialPanel(props.open),
   intent: {
-    Toggle: () => ({ _tag: 'Toggle' }),
+    Toggle: true,
     Filter: ({ value }) => ({ _tag: 'Filter', text: value ?? '' }),
     Kind: ({ value, checked }) =>
       isKind(value) ? { _tag: 'Kind', kind: value, on: checked === true } : undefined,
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Received: (s, m) => receive(s, m.events),

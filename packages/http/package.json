@@ -1,6 +1,6 @@
 {
   "name": "@gyral/http",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decoding.",
   "license": "MIT",
   "author": "Mike Zupper",
@@ -17,7 +17,9 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./testing": "./src/testing.ts"
+    "./testing": "./src/testing.ts",
+    "./sse": "./src/sse.ts",
+    "./websocket": "./src/websocket.ts"
   },
   "publishConfig": {
     "exports": {
@@ -28,6 +30,14 @@
       "./testing": {
         "types": "./dist/testing.d.ts",
         "default": "./dist/testing.js"
+      },
+      "./sse": {
+        "types": "./dist/sse.d.ts",
+        "default": "./dist/sse.js"
+      },
+      "./websocket": {
+        "types": "./dist/websocket.d.ts",
+        "default": "./dist/websocket.js"
       }
     }
   },

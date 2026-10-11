@@ -1,17 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html, settled } from '@gyral/core';
+import { command, define, html, settled } from '@gyral/core';
 import {
-  back,
-  forward,
   listen,
   makeRouter,
   navigate,
   routes,
-  setTitle,
+  setHead,
   type RouteLocation,
   type RouteMatch,
   type RouterDriver,
+  router,
 } from '../src/index.js';
+
+// History back and forward are router inputs (the skill's "History back and forward" recipe).
+const back = () => command(router, { _tag: 'Traverse', delta: -1 });
+const forward = () => command(router, { _tag: 'Traverse', delta: 1 });
 
 const app = routes({ home: '/', user: '/users/:id' });
 const titleOf = (route: RouteMatch<typeof app.table> | undefined): string =>
@@ -27,16 +30,18 @@ type Msg =
   | { readonly _tag: 'Back' }
   | { readonly _tag: 'Forward' };
 
-const App = define<State, Msg>('test-memory-app', {
+const App = define<State, Msg>()('test-memory-app', {
   init: () => [
     { route: undefined, seen: [] },
     [listen((location) => ({ _tag: 'Routed', location }))],
   ],
-  intent: {},
   update: {
     Routed: (s, m) => {
       const route = app.match(m.location.href);
-      return [{ route, seen: [...s.seen, m.location.pathname] }, [setTitle(titleOf(route))]];
+      return [
+        { route, seen: [...s.seen, m.location.pathname] },
+        [setHead({ title: titleOf(route) })],
+      ];
     },
     Go: (s, m) => [s, [navigate(m.url, { replace: m.replace ?? false })]],
     Back: (s) => [s, [back()]],
@@ -68,7 +73,7 @@ describe('memory history', () => {
   });
 
   it('starts at the initial URL without touching the real location', () => {
-    expect(el.state.route).toEqual({ name: 'user', params: { id: '1' } });
+    expect(el.state.route).toEqual({ name: 'user', params: { id: '1' }, path: '/users/1' });
     expect(location.href).toBe(original);
     expect(driver.snapshot().href).toBe('http://localhost/users/1');
   });
@@ -106,13 +111,13 @@ describe('memory history', () => {
     expect(location.href).toBe(original);
   });
 
-  it('records titles set by setTitle() without changing document.title', async () => {
+  it('records the head set by setHead() without changing the document', async () => {
     await vi.waitFor(() => {
-      expect(driver.snapshot().title).toBe('User 1');
+      expect(driver.snapshot().head?.title).toBe('User 1');
     });
     el.send({ _tag: 'Go', url: '/' });
     await vi.waitFor(() => {
-      expect(driver.snapshot().title).toBe('Home');
+      expect(driver.snapshot().head).toEqual({ title: 'Home' });
     });
     expect(document.title).toBe(originalTitle);
   });
@@ -200,19 +205,20 @@ describe('link capture is opt-in (ADR 0009 addendum)', () => {
   });
 });
 
-describe('setTitle() with the browser history', () => {
+describe('setHead() with the browser history', () => {
   it('sets document.title', async () => {
     const before = document.title;
     const driver = makeRouter({ captureLinks: false, navigationApi: false });
+    setHead({ title: 'Hello' }); // fills the head slot, as an app's first setHead() does
     await driver.run(
-      { _tag: 'Title', title: 'Hello' },
+      { _tag: 'Head', head: { title: 'Hello' } },
       {
         signal: new AbortController().signal,
         emit: () => undefined,
       },
     );
     expect(document.title).toBe('Hello');
-    expect(driver.snapshot().title).toBe('Hello');
+    expect(driver.snapshot().head?.title).toBe('Hello');
     document.title = before;
     driver.dispose();
   });

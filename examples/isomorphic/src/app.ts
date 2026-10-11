@@ -1,6 +1,6 @@
 import { css, define, html, prop } from '@gyral/core';
-import { listen, makeRouter, setTitle, type RouteLocation } from '@gyral/router';
-import { pageTitle, site, titles } from './routes.js';
+import { listen, setHead, type RouteLocation } from '@gyral/router';
+import { pageHead, site, titles } from './routes.js';
 
 export interface Props {
   /** The request path, set by the server. On the client the router takes over. */
@@ -41,20 +41,17 @@ const content = (path: string) => {
   }
 };
 
-export const App = define<State, Msg, Props>('gy-iso-app', {
+export const App = define<State, Msg, Props>()('gy-iso-app', {
   props: { path: prop.string() },
-  // This app owns the whole page, so it opts in to capturing link clicks (ADR 0009).
-  drivers: { router: makeRouter({ captureLinks: true }) },
-  // Same on server and client. The server never runs commands; after hydration the client
-  // runs init's listen(), which streams the current location and every navigation (ADR 0012).
-  init: (props) => [
-    { path: props.path ?? '/' },
-    [listen((location) => ({ _tag: 'Routed', location }))],
-  ],
-  intent: {},
+  // Same on server and client.
+  init: (props) => ({ path: props.path ?? '/' }),
+  // The server never runs commands; after hydration the client subscribes to the location,
+  // which streams the current one and every navigation (ADR 0012, ADR 0025).
+  subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   update: {
-    // pageTitle() also renders the server's <title>: one source for both (ADR 0009).
-    Routed: (_s, m) => [{ path: m.location.pathname }, [setTitle(pageTitle(m.location.pathname))]],
+    // pageHead() also renders the server's head: one source for both (ADR 0019). The first
+    // Routed after hydration finds the server's head already matching and writes nothing.
+    Routed: (_s, m) => [{ path: m.location.pathname }, [setHead(pageHead(m.location.pathname))]],
   },
   view: (s) => html`
     <header>${menu(s.path)}</header>
@@ -88,9 +85,3 @@ export const App = define<State, Msg, Props>('gy-iso-app', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-iso-app': InstanceType<typeof App>;
-  }
-}

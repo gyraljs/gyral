@@ -32,8 +32,11 @@ before submit; the schema adds what HTML can't express. Schemas may be async (a 
   field. Its server half writes `aria-invalid="true"` into the start tag, so don't write it
   twice.
 - Render the error text as plain markup, so the no-JS (server) render announces errors too.
-- `submitForm(url, formData, { onSuccess, onFailure, csrf? })` posts the valid submission; a
-  server 422 comes back as the same `IntentRejected`.
+- `submitForm(url, formData, { onSuccess, onFailure })` posts the valid submission; a server
+  422 comes back as the same `IntentRejected`. A CSRF token from a `<meta>` is added by the
+  http driver, configured once for the app:
+  `provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
+  `csrf: { token }` sends a token the app already holds.
 
 ```ts
 import { define, fieldErrors, form, html, invalid, type FormFields } from '@gyral/core';
@@ -60,7 +63,7 @@ const text = (values: FormFields, key: string): string => {
   return typeof value === 'string' ? value : '';
 };
 
-export const Signup = define<State, Msg>('my-signup', {
+export const Signup = define<State, Msg>()('my-signup', {
   init: () => ({ values: {}, errors: {}, done: false }),
   intent: {
     Submit: form(SignupForm, (_data, raw) => ({ _tag: 'Submit', form: raw })),
@@ -73,7 +76,6 @@ export const Signup = define<State, Msg>('my-signup', {
         submitForm<Msg>('/signup', m.form, {
           onSuccess: () => ({ _tag: 'Done' }),
           onFailure: () => ({ _tag: 'Failed' }),
-          csrf: { meta: 'csrf-token' },
         }),
       ],
     ],
@@ -112,8 +114,27 @@ export const Signup = define<State, Msg>('my-signup', {
 });
 ```
 
-Never keep passwords in state (or re-fill them from `values`): state is serialized into the
-page.
+Never keep passwords in state: state is serialized into the page. Secret fields never come back
+in `values` anyway: a name containing `password`, `passcode`, `csrf` or `xsrf` is secret by
+itself, and others are listed in the definition (`secret` takes any posted field name, inside
+the schema or not, such as a hidden `_session` field). Development builds warn about an unlisted field that looks secret
+(`token`, `card`, `cvc`, `pin`, …), and the devtools timeline shows secrets as `[secret]`.
+
+```ts
+import { defineForm } from '@gyral/core';
+import * as v from 'valibot';
+
+const Checkout = defineForm(
+  v.object({
+    email: v.pipe(v.string(), v.email('Enter a valid email address.')),
+    card: v.pipe(v.string(), v.regex(/^\d{16}$/, 'Enter the 16-digit card number.')),
+    cvc: v.pipe(v.string(), v.regex(/^\d{3,4}$/, 'Enter the security code.')),
+  }),
+  { secret: ['card', 'cvc'] },
+);
+// A rejection's values: { email } only, on the JS and the no-JS path alike.
+export { Checkout };
+```
 
 ## What the user typed stays until the model changes
 
@@ -122,42 +143,37 @@ model's value for them changes; then the model wins, even over an edit. Any othe
 (another field's message, a refused edit, a rejection that keeps `values`) leaves the controls
 as the user left them, so passwords the model never holds stay typed after a rejection.
 
-To clear or restore a form, change the model. A keyed row re-creates the controls with the
+To clear or restore a form, change the model. `keyed(key, …)` re-creates the controls with the
 model's values (`form.reset()` would restore the first render's values instead):
 
 ```ts
-import { define, each, html, intents } from '@gyral/core';
+import { define, html, intentsOf, keyed, type TemplateResult } from '@gyral/core';
 
 interface State {
   readonly note: string;
   readonly formKey: number;
 }
 type Msg = { readonly _tag: 'Note'; readonly value: string } | { readonly _tag: 'Clear' };
-const i = intents<Msg>();
+const i = intentsOf<typeof Notes>();
 
-const fields = (s: State) =>
+const fields = (s: State): TemplateResult =>
   html`<form>
     <textarea name="note" data-intent=${i.Note}>${s.note}</textarea>
     <button type="button" data-intent=${i.Clear}>Clear</button>
   </form>`;
 
-export const Notes = define<State, Msg>('my-notes', {
+export const Notes = define<State, Msg>()('my-notes', {
   init: () => ({ note: '', formKey: 0 }),
   intent: {
     Note: ({ value }) => ({ _tag: 'Note', value: value ?? '' }),
-    Clear: () => ({ _tag: 'Clear' }),
+    Clear: true,
   },
   update: {
     Note: (s, m) => ({ ...s, note: m.value }),
     // A new key: the form's elements are replaced by fresh ones with the model's values.
     Clear: (s) => ({ note: '', formKey: s.formKey + 1 }),
   },
-  view: (s) =>
-    html`${each(
-      [s],
-      (x) => x.formKey,
-      (x) => fields(x),
-    )}`,
+  view: (s) => html`${keyed(s.formKey, fields(s))}`,
 });
 ```
 
@@ -176,7 +192,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Zip'; readonly zip: string };
 
-export const ZipInput = define<State, Msg>('my-zip', {
+export const ZipInput = define<State, Msg>()('my-zip', {
   init: () => ({ zip: '', error: undefined }),
   intent: {
     Zip: field(v.pipe(v.string(), v.regex(/^\d{5}$/, 'Five digits.')), (zip) => ({
@@ -240,3 +256,56 @@ export async function handle(request: Request): Promise<Response> {
   })(request);
 }
 ```
+
+### Re-filling a form your own route validates
+
+`formAction` puts the submitted values in `IntentRejected.values` for you. A route that checks a
+submission itself (a contact form that also calls a spam filter, say) gets the same values with
+`definition.values(formData)`: the text values keyed by the form's fields, repeated names as
+arrays, `File`s and secret fields left out. Render them back into the form so nothing typed is
+lost. `definition.validate(formData, intent)` is the validation `form()` and `formAction` run.
+
+```ts
+import { defineForm, html, type TemplateResult } from '@gyral/core';
+import * as v from 'valibot';
+
+const Contact = defineForm(
+  v.object({
+    email: v.pipe(v.string(), v.email('Enter a valid email address.')),
+    message: v.pipe(v.string(), v.nonEmpty('Write a message.')),
+  }),
+);
+
+/** The form again, with what was submitted and the server's error. */
+function contactForm(data: FormData, error: string): TemplateResult {
+  const values = Contact.values(data);
+  const text = (value: string | readonly string[] | undefined): string =>
+    typeof value === 'string' ? value : '';
+  return html`<form method="post">
+    <input name="email" type="email" value=${text(values.email)} />
+    <textarea name="message">${text(values.message)}</textarea>
+    <p role="alert">${error}</p>
+    <button>Send</button>
+  </form>`;
+}
+```
+
+# Native custom form controls (0.3.1)
+
+Use `formAssociated: { value: (s) => s.value }` in a component spec to participate in the
+owning form under the host's native `name` attribute. Return null to omit the control.
+`state` can project a separate string/File/FormData restoration value. Optional `validity`
+projects `{ flags: { customError: true }, message: 'Explain the problem', anchor: 'input' }`;
+return undefined to clear validity. The anchor selects a control in the component's root.
+Handle `FormReset`, `FormDisabled` and `FormStateRestore` in `update` when needed; the last
+message carries `state` and `mode` (`restore` or `autocomplete`). Mirror disabled state to
+inner controls. These reducers are optional; reset does not rerun init automatically.
+
+SSR renders the view without native custom-control registration. For submission before
+JavaScript, render a native fallback input in the server/first-client view. Submit null
+from the custom control until a parsed input event transfers the live value to the model;
+then switch to the enhanced mode and remove its name (or disable a separate fallback
+control) to avoid duplicate entries while keeping the interactive control usable.
+Switching on `Hydrated` alone can lose values typed before hydration; Gyral does not
+automatically read arbitrary fallback controls into model state. Keep value/validity projections pure; never attach
+ElementInternals in component code. Forms and `states` share Gyral's single attachment.

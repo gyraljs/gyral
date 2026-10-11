@@ -1,4 +1,4 @@
-import { css, define, emit, html, prop, type Stateless } from '@gyral/core';
+import { css, define, html, outputs, prop, type Stateless } from '@gyral/core';
 
 export interface SliderProps {
   readonly label: string;
@@ -13,6 +13,9 @@ export type SliderOutput = { readonly _tag: 'Changed'; readonly value: number };
 
 type Msg = { readonly _tag: 'Changed'; readonly value: number };
 
+/** Typed `emit` for this component's outputs. */
+const emit = outputs<SliderOutput>();
+
 /**
  * A reusable, *controlled* slider: the parent owns the value and passes it down as a prop;
  * the slider only reports changes up. It needs no model state of its own (no local copy
@@ -21,7 +24,7 @@ type Msg = { readonly _tag: 'Changed'; readonly value: number };
  * parent's value changes, the render writes it to the input unless the input already shows it.
  * A render where the value is unchanged leaves the input as the user set it.
  */
-export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
+export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>()(
   'gy-labeled-slider',
   {
     props: {
@@ -82,9 +85,3 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>(
     `,
   },
 );
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-labeled-slider': InstanceType<typeof LabeledSlider>;
-  }
-}

@@ -19,10 +19,12 @@ concern (events and state alike) was a stream. That made Cycle hard to learn. We
 
 ## Decision
 
-A component is `define(tag, { props?, init, intent, update, view, styles? })`:
+A component is `define(tag, { props?, init, intent, update, view, styles? })` (since 0.3.1,
+two calls: `define<State, Msg>()(tag, spec)`, addendum "Intent names"):
 
 - **Messages** are a tagged union (`{ _tag: 'Add', text }`). A message's tag is also its
-  intent name.
+  intent name. (Since 0.3.1 the intent names are the keys of `intent`, which may include names
+  that aren't tags.)
 - **View** is `` (state, i) => html`…` ``. It names intents in markup: `data-intent=${i.Add}`.
   `i` is typed, so a typo in an intent name is a compile error. Views attach no closures.
 - **Intent** maps tags to parsers: `(IntentInput) => Message | undefined`. `IntentInput` holds
@@ -41,7 +43,8 @@ A component is `define(tag, { props?, init, intent, update, view, styles? })`:
 
 ## Consequences
 
-- Intent names appear in markup as message tags (PascalCase).
+- Intent names appear in markup as message tags (PascalCase), or, since 0.3.1, as any key of
+  `intent` (addendum "Intent names").
 - Component state lives in the element (a private model field, then `requestUpdate()`).
   Shared app state across components will use signals (`@lit-labs/signals`). That is a
   separate decision, to be recorded when a shared-state bead needs it.
@@ -68,6 +71,107 @@ the templates it renders, added when a template first renders (all intent events
 template binds `data-intent-on` dynamically). Any statically named event type now works
 without `spec.events`; list a type there only when a bound `data-intent-on` produces it and it
 isn't one of the intent events above. Details: view/05-element.md "Intent events".
+
+**Update (gyral-dyn.13, 2026-10-08, 0.3.1):** `data-intent-on` takes a list of events
+(`"pointerdown pointerup pointercancel"`, `"keydown keyup"`), so press and release are one
+intent whose parser reads `event.type`; the `capturePointer()` hook keeps the pointer on the
+element until release. Several controls that change one thing can share one intent and say
+which they are through `name` (the skill's intent.md "Several controls, one message"). Details: view/05-element.md "Press and
+release".
+
+**Update (gyral-dyn.15 and gyral-dyn.17, 2026-10-08, 0.3.1; decided by the user):** an element
+may name an intent per event type, `data-intent-<event>=${i.Msg}`, which comes before its plain
+`data-intent` for that event (view/05-element.md "Per-event intents"). Parsers receive the
+read-only `Ctx` reducers get as a second argument, `(input, ctx)`: props as they are when the
+event fires (read from the element, not from the last render) and `read(store)`, so a parser
+can decide synchronously, from props, whether to `preventDefault()` (a listbox whose
+orientation prop says which arrow keys it owns). Parsers stay pure apart from `preventDefault()`. `IntentParser<M, P>` types it;
+one-parameter parsers still fit, and `form()`/`field()`/`child()` return one-parameter
+parsers so existing direct calls still compile.
+
+**Update (gyral-1zd.14, 2026-10-09, 0.3.1; decided by the user):** the parser's `ctx` also
+carries `state`, the component's state when the event fires, read-only (`ParserCtx<P, S>`,
+`IntentParser<M, P, S>`). Where the user is often decides `preventDefault()`: a grid keeps Tab
+only until its last cell. Without it, views wrote `data-first`/`data-last` attributes for the
+parser to read. Parsers still only read.
+
+## Addendum: Intent names (gyral-dyn.12, gyral-dyn.31, 2026-10-08, 0.3.1; decided by the user)
+
+**Context.** Intent names were message tags, so a component with many controls that each send
+the same kind of message (a table toolbar's Archive, Restore, Duplicate and Delete, all sent to
+the server as one request) needed a message variant and a pass-through reducer per control, or
+one shared intent whose parser branches on the control's `name`.
+
+**Decision.** The intent names are **the keys of `intent`**, inferred by a two-call `define`
+(ADR 0023):
+
+```text
+define<State, Msg>()('doc-table', {
+  intent: { Archive: …, Restore: …, Duplicate: … }, // three intent names, inferred
+  update: { Send: … },                                // reducers for messages only
+  view: (s, i) => html`<button data-intent=${i.Duplicate}>…</button>`,
+});
+```
+
+- A key that is a message tag must return that variant (a parser named after a message that
+  produces another one is almost always a mistake); any other key may return any message.
+- Names that aren't tags get no reducer: `Update` is keyed by the message tags only.
+- `i` in the view offers exactly the keys, so a name with no parser, or a misspelled one, fails
+  to compile where the view uses it. Rows get the same names from
+  `intentsOf<typeof Component>()`, and a row that uses them declares its return type, or the
+  row, the view and the component's type infer each other in a circle.
+- A misspelled key that no template names at all is a valid new name to the types;
+  `gyral/unused-intent` reports it (it already reported parsers no template names).
+- Types only, apart from the one extra call: the runtime already looks parsers up by the
+  `data-intent` name.
+
+The first version (gyral-dyn.12) declared the extra names in the message union with
+`IntentName<'…'>`, because TypeScript has no partial type-argument inference: with
+`define<State, Msg>(tag, spec)` the keys of `intent` could never be inferred. The owner chose
+the curried form instead (ADR 0023), which removes `IntentName`, `Messages` and the one-call
+`define` in 0.3.1. Its type errors, as users see them:
+
+```text
+// a typo in the view, or a misspelled key the view names correctly
+Property 'Archive' does not exist on type 'IntentNames<"Archvie">'. Did you mean 'Archvie'?
+
+// a tag key returns another variant
+Type '{ _tag: "Sent"; }' is not assignable to type 'ParseResult<{ readonly _tag: "Send"; … }>'.
+
+// a reducer for an intent name
+Object literal may only specify known properties, and 'Archive' does not exist in type
+'Update<State, Msg, object>'.
+
+// define called once, the old way
+Expected 0 arguments, but got 2.
+```
+
+When one parser that branches on `name` reads better (several `<select>`s editing one record),
+the shared-intent pattern stays the simpler choice. Type tests and a browser test are in
+`packages/core/test/intent-names.test.ts`.
+
+## Addendum: declining parsers (gyral-dyn.25, 2026-10-08, 0.3.1; decided by the user)
+
+A parser's `undefined` used to mean "ignore": the nearest element with an intent for the event
+took it, and nothing else ran. Now a synchronous `undefined` **declines**: the lookup continues
+outward to the next intent for the same event, within the component (view/05-element.md
+"Declining"). This keeps parsers the place where "is this event mine?" is decided, and lets a
+container's shortcuts coexist with its fields' own key handling without `composedPath()`
+filtering. Async parsers can't decline. It is a behavior change for code that relied on an
+inner `undefined` hiding the event from an outer intent; such code returns a no-op message or
+checks `event.target` in the outer parser.
+
+## Addendum: tag-only intents and optional tables (gyral-1zd.20, 2026-10-09, 0.3.1; decided by the user)
+
+Audits of seven apps found about 40 parsers that only return their own tag and 52 empty
+`intent: {}` / `update: {}` tables. Elm names the message itself (`onClick Deal`) and Hyperapp
+an action (`onclick: Deal`); neither needs a function for a message without data. Gyral keeps
+closures out of views, so the equivalent sits in the parser table: `Deal: true` means
+`() => ({ _tag: 'Deal' })`. It is allowed only for a variant with no field besides `_tag`, and
+only under a key that is a message tag (an inferred intent name must still say what it sends).
+`intent` is optional, and `update` is optional when the component has no messages; with
+messages, `update` stays required and exhaustive. Runtime cost: one comparison in the intent
+dispatcher.
 
 ## Addendum: View Transitions (gyral-czi.12, 2026-10-04)
 

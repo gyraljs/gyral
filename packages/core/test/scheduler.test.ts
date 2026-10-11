@@ -1,16 +1,16 @@
 // The global scheduler (docs/design-docs/view/04-scheduler.md): marking, the flush (parents
 // first, one render per host), the post-render queue, errors and the loop guard.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { collectErrors } from './collect-errors.js';
 import { define, each, focus, html, prop, settled, type Hydrated } from '../src/index.js';
 
 const log: string[] = [];
 
 type Msg = { readonly _tag: 'Bump' };
 
-define<{ readonly n: number }, Msg, { readonly label: string }>('test-sch-leaf', {
+define<{ readonly n: number }, Msg, { readonly label: string }>()('test-sch-leaf', {
   props: { label: prop.string({ attribute: false, default: '' }) },
   init: () => ({ n: 0 }),
-  intent: {},
   update: { Bump: (s) => ({ n: s.n + 1 }) },
   view: (s, _i, { props }) => {
     log.push(`leaf:${props.label}:${String(s.n)}`);
@@ -18,9 +18,8 @@ define<{ readonly n: number }, Msg, { readonly label: string }>('test-sch-leaf',
   },
 });
 
-const Root = define<{ readonly n: number }, Msg>('test-sch-root', {
+const Root = define<{ readonly n: number }, Msg>()('test-sch-root', {
   init: () => ({ n: 0 }),
-  intent: {},
   update: { Bump: (s) => ({ n: s.n + 1 }) },
   view: (s) => {
     log.push(`root:${String(s.n)}`);
@@ -58,12 +57,11 @@ describe('the flush', () => {
     expect(log).toEqual(['root:2', 'leaf:r2:1']);
   });
 
-  it('isolates a host whose view throws: logged with its tag, previous DOM kept', async () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it('isolates a host whose view throws: reported with its tag, previous DOM kept', async () => {
+    const reported = collectErrors();
     let fail = false;
-    const Fragile = define<{ readonly n: number }, Msg>('test-sch-fragile', {
+    const Fragile = define<{ readonly n: number }, Msg>()('test-sch-fragile', {
       init: () => ({ n: 0 }),
-      intent: {},
       update: { Bump: (s) => ({ n: s.n + 1 }) },
       view: (s) => {
         if (fail) throw new Error('boom');
@@ -78,7 +76,9 @@ describe('the flush', () => {
     bad.send({ _tag: 'Bump' });
     root.send({ _tag: 'Bump' });
     await settled();
-    expect(String(error.mock.calls[0]?.[0])).toContain('<test-sch-fragile> failed to render');
+    reported.stop();
+    expect(reported.errors[0]?.component).toBe('test-sch-fragile');
+    expect(reported.errors[0]?.phase).toBe('view');
     expect(bad.shadowRoot?.querySelector('b')?.textContent).toBe('0');
     expect(log).toContain('root:1');
   });
@@ -86,9 +86,8 @@ describe('the flush', () => {
   it('runs post-render work in order: focus, states, Hydrated, deferred init commands', async () => {
     const order: string[] = [];
     type M = { readonly _tag: 'Go' } | { readonly _tag: 'Hi' };
-    const Ordered = define<{ readonly on: boolean }, M>('test-sch-order', {
+    const Ordered = define<{ readonly on: boolean }, M>()('test-sch-order', {
       init: () => [{ on: false }, [focus('button')]],
-      intent: {},
       update: {
         Go: (s) => s,
         Hi: (s) => s,
@@ -120,9 +119,8 @@ describe('the flush', () => {
       return html`<li>${n}</li>`;
     };
     const items = Array.from({ length: 150 }, (_, k) => k);
-    const Lists = define<{ readonly t: number }, Msg>('test-sch-lists', {
+    const Lists = define<{ readonly t: number }, Msg>()('test-sch-lists', {
       init: () => ({ t: 0 }),
-      intent: {},
       update: { Bump: (s) => ({ t: s.t + 1 }) },
       view: (s) =>
         html`<ul data-t=${s.t}>
@@ -146,9 +144,8 @@ describe('the loop guard', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     type P = { readonly _tag: 'Ping' };
     // Post-render work that sends a message to its own host on every render is a cycle.
-    const Loop = define<{ readonly n: number }, P>('test-sch-loop2', {
+    const Loop = define<{ readonly n: number }, P>()('test-sch-loop2', {
       init: () => ({ n: 0 }),
-      intent: {},
       update: { Ping: (s) => ({ n: s.n + 1 }) },
       view: (s) => html`<p>${s.n}</p>`,
       states: (s) => {

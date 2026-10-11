@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, defineStore, html } from '@gyral/core';
-import { page, renderToString } from '../src/index.js';
+import { renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 
 type Msg = { readonly _tag: 'Stamp' };
 
-define<{ readonly at: Date | string }, Msg>('ssr-dated', {
+define<{ readonly at: Date | string }, Msg>()('ssr-dated', {
   init: () => ({ at: '2026-10-04' }),
-  intent: {},
   update: { Stamp: () => ({ at: new Date(0) }) },
   view: (s) => html`<p>${String(s.at)}</p>`,
 });

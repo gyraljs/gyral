@@ -1,8 +1,7 @@
 # Server rendering and hydration
 
-Server rendering is Gyral's own (`@gyral/core/server`, spec:
-docs/design-docs/view/06-server.md); `@gyral/ssr` (`renderPage`, `page`, `renderToString`,
-`renderToStream`, `formAction`, `@gyral/ssr/static`) renders with it. Hydration is built into
+Server rendering is Gyral's own (spec: docs/design-docs/view/06-server.md); `@gyral/ssr`
+(`renderPage`, `renderToString`, `styleHashes`, `formAction`, `@gyral/ssr/static`) is its API. Hydration is built into
 core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
 place, on its own, with no hydration import.
 
@@ -30,21 +29,25 @@ Pages work before JavaScript loads.
    plain elements. Hydration never overwrites what the user typed before scripts ran.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
-   first and switch in the `Hydrated` reducer. A mismatch throws `HydrationMismatch` in
+   first and switch in the `Hydrated` reducer. A mismatch throws a hydration-mismatch error in
    development (logged with the tag, template location, DOM path, expected and found; the
    component keeps the server's DOM) and, in production, warns and re-renders only that
    component. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
    components' `<style>` elements are allowed by hash, so `style-src` needs no
-   `'unsafe-inline'`: see "Content-Security-Policy" below.
+   `'unsafe-inline'`; Trusted Types need the `gyral` policy allowed: see
+   "Content-Security-Policy" below.
 7. **Light components own their children.** Don't write children inside a `shadow: false`
    component's tag (the server throws); pass data as props. Shadow components take children
    for their `<slot>`s.
 
 ## Request handler
 
-`renderPage(options, init?)` returns a streaming `Response` for a full document. It works with
-any framework that speaks `fetch` (Hono, Node adapters, Workers). Templates are core's `html`:
+`renderPage(options, init?)` returns a `Response` for a full document. Its body is chunked
+output of a synchronous render, pulled one component boundary at a time: load all data before
+calling it (nothing is awaited, there is no async or suspense streaming, and the head can't be
+sent while data loads). Status and headers are final before the first byte, so a 404 is a real 404. It works with any framework that speaks `fetch` (Hono, `@gyral/ssr/node`, Workers).
+Templates are core's `html`:
 
 ```ts
 import { html } from '@gyral/core';
@@ -63,11 +66,118 @@ export function home(request: Request): Response {
 }
 ```
 
-Also available: `page(options)` (the document template), `renderToString(value, { stores })`
-and `renderToStream(value, { stores })`. Head content (`head`) is written with core's `html`
-too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
+Also available: `renderToString(value, { stores })` for a fragment or a cached page; a
+`renderPage()` response's `body` is the chunked stream. Head content the head model doesn't cover
+(`extraHead`) is written with core's `html` too. In development (Vite's dev server, Vitest) the output carries `<!--gyral:ID-->` markers
 for hydration's checks; production output is the template HTML plus values. A `Promise`
 anywhere in a view is an error: load data first.
+
+**A component that throws** (its `init` or view) renders its `error` view, or nothing, marked
+`data-gyral-error` and without a seed; the rest of the page renders and the browser starts that
+component fresh (ADR 0024, `errors.md`). `renderPage({ onError })` hears each `GyralError`
+(default `console.error`). `onError: 'throw'` renders the page to a string first and throws
+before any byte is sent: catch it and answer with your error page. Data loading happens before
+`renderPage`, so the route handler already owns the error page for its own failures.
+
+### One URL per page: redirect to the canonical path
+
+The router ignores one trailing slash, so `/products/x/` matches the same route as `/products/x`.
+`match()` returns the canonical `path` (`href(name, params)`); redirect when the request's
+pathname differs, so search engines and caches see one URL per page:
+
+```ts
+import { html } from '@gyral/core';
+import { routes } from '@gyral/router';
+import { renderPage } from '@gyral/ssr';
+
+export const site = routes({ home: '/', product: '/products/:id' });
+
+export function handle(request: Request): Response {
+  const url = new URL(request.url);
+  const m = site.match(url);
+  if (m === undefined) return new Response('Not found', { status: 404 });
+  if (m.path !== url.pathname) return Response.redirect(new URL(m.path + url.search, url), 301);
+  return renderPage({
+    title: m.name === 'product' ? `Product ${m.params.id}` : 'Home',
+    lang: 'en',
+    body: html`<my-app path=${m.path}></my-app>`,
+    scripts: ['/src/entry-client.ts'],
+  });
+}
+```
+
+### One head for server and client
+
+A page's head (title, description, canonical, robots, `meta`, `links`, JSON-LD, `lang`, `dir`)
+is one `Head` value (ADR 0019). Compute it with one pure function, give it to `renderPage()` on
+the server, and return `setHead(…)` from the reducer that has the route and
+data, so a client navigation leaves the same head as a page load. `setHead` replaces the whole
+managed head: whatever the new head doesn't name (a `noindex`, last page's JSON-LD) is removed,
+unchanged elements aren't written (the first `Routed` after hydration writes nothing), and
+`extraHead` content is never touched. The page owns the head; components don't add to it.
+
+```ts
+import { define, html, type Head } from '@gyral/core';
+import { listen, routes, setHead, type RouteLocation, type RouteMatch } from '@gyral/router';
+import { renderPage } from '@gyral/ssr';
+
+export const site = routes({ home: '/', product: '/products/:id' });
+/** Configuration, never the request's Host header. */
+const ORIGIN = 'https://shop.example';
+
+export const pageHead = (m: RouteMatch<typeof site.table> | undefined): Head =>
+  m === undefined
+    ? { title: 'Not found — Shop', robots: 'noindex' }
+    : {
+        title: m.name === 'product' ? `Product ${m.params.id} — Shop` : 'Shop',
+        description: 'Everything for your kitchen.',
+        canonical: new URL(m.path, ORIGIN).href,
+        meta: [{ property: 'og:type', content: m.name === 'product' ? 'product' : 'website' }],
+        jsonLd:
+          m.name === 'product' ? [{ '@context': 'https://schema.org', '@type': 'Product' }] : [],
+      };
+
+// Server
+export function handle(request: Request): Response {
+  const m = site.match(new URL(request.url));
+  return renderPage(
+    {
+      ...pageHead(m),
+      extraHead: html`<link rel="icon" href="/favicon.svg" />`,
+      body: html`<my-shop></my-shop>`,
+      scripts: ['/src/entry-client.ts'],
+    },
+    { status: m === undefined ? 404 : 200 },
+  );
+}
+
+// Client
+type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
+export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
+  init: () => [{ path: '/' }, [listen((location) => ({ _tag: 'Routed', location }))]],
+  update: {
+    Routed: (_s, { location }) => [
+      { path: location.pathname },
+      [setHead(pageHead(site.match(location.href)))],
+    ],
+  },
+  view: (s) => html`<p>${s.path}</p>`,
+});
+```
+
+- A `meta` entry may carry `media` (one `theme-color` per color scheme: both are kept), and a
+  `links` entry any attribute (`type`, `sizes`, `hreflang`, `crossorigin`, …).
+- `renderPage({ headScripts })` writes inline scripts right after the managed entries and
+  before any stylesheet, so a theme script runs before the page paints; `renderPage({ csp })`
+  allows them in `script-src` by hash. Trusted code only.
+- Later `meta`/`links` entries win over earlier ones with the same name or attributes, so
+  `meta: [...siteDefaults, ...pageMeta]` merges defaults. `charset`, `viewport`, `http-equiv`
+  and `stylesheet`/`preload`/`modulepreload`/`canonical` links are refused there: they belong
+  to `renderPage()`'s own options (or `canonical`).
+- `canonical` must be absolute; development warns on a path.
+- JSON-LD needs no CSP allowance (a data block isn't script). Where Trusted Types are enforced,
+  the client skips JSON-LD updates (crawlers read the server's).
+- The memory history records the head in `snapshot().head` instead of touching the document.
 
 ## Content-Security-Policy
 
@@ -96,14 +206,93 @@ export function home(): Response {
 for the components registered when it is called: import them first (in development
 `renderPage` warns when a header it is given lacks a registered component's hash).
 
-Inline `style="…"` attributes and hand-written `<style>` in `head` aren't covered: move that
-CSS into `styles` or a stylesheet. `@gyral/core/server` also exports `styleHashes()` (every
-registered shadow component's hash) and `componentStyles()` (tag → `<style>` text).
+Hand-written `<style>` in `extraHead` isn't covered: move that CSS into `styles` or a stylesheet.
+Inline `style="…"` attributes in server HTML aren't covered by default: a strict `style-src`
+blocks them on first paint, and hydration then applies them through the CSSOM (client renders
+and updates are never blocked). Put declarations in stylesheets selected by classes or data
+attributes, and use inline styles only for custom properties the stylesheet has a fallback
+for. When a page needs its few inline values exact on first paint (or never hydrates), let
+Gyral hash them:
 
-## Client entry
+```ts
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+
+export function progress(done: number): Response {
+  return renderPage({
+    title: 'Upload',
+    body: html`<div class="bar" style="--done: ${done}%"></div>`,
+    csp: { directives: { 'default-src': "'self'" }, styleAttributes: 'hash' },
+  });
+}
+```
+
+The header then gets `style-src-attr 'unsafe-hashes' 'sha256-…'` for every distinct `style`
+value the page wrote (static, bound and element-hook values; not `raw()` markup). The page is
+rendered to a string first, so the body isn't chunked; each value adds about 54 bytes of
+header (development warns above 32; `maxStyleHashes`, default 128, caps the list). Serve-time
+pages only: `prerender` writes no per-page header.
+
+`styleHashes()` from `@gyral/ssr` lists every registered shadow component's `<style>` hash,
+for a policy built outside `renderPage`.
+
+**Trusted Types** (client-only apps too): the browser parses template HTML and `raw()` markup
+through one policy named `gyral`, created on first use. Under
+`'require-trusted-types-for': "'script'"`, allow it in `trusted-types` when you list policies
+(`'trusted-types': 'gyral'`, plus your own). The policy trusts its input as the app's own HTML,
+so `raw()` still never takes user input.
+
+## Loading components on the client
+
+**Automatically (recommended).** Turn on `components` in the Vite preset and pass the
+`components` your server gets to `renderPage`: each page then loads exactly the components it
+rendered (their modules, preloaded, and a small loader), and a page that rendered none loads no
+JavaScript. No client entry, no per-page flags, no side-effect imports for the client; the
+server still imports the components it renders.
 
 ```text
-// src/entry-client.ts — no hydration import: core hydrates each component on its own.
+// vite.config.ts
+export default defineConfig({
+  ...gyralVitePreset({ components: true }), // finds define()'d tags under src/
+  build: { outDir: 'dist/client', emptyOutDir: true },
+});
+```
+
+```ts
+import { html } from '@gyral/core';
+import { renderPage, type ComponentAssets } from '@gyral/ssr';
+
+// `components` comes from gyralDevServer (dev), productionServer or componentsFromManifest
+// (production); tests leave it out.
+export const createApp = (components?: ComponentAssets) => ({
+  fetch: (_request: Request) =>
+    renderPage({
+      title: 'Home',
+      body: html`<my-home></my-home>`,
+      ...(components === undefined ? {} : { components }),
+    }),
+});
+```
+
+Keep component modules under `src/` (the `include` option changes that). The scan finds
+`export const X = define<…>()('my-tag', …)`; a component defined through a wrapper (a helper
+that calls `define()` with a tag it was given) is invisible to it, so list it:
+`gyralVitePreset({ components: { modules: { 'member-form': 'src/forms/member.ts' } } })`. A
+component module that another chunk imports statically (the entry, or another component) is
+bundled into that chunk; it still loads, and its preload is that chunk. Tags rendered inside
+the shadow root of a component the loader defined are found too, so a component doesn't have to
+import its shadow children (it still may). In browser tests and page scripts, `await
+componentsReady()` from `@gyral/core` waits until every rendered tag the loader knows is defined
+and the page has settled (in a test, import `virtual:gyral/components` first). For app-wide
+setup (`provideDrivers` at the page), keep a small client entry and pass it in `scripts`
+alongside `components`. A rendered tag no client module defines is a development warning.
+
+**With a client entry.** Without `components`, the page loads one entry you write, which
+imports the components (no hydration import: core hydrates each component on its own), and you
+pass it as `scripts` (and `modulepreload`/`stylesheets` in production, below):
+
+```text
+// src/entry-client.ts
 import './components/greeting.js';
 ```
 
@@ -117,9 +306,8 @@ interface State {
 }
 type Msg = never;
 
-export const ShareButton = define<State, Msg>('my-share', {
+export const ShareButton = define<State, Msg>()('my-share', {
   init: () => ({ enhanced: false }),
-  intent: {},
   update: {
     // Sent once after the first client render: safe to show the JS-only UI now.
     Hydrated: (s) => ({ ...s, enhanced: 'share' in navigator }),
@@ -140,28 +328,35 @@ import { renderPage } from '@gyral/ssr';
 import { clientAssetsFromManifest, prerender, productionServer } from '@gyral/ssr/static';
 
 interface AppOptions {
-  readonly clientEntry: string;
+  readonly clientEntry: string | undefined;
   readonly modulepreload?: readonly string[];
+  readonly stylesheets?: readonly string[];
 }
 
-const createApp = ({ clientEntry, modulepreload = [] }: AppOptions) => ({
+const createApp = ({ clientEntry, modulepreload = [], stylesheets = [] }: AppOptions) => ({
   fetch: (_request: Request) =>
     renderPage({
       title: 'Home',
       body: html`<my-home></my-home>`,
-      scripts: [clientEntry],
+      scripts: clientEntry === undefined ? [] : [clientEntry],
       modulepreload, // <link rel="modulepreload"> for the entry's imports and the hydration chunk
+      stylesheets, // <link rel="stylesheet"> for the hashed CSS the client entry imports
     }),
 });
 
-// Build step (after `vite build` with build.manifest: true into dist/client):
+// Build step (after `vite build` with build.manifest: true into dist/client). Served under a
+// path (Vite's `base: '/app/'`)? Pass the same base as a 4th argument: `[], { base: '/app/' }`.
 const dist = join(process.cwd(), 'dist');
 const assets = await clientAssetsFromManifest(
   join(dist, 'client', '.vite', 'manifest.json'),
   'src/entry-client.ts',
 );
 await prerender({
-  app: createApp({ clientEntry: assets.entry, modulepreload: assets.modulepreload }),
+  app: createApp({
+    clientEntry: assets.entry,
+    modulepreload: assets.modulepreload,
+    stylesheets: assets.css,
+  }),
   paths: ['/'],
   outDir: join(dist, 'static'),
 });
@@ -171,17 +366,195 @@ export const server = await productionServer({ distDir: dist, createApp });
 ```
 
 `prerender` fails the build on any non-200 page. Mount `server.fetch` in your HTTP server.
-`productionServer` passes `{ clientEntry, modulepreload }` to `createApp`. Hydration code loads
-lazily (only pages with server-rendered components need it); passing `modulepreload` on to
-`renderPage` lets the browser fetch it together with the entry instead of a round trip later.
-A page whose route module is imported lazily passes `preload(['src/routes/product.ts'])`
-(also given to `createApp`) as `modulepreload` instead: the same list plus that module and its
-imports (`clientAssets(manifest, entry, also)` underneath). `clientEntryFromManifest()` (the
-entry URL alone) still works.
+`productionServer` passes `{ clientEntry, modulepreload, stylesheets, components }` to
+`createApp`: with the preset's `components` on, pass `components` to `renderPage` (and
+`componentsFromManifest(join(dist, 'client'))` in the prerender step) instead of the entry;
+`clientEntry` is then undefined when the build has no entry.
+Hydration code loads lazily (only pages with server-rendered components need it); passing
+`modulepreload` on to `renderPage` lets the browser fetch it together with the entry instead of
+a round trip later. A page whose route module is imported lazily spreads
+`assets(['src/routes/product.ts'])` (also given to `createApp`) into `renderPage` instead:
+`{ modulepreload, stylesheets }` with that module, its imports and its CSS added
+(`preload(modules)` is the `modulepreload` half alone). Outside `productionServer`,
+`clientAssetsFromManifest(manifestPath, entry, also?)` gives the same `{ entry, modulepreload,
+css }`.
+
+**Hashed stylesheets.** Import the app's global CSS from the client entry
+(`import './app.css';`), so Vite bundles it into a content-hashed file listed in the manifest;
+`clientAssetsFromManifest(...).css` (`stylesheets` in `createApp`) lists those files, and
+`renderPage({ stylesheets })` links them before any inline `styles`. They are served immutable
+from `/assets/`, cached across pages, and `style-src 'self'` allows them without hashes. Use
+`styles` (inline, hashed for CSP) only for small critical CSS.
+
+`productionServer` options: `assetsDir` (served at `/assets/`, default `dist/client/assets`),
+`staticDir` (prerendered pages, default `dist/static`; `false` when nothing is prerendered, so
+page requests skip the file lookup) and `cache` (keep assets in memory, default on, bounded).
+Assets answer `GET` and `HEAD` with immutable caching, `content-length` and `nosniff`; a
+malformed URL is a 400 and a miss a `no-store` 404 (a CDN must not cache it before the deploy
+lands). For a custom server, `assetHandler({ dir, prefix?, cache? })` is the same asset half
+alone: it returns `undefined` for paths outside the prefix.
+
+```ts
+import { assetHandler } from '@gyral/ssr/static';
+
+// A volume that keeps every release's hashed files, so old tabs still load their chunks.
+const assets = assetHandler({ dir: '/srv/assets' });
+
+export async function handle(request: Request): Promise<Response> {
+  return (await assets(request)) ?? new Response('Not found', { status: 404 });
+}
+```
+
+## Serving on Node (`@gyral/ssr/node`)
+
+`toNodeListener(fetch, { origin?, onError? })` mounts any fetch handler on `node:http`, so a
+Node server needs no Hono or adapter of its own. The `Request` carries the method, headers, a
+streamed body and a `signal` that aborts when the client disconnects; the `Response` body is
+written with backpressure (a slow client slows the render; one that leaves cancels it); `HEAD`
+sends headers only; each `set-cookie` stays separate; a throwing handler is a 500.
+
+The handler's second argument is `{ incoming, remoteAddress }` (the Node request and the
+client's IP address), for rate limits, logs and audits. A Hono app gets it as `c.env`, so
+`getConnInfo(c)` from `@hono/node-server/conninfo` works. `productionServer`'s `fetch` passes it
+on to the app `createApp` returns (`productionServer<NodeEnv>(…)` types it), so an app behind it
+sees the address too. Behind a proxy `remoteAddress` is the proxy: read `X-Forwarded-For` only
+when the request came from a proxy you run.
+
+```ts
+import { createServer } from 'node:http';
+import { toNodeListener } from '@gyral/ssr/node';
+
+const hits = new Map<string, number>();
+createServer(
+  toNodeListener((_request, { remoteAddress }) => {
+    const client = remoteAddress ?? 'unknown';
+    const count = (hits.get(client) ?? 0) + 1;
+    hits.set(client, count);
+    return count > 100 ? new Response('Slow down', { status: 429 }) : new Response('ok');
+  }),
+).listen(3000);
+```
+
+```ts
+import { createServer } from 'node:http';
+import { join } from 'node:path';
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+import { toNodeListener } from '@gyral/ssr/node';
+import { productionServer } from '@gyral/ssr/static';
+
+const app = await productionServer({
+  distDir: join(process.cwd(), 'dist'),
+  staticDir: false, // nothing prerendered: every page renders per request
+  // With gyralVitePreset({ components: true }): each page loads the components it rendered.
+  // With a client entry instead: scripts: [clientEntry], plus modulepreload and stylesheets.
+  createApp: ({ components, stylesheets }) => ({
+    fetch: (_request: Request) =>
+      renderPage({
+        title: 'Home',
+        body: html`<my-home></my-home>`,
+        stylesheets,
+        ...(components === undefined ? {} : { components }),
+      }),
+  }),
+});
+
+// origin: the public origin request URLs are built on (default: the Host header).
+createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
+```
+
+## Development server
+
+`gyralDevServer` (from `@gyral/ssr/node`, Vite loaded on first use) is the whole dev server:
+Vite serves client modules, CSS and HMR; every other request loads the server module through
+Vite (edits show at once) and streams the app's response. `state` is created once from the
+first module, so in-memory data survives reloads; a render error answers 500 with Vite's error
+overlay.
+
+```ts
+import { gyralDevServer, type DevApp } from '@gyral/ssr/node';
+import type { ComponentAssets } from '@gyral/ssr';
+
+interface AppModule {
+  readonly createApp: (components: ComponentAssets | undefined, db: Map<string, string>) => DevApp;
+}
+
+const { url } = await gyralDevServer({
+  entry: '/server/app.ts', // loaded per request
+  state: () => new Map<string, string>(), // kept across reloads
+  app: (mod: AppModule, { components, state }) => mod.createApp(components, state),
+  // port (default PORT or 5173), hmrPort, origin, vite: { …more Vite settings }
+});
+console.log(`Dev server: ${url}`);
+```
+
+## Request layer
+
+Gyral renders pages, answers forms and serves builds, but leaves routing, middleware, cookies
+and error pages to a fetch router (ADR 0026). Hono is the usual choice; any
+`(request) => Response` router works, since every Gyral server function takes and returns web
+`Request`/`Response`:
+
+```text
+const app = new Hono();
+app.use(securityHeaders);                     // middleware: yours or Hono's
+app.get('/', () => renderPage({ … }));
+app.post('/notes', formAction(NoteForm, { intent: 'Save', valid: save }));
+app.notFound(() => renderPage({ title: 'Not found', … }, { status: 404 }));
+createServer(toNodeListener(app.fetch)).listen(3000);
+```
+
+The seams Gyral provides:
+
+- **JSON-only form endpoints.** Leave out `formAction`'s `invalid` when only `submitForm` calls
+  the endpoint: every rejection is then the JSON 422.
+- **`wantsJson(request)`**: the rule `formAction` answers by (`Accept: application/json`
+  without `text/html`), for your own routes that serve both a page and JSON.
+- **`productionServer({ onResponse })`** sees every response (assets, prerendered pages, the
+  app's) before it goes out: add security headers, a CSP for files from disk, or cookies.
+
+```ts
+import { wantsJson } from '@gyral/ssr';
+import { productionServer } from '@gyral/ssr/static';
+
+export const server = await productionServer({
+  distDir: 'dist',
+  createApp: () => ({
+    fetch: (request) =>
+      wantsJson(request) ? Response.json({ ok: true }) : new Response('<p>ok</p>'),
+  }),
+  onResponse: (response) => {
+    const headers = new Headers(response.headers);
+    headers.set('x-content-type-options', 'nosniff');
+    headers.set('referrer-policy', 'same-origin');
+    return new Response(response.body, { status: response.status, headers });
+  },
+});
+```
+
+**Cookies.** Set them on the `Response` a Gyral function returns (`seeOther(url)` and
+`renderPage(…)` give you one: `response.headers.append('set-cookie', …)`), in your router's
+middleware after the handler ran, or in `onResponse`. `formAction` keeps a valid answer's
+`set-cookie` headers on the JSON path too.
+
+**CSRF without tokens.** Browsers send `Sec-Fetch-Site` (and `Origin` on posts): reject
+cross-site writes in middleware, and keep `csrfFromMeta` on the client only if you also use
+tokens.
+
+```ts
+/** A cross-site POST, PUT, PATCH or DELETE: answer 403 before your handler runs. */
+export function crossSiteWrite(request: Request): boolean {
+  if (request.method === 'GET' || request.method === 'HEAD') return false;
+  const site = request.headers.get('sec-fetch-site');
+  if (site !== null) return site !== 'same-origin' && site !== 'none';
+  const origin = request.headers.get('origin');
+  return origin !== null && origin !== new URL(request.url).origin;
+}
+```
 
 ## Islands: hydrate later
 
-`define(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered
+`define()(tag, { hydrate: 'idle' | 'visible' | 'interaction', … })` makes a server-rendered
 instance hydrate when the browser is idle, when it scrolls into view, or on first
 pointer/focus (the server writes `defer-hydration` and `data-gyral-hydrate`). Use it for
 below-the-fold or rarely used widgets; islands may sit anywhere, also inside other components.
@@ -198,4 +571,13 @@ components.md.
 
 Create store instances **per request** and pass them to `renderPage({ stores })`; the page
 carries one store seed the client restores before components hydrate. Give stores a `schema`
-to validate that seed in the browser.
+to validate that seed in the browser. To give part of a page its own instances, wrap it in a
+`<gyral-stores>` element; the server renders it with its
+own seed.
+
+## Preloads under a service worker
+
+Chrome 152–153 may warn "preload … not used because it is a cross-world service worker
+resource mismatch" and fetch the module again from the worker when DevTools or a test driver
+is attached. It is a browser bug, fixed in Chrome 154; the page works the same. If your tests
+run Playwright's bundled Chromium, upgrade to a build ≥ 154.

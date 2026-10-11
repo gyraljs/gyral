@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { command, define, defineDriver, html, prop, settled } from '@gyral/core';
+import { command, define, defineDriver, html, prop, retry, settled } from '@gyral/core';
 import {
   commandsFor,
   fakeDriver,
@@ -40,13 +40,13 @@ const loadUser = (id: string) =>
     },
   );
 
-const Profile = define<State, Msg, { readonly userId: string }>('test-profile', {
+const Profile = define<State, Msg, { readonly userId: string }>()('test-profile', {
   props: { userId: prop.string({ required: true }) },
   init: (props) => [
     { id: props.userId, user: undefined, error: undefined },
     [loadUser(props.userId)],
   ],
-  intent: { Load: ({ value }) => ({ _tag: 'Load', id: value ?? '' }) },
+  intent: {}, // Load comes from tests (send, step), not from the DOM
   update: {
     Load: (s, m) => [{ ...s, id: m.id }, [loadUser(m.id)]],
     Loaded: (s, m) => ({ ...s, user: m.name, error: undefined }),
@@ -90,9 +90,8 @@ describe('pure stepping', () => {
       state: s0,
       commands: [],
     });
-    const Live = define<{ readonly live: boolean }, never>('test-hydrated-step', {
+    const Live = define<{ readonly live: boolean }>()('test-hydrated-step', {
       init: () => ({ live: false }),
-      intent: {},
       update: { Hydrated: (s, m) => ({ ...s, live: m.serverRendered }) },
       view: () => html`<p>live</p>`,
     });
@@ -239,12 +238,11 @@ describe('virtualTime', () => {
       }),
   });
 
-  const Timer = define<{ readonly fired: number }, { readonly _tag: 'Fire' }>('test-timer', {
+  const Timer = define<{ readonly fired: number }, { readonly _tag: 'Fire' }>()('test-timer', {
     init: () => [
       { fired: 0 },
       [command(delay, { ms: 60_000 }, { onSuccess: () => ({ _tag: 'Fire' }) })],
     ],
-    intent: {},
     update: { Fire: (s) => ({ fired: s.fired + 1 }) },
     view: (s) => html`${s.fired}`,
   });
@@ -261,16 +259,18 @@ describe('virtualTime', () => {
     expect(time.now()).toBe(Date.now());
   });
 
-  it('drives retry delays of the runtime', async () => {
+  it('drives the delays of a retry() wrapper', async () => {
     time = virtualTime();
     let attempts = 0;
-    const flaky = fakeDriver(users, {
-      retry: { times: 2, delayMs: 1_000, backoff: 'fixed' },
-      impl: () => {
-        attempts += 1;
-        return attempts < 3 ? Promise.reject(new Error('flaky')) : { name: 'Ok' };
-      },
-    });
+    const flaky = retry(
+      fakeDriver(users, {
+        impl: () => {
+          attempts += 1;
+          return attempts < 3 ? Promise.reject(new Error('flaky')) : { name: 'Ok' };
+        },
+      }),
+      { times: 2, delayMs: 1_000, backoff: 'fixed' },
+    );
     const el = new Profile();
     Object.assign(el, { userId: 'u1' });
     el.drivers = { users: flaky };

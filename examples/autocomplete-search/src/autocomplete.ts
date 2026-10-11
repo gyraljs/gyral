@@ -89,7 +89,7 @@ const option = (title: string, [index, highlighted, pick]: readonly [number, boo
     ${title}
   </li>`;
 
-export const Autocomplete = define<State, Msg>('gy-autocomplete', {
+export const Autocomplete = define<State, Msg>()('gy-autocomplete', {
   init: () => ({ query: '', suggestions: [], highlighted: undefined, open: false, status: 'idle' }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
@@ -98,7 +98,7 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
       if (key === 'ArrowDown' || key === 'ArrowUp') event.preventDefault(); // keep the caret
       return { _tag: 'Key', key };
     },
-    Blurred: () => ({ _tag: 'Blurred' }),
+    Blurred: true,
     Pick: ({ target }) => {
       const index = Number(target.getAttribute('data-index'));
       return Number.isInteger(index) ? { _tag: 'Pick', index } : undefined;
@@ -185,9 +185,3 @@ export const Autocomplete = define<State, Msg>('gy-autocomplete', {
   `,
   styles,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-autocomplete': InstanceType<typeof Autocomplete>;
-  }
-}

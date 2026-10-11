@@ -4,11 +4,13 @@
 // by its live properties. Components render on both sides (shadow and light).
 import fc from 'fast-check';
 import { afterEach, describe, expect, it } from 'vitest';
-import { html, settled } from '../../src/index.js';
+import { each, html, nothing, settled, svg } from '../../src/index.js';
 import { renderToString } from '../../src/server.js';
 import { render, type ChildValue } from '../../src/view/index.js';
 import './conformance-components.js';
 import { view } from './server-arbitrary.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Server-only attributes: hydration's inputs, not part of the view (06 "Components"). */
 const SERVER_ONLY = new Set(['data-gyral-seed', 'data-gyral-light']);
@@ -50,12 +52,13 @@ function canon(parent: ParentNode, shadow = false): string {
     flush();
     const attrs = [...el.attributes]
       .filter((a) => !SERVER_ONLY.has(a.name))
-      .map((a) => ` ${a.name}=${JSON.stringify(a.value)}`)
+      .map((a) => ` ${a.namespaceURI === null ? '' : '~'}${a.name}=${JSON.stringify(a.value)}`)
       .sort()
       .join('');
     const root = el.shadowRoot === null ? '' : `#shadow(${canon(el.shadowRoot, true)})`;
     const content = el instanceof HTMLTemplateElement ? canon(el.content) : canon(el);
-    out += `<${el.localName}${attrs}${live(el)}>${root}${content}</${el.localName}>`;
+    const tag = el.namespaceURI === SVG_NS ? `svg:${el.localName}` : el.localName;
+    out += `<${tag}${attrs}${live(el)}>${root}${content}</${tag}>`;
   }
   flush();
   return out;
@@ -92,6 +95,23 @@ describe('server equals client (view/README.md "Conformance", property 1)', () =
       <cf-shadow label="L" .items=${['i<1>', 'i2']}><b>slotted</b></cf-shadow
       ><cf-light n=${2}></cf-light>`;
     expect(server(value, true)).toBe(await client(value));
+  });
+
+  it('matches svg fragments inside an <svg> (view/01 "svg templates")', async () => {
+    const mark = (on: boolean) => (on ? svg`<path class="m" d=${'M0 0'} />` : nothing);
+    const value = html`<svg viewBox="0 0 9 9">
+      ${svg`<clipPath id="c"><rect width=${2} /></clipPath>
+        <g transform="rotate(${4})">${mark(true)}${mark(false)}<text x="1">${'A & <b>'}</text></g>
+        <use xlink:href="#c" />
+        ${each(
+          [1, 2],
+          (k) => k,
+          (k) => svg`<circle r=${k} />`,
+        )}`}
+    </svg>`;
+    for (const dev of [true, false]) expect(server(value, dev)).toBe(await client(value));
+    expect(await client(value)).toContain('<svg:clipPath id="c">');
+    expect(await client(value)).toContain('~xlink:href="#c"');
   });
 
   it('holds for generated template results', async () => {

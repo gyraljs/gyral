@@ -1,6 +1,6 @@
 {
   "name": "@gyral/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer.",
   "license": "MIT",
   "author": "Mike Zupper",
@@ -14,13 +14,20 @@
     "url": "https://github.com/gyraljs/gyral/issues"
   },
   "type": "module",
+  "bin": {
+    "gyral-types": "./dist/cli/gyral-types.js"
+  },
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts",
+    "./internal/server": "./src/server.ts",
+    "./internal": "./src/internal.ts",
     "./vite": "./src/vite.ts",
     "./compiled": "./src/view/compiled.ts",
-    "./eslint": "./src/eslint/index.ts"
+    "./eslint": "./src/eslint/index.ts",
+    "./errors.json": "./src/errors.json",
+    "./storage": "./src/storage.ts",
+    "./indexeddb": "./src/indexeddb.ts"
   },
   "imports": {
     "#devtools": {
@@ -34,6 +41,21 @@
     "#view-dev": {
       "development": "./src/view/dev.ts",
       "default": "./src/view/dev-off.ts"
+    },
+    "#hydration-loader": {
+      "gyral-client-only": "./src/hydration-off.ts",
+      "default": "./src/hydration-loader.ts"
+    },
+    "#invoker-fallback": {
+      "gyral-client-only": {
+        "development": "./src/invoker-fallback.ts",
+        "default": "./src/invoker-fallback-used.ts"
+      },
+      "default": "./src/invoker-fallback.ts"
+    },
+    "#spec-features": {
+      "gyral-compiled": "./src/spec-features-used.ts",
+      "default": "./src/spec-features.ts"
     }
   },
   "publishConfig": {
@@ -42,9 +64,13 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./server": {
+      "./internal/server": {
         "types": "./dist/server.d.ts",
         "default": "./dist/server.js"
+      },
+      "./internal": {
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.js"
       },
       "./vite": {
         "types": "./dist/vite.d.ts",
@@ -57,6 +83,15 @@
       "./eslint": {
         "types": "./dist/eslint/index.d.ts",
         "default": "./dist/eslint/index.js"
+      },
+      "./errors.json": "./dist/errors.json",
+      "./storage": {
+        "types": "./dist/storage.d.ts",
+        "default": "./dist/storage.js"
+      },
+      "./indexeddb": {
+        "types": "./dist/indexeddb.d.ts",
+        "default": "./dist/indexeddb.js"
       }
     },
     "imports": {
@@ -71,6 +106,21 @@
       "#view-dev": {
         "development": "./dist/view/dev.js",
         "default": "./dist/view/dev-off.js"
+      },
+      "#hydration-loader": {
+        "gyral-client-only": "./dist/hydration-off.js",
+        "default": "./dist/hydration-loader.js"
+      },
+      "#invoker-fallback": {
+        "gyral-client-only": {
+          "development": "./dist/invoker-fallback.js",
+          "default": "./dist/invoker-fallback-used.js"
+        },
+        "default": "./dist/invoker-fallback.js"
+      },
+      "#spec-features": {
+        "gyral-compiled": "./dist/spec-features-used.js",
+        "default": "./dist/spec-features.js"
       }
     }
   },

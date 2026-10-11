@@ -7,8 +7,8 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Optional peers the smoke test touches (@gyral/testing/arbitraries uses fast-check).
-const PEERS = ['fast-check@^4'];
+// Optional peers the smoke test touches (none since @gyral/testing/arbitraries was removed).
+const PEERS = [];
 /** Packages no Gyral install may bring in (ADR 0018: Gyral renders with its own view layer). */
 const FORBIDDEN = ['lit', 'lit-html', 'lit-element', '@lit/reactive-element', '@lit-labs/ssr'];
 
@@ -39,16 +39,16 @@ try {
 import { define, html } from '@gyral/core';
 import { renderToString } from '@gyral/ssr';
 const entries = [
-  '@gyral/core', '@gyral/core/server', '@gyral/core/vite', '@gyral/core/eslint',
-  '@gyral/core/compiled', '@gyral/http', '@gyral/http/testing', '@gyral/router', '@gyral/time',
-  '@gyral/ssr', '@gyral/ssr/static', '@gyral/testing', '@gyral/testing/arbitraries',
+  '@gyral/core', '@gyral/core/internal/server', '@gyral/core/internal', '@gyral/core/vite', '@gyral/core/eslint',
+  '@gyral/core/compiled', '@gyral/core/storage', '@gyral/core/indexeddb', '@gyral/http', '@gyral/http/testing', '@gyral/http/sse', '@gyral/http/websocket', '@gyral/router', '@gyral/time',
+  '@gyral/ssr', '@gyral/ssr/static', '@gyral/ssr/node', '@gyral/testing',
 ];
 for (const entry of entries) {
   const mod = await import(entry);
   if (Object.keys(mod).length === 0) throw new Error(entry + ' has no exports');
   console.log('import ok  ' + entry + ' (' + Object.keys(mod).length + ' exports)');
 }
-define('gy-hello', {
+define()('gy-hello', {
   init: () => ({ name: 'world' }),
   intent: {},
   update: {},
@@ -76,6 +76,18 @@ const result = await client.callTool({ name: 'get_api', arguments: { symbol: 'de
 const text = result.content.map((c) => c.text).join('');
 if (tools.length !== 7 || !text.includes("import { define } from '@gyral/core'")) {
   throw new Error('unexpected MCP answer: ' + tools.length + ' tools, ' + text.slice(0, 200));
+}
+for (const [symbol, entry] of [
+  ['makeLocalStorageDriver', '@gyral/core/storage'],
+  ['makeIndexedDBDriver', '@gyral/core/indexeddb'],
+  ['makeEventSourceDriver', '@gyral/http/sse'],
+  ['makeWebSocketDriver', '@gyral/http/websocket'],
+]) {
+  const answer = await client.callTool({ name: 'get_api', arguments: { symbol } });
+  const body = answer.content.map((c) => c.text).join('');
+  if (!body.includes(symbol) || !body.includes("from '" + entry + "'")) {
+    throw new Error('missing optional MCP API: ' + symbol + ' from ' + entry);
+  }
 }
 await client.close();
 console.log('mcp ok     gyral-mcp answered over stdio (' + tools.length + ' tools)');

@@ -29,7 +29,6 @@ const DEFAULTS = {
   moduleResolution: 'bundler',
   lib: ['ES2023', 'DOM', 'DOM.Iterable'],
   strict: true,
-  useDefineForClassFields: false,
   skipLibCheck: true,
   types: [],
 };

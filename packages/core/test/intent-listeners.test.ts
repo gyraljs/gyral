@@ -1,5 +1,5 @@
 // A component root listens only for the events its intents can fire on (gyral-g1r.20,
-// view/05-element.md "Intent events"): the default triggers, spec.events, and the
+// view/05-element.md "Intent events"): the default triggers and the
 // `data-intent-on` values of the templates it renders (all intent events when one is bound).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -20,14 +20,13 @@ interface State {
   readonly log: readonly string[];
 }
 type Msg = { readonly _tag: 'Open' } | { readonly _tag: 'Hit'; readonly type: string };
-type View = (s: State, i: IntentNames<Msg>) => ChildValue;
+type View = (s: State, i: IntentNames<'Open' | 'Hit'>) => ChildValue;
 
-const component = (tag: string, view: View, events?: readonly string[]) =>
-  define<State, Msg>(tag, {
+const component = (tag: string, view: View) =>
+  define<State, Msg>()(tag, {
     init: () => ({ open: false, on: 'keyup', log: [] }),
-    ...(events === undefined ? {} : { events }),
     intent: {
-      Open: () => ({ _tag: 'Open' }),
+      Open: true,
       Hit: ({ event }) => ({ _tag: 'Hit', type: event.type }),
     },
     update: {
@@ -51,7 +50,6 @@ const Later = component(
               <p data-intent=${i.Hit} data-intent-on="focusin">x</p>`
           : nothing
       }`,
-  ['pointerup'],
 );
 
 const Bound = component(
@@ -93,7 +91,7 @@ describe('intent listeners (gyral-g1r.20)', () => {
 
   it('adds the events of a template when it first renders, and they fire', async () => {
     const el = await mount(Later);
-    expect(added).toEqual([...DEFAULT_EVENTS, 'pointerup']);
+    expect(added).toEqual([...DEFAULT_EVENTS]);
     (el as unknown as { send(m: Msg): void }).send({ _tag: 'Open' });
     await settled();
     const field = input(el);
@@ -128,5 +126,19 @@ describe('intent listeners (gyral-g1r.20)', () => {
     ]);
     expect(eventsOf(template)).toEqual(['toggle', 'keyup', 'focusout']);
     expect(eventsOf(template)).toBe(eventsOf(template));
+  });
+
+  it('collects every event of a list (gyral-dyn.13)', () => {
+    const template = normalize([
+      '<a data-intent-on="pointerdown  pointerup"></a><b data-intent-on=\'keydown\tkeyup\'></b>',
+    ]);
+    expect(eventsOf(template)).toEqual(['pointerdown', 'pointerup', 'keydown', 'keyup']);
+  });
+
+  it('ignores whitespace at the ends of a list: no listener for an empty name', () => {
+    const template = normalize([
+      '<a data-intent-on=" pointerdown pointerup "></a><b data-intent-on="  "></b>',
+    ]);
+    expect(eventsOf(template)).toEqual(['pointerdown', 'pointerup']);
   });
 });

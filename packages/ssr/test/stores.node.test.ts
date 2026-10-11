@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { define, defineStore, html } from '@gyral/core';
-import { renderToString as renderWithoutScope } from '@gyral/core/server';
-import { page, renderPage, renderToStream, renderToString } from '../src/index.js';
+import { define, defineStore, html, type GyralError } from '@gyral/core';
+import { renderToString as renderWithoutScope } from '@gyral/core/internal/server';
+import { renderPage, renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
+import { renderToStream } from '../src/render-stream.js';
 
 interface Cart {
   readonly owner: string;
@@ -12,11 +14,9 @@ const cart = defineStore<Cart, { readonly _tag: 'Add'; readonly sku: string }>('
   update: { Add: (s, m) => ({ ...s, lines: [...s.lines, m.sku] }) },
 });
 
-define<{ readonly x: number }, never>('ssr-badge', {
+define<{ readonly x: number }>()('ssr-badge', {
   stores: [cart],
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`<p>${read(cart).owner}:${read(cart).lines.length}</p>`,
 });
 
@@ -44,9 +44,13 @@ describe('stores on the server (ADR 0013)', () => {
   });
 
   it('fails clearly when a component reads a store outside any render scope', () => {
-    expect(() => renderWithoutScope(html`<ssr-badge></ssr-badge>`)).toThrow(
-      /without a store scope/,
-    );
+    // The component fails alone (ADR 0024): reported through onError, the page goes on.
+    const failures: GyralError[] = [];
+    const out = renderWithoutScope(html`<ssr-badge></ssr-badge>`, {
+      onError: (e) => failures.push(e as GyralError),
+    });
+    expect(out).toContain('data-gyral-error');
+    expect(String(failures[0]?.cause)).toMatch(/without a store scope/);
   });
 
   it('renders a component per pull, so each step can run in its own scope', async () => {

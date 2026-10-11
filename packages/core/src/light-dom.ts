@@ -2,7 +2,7 @@
 // as the host's own children, styled by document CSS.
 
 interface SpecLike {
-  readonly shadow?: boolean;
+  readonly shadow?: unknown;
 }
 
 export const isLight = (spec: SpecLike): boolean => spec.shadow === false;

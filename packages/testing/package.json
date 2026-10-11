@@ -1,7 +1,7 @@
 {
   "name": "@gyral/testing",
-  "version": "0.3.0",
-  "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, schema arbitraries.",
+  "version": "0.3.1",
+  "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests, schema arbitraries.",
   "license": "MIT",
   "author": "Mike Zupper",
   "homepage": "https://github.com/gyraljs/gyral/tree/main/packages/testing#readme",
@@ -17,7 +17,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./arbitraries": "./src/arbitraries.ts"
+    "./vitest": "./src/vitest.ts"
   },
   "publishConfig": {
     "exports": {
@@ -25,9 +25,9 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
-      "./arbitraries": {
-        "types": "./dist/arbitraries.d.ts",
-        "default": "./dist/arbitraries.js"
+      "./vitest": {
+        "types": "./dist/vitest.d.ts",
+        "default": "./dist/vitest.js"
       }
     }
   },
@@ -48,15 +48,15 @@
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
-    "fast-check": "^4.0.0"
+    "vitest": "^4.1.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
-    "fast-check": {
+    "vitest": {
       "optional": true
     }
   },
   "devDependencies": {
     "@valibot/to-json-schema": "1.8.0",
-    "fast-check": "4.10.2"
+    "vitest": "5.0.3"
   }
 }

@@ -4,6 +4,8 @@
 // checks that the parse built exactly the DOM the normalizer's paths assume. A difference
 // means the parser repaired the markup: rule 7 (view/09-template-rules.md). Builds made with
 // the `gyral-compiled` condition get prepare-stub.ts instead.
+import { DEV } from '#view-dev';
+import { locOf } from './loc.js';
 import { recordTemplateId } from './normalize/id.js';
 import { analyze } from './normalize/normalize.js';
 import { repairError, shapeMismatch } from './normalize/shape.js';
@@ -15,12 +17,16 @@ const prepared = new WeakMap<readonly string[], TemplateObject>();
 let lastSource: readonly string[] | undefined;
 let lastTemplate: TemplateObject | undefined;
 
-/** The template object of a call site's strings, normalized (with development checks) once. */
-export function prepare(strings: readonly string[]): TemplateObject {
+/**
+ * The template object of a call site's strings, normalized (with development checks) once.
+ * `svg`: the call site is an svg template (template.ts `svg`), whose first call prepares it.
+ */
+export function prepare(strings: readonly string[], svg?: boolean): TemplateObject {
   if (strings === lastSource) return lastTemplate as TemplateObject;
   let template = prepared.get(strings);
   if (template === undefined) {
-    const analysis = analyze(strings);
+    // Development: the call site (loc.ts), so rule errors and hydration mismatches name it.
+    const analysis = analyze(strings, DEV ? locOf(strings) : undefined, svg);
     template = analysis.template;
     recordTemplateId(analysis.template.id, analysis.strings);
     shapes.set(template, analysis.shape);

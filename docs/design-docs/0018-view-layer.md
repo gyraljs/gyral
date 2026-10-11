@@ -72,7 +72,8 @@ general-purpose features. The priorities, in order: correctness, speed, bundle s
    `ElementDirective`/`directive`, `live`, `liveBoolean`, `textarea()`, `repeat`, `keyed`,
    `updateComplete`, `requestUpdate`. The `many`, `themes` and `view-transitions` examples go
    with `styleMap`. `svg` templates, `classMap` and `styleMap` may return if a real feature need
-   appears; inline `<svg>` inside `html` keeps working.
+   appears; inline `<svg>` inside `html` keeps working. **`svg` returned in 0.3.1** for a real
+   need: an app's SVG fragments (below, "svg templates return").
 
 ### The design (each point has a spec)
 
@@ -229,6 +230,76 @@ benchmark repo's `gyral-next` branch; calibration spread 3.3%, no drift flag).
   10.2 → 7.9 KiB, every page downloads less JS; gyral.dev island entry 17.6 → 14.1 KB gzip
   plus a 2.9 KB preloaded hydration chunk, strict CSP without `'unsafe-inline'` styles.
 
+### svg templates return (gyral-c5d.8, 0.3.1)
+
+The need: an app migrated to Gyral renders small SVG fragments (marks, labels)
+as templates of their own, ``${cond ? svg`<path …/>` : nothing}`` inside an `<svg>` of an `html`
+template. Rule 10 rejected them in `html` (the HTML parser would make HTML elements of a
+top-level `<path>`), so the team inlined every variant in one `<svg>` with `display="none"`
+slots. `svg` is back, on Gyral's terms (view/01 "svg templates"):
+
+- The template object carries `svg: true`; the normalizer builds its tree as SVG content from
+  the top (rule 10 turned around: HTML at its top level is the error), and its id differs from
+  the same strings as `html`.
+- The client parses its HTML inside an `<svg>` and keeps that element's children: the HTML
+  parser's own foreign-content rules create the nodes (namespace, camelCase names, namespaced
+  static attributes). The server writes it as is inside the parent's `<svg>`; hydration walks
+  it like any template.
+- An `svg` template renders only inside SVG content: elsewhere it is a development error on
+  both sides. Bound namespaced attributes (`xlink:href=${…}`) are a rule 10 error pointing to
+  SVG 2's `href`; bound attribute names on SVG elements take the parser's spelling
+  (`viewbox` → `viewBox`).
+- **Size:** only apps that use `svg` carry it (`svgTemplate` and `compiledSvg`, about 0.2 KB
+  minified); every example's `pnpm size` is unchanged within module-order noise (−19 to
+  +13 B gzip, `view` −4 B). An app toggling one `<path>` with `svg` instead of a
+  `display=${…}` attribute: +272 B minified, +85 B gzip, its extra template object included.
+
+### 0.3.1 size work (gyral-c5d.2, gyral-c5d.11–.15, 2026-10-07): measured
+
+Prompted by a migrated app's bundle (c5d.10): optional machinery that apps reach through
+data rather than an API call, and text, still shipped to apps that never used it. Each change
+keeps behaviour for apps that don't opt in:
+
+1. **`defineDisposableHook`** (c5d.2, view/02): a hook's teardown is a function of its own, so
+   the disposal tracking ships only with it, not with every `defineHook`.
+2. **Client-only builds** (c5d.11, view/07 "Client-only builds"): the preset's
+   `clientOnly: true` leaves out the hydration loader and its chunk, the invoker-command
+   fallback unless a module may use command intents, and with them Vite's preload helper.
+3. **Spec-field features registered by the build** (c5d.12, view/05 "Features register
+   themselves"): view transitions, the frame lane and custom states are bundled only when a
+   module names `viewTransition`, `renderOnFrame` or `states`; the runtime path keeps all three.
+4. **Production diagnostics as codes** (c5d.13): `Gyral G0010 <args…> <docs URL>`; the texts
+   live in one table (`view/messages.ts`) that development bundles and
+   `docs/references/errors.md` is generated from.
+5. **No property path for props in production** (c5d.14, view/05 "When props are validated"),
+   and `prop.value(check)` checks that are plain references are dropped from production client
+   builds.
+6. **`@gyral/time/delay`** (c5d.15, ADR 0006): delay and debounce over a delay-only driver.
+
+`pnpm size`, KiB gzip, all chunks / initial (`(clientOnly)`: the same app built with
+`clientOnly: true`):
+
+| Bundle                   | 0.3.0         | before (063416a) | 0.3.1           |
+| ------------------------ | ------------- | ---------------- | --------------- |
+| hello-world              | 11.22 / 8.86  | 11.27 / 8.90     | 10.81 / 8.42    |
+| hello-world (clientOnly) | —             | —                | **7.35 / 7.35** |
+| counter                  | 11.14 / 8.78  | 11.19 / 8.81     | 10.72 / 8.34    |
+| counter (clientOnly)     | —             | —                | 7.27 / 7.27     |
+| isomorphic (SSR)         | 15.35 / 12.87 | 15.41 / 12.95    | 14.86 / 12.36   |
+| autocomplete-search      | 17.27 / 14.92 | 17.56 / 15.19    | 16.66 / 14.29   |
+| no-js-first (SSR, forms) | 19.04 / 16.60 | 19.11 / 16.65    | 18.27 / 15.83   |
+| view line                | 6.90          | 7.13             | 6.87            |
+
+Per change, on hello-world (all chunks / initial, bytes): disposable hooks 0 (autocomplete-search
+−257 / −250, view −244), spec-field features −282 / −289, codes −173 / −184, property path −33
+/ −30; client-only −3,538 / −1,092 on top (no hydration chunk, no preload helper); the
+delay-only examples −153 to −172 with `@gyral/time/delay`. Every example shrank; the budgets
+raised during 0.3.1 are restored and all are measured + 0.1 KiB again.
+
+Against the targets: the smallest app, ≤ 8 KiB, **is met by client-only builds** (7.35; stretch
+6 is 1.35 KiB away) and missed by 0.4 KiB otherwise (8.42 initial, which includes the hydration
+loader and the preload helper a server-rendered page needs).
+
 ## Migration (decision K)
 
 The plan, as carried out:
@@ -266,3 +337,26 @@ The plan, as carried out:
   just no longer ships or depends on Lit.
 - The template compiler becomes part of the default toolchain, so templates can be checked and
   prepared at build time; the runtime path keeps "no build step" working.
+
+## Addendum: hook order (gyral-1zd.27, 0.3.1)
+
+Element hooks' `client` calls used to run right after each host's own render, in document order.
+The scheduler renders parents before children (04), so a parent's hook ran before the child
+components it had just given new props had rendered: a hook measuring a list, or scrolling to
+a child's row, saw last render's DOM. Apps worked around it with observers and animation-frame
+loops, and with counters in the model only there to make a hook run again.
+
+Decision:
+
+- Inside a scheduler flush, queued `client` calls wait until every dirty host has rendered, then
+  run **children first**: the last-rendered root's calls first (the scheduler renders by depth,
+  so children render after their parents), each root's own calls in document order. A
+  `render` call outside the scheduler runs its calls when it returns. This is the order React
+  and Vue run effects and `mounted` hooks in: child components first, after the whole commit.
+- `defineHook({ client, update: 'always' })` runs `client` on every render that commits the
+  hook's position, not only when an argument changed.
+- The runner (`view/render/hook-run.ts`) is installed by `defineHook`/`defineDisposableHook`,
+  so apps without hooks bundle none of it. Apps with hooks pay about 0.3 KiB gzip for the
+  batching and ordering (measured on the form examples).
+
+Tested in `core/test/hook-order.test.ts`.

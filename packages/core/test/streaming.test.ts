@@ -31,9 +31,8 @@ type Msg =
   | { readonly _tag: 'Restart' }
   | { readonly _tag: 'Burst' };
 
-const Ticker = define<{ readonly seen: readonly number[] }, Msg>('test-ticker', {
+const Ticker = define<{ readonly seen: readonly number[] }, Msg>()('test-ticker', {
   init: () => [{ seen: [] }, [command(ticks, 'a', { onSuccess: (n) => ({ _tag: 'Tick', n }) })]],
-  intent: {},
   update: {
     Tick: (s, m) => ({ seen: [...s.seen, m.n] }),
     Restart: (s) => [s, [command(ticks, 'b', { onSuccess: (n) => ({ _tag: 'Tick', n }) })]],

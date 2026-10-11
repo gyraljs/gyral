@@ -1,9 +1,10 @@
 // Pure panel model (ADR 0017): turns DevEvents into timeline rows, live components and
 // command lanes. No DOM access, so it is tested without a browser.
-import type { DevComponentRef, DevEvent } from '@gyral/core';
+import type { DevComponentRef, DevEvent } from '@gyral/core/internal';
+import { isSecretField } from '@gyral/core/internal';
 
-export type RowKind = 'component' | 'update' | 'command' | 'store';
-export const ROW_KINDS: readonly RowKind[] = ['update', 'command', 'store', 'component'];
+export type RowKind = 'component' | 'update' | 'command' | 'store' | 'error';
+export const ROW_KINDS: readonly RowKind[] = ['update', 'command', 'store', 'component', 'error'];
 
 export interface Row {
   readonly seq: number;
@@ -51,13 +52,22 @@ export const initialPanel = (open = false): PanelState => ({
 
 export const componentLabel = (c: DevComponentRef): string => `<${c.tag}>#${String(c.id)}`;
 
-/** A bounded, cycle-safe JSON preview for display. Never throws. */
+/**
+ * A bounded, cycle-safe JSON preview for display. Never throws. Values under a secret form
+ * field's name (`defineForm(schema, { secret })`, or a password-like name) show as `[secret]`.
+ */
 export function preview(value: unknown, limit = 120): string {
   const seen = new WeakSet();
   let text: string;
   try {
     // Typed as string, but JSON.stringify returns undefined for undefined and bare functions.
-    const json = JSON.stringify(value, (_key, v: unknown) => {
+    const json = JSON.stringify(value, (key, v: unknown) => {
+      if (key !== '' && v !== undefined && isSecretField(key)) return '[secret]';
+      if (typeof FormData !== 'undefined' && v instanceof FormData) {
+        return Object.fromEntries(
+          [...v.keys()].map((k) => [k, isSecretField(k) ? '[secret]' : v.getAll(k).map(String)]),
+        );
+      }
       if (typeof v === 'object' && v !== null) {
         if (seen.has(v)) return '[circular]';
         seen.add(v);
@@ -125,6 +135,14 @@ function toRow(event: DevEvent, seq: number): Row {
         who: event.owner,
         what: `${event.phase} ${event.driver}`,
         detail: `lane ${event.lane}, ${event.policy}`,
+      };
+    case 'error':
+      return {
+        ...base,
+        kind: 'error',
+        who: event.component === undefined ? 'gyral' : componentLabel(event.component),
+        what: `${event.phase} failed${event.msg === undefined ? '' : ` (${event.msg})`}`,
+        detail: event.error instanceof Error ? String(event.error) : preview(event.error),
       };
   }
 }

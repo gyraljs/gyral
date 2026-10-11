@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, defineStore, html, send, settled, StoreRegistry } from '../src/index.js';
+import { define, defineStore, html, send, settled } from '../src/index.js';
+import { StoreRegistry } from '../src/server.js';
 
 interface Log {
   readonly events: readonly string[];
@@ -28,11 +29,9 @@ const cart = defineStore<Cart, CartMsg>('send-cart', {
   },
 });
 
-define<{ readonly x: number }, never>('send-owner', {
+define<{ readonly x: number }>()('send-owner', {
   stores: [cart],
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`<p>${read(cart).owner}:${read(cart).lines.length}</p>`,
 });
 

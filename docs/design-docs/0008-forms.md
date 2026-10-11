@@ -2,6 +2,40 @@
 
 Status: **accepted** (2026-10-04). Client half: gyral-czi.3. Server half: gyral-4k7.2 (below).
 
+## Form-associated components (0.3.1, gyral-1zd.7)
+
+`formAssociated: { value, state?, validity? }` opts a `define()` spec into native form
+participation. Each function receives `(state, ctx)`; the projections are pure. `value`
+returns a string, File, FormData or null (omit the field). `state` optionally supplies a
+separate restoration value of the same shape; otherwise the submitted value is restored.
+`validity` returns `{ flags, message, anchor? }` or undefined to clear errors. `flags` uses
+native `ValidityStateFlags`; `anchor` is a selector in the component's render root, resolved
+by Gyral after rendering, for the browser's validation bubble. An invalid projection must
+provide a nonempty message, as required by `ElementInternals.setValidity()`.
+
+Gyral sets the constructor's static `formAssociated` flag and applies the projections with
+`ElementInternals.setFormValue()` and `setValidity()` after each successful render. Custom
+states and forms share one ElementInternals instance. The native `name`, `form` and
+`disabled` attributes keep their platform meanings; a disabled fieldset also disables the
+component. Reducers optionally handle `FormReset`, `FormDisabled { disabled }` and
+`FormStateRestore { state, mode }` (`mode` is `restore` or `autocomplete`). Reset policy
+belongs to the reducer; Gyral does not rerun init. Callbacks arriving before the first
+render are kept until that render succeeds, preserving SSR hydration before their updates.
+Components must mirror disabled state to their interactive controls in the view.
+
+The server renders the ordinary view and seed; it cannot register a form control without
+JavaScript. Forms that must submit before hydration use native fallback controls in their
+server/first-client view. Keep the fallback as the submitting control until a parsed input
+event has transferred its current value into the model; then remove its name (or disable a
+separate fallback control) and
+submit the model projection. Switching on `Hydrated` alone can lose pre-hydration edits:
+Gyral does not automatically read arbitrary fallback controls into model state. There is no
+automatic hidden input or validity polyfill. The form API is Baseline widely available; optional machinery
+is detected by the Vite compiler from the `formAssociated` field, like `states`.
+Sources: [HTML custom elements](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-elements-face-example),
+[setFormValue](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals/setFormValue),
+[setValidity](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals/setValidity).
+
 > **Superseded in part by [ADR 0018](0018-view-layer.md)** (2026-10-06, shipped in 0.3.0): form state uses plain attribute bindings ([view/02-bindings.md](view/02-bindings.md)), `invalid()` is an element hook with a server half, and server output carries no Lit markers. Lit-specific text below describes 0.2.x.
 
 ## Context
@@ -66,7 +100,7 @@ app.post('/', (c) =>
 );
 ```
 
-- **One validator.** Core's `validateForm(definition, intent, formData)` is what the client's
+- **One validator.** The definition's `validate(formData, intent)` is what the client's
   `form()` parser calls, and what `formAction` calls on the server. Both produce the same
   `IntentRejected`, and only one function turns form data into an object or a rejection.
 - **One reducer.** The server does not compute error state itself. It renders the component
@@ -75,7 +109,7 @@ app.post('/', (c) =>
   `IntentRejected` reducer builds the error state on the server, exactly as it does in the
   browser. The resulting state is seeded (ADR 0012), so hydration resumes from it.
   `initialMessages` is ignored when an element resumes from a seed.
-- **Re-filling.** `IntentRejected.values` (from `form()` and `validateForm`) carries the
+- **Re-filling.** `IntentRejected.values` (from `form()` and `definition.validate`) carries the
   submitted text fields; Files are dropped. The reducer decides what to keep. **Never keep
   passwords**: state is serialized into the page.
 - **Post/Redirect/Get.** On success, `seeOther(url)` returns a 303, so reloading never
@@ -188,3 +222,44 @@ The rejected value itself keeps its error: resubmitting it unchanged is still bl
 model's message. Element directives don't run on the server; server-rendered errors are applied
 on hydration (`packages/ssr/test/invalid-hydration.test.ts`, which also runs against production
 Lit).
+
+## Addendum: CSRF tokens are configured on the driver (ADR 0022, 0.3.1)
+
+`submitForm`'s `csrf: { meta }` is gone (the example in "the JS-path round trip" above shows
+0.3.0). A token from a `<meta>` is added by the http driver, configured once for the app:
+`provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
+`csrf: { token }` still sends a token the app already holds. Development builds warn once when a
+non-GET request goes out without the token while the page has a CSRF `<meta>`.
+
+## Addendum: `formValues` for routes that validate on their own (0.3.1)
+
+The 0.3.1 export review (gyral-1zd.6) moved `formDataToObject` and `formFields` to
+`@gyral/core/internal`. A server route that validates a submission itself, not through
+`formAction`, still needs the submitted values to re-render the form. `formValues(definition,
+formData)` returns exactly what `IntentRejected.values` carries (text values, repeated names and
+`name[]` as arrays, no `File`s), typed by the definition's input keys (`FormValues<Schema>`).
+It's a thin wrapper over the internal functions, so the two paths can't drift. (It became
+`definition.values(formData)` in the next addendum.)
+
+## Addendum: secret fields, and the helpers fold into the definition (0.3.1)
+
+The 0.3.1 review found `formAction` echoing passwords and card numbers in
+`IntentRejected.values` on the no-JS path; one app stripped them by hand in five places. No
+other framework echoes submitted values automatically: SvelteKit's `fail(400, { values })`,
+React Router's `useActionData` and Astro/Qwik actions return only what the action chooses, and
+browsers never restore a password field. Gyral keeps the convenient automatic echo, but makes it
+safe by default:
+
+- `defineForm(schema, { secret: ['card', 'cvc'] })` lists secret fields; any field whose name
+  contains `password` or `passcode` is secret without being listed.
+- Secret fields never appear in `IntentRejected.values` (client `form()`, no-JS `formAction`,
+  `rejectWith`), in `definition.values()`, or in JSON 422 bodies (which carry no values at all).
+- Development builds warn once for an unlisted field whose name has a secret-looking word
+  (`token`, `secret`, `card`, `cvc`, `cvv`, `ssn`, `pin`); the devtools timeline previews secret
+  fields, and secret `FormData` entries, as `[secret]`.
+
+`validateForm(definition, intent, data)` and `formValues(definition, data)` were two exports for
+what the definition already knows. They became methods: `definition.validate(data, intent?)` and
+`definition.values(data)`, and the internal `formFields`/`formDataToObject` are no longer
+exported (nothing outside core used them once `formAction` called the definition). A bare schema
+still works with `form()`, with only the name-based secret rule.

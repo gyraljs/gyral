@@ -1,71 +1,32 @@
-import { command, type Command, type Concurrency } from '@gyral/core';
-import { time, type Frame, type TimeInput, type TimeOutput } from './driver.js';
+// `@gyral/time`: delays, debounces and wall-clock ticks (`every`) as commands. Delays and
+// debounces run on a delay-only driver (delay.ts), `every` on the full one (driver.ts); both are
+// named `time`, so tests substitute either by that name, and an app that only delays bundles
+// none of the `every` code (gyral-c5d.15, gyral-1zd.24).
+import type { Command } from '@gyral/core';
+import { time } from './driver.js';
+import { timer } from './timer.js';
 
-export { makeTime, time } from './driver.js';
-export type { Frame, TimeDriver, TimeInput, TimeOptions, TimeOutput } from './driver.js';
-
-/** Concurrency lane for a timer. Timers in different lanes run independently. */
-export interface Lane {
-  /** Lane name. Default: one shared lane per command kind (see each command). */
-  readonly key?: string;
-  readonly concurrency?: Concurrency;
-}
-
-function timer<M>(
-  input: TimeInput,
-  toMsg: (output: TimeOutput) => M | undefined,
-  lane: Lane,
-  defaults: Required<Lane>,
-): Command<M> {
-  return command<TimeInput, TimeOutput, unknown, M>(time, input, {
-    onSuccess: toMsg,
-    key: lane.key ?? defaults.key,
-    concurrency: lane.concurrency ?? defaults.concurrency,
-  });
-}
-
-/** Sends `msg` after `ms`. By default every delay runs (`merge` in lane `time:delay`). */
-export function delay<M>(ms: number, msg: M, lane: Lane = {}): Command<M> {
-  return timer({ _tag: 'Delay', ms }, () => msg, lane, {
-    key: 'time:delay',
-    concurrency: 'merge',
-  });
-}
+export { time } from './driver.js';
+export { debounce, delay } from './delay.js';
+export type { Frame, TimeDriver, TimeInput, TimeOutput } from './driver.js';
+export type { Lane } from './timer.js';
 
 /**
- * Sends `msg` once `ms` pass without another `debounce` in the same lane: a delay under
- * `switch`, so each call cancels the pending one.
+ * Sends `toMsg(now)` at once and then every `ms`, `now` being `Date.now()` (virtual under
+ * `virtualTime()`), until it is stopped. Made for `subscriptions` (ADR 0025):
+ * `subscriptions: (s) => (s.live ? [every(1000, (now) => ({ _tag: 'Tick', now }))] : [])`.
+ * Each `every` runs in lane `key` (`switch`: another one in the same lane replaces it).
  */
-export function debounce<M>(ms: number, msg: M, key = 'time:debounce'): Command<M> {
-  return delay(ms, msg, { key, concurrency: 'switch' });
-}
-
-/**
- * Streams the number of elapsed periods (1, 2, 3, …) every `ms` until the component
- * disconnects. Starting another periodic in the same lane replaces it (`switch`).
- */
-export function periodic<M>(
+export function every<M>(
   ms: number,
-  toMsg: (ticks: number) => M | undefined,
-  lane: Lane = {},
+  toMsg: (now: number) => M | undefined,
+  key = 'time:every',
 ): Command<M> {
   return timer(
-    { _tag: 'Periodic', ms },
+    time,
+    { _tag: 'Every', ms },
     (output) => (typeof output === 'number' ? toMsg(output) : undefined),
-    lane,
-    { key: 'time:periodic', concurrency: 'switch' },
-  );
-}
-
-/** Streams animation frames until the component disconnects (`switch` in its lane). */
-export function animationFrames<M>(
-  toMsg: (frame: Frame) => M | undefined,
-  lane: Lane = {},
-): Command<M> {
-  return timer(
-    { _tag: 'Frames' },
-    (output) => (typeof output === 'object' ? toMsg(output) : undefined),
-    lane,
-    { key: 'time:frames', concurrency: 'switch' },
+    {},
+    { key, concurrency: 'switch' },
   );
 }

@@ -1,4 +1,5 @@
 import type { Driver, DriverContext } from '@gyral/core';
+import { abortError, wait } from './timer.js';
 
 /** One animation frame: the rAF timestamp and the time since the previous frame. */
 export interface Frame {
@@ -8,10 +9,10 @@ export interface Frame {
 
 export type TimeInput =
   | { readonly _tag: 'Delay'; readonly ms: number }
-  | { readonly _tag: 'Periodic'; readonly ms: number }
+  | { readonly _tag: 'Every'; readonly ms: number }
   | { readonly _tag: 'Frames' };
 
-/** Delays resolve `undefined`; periodic streams tick counts; frames stream `Frame`s. */
+/** Delays resolve `undefined`; `every` streams wall-clock times (`Date.now()`); frames stream `Frame`s. */
 export type TimeOutput = undefined | number | Frame;
 
 export type TimeDriver = Driver<TimeInput, TimeOutput>;
@@ -20,11 +21,6 @@ export interface TimeOptions {
   /** Driver name used for substitution (`el.drivers`). Default `'time'`. */
   readonly name?: string;
 }
-
-const abortError = (signal: AbortSignal): Error => {
-  const reason: unknown = signal.reason;
-  return reason instanceof Error ? reason : new DOMException('Aborted', 'AbortError');
-};
 
 /**
  * Runs `start` until the command is aborted, then calls the cleanup `start` returned.
@@ -37,6 +33,13 @@ function until(signal: AbortSignal, start: () => () => void): Promise<never> {
       return;
     }
     const stop = start();
+    // Starting a stream can emit synchronously, and the receiver may abort in that emit.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- start can abort
+    if (signal.aborted) {
+      stop();
+      reject(abortError(signal));
+      return;
+    }
     signal.addEventListener(
       'abort',
       () => {
@@ -48,32 +51,12 @@ function until(signal: AbortSignal, start: () => () => void): Promise<never> {
   });
 }
 
-function delay(ms: number, signal: AbortSignal): Promise<undefined> {
-  return new Promise<undefined>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(abortError(signal));
-      return;
-    }
-    const timer = setTimeout(() => {
-      resolve(undefined);
-    }, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(abortError(signal));
-      },
-      { once: true },
-    );
-  });
-}
-
-function periodic(ms: number, { signal, emit }: DriverContext<TimeOutput>): Promise<never> {
+/** Emits `Date.now()` at once, then every `ms`, until aborted. */
+function every(ms: number, { signal, emit }: DriverContext<TimeOutput>): Promise<never> {
   return until(signal, () => {
-    let ticks = 0;
+    emit(Date.now());
     const timer = setInterval(() => {
-      ticks += 1;
-      emit(ticks);
+      emit(Date.now());
     }, ms);
     return () => {
       clearInterval(timer);
@@ -107,7 +90,7 @@ function frames({ signal, emit }: DriverContext<TimeOutput>): Promise<never> {
     const loop = (time: number): void => {
       emit({ time, delta: previous === undefined ? 0 : time - previous });
       previous = time;
-      cancel = scheduleFrame(loop);
+      if (!signal.aborted) cancel = scheduleFrame(loop);
     };
     cancel = scheduleFrame(loop);
     return () => {
@@ -123,9 +106,9 @@ export function makeTime(options: TimeOptions = {}): TimeDriver {
     run: (input, ctx) => {
       switch (input._tag) {
         case 'Delay':
-          return delay(input.ms, ctx.signal);
-        case 'Periodic':
-          return periodic(input.ms, ctx);
+          return wait(input.ms, ctx.signal);
+        case 'Every':
+          return every(input.ms, ctx);
         case 'Frames':
           return frames(ctx);
       }
@@ -134,4 +117,4 @@ export function makeTime(options: TimeOptions = {}): TimeDriver {
 }
 
 /** The default time driver. */
-export const time: TimeDriver = makeTime();
+export const time: TimeDriver = /* @__PURE__ */ makeTime();

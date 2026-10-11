@@ -1,4 +1,4 @@
-// Which identifiers are Gyral's `html` and `each` (@gyral/core/eslint). Like the template
+// Which identifiers are Gyral's `html`, `svg` and `each` (@gyral/core/eslint). Like the template
 // compiler (compiler/scan.ts), a binding counts only when it is imported from a template
 // source: `import { html } from '@gyral/core'` (any local name) or `import * as g` used as
 // `g.html`. ESLint's scope analysis resolves the name, so shadowing is handled. Core's own code
@@ -56,7 +56,10 @@ export function findVariable(scope: Scope.Scope | null, name: string): Scope.Var
 }
 
 /** How `id` was imported from a template source: the export's name, or `*`. */
-function importedAs(context: Rule.RuleContext, id: NodeOf<'Identifier'>): string | undefined {
+export function importedAs(
+  context: Rule.RuleContext,
+  id: NodeOf<'Identifier'>,
+): string | undefined {
   const variable = findVariable(context.sourceCode.getScope(id), id.name);
   const def = variable?.defs[0];
   if (def?.type !== 'ImportBinding') return undefined;

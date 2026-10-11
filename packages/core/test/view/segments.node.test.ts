@@ -5,7 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { normalize } from '../../src/view/normalize/normalize.js';
 import { minifyStrings } from '../../src/view/normalize/whitespace.js';
-import { template } from './arbitrary.js';
+import { STATIC_STYLE, template } from './arbitrary.js';
 import { emptyRender, t, valueCounts } from './helpers.js';
 
 describe('segments (view/06)', () => {
@@ -68,7 +68,8 @@ describe('normalizer properties (view/README "Conformance")', () => {
     fc.assert(
       fc.property(template, (strings) => {
         const n = normalize(strings);
-        expect(emptyRender(n.segments ?? [])).toBe(n.html);
+        // The client HTML leaves static styles to the part table (01 "Normalization").
+        expect(emptyRender(n.segments ?? []).replaceAll(STATIC_STYLE, '')).toBe(n.html);
         expect(valueCounts(n)).toEqual({ parts: strings.length - 1, segments: strings.length - 1 });
       }),
       { numRuns: 300 },

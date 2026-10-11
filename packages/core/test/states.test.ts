@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { css, define, html, settled } from '../src/index.js';
 
 type Msg = { readonly _tag: 'Toggle' };
 
-const Lamp = define<{ readonly on: boolean }, Msg>('test-states', {
+const Lamp = define<{ readonly on: boolean }, Msg>()('test-states', {
   init: () => ({ on: false }),
-  intent: { Toggle: () => ({ _tag: 'Toggle' }) },
+  intent: { Toggle: true },
   update: { Toggle: (s) => ({ on: !s.on }) },
   states: (s) => ({ on: s.on, off: !s.on }),
   view: (_s, i) => html`<button data-intent=${i.Toggle}>toggle</button>`,
@@ -16,10 +16,8 @@ const Lamp = define<{ readonly on: boolean }, Msg>('test-states', {
   `,
 });
 
-const Plain = define<{ readonly n: number }, never>('test-no-states', {
+const Plain = define<{ readonly n: number }>()('test-no-states', {
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<p>plain</p>`,
 });
 
@@ -48,5 +46,30 @@ describe('custom states (spec.states)', () => {
     document.body.append(el);
     await settled();
     expect(() => el.attachInternals()).not.toThrow();
+  });
+
+  // gyral-dyn.30: Chromium 90–124 have CustomStateSet but accept only `--`-prefixed names, so
+  // add('on') throws there. States are an enhancement (ADR 0003): skip them, never fail renders.
+  it('skips states where the platform rejects plain state names', async () => {
+    const add = vi.spyOn(CustomStateSet.prototype, 'add').mockImplementation(function (
+      this: CustomStateSet,
+      name: string,
+    ) {
+      if (!name.startsWith('--')) throw new DOMException(`bad state "${name}"`, 'SyntaxError');
+      return this;
+    });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const el = new Lamp();
+      document.body.append(el);
+      await settled();
+      el.send({ _tag: 'Toggle' });
+      await settled();
+      expect(el.shadowRoot?.querySelector('button')).not.toBeNull();
+      expect(errors).not.toHaveBeenCalled();
+    } finally {
+      add.mockRestore();
+      errors.mockRestore();
+    }
   });
 });

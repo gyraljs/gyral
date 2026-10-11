@@ -1,16 +1,25 @@
-import type { Driver } from '@gyral/core';
+import type { Driver, Head } from '@gyral/core';
 import { capturedUrl, linkCapture } from './links.js';
 import { createMemorySource, type MemoryOptions } from './memory.js';
-import type { RouterSnapshot, Source } from './source.js';
+import { headSlot } from './internal/head-slot.js';
+import { rendered } from './internal/rendered.js';
+import { loadHistory, type HistoryPath } from './internal/load-history.js';
+import type { AfterNavigation, RouterSnapshot, Source } from './source.js';
 import { locationStream, type RouteLocation } from './stream.js';
 
 export type { RouteLocation } from './stream.js';
 export type { RouterSnapshot } from './source.js';
 
+export type { AfterNavigation } from './source.js';
+
 export type RouterInput =
-  | { readonly _tag: 'Navigate'; readonly url: string; readonly replace: boolean }
+  | ({
+      readonly _tag: 'Navigate';
+      readonly url: string;
+      readonly replace: boolean;
+    } & Partial<AfterNavigation>)
   | { readonly _tag: 'Traverse'; readonly delta: number }
-  | { readonly _tag: 'Title'; readonly title: string }
+  | { readonly _tag: 'Head'; readonly head: Head }
   | { readonly _tag: 'Listen' };
 
 export interface RouterOptions extends MemoryOptions {
@@ -26,10 +35,24 @@ export interface RouterOptions extends MemoryOptions {
   readonly window?: Window;
   /** Browser history: use the Navigation API when present. Default `true`. */
   readonly navigationApi?: boolean;
+  /**
+   * Browser history, once a navigation has rendered: scroll to the `#fragment` target or the
+   * top (push) and restore the position on back/forward. Default `true`; `false` for apps that
+   * manage scroll themselves. A replace never scrolls unless `navigate(url, { scroll: true })`;
+   * `navigate(url, { scroll })` overrides it per call.
+   */
+  readonly scroll?: boolean;
+  /**
+   * Browser history, once a navigation has rendered: move focus to the first `[autofocus]`
+   * element, or reset it to the page start, unless something took focus during the navigation
+   * (a `focus('main h1')` command). Default `true` (a replace: only with `focusReset: true`).
+   * `navigate(url, { focusReset })` per call.
+   */
+  readonly focusReset?: boolean;
 }
 
 export interface RouterDriver extends Driver<RouterInput, RouteLocation | undefined> {
-  /** The current URL and title as this router sees them. */
+  /** The current URL and last head as this router sees them. */
   readonly snapshot: () => RouterSnapshot;
   /** Removes document listeners and ends running `listen` commands. */
   readonly dispose: () => void;
@@ -45,7 +68,14 @@ interface NavigationLike extends EventTarget {
 interface NavigateEventLike extends Event {
   readonly canIntercept: boolean;
   readonly info: unknown;
-  intercept(): void;
+  readonly navigationType: string;
+  readonly hashChange: boolean;
+  readonly destination: { readonly url: string };
+  intercept(options: {
+    handler: () => Promise<void>;
+    scroll: 'after-transition' | 'manual';
+    focusReset: 'after-transition' | 'manual';
+  }): void;
 }
 
 function createBrowserSource(options: RouterOptions): Source {
@@ -54,33 +84,66 @@ function createBrowserSource(options: RouterOptions): Source {
     options.navigationApi === false
       ? undefined
       : (win as { navigation?: NavigationLike }).navigation;
-  // Identifies navigations this router started, so only those are intercepted.
-  const token = {};
   const stream = locationStream(() => win.location);
+  // A replace (keeping the query in sync with a search box) leaves scroll and focus alone
+  // unless asked; a push and a traversal follow the router's options (default on).
+  const what = (asked: Partial<AfterNavigation> = {}, replace = false): AfterNavigation => ({
+    scroll: asked.scroll ?? (!replace && (options.scroll ?? true)),
+    focusReset: asked.focusReset ?? (!replace && (options.focusReset ?? true)),
+  });
+  // Navigation API: the `info` of each navigation this router started, so only those (and
+  // same-document traversals) are intercepted, with that navigation's scroll/focus choice.
+  const started = new WeakMap<object, AfterNavigation>();
+  let head: Head | undefined;
+  // History API path (ADR 0003 tier 3): loaded only without the Navigation API. If its chunk
+  // can't load (offline, or a deploy removed it), navigations become full page loads.
+  const history: Promise<HistoryPath | undefined> | undefined =
+    nav === undefined
+      ? loadHistory().then(
+          (m) => m.historyPath(win, stream, what, rendered),
+          () => undefined,
+        )
+      : undefined;
 
-  const navigate = (url: string, replace: boolean) => {
+  const navigate = (url: string, replace: boolean, asked?: Partial<AfterNavigation>) => {
     const target = new URL(url, win.location.href);
     if (target.origin !== win.location.origin) {
       win.location.assign(target.href);
       return undefined;
     }
     if (nav !== undefined) {
-      const result = nav.navigate(target.href, {
-        history: replace ? 'replace' : 'push',
-        info: token,
-      });
+      const info = {};
+      started.set(info, what(asked, replace));
+      const result = nav.navigate(target.href, { history: replace ? 'replace' : 'push', info });
       result.finished.catch(() => undefined); // superseded navigations reject; that's fine
       return result.committed.then(() => stream.current());
     }
-    if (replace) win.history.replaceState(null, '', target.href);
-    else win.history.pushState(null, '', target.href);
-    stream.notify();
-    return stream.current();
+    return history?.then((path) => {
+      if (path === undefined) {
+        win.location[replace ? 'replace' : 'assign'](target.href);
+        return undefined;
+      }
+      path.navigate(target, replace, what(asked, replace));
+      return stream.current();
+    });
   };
 
   const onNavigate = (event: Event): void => {
     const e = event as NavigateEventLike;
-    if (e.info === token && e.canIntercept) e.intercept(); // keep it same-document
+    if (!e.canIntercept) return;
+    const asked = typeof e.info === 'object' && e.info !== null ? started.get(e.info) : undefined;
+    // Ours: keep it same-document. A same-document traversal to another page: restore scroll
+    // after the render. One to the same path and query (a fragment, or an entry pushed for a
+    // dialog) renders nothing new and is left to the browser, as the History API path does.
+    const page = (url: string): string | undefined => url.split('#')[0];
+    const samePage = page(e.destination.url) === page(win.location.href);
+    const after = asked ?? (e.navigationType === 'traverse' && !samePage ? what() : undefined);
+    if (after === undefined) return;
+    e.intercept({
+      handler: rendered,
+      scroll: after.scroll ? 'after-transition' : 'manual',
+      focusReset: after.focusReset ? 'after-transition' : 'manual',
+    });
   };
   const onClick = (event: Event): void => {
     if (!(event instanceof MouseEvent)) return;
@@ -92,12 +155,8 @@ function createBrowserSource(options: RouterOptions): Source {
     });
   };
 
-  if (nav === undefined) {
-    win.addEventListener('popstate', stream.notify);
-  } else {
-    nav.addEventListener('navigate', onNavigate);
-    nav.addEventListener('currententrychange', stream.notify);
-  }
+  nav?.addEventListener('navigate', onNavigate);
+  nav?.addEventListener('currententrychange', stream.notify);
   const linkRoot =
     options.linkRoot === undefined
       ? options.captureLinks === true
@@ -113,16 +172,15 @@ function createBrowserSource(options: RouterOptions): Source {
     traverse: (delta) => {
       win.history.go(delta);
     },
-    setTitle: (title) => {
-      win.document.title = title;
+    setHead: (next) => {
+      head = next;
+      headSlot.apply?.(win.document, next);
     },
-    snapshot: () => ({
-      href: win.location.href,
-      title: win.document.title,
-      length: win.history.length,
-    }),
+    snapshot: () => ({ href: win.location.href, head, length: win.history.length }),
     dispose: () => {
-      win.removeEventListener('popstate', stream.notify);
+      void history?.then((path) => {
+        path?.dispose();
+      });
       nav?.removeEventListener('navigate', onNavigate);
       nav?.removeEventListener('currententrychange', stream.notify);
       capture.dispose();
@@ -144,12 +202,12 @@ export function makeRouter(options: RouterOptions = {}): RouterDriver {
         case 'Listen':
           return use().subscribe(emit, signal);
         case 'Navigate':
-          return use().navigate(input.url, input.replace);
+          return use().navigate(input.url, input.replace, input);
         case 'Traverse':
           use().traverse(input.delta);
           return undefined;
-        case 'Title':
-          use().setTitle(input.title);
+        case 'Head':
+          use().setHead(input.head);
           return undefined;
       }
     },

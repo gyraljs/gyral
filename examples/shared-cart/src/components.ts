@@ -4,10 +4,11 @@ import {
   define,
   each,
   html,
-  intents,
+  intentsOf,
   nothing,
   send,
   type Stateless,
+  type TemplateResult,
 } from '@gyral/core';
 import { cart, count, money, totalCents, type Line, type Product } from './cart.js';
 
@@ -32,10 +33,9 @@ const button = css`
 `;
 
 /** Header badge: reads the cart and briefly highlights after each change. */
-export const CartBadge = define<{ readonly bumps: number }, never>('gy-cart-badge', {
+export const CartBadge = define<{ readonly bumps: number }>()('gy-cart-badge', {
   stores: [cart],
   init: () => ({ bumps: 0 }),
-  intent: {},
   update: {
     StoreChanged: (s, m) => (changed(cart, m) === undefined ? s : { bumps: s.bumps + 1 }),
   },
@@ -69,7 +69,7 @@ export const CartBadge = define<{ readonly bumps: number }, never>('gy-cart-badg
 type ListMsg = { readonly _tag: 'AddToCart'; readonly sku: string };
 
 /** Product list: writes to the cart, never reads it. */
-export const ProductList = define<Stateless, ListMsg>('gy-product-list', {
+export const ProductList = define<Stateless, ListMsg>()('gy-product-list', {
   stores: [cart],
   intent: { AddToCart: ({ value }) => (value ? { _tag: 'AddToCart', sku: value } : undefined) },
   update: {
@@ -112,21 +112,24 @@ export const ProductList = define<Stateless, ListMsg>('gy-product-list', {
 
 type PanelMsg = { readonly _tag: 'RemoveLine'; readonly sku: string } | { readonly _tag: 'Empty' };
 
-/** The panel's intent names as a module constant: rows stay pure without passing them in. */
-const panel = intents<PanelMsg>();
+/**
+ * The panel's intent names as a module constant: rows stay pure without passing them in. A row
+ * that uses them declares its return type, so the row and the panel's type don't infer each other.
+ */
+const panel = intentsOf<typeof CartPanel>();
 
-const LineRow = (l: Line) =>
+const LineRow = (l: Line): TemplateResult =>
   html`<li>
     ${l.name} × ${l.qty}
     <button type="button" value=${l.sku} data-intent=${panel.RemoveLine}>Remove</button>
   </li>`;
 
 /** Cart panel: reads and writes the cart. */
-export const CartPanel = define<Stateless, PanelMsg>('gy-cart-panel', {
+export const CartPanel = define<Stateless, PanelMsg>()('gy-cart-panel', {
   stores: [cart],
   intent: {
     RemoveLine: ({ value }) => (value ? { _tag: 'RemoveLine', sku: value } : undefined),
-    Empty: () => ({ _tag: 'Empty' }),
+    Empty: true,
   },
   update: {
     RemoveLine: (s, { sku }) => [s, [send(cart, { _tag: 'Remove', sku })]],
@@ -149,11 +152,3 @@ export const CartPanel = define<Stateless, PanelMsg>('gy-cart-panel', {
   },
   styles: [button],
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-cart-badge': InstanceType<typeof CartBadge>;
-    'gy-product-list': InstanceType<typeof ProductList>;
-    'gy-cart-panel': InstanceType<typeof CartPanel>;
-  }
-}

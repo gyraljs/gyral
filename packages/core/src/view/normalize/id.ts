@@ -14,10 +14,17 @@ function avalanche(h: number, a: number, b: number): number {
   return x ^ (x >>> 16);
 }
 
-/** The id of a template's normalized strings. */
-export function templateId(strings: readonly string[]): string {
+/**
+ * The id of a template's normalized strings. `svg`: an svg template's (01 "svg templates"),
+ * whose DOM differs from an html template's with the same strings, so its id does too.
+ */
+export function templateId(strings: readonly string[], svg = false): string {
   let h1 = 0x9e3779b9 ^ strings.length;
   let h2 = 0x85ebca6b ^ strings.length;
+  if (svg) {
+    h1 = mix(h1, 0x737667, 0x2d51);
+    h2 = mix(h2, 0x737667, 0x1b873593);
+  }
   for (const s of strings) {
     h1 = mix(h1, s.length, 0x2d51);
     h2 = mix(h2, s.length, 0x1b873593);

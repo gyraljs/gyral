@@ -74,7 +74,7 @@ A command references a driver object, so most apps need no wiring at all. To sub
 fakes, configured instances), drivers are looked up **by `name`** in this order:
 
 1. the element instance's `drivers` property (`el.drivers = { http: fake }`) — tests;
-2. the spec's `drivers` option (`define(tag, { drivers: { http: makeHttpDriver({...}) } })`);
+2. the spec's `drivers` option (`define()(tag, { drivers: { http: makeHttpDriver({...}) } })`);
 3. the driver object on the command.
 
 We chose this over a `@lit/context` provider because it needs no extra element, no
@@ -107,15 +107,33 @@ dependency, and works for a component tested in isolation. An ancestor-provided 
   `Next`. Framework messages (`PropsChanged`, `IntentRejected`) step like any other.
   `inputsFor(commands, driver)`, `resolve(cmd, output)` and `reject(cmd, error)` drive the
   loop through a command's mappers with no DOM.
+- **Outputs and focus** (gyral-dyn.8, 0.3.1): `outputsIn(commands, Component)` returns what a
+  reducer sent to the parent with `emit()` / `outputs<O>()`, typed by the class's output union
+  (`OutputsOf<C>`; `outputsIn<Out>(commands)` names the union instead), and
+  `focusTargetsIn(commands)` returns each `focus()` request as `{ selector, ...options }`. Core
+  runs both commands itself with marker drivers; tests once filtered on their names
+  (`'@gyral/emit'`, `'@gyral/focus'`), which are internals. **Decision:** core keeps the marker
+  drivers private (no `EMIT`/`FOCUS` export); the helpers take the names from the public
+  builders (`emit(…).driver`, `focus(…).driver`), so the names may change without breaking a
+  test. Export them only if a need appears that these helpers can't cover.
 - **DOM:** `fakeDriver(driverOrName, { impl?, toError?, … })` records each call (input and
   `AbortSignal`) and waits for `resolveNext` / `rejectNext` (or `calls[i].resolve`). Errors
   pass through unchanged, so a test rejects with the already-typed error. Streaming commands:
   `fake.emitNext(value)` pushes into the newest running call, or use `calls[i].emit(value)`
   for a specific one (gyral-czi.15). Emits into a settled or aborted call are ignored, like
   the real runtime.
-- **Disconnect is asynchronous:** removing an element interrupts its commands on a later
-  tick, so a test must yield before asserting `signal.aborted` — `await clock.advance(0)`
-  under `virtualTime()`, or `await new Promise((r) => setTimeout(r, 0))` with real timers.
+- **Disconnect interrupts one microtask later** (0.3.1, gyral-dyn.33; until next.4 it was
+  synchronous, gyral-g1r.29): `disconnectedCallback` schedules the disposal of the element's
+  interpreter for the next microtask. If the element is connected again first (a move with
+  `appendChild`/`insertBefore`, which disconnects and connects in one task), the disposal is
+  cancelled and every command keeps running. Otherwise the interpreter is disposed, which aborts
+  every running or queued command's `AbortController`; `abort` listeners run inside `abort()`,
+  and no later result of those commands is dispatched. A host attached again after that starts
+  its `subscriptions` again from the current state (ADR 0025, view/05 "Moves and reconnects";
+  the `Connected` message of next.5 was removed). Tests assert `signal.aborted` after
+  `el.remove(); await Promise.resolve();` (or `await clock.advance(0)` under `virtualTime()`).
+  Why: list libraries and DOM code reorder elements by removing and re-inserting them, and a
+  synchronous dispose ended long-lived commands for good on every reorder.
 - **Virtual time:** `virtualTime()` installs `@sinonjs/fake-timers` (timers, `Date`, rAF;
   microtasks stay real) and offers `advance(ms)` / `runAll()` / `restore()`. ADR 0002
   promised Effect's `TestClock`. We patch the **platform** clock instead, because Effect's
@@ -132,21 +150,70 @@ disconnected). A streaming `run` usually returns a promise that never resolves; 
 it. A finite stream may resolve, and its resolved value is delivered last. Used by
 `listen()` in `@gyral/router` and by `@gyral/time`.
 
+### Outside sources: `subscription()` (gyral-c5d.5, 0.3.1)
+
+Apps keep some state in stores Gyral doesn't own: an app migrated to Gyral kept its domain
+state in a TC39-signals store, read through a hand-written streaming driver (`Signal.subtle.Watcher`,
+re-armed in a microtask, unwatched on abort) and written with a `play` command whose driver
+calls `store.dispatch` synchronously. Every such driver repeats the same plumbing: a promise
+that never resolves, an abort listener, the unsubscribe, ignoring late values. Core now ships
+it once:
+
+```ts
+function subscription<O, I = undefined, E = unknown>(
+  name: string,
+  subscribe: (emit: (value: O) => void, ctx: SubscriptionContext<I>) => Unsubscribe,
+  options?: SubscriptionOptions<E>, // concurrency (default 'switch'), retry, toError
+): Driver<I, O, E>;
+interface SubscriptionContext<I> {
+  readonly input: I;
+  readonly signal: AbortSignal;
+  readonly fail: (error: unknown) => void; // ends it: onFailure, after retry
+}
+type Unsubscribe = (() => void) | { readonly unsubscribe: () => void };
+```
+
+- It returns a driver, not a command: drivers are what tests and pages substitute by name,
+  and `command(driver, input, { onSuccess, key? })` already maps values to messages with the
+  lane rules. A `fromSource({ subscribe, getSnapshot })` shape was rejected: Redux
+  (`subscribe` + `getState`), XState (`subscribe` returns `{ unsubscribe }`), signals (a
+  watcher) and sockets (events) differ in exactly the part such a shape would fix, while
+  "subscribe and return how to stop" covers them all in two or three lines (recipes in the
+  skill's `references/outside-stores.md`).
+- Cleanup is automatic: abort (lane `switch`, disconnect) and `fail()` release the source
+  once, emits after that are ignored, and an unsubscribe that throws is logged. A `subscribe`
+  that throws, or `fail(error)`, rejects the run with that error as is, so `toError`,
+  `onFailure` and `retry` (which subscribes again: socket reconnects) work as for any driver.
+- Default lane policy `'switch'` (like `listen()` and `every()`): re-issuing the command
+  replaces the subscription; a per-input `key` keeps several.
+- Writing stays a plain driver; the change comes back through the subscription.
+- A standalone module (`subscription.ts`), so apps that don't import it don't bundle it; it
+  needs no feature slot because `command()` already registers the interpreter.
+- `settled()` doesn't wait for subscriptions (they never finish) but waits for the messages
+  they deliver (view/04 "`settled()`").
+
 ### `@gyral/time` (gyral-ud5.3)
 
 One `time` driver (substitutable by name) with four commands. Each command kind has its own
 default lane, and a `Lane` option (`key`, `concurrency`) lets timers coexist:
 
-| Command                   | Kind                        | Default lane / policy                                         |
-| ------------------------- | --------------------------- | ------------------------------------------------------------- |
-| `delay(ms, msg)`          | one-shot                    | `time:delay`, `merge` (every delay fires)                     |
-| `debounce(ms, msg, key?)` | one-shot                    | `time:debounce`, `switch` (each call cancels the pending one) |
-| `periodic(ms, toMsg)`     | stream of 1, 2, 3…          | `time:periodic`, `switch`                                     |
-| `animationFrames(toMsg)`  | stream of `{ time, delta }` | `time:frames`, `switch`                                       |
+| Command                   | Kind                              | Default lane / policy                                         |
+| ------------------------- | --------------------------------- | ------------------------------------------------------------- |
+| `delay(ms, msg)`          | one-shot                          | `time:delay`, `merge` (every delay fires)                     |
+| `debounce(ms, msg, key?)` | one-shot                          | `time:debounce`, `switch` (each call cancels the pending one) |
+| `every(ms, toMsg, key?)`  | `Date.now()` now, then every `ms` | `time:every`, `switch`                                        |
+| `animationFrames(toMsg)`  | stream of `{ time, delta }`       | `time:frames`, `switch`                                       |
 
 Debounce is a delay under `switch`, not a separate mechanism. Nothing starts at import, and
 `animationFrames` falls back to a 16 ms timer where `requestAnimationFrame` is missing. Tests
 use `virtualTime()` from `@gyral/testing`, which fakes `setTimeout`/`setInterval`/rAF.
+
+**Delay-only apps (gyral-c5d.15, 0.3.1):** the driver is one `switch` over its inputs, so
+`delay` alone bundles `every` and `animationFrames` too. `@gyral/time/delay` exports `delay`
+and `debounce` with the same signatures and lanes over a delay-only driver (`delayTime`;
+the `makeTime`/`makeDelayTime` factories are internal since 0.3.1), also named `time` and taking the same input, so substitution, `inputsFor`
+and virtual time work unchanged and either driver can stand in for the other. About 0.15 KiB
+gzip less (the delay-only examples, measured). The main entry is unchanged.
 
 ## Randomness as an effect (gyral-czi.10, 2026-10-04)
 
@@ -189,6 +256,25 @@ throws if any problem was recorded (Lit's dev-mode banner excepted). `mountSsr(h
 false })` withholds the seed, to prove a test depends on it. Import component modules after
 mounting so they hydrate in place.
 
+**Server markup on demand (gyral-dyn.8, 0.3.1).** A browser test can't produce server markup:
+in the browser `define()` registers elements instead of recording server specs, and client
+builds drop the server segments of compiled templates. Golden fixtures are heavy for
+component-level hydration tests, which then tend to become end-to-end tests. `@gyral/testing/vitest` exports `renderOnServer`, a
+Vitest browser command (`test.browser.commands`, run in Vitest's Node process): given a module
+(relative to the test file), an export and JSON props, it loads the module with the project's
+Vite server in its `ssr` environment (module runner; same plugins and preset, development
+condition) and renders it with the `@gyral/core/server` that the module's own `@gyral/core`
+resolves to, so its components are registered with that renderer. The export may be a
+`define()` class (its element, with props bound as properties), a function of the props
+returning a template result, an HTML string or a `Response` (a full page), or a template result.
+The browser test then runs `mountSsr(html)`, imports the module and awaits `hydrated(page)`.
+`vitest` is an optional peer, used only by this entry, which is config-side: test files reach
+the command through `commands` from `vitest/browser` (typed by the entry's module augmentation).
+Modules stay loaded between calls, like a dev server. The testing package's
+`render-on-server-hydration.test.ts` hydrates its output in the development and production
+builds of core. Golden fixtures stay for markup from a whole server stack (routing, data
+loading, a built server), for markup reviewed in diffs, and for other runners.
+
 ## Property tests from schemas (gyral-czi.11, 2026-10-04)
 
 `@gyral/testing/arbitraries` (optional; needs `fast-check` 4) turns a Standard Schema into a
@@ -214,7 +300,7 @@ A command's driver is now resolved in this order:
 
 A provider is a `<gyral-drivers>` element with a `.drivers` property, or any element registered
 with `provideDrivers(element, drivers)` (which returns a function that removes the overrides).
-`@gyral/testing` wraps it as `withDrivers(root, drivers)`, so one call covers every component
+Tests call it directly, so one call covers every component
 in a test container or a `mountSsr(...).root`. Resolution happens each time a command runs, so
 providers can change during a test. Commands never run on the server, so providers are not
 consulted there.
@@ -229,7 +315,7 @@ schemas, `errorSchema`, status errors and JSON parsing behave exactly as in prod
 ```ts
 import { fakeHttp } from '@gyral/http/testing';
 const http = fakeHttp(); // or fakeHttp({ respond: (req) => ({ body }) }) to answer at once
-el.drivers = { http }; // or withDrivers(root, { http })
+el.drivers = { http }; // or provideDrivers(root, { http })
 http.requests; // HttpRequest inputs
 http.respondNext({ body: { count: '42' } }); // decoded through the request's schema
 http.respondNext({ status: 422, body: { … } }); // HttpStatusError, detail via errorSchema
@@ -252,3 +338,66 @@ From gyral-shop's admin tests:
   Vitest fails the run, or passed to `onResponderError(error, request)` when given. All such
   errors are also kept in `http.responderErrors`. Simulate a real network failure with
   `failNext()` instead.
+
+## Addendum: retries are a driver wrapper (ADR 0022, 0.3.1)
+
+`Driver.retry` and `SubscriptionOptions.retry` are gone, and the interpreter runs a driver once.
+`retry(driver, policy)` returns the same driver (same name, so substitution by name still
+works) with a rejected `run` retried after the policy's delay; an abort ends it at once and is
+never retried. `RetryPolicy` keeps its shape. Apps that never call `retry` don't bundle it.
+The `retry` field in the `Driver` interface and the subscription options above describe 0.3.0.
+On the http driver, a CSRF token from a `<meta>` is configured only through the driver's
+`headers` (`csrfFromMeta`); `HttpRequest.csrf` is gone.
+
+## Addendum: failures go through one channel (ADR 0024, 0.3.1)
+
+A driver failure with no `onFailure` is reported as an error (G0041), not a warning, and a
+throwing `onSuccess`/`onFailure` mapper is reported (G0040) and sends nothing; both send
+`Errored` to the component (phase `command`). A reducer that throws for a command's result is an
+update failure (G0073): the state is unchanged and the reducer's commands don't run. Store
+commands report the same way, without a component. See ADR 0024 for the channel itself
+(`GyralError`, the boundary event, `reportError`).
+
+## Addendum: one override rule, driver tokens, commands without handlers (0.3.1)
+
+**One override rule.** The spec's `drivers` field is gone. A command's driver resolves by name
+from the element's own `el.drivers`, then the nearest provider (`provideDrivers`,
+`<gyral-drivers>`), then the command's own driver. Three override sources were one too many:
+the audits found the spec field repeated on eleven components of one app, where a single
+`provideDrivers` at the entry was meant. Apps configure drivers once at the entry
+(`provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) })`). Stores keep
+`StoreSpec.drivers` and `instance.drivers`: they live outside the element tree, so providers
+can't reach them.
+
+**Driver tokens.** `defineDriver<I, O, E>('session')`, or `defineDriver({ name, toError })`
+without `run`, returns a typed token: commands built from it are typed by `I`, `O` and `E`,
+and it runs only when `el.drivers` or a provider supplies a driver of that name. Nothing
+providing it is a programming error, reported through the error channel as G0043 (phase
+`command`) naming the driver and the component; it never reaches `onFailure`. This replaces
+the placeholder drivers apps wrote (a `run` that throws "not configured"), whose meaning
+depended on which module happened to load first, and the `as AnyDriver` casts around them.
+
+| Framework            | Service lookup                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| React, Preact, Solid | `createContext<T>(default)`: a typed token, provided by an ancestor, read with `useContext` |
+| Vue                  | `provide(key, value)` / `inject(key)` with a typed `InjectionKey<T>`                        |
+| Lit                  | `@lit/context`: `createContext<T>(key)`, provider and consumer controllers                  |
+| Angular              | `InjectionToken<T>` resolved through the injector hierarchy                                 |
+| Gyral                | `defineDriver<I, O, E>(name)`: a typed token, provided by an ancestor or `el.drivers`       |
+
+Gyral's lookup is by name rather than object identity, so a fake in a test (`fakeDriver`,
+`mountSsr`, `mount`) needs no import of the token; commands stay plain data.
+
+**Commands without handlers.** Every field of `CommandHandlers` is optional. `command(log,
+line)` is a `Command<never>`: it answers with nothing, and a failure is reported (G0041). The
+message type parameters are `const`, so `onSuccess: (n) => ({ _tag: 'Loaded', n })` infers the
+literal tag and no type arguments are needed:
+
+```ts
+// 0.3.0
+command<string, void, unknown, Msg>(log, line, { onSuccess: () => undefined });
+command<string, number, Error, Msg>(fetchCount, q, { onSuccess: (n) => ({ _tag: 'Loaded', n }) });
+// 0.3.1
+command(log, line);
+command(fetchCount, q, { onSuccess: (n) => ({ _tag: 'Loaded', n }) });
+```

@@ -1,5 +1,22 @@
 # @gyral/http
 
+## 0.3.1
+
+### Patch Changes
+
+- Add optional `@gyral/http/sse`: native EventSource feeds with JSON/custom parsing,
+  Standard Schema decoding, named events, ordered async results and cancellation. Native
+  EventSource owns reconnect timing and Last-Event-ID; decode failures keep the feed alive.
+- Add optional `@gyral/http/websocket`: explicitly owned connections, typed receive/send
+  codecs, bounded outgoing buffering, close metadata and cancellation. Reconnection is
+  opt-in through `retry`; sends are never queued offline or replayed automatically.
+- Configure CSRF headers once with `makeHttpDriver({ headers: csrfFromMeta(...) })`.
+  `redirectedTo` and `FormRedirected` are exported here for form responses.
+- Align driver overrides and retry policy with core. The fetch entry carries neither optional
+  native transport, and the network drivers add no runtime dependencies.
+- Update the `@gyral/core` dependency to 0.3.1. Consult the
+  [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md) for removed helper APIs.
+
 ## 0.3.0
 
 ### Minor Changes

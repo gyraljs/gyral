@@ -1,9 +1,10 @@
+import { loadInvokerShim } from '#invoker-fallback';
 import { commandOf, invokersSupported } from './invokers.js';
-import { hold } from './scheduler.js';
-import type { IntentInput, IntentNames, IntentParser, Tagged } from './types.js';
-import type { Markup } from './view/index.js';
+import { isLightComponent } from './light-dom.js';
+import type { IntentInput, IntentNames, IntentParser, ParserCtx, Tagged } from './types.js';
+import { message, type Markup } from './view/index.js';
 
-/** Event a child component dispatches on its host to send an output up (ADR 0010). */
+/** Event a child component dispatches on its host to send an output up (ADR 0010); public. */
 export const OUTPUT_EVENT = 'gyral-output';
 
 /** Default triggers (`defaultTrigger`): every component root listens for these. */
@@ -17,9 +18,11 @@ export const DEFAULT_EVENTS: readonly string[] = [
 
 /**
  * The events `data-intent-on` usually names. A component root listens (capture phase, so
- * non-bubbling events such as `toggle` are seen too) for the defaults, for `spec.events`, and
- * for the `data-intent-on` values in the templates it renders; a template that binds
- * `data-intent-on` dynamically adds all of these (view/05-element.md "Intent events").
+ * non-bubbling events such as `toggle` are seen too) for the defaults and for the events its
+ * templates name in `data-intent-<event>` attributes and static `data-intent-on` values; a
+ * template that binds `data-intent-on` dynamically adds all of these. Any other event with a
+ * bound intent takes a per-event attribute, `data-intent-pointerdown=${i.Press}`, whose name the
+ * template carries (view/05-element.md "Intent events").
  */
 export const INTENT_EVENTS: readonly string[] = [
   ...DEFAULT_EVENTS,
@@ -31,17 +34,34 @@ export const INTENT_EVENTS: readonly string[] = [
   'command',
 ];
 
-/** A static `data-intent-on` value, quoted or not (event names have no spaces or quotes). */
-const INTENT_ON = /\sdata-intent-on=["']?([^"'\s>]+)/gi;
+/**
+ * A static `data-intent-<event>` attribute: a per-event intent (the event is in the name), or
+ * `data-intent-on` (its value is the event, or a quoted list of them separated by spaces).
+ */
+const INTENT_ATTR = /\sdata-intent-([\w-]+)=(["']?)(.*?)\2(?=[\s/>])/gi;
+// Names separated by any whitespace; none empty, so no listener for "".
+const eventList = (value: string): string[] => value.match(/\S+/g) ?? [];
 const eventsByTemplate = new WeakMap<Markup, readonly string[]>();
 
-/** The intent events a template's (or `raw()` markup's) `data-intent-on` attributes name. */
+/**
+ * The intent events a template's (or `raw()` markup's) `data-intent-<event>` and
+ * `data-intent-on` attributes name. A bound attribute's name is in its part; a bound
+ * `data-intent-on` adds every intent event.
+ */
 export function eventsOf(markup: Markup): readonly string[] {
   let events = eventsByTemplate.get(markup);
   if (events === undefined) {
-    events = markup.parts?.some((p) => p[2] === 'data-intent-on') // a bound attribute's name
-      ? INTENT_EVENTS
-      : Array.from(markup.html.matchAll(INTENT_ON), (m) => m[1] ?? '');
+    // Bound attributes are in the parts, by name: listed as ` name=* ` and matched like markup
+    // (other parts' names are never intent attributes; `*` marks a bound data-intent-on).
+    const bound = markup.parts?.map((p) => ` ${p[2] as string}=* `).join('') ?? '';
+    events = Array.from((markup.html + bound).matchAll(INTENT_ATTR)).flatMap(
+      ([, event, , value]) =>
+        event !== 'on'
+          ? (event as string)
+          : value === '*'
+            ? INTENT_EVENTS
+            : eventList(value as string),
+    );
     eventsByTemplate.set(markup, events);
   }
   return events;
@@ -50,35 +70,29 @@ export function eventsOf(markup: Markup): readonly string[] {
 const isToggle = (el: Element): el is HTMLInputElement =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
 
-// ToggleEvent (popover, <details>) is not Baseline widely available; read it structurally.
-function toggleState(event: Event): 'open' | 'closed' | undefined {
-  if (event.type !== 'toggle' || !('newState' in event)) return undefined;
-  return event.newState === 'open' ? 'open' : 'closed';
-}
-
 const CLICK_INPUT_TYPES = /^(button|submit|reset|image)$/;
 
-/** The event that fires an intent unless `data-intent-on` overrides it. */
+/**
+ * The event that fires an intent unless `data-intent-on` overrides it. Custom elements
+ * (autonomous: the name has a dash) talk to their parent via outputs.
+ */
 export function defaultTrigger(el: Element): string {
-  switch (el.localName) {
-    case 'form':
-      return 'submit';
-    case 'select':
-      return 'change';
-    case 'textarea':
-      return 'input';
-    case 'input': {
-      const type = (el as HTMLInputElement).type;
-      if (CLICK_INPUT_TYPES.test(type)) return 'click';
-      return type === 'checkbox' || type === 'radio' ? 'change' : 'input';
-    }
-  }
-  // Custom elements (autonomous: the name has a dash) talk to their parent via outputs.
-  return el.localName.includes('-') ? OUTPUT_EVENT : 'click';
+  const name = el.localName;
+  return name === 'form'
+    ? 'submit'
+    : name === 'select' || isToggle(el)
+      ? 'change'
+      : name === 'textarea' ||
+          (name === 'input' && !CLICK_INPUT_TYPES.test((el as HTMLInputElement).type))
+        ? 'input'
+        : name.includes('-')
+          ? OUTPUT_EVENT
+          : 'click';
 }
 
-function triggerOf(el: Element): string {
-  return el.getAttribute('data-intent-on') ?? defaultTrigger(el);
+/** The events that fire `el`'s intent: its `data-intent-on` list, or its default trigger. */
+function triggersOf(el: Element): string[] {
+  return eventList(el.getAttribute('data-intent-on') ?? defaultTrigger(el));
 }
 
 /** Every class `define()` creates, so intent lookup can tell where a component begins. */
@@ -106,37 +120,20 @@ export function hostDepth(el: Element): number {
 /**
  * Does `node` belong to the component whose intent root is `root`? `root` is the component's
  * shadow root, or the host itself for light-DOM components (ADR 0014). The node must be in the
- * same tree (not inside a nested shadow root) with no other Gyral host between them: a nested
- * component, light-DOM or shadow, owns its own content. The nested host element itself (with
- * the parent's `data-intent` on it) still belongs to the parent.
+ * same tree (not inside a nested shadow root) with no light-DOM Gyral host between them: a
+ * light-DOM component owns its children (it rendered them). Children of a shadow-DOM host are
+ * the outer template's content, slotted into it, so they stay the outer component's (a form or
+ * a child component slotted into a card). The nested host element itself (with the parent's
+ * `data-intent` on it) still belongs to the parent.
  */
 function ownedBy(node: Element, root: Node): boolean {
   const tree = root instanceof ShadowRoot ? root : root.getRootNode();
   if (node.getRootNode() !== tree) return false;
   for (let p = node.parentNode; p !== null; p = p.parentNode) {
     if (p === root) return true;
-    if (isGyralHost(p)) return false;
+    if (isGyralHost(p) && isLightComponent(p.constructor)) return false;
   }
   return false;
-}
-
-/**
- * Finds the nearest `data-intent` element for this event that belongs to `root`. Elements
- * inside nested components are ignored: that is component isolation.
- */
-export function findIntentElement(event: Event, root: Node): Element | undefined {
-  for (const node of event.composedPath()) {
-    if (node === root) return undefined;
-    if (
-      node instanceof Element &&
-      node.hasAttribute('data-intent') &&
-      triggerOf(node) === event.type &&
-      ownedBy(node, root)
-    ) {
-      return node;
-    }
-  }
-  return undefined;
 }
 
 function valueOf(el: Element): string | undefined {
@@ -151,28 +148,47 @@ function valueOf(el: Element): string | undefined {
   return undefined;
 }
 
-/** Reads an event into an IntentInput. Form submissions are prevented and turned into FormData. */
-export function readIntent(event: Event, root: Node): IntentInput | undefined {
-  const target = findIntentElement(event, root);
-  const name = target?.getAttribute('data-intent');
-  if (target === undefined || name == null) return undefined;
-  let formData: FormData | undefined;
-  if (target instanceof HTMLFormElement && event instanceof SubmitEvent) {
-    event.preventDefault();
-    formData = new FormData(target, event.submitter);
+/**
+ * Reads an event into an IntentInput for the nearest element on its path that names an intent
+ * for it and belongs to `root`: its `data-intent-<type>`, else its `data-intent` when the
+ * event is one of its triggers. With `after`, the search starts past that element (the intent
+ * whose parser declined). Elements inside nested components are ignored: that is component
+ * isolation. Form submissions are prevented and turned into FormData.
+ */
+export function readIntent(event: Event, root: Node, after?: Element): IntentInput | undefined {
+  const path = event.composedPath();
+  // indexOf(undefined) is -1: without `after`, the whole path.
+  for (const target of path.slice(path.indexOf(after as Element) + 1)) {
+    if (target === root) return undefined;
+    if (!(target instanceof Element)) continue;
+    // An output is the dispatching child's own: only the element it was dispatched on (the
+    // child host, where the direct parent's `data-intent` sits) takes it, never an ancestor.
+    if (event.type === OUTPUT_EVENT && target !== path[0]) continue;
+    const name =
+      target.getAttribute('data-intent-' + event.type) ??
+      (triggersOf(target).includes(event.type) ? target.getAttribute('data-intent') : null);
+    if (name === null || !ownedBy(target, root)) continue;
+    let formData: FormData | undefined;
+    if (target instanceof HTMLFormElement && event instanceof SubmitEvent) {
+      event.preventDefault();
+      formData = new FormData(target, event.submitter);
+    }
+    return {
+      name,
+      event,
+      target,
+      value: valueOf(target),
+      checked: isToggle(target) ? target.checked : undefined,
+      formData,
+      detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
+      // Read structurally too: only keyboard events carry `key` to elements.
+      key: (event as { readonly key?: string }).key,
+      // ToggleEvent (popover, <details>) is not Baseline widely available: read it structurally.
+      newState: (event as { readonly newState?: 'open' | 'closed' }).newState,
+      command: commandOf(event),
+    };
   }
-  return {
-    name,
-    event,
-    target,
-    value: valueOf(target),
-    checked: isToggle(target) ? target.checked : undefined,
-    formData,
-    detail: event instanceof CustomEvent ? (event.detail as unknown) : undefined,
-    key: event instanceof KeyboardEvent ? event.key : undefined,
-    newState: toggleState(event),
-    command: commandOf(event),
-  };
+  return undefined;
 }
 
 // Any property read returns its own name, so `intents.Increment === 'Increment'`.
@@ -185,13 +201,17 @@ export const intentNames: unknown = new Proxy(
 /**
  * A component's intent names as a module-level constant, so pure list rows can name intents
  * without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
- * the view gets as `i`:
+ * the view gets as `i`, typed by the component's class (ADR 0023). A row that names intents
+ * this way needs an explicit return type, or the row, the view and the class infer each other
+ * in a circle:
  *
- *   const i = intents<Msg>();
- *   const Row = (t: Todo) => html`<input value=${t.id} data-intent=${i.Toggle} />`;
+ *   const i = intentsOf<typeof TodoList>();
+ *   const Row = (t: Todo): TemplateResult => html`<input value=${t.id} data-intent=${i.Toggle} />`;
  */
-export function intents<M extends Tagged>(): IntentNames<M> {
-  return intentNames as IntentNames<M>;
+export function intentsOf<C extends { readonly intentNames?: string }>(): IntentNames<
+  NonNullable<C['intentNames']>
+> {
+  return intentNames as IntentNames<NonNullable<C['intentNames']>>;
 }
 
 /**
@@ -209,37 +229,56 @@ export function listenForIntents(
     if (listening.has(type)) continue;
     listening.add(type);
     root.addEventListener(type, handler, { capture: true });
-    if (type === 'command' && !invokersSupported()) {
-      hold(
-        import('./invokers-shim.js').then((shim) => {
-          shim.shimInvokers(root);
-        }, reportError),
-      );
-    }
+    if (type === 'command' && !invokersSupported()) loadInvokerShim(root);
   }
 }
 
-/** Parses one event with its matching parser and delivers the message (sync or async). */
+/**
+ * Parses one event with its matching parser and delivers the message (sync or async). A
+ * parser that returns `undefined` synchronously declines: the next intent outward for the same
+ * event gets it, up to the component root. A promise can't decline. The model's `ctx()` is
+ * built only when a parser runs, so its props are those at event time.
+ */
 export function handleIntent<M>(
   event: Event,
   root: Node,
-  parsers: Readonly<Record<string, IntentParser<M> | undefined>>,
+  parsers: Readonly<Record<string, IntentParser<M> | true | undefined>>,
   tag: string,
+  model: {
+    ctx(): ParserCtx<unknown>;
+    fail(cause: unknown, phase: 'parse', text: string, msg?: string): unknown;
+  },
   deliver: (msg: Tagged | undefined) => void,
 ): void {
-  const input = readIntent(event, root);
-  if (input === undefined) return;
-  const parser = parsers[input.name];
-  if (parser === undefined) {
-    console.warn(`<${tag}> has no intent parser for data-intent="${input.name}".`);
-    return;
-  }
-  const result = parser(input) as Tagged | undefined | Promise<Tagged | undefined>;
-  if (result instanceof Promise) {
-    result.then(deliver, (error: unknown) => {
-      console.error(`<${tag}> intent parser for "${input.name}" failed`, error);
-    });
-  } else {
-    deliver(result);
+  for (let input: IntentInput | undefined; (input = readIntent(event, root, input?.target));) {
+    const { name } = input;
+    const parser = parsers[name];
+    if (parser === undefined) {
+      console.warn(message(11, tag, name));
+      return;
+    }
+    // A parser that throws or rejects is reported (ADR 0024) and sends nothing.
+    const failed = (cause: unknown): void => {
+      model.fail(cause, 'parse', message(12, tag, name), name);
+    };
+    let result: Tagged | undefined | Promise<Tagged | undefined>;
+    try {
+      // `true`: the intent sends its own tag (types allow it only for field-less variants).
+      result =
+        parser === true
+          ? { _tag: name }
+          : (parser(input, model.ctx()) as Tagged | undefined | Promise<Tagged | undefined>);
+    } catch (cause) {
+      failed(cause);
+      return;
+    }
+    // The direct parent took a child's output: it goes no further (no outer component or page
+    // listener sees it, ADR 0010 addendum). A declining parser lets it go on.
+    if (event.type === OUTPUT_EVENT && result !== undefined) event.stopPropagation();
+    if (result instanceof Promise) return void result.then(deliver, failed);
+    if (result !== undefined) {
+      deliver(result);
+      return;
+    }
   }
 }

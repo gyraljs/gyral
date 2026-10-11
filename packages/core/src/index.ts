@@ -7,20 +7,25 @@ export type {
   Driver,
   DriverContext,
   DriverOverrides,
+  DriverToken,
   Next,
   RetryPolicy,
 } from './command.js';
-export { child, emit } from './children.js';
+export { retry } from './retry.js';
+export { subscription } from './subscription.js';
+export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
+export { child, outputs } from './children.js';
 export { focus } from './focus.js';
+export { call, type CallInput } from './call.js';
 export type { FocusOptions } from './focus.js';
-export { invokersSupported } from './invokers.js';
 export type { CommandInfo } from './invokers.js';
-export { ISLAND_ATTRIBUTE } from './islands.js';
 export type { HydrateStrategy } from './islands.js';
-export type { ChildSource, OutputSource } from './children.js';
+export type { ChildSource, OutputEvent, OutputSource, OutputsOf } from './children.js';
 export { define } from './define.js';
-export { intents } from './intent.js';
+export { intentsOf, OUTPUT_EVENT } from './intent.js';
 export { settled } from './settled.js';
+export { componentsReady } from './components-ready.js';
+export { GyralError, type ErrorPhase } from './errors.js';
 export { changed, defineStore, send } from './store.js';
 export type {
   AnyStore,
@@ -30,58 +35,33 @@ export type {
   StoreInstance,
   StoreOverrides,
   StoreRef,
-  StoreSendInput,
   SeedCheck,
   StoreResolver,
   StoreSpec,
   StoreUpdate,
 } from './store.js';
-export { STORE_SEND } from './store.js';
-// Store scoping: used by @gyral/ssr (server scope + page seed) and @gyral/testing.
-export {
-  resetDocumentStores,
-  scriptSafeJson,
-  STORE_SEED_ATTRIBUTE,
-  StoreRegistry,
-  STORES_ELEMENT,
-  withStoreScope,
-} from './store-scope.js';
-export { DRIVERS_ELEMENT, provideDrivers } from './drivers-scope.js';
-export { jsonHazard, warnJsonHazard } from './json-safety.js';
-export { random, randomDriver, randomInt, toInt, type RandomInput } from './random.js';
-export {
-  defineForm,
-  field,
-  fieldErrors,
-  form,
-  formDataToObject,
-  formFields,
-  intentRejectedSchema,
-  redirectedTo,
-  validateForm,
-} from './forms.js';
-export type { FormDefinition, FormRedirected, FormResult, FormValue } from './forms.js';
-export { runInit } from './init.js';
-export { invalid } from './hooks/invalid.js';
-export { findInScope, labelledBy } from './hooks/labelled-by.js';
-export { prop } from './prop.js';
-export type { Prop, PropKind, PropsOf } from './prop.js';
-// Devtools event stream (ADR 0017): emitted in development builds only.
-export {
-  DEVTOOLS_ENABLED as devtoolsEnabled,
-  devLiveComponents as devtoolsLiveComponents,
-} from '#devtools';
-export { DEVTOOLS_GLOBAL } from './devtools-events.js';
+export { provideDrivers } from './drivers-scope.js';
+export { defineForm, field, fieldErrors, form } from './forms.js';
 export type {
-  CommandPhase,
-  CommandTraceEvent,
-  DevComponentRef,
-  DevEvent,
-  DevtoolsHook,
-} from './devtools-events.js';
-// Used by the server renderer and @gyral/ssr (ADR 0014, view/06-server.md).
-export { isLightComponent, LIGHT_ATTRIBUTE } from './light-dom.js';
-export type { GyralElement, GyralElementClass } from './define.js';
+  FieldName,
+  FormDefinition,
+  FormOptions,
+  FormResult,
+  FormValue,
+  FormValues,
+} from './forms.js';
+export { invalid } from './hooks/invalid.js';
+export type {
+  FormAssociation,
+  FormControlValue,
+  FormControlValidity,
+  FormDisabled,
+  FormReset,
+  FormStateRestore,
+} from './form-associated.js';
+export { prop } from './prop.js';
+export type { Prop, PropGuard, PropKind, PropsOf } from './prop.js';
+export type { Definer, GyralElement, GyralElementClass } from './define.js';
 export type {
   ComponentSpec,
   Ctx,
@@ -92,9 +72,13 @@ export type {
   IntentParser,
   IntentRejected,
   Intents,
+  ParserCtx,
+  ParserFor,
   PropDeclarations,
+  Errored,
   Hydrated,
   PropsChanged,
+  ShadowOption,
   Stateless,
   StoreReader,
   Tagged,
@@ -102,7 +86,7 @@ export type {
 } from './types.js';
 
 // The view layer (ADR 0018, docs/design-docs/view/): templates, lists, hooks and styles.
-export { css, defineHook, each, html, HydrationMismatch, nothing, raw } from './view/index.js';
+export { css, defineHook, each, html, keyed, nothing, raw, svg } from './view/index.js';
 export type {
   ChildValue,
   CssValue,
@@ -115,3 +99,6 @@ export type {
   Styles,
   TemplateResult,
 } from './view/index.js';
+
+// The head model (ADR 0019): shared by @gyral/ssr's renderPage() and @gyral/router's setHead().
+export type { Head, HeadLink, HeadMeta, JsonValue } from './head.js';

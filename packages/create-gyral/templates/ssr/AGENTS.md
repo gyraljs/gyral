@@ -19,7 +19,9 @@ This file tells coding agents how the project works.
 - `src/home-page.ts`: the page, a light-DOM component (`shadow: false`) styled by
   `src/styles.css`.
 - `src/counter.ts`: a widget in shadow DOM (`styles` inside).
-- `src/entry-client.ts`: browser entry: imports the components (hydration is built in).
+- No browser entry: `gyralVitePreset({ components: true })` gives every component under `src/`
+  its own client module, and `renderPage({ components })` loads exactly the ones a page
+  rendered (hydration is built in). Keep components under `src/`.
 - `server/app.ts`: renders each page with `renderPage`. Add a route there, and its path to
   `staticPaths` to prerender it. `server/app.test.ts` tests the rendered HTML. Pages send a
   `Content-Security-Policy` whose `style-src` lists style hashes (`renderPage({ csp })`):
@@ -27,7 +29,7 @@ This file tells coding agents how the project works.
 
 ## Gyral rules (follow them in every change)
 
-1. Each component: `define<State, Msg>('app-name', { init, intent, update, view })`.
+1. Each component: `define<State, Msg>()('app-name', { init, intent, update, view })`.
    Messages are tagged unions (`{ readonly _tag: 'Name' }`); `update` handles every tag.
 2. Views are pure and name intents: `data-intent=${i.Save}`. Never `@click=${…}` or any
    closure. Override the trigger event with `data-intent-on="keydown"`.

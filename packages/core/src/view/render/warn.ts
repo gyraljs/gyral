@@ -46,6 +46,26 @@ export function warnValue(part: object, value: unknown, where: string): void {
   );
 }
 
+/**
+ * A property binding got a function, once per part (02 "Properties"): views attach no
+ * closures. Built-in elements and Gyral components warn; other custom elements may take a
+ * callback (a third-party widget's API), so they don't.
+ */
+export function warnFunctionProp(part: object, el: Element, name: string): void {
+  const gyral = (el.constructor as { readonly spec?: unknown }).spec !== undefined;
+  if (warned.has(part) || (el.localName.includes('-') && !gyral)) return;
+  warned.add(part);
+  console.warn(
+    `gyral: .${name}=\${…} on <${el.localName}> got a function. Views attach no closures: ` +
+      (gyral
+        ? 'props are data (they travel in hydration seeds); pass data and let the component ' +
+          'decide what to do with it, and hear back from it through its outputs'
+        : 'name an intent with data-intent=${i.Name} for events, and put behaviour on an ' +
+          'element in a hook (defineHook)') +
+      ` (${SPEC}/02-bindings.md "Properties").`,
+  );
+}
+
 let rawWarned = false;
 
 /** `raw()` parsed in the browser, once per page. */
@@ -81,10 +101,43 @@ export function warnImpureRow(row: (...args: never[]) => unknown): void {
 }
 
 /** A hook hole got something other than a hook result. */
+/** `?modal`/`?popover-open` with the bindings' code left out of the build (toggles.ts). */
+export function warnToggle(el: Element, name: string): void {
+  if (warned.has(el)) return;
+  warned.add(el);
+  console.warn(
+    `gyral: ?${name} on <${el.localName}> does nothing: the build left its code out ` +
+      `(${SPEC}/05-element.md "Features register themselves").`,
+  );
+}
+
 export function badHook(value: unknown): never {
   throw new TypeError(
     `gyral: an element hook position (\${…} inside a start tag) got ${describe(value)}. Only ` +
       `hooks made with defineHook() go there, e.g. <input \${invalid(errors)}> ` +
       `(${SPEC}/02-bindings.md "Element hooks").`,
+  );
+}
+
+/**
+ * An svg template renders only in SVG content: an SVG element other than <foreignObject>,
+ * <desc> or <title>, whose content is HTML (01 "svg templates"). A detached fragment (an
+ * instance being built) isn't checked: its place is known only when it is inserted.
+ */
+export function checkSvgParent(parent: Node): void {
+  if (parent.nodeType === 11 && !('host' in parent)) return;
+  const el = parent as Element;
+  if (
+    el.namespaceURI === 'http://www.w3.org/2000/svg' &&
+    !/^(foreignObject|desc|title)$/.test(el.localName)
+  ) {
+    return;
+  }
+  const where = el.nodeType === 1 ? `<${el.localName}>` : 'a shadow root';
+  throw new Error(
+    `gyral: an svg template is rendered into ${where}, which isn't SVG content. svg\`…\` ` +
+      'fragments are SVG elements: render them inside an <svg> (or another SVG element, not ' +
+      '<foreignObject>) of an html template, html`<svg viewBox="…">${svg`…`}</svg>`, or write ' +
+      `the whole graphic with html (${SPEC}/01-templates.md "svg templates").`,
   );
 }

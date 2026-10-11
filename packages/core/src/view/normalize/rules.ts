@@ -41,6 +41,14 @@ export const msg = {
     `.${name}=${H} on <${tag}> binds form state as a property, which never reaches the ` +
     `server and has a second spelling. Write ${write} instead: Gyral keeps it live ` +
     `(view/02-bindings.md, "Live form state").`,
+  toggle: (tag: string, name: string): string =>
+    name === 'modal'
+      ? `modal on <${tag}>: only a <dialog> opens as a modal, and only from ?modal=${H}, which ` +
+        `calls showModal() and close() as the value changes (view/02-bindings.md, "Dialogs and ` +
+        `popovers"). Write <dialog ?modal=${H}>.`
+      : `popover-open on <${tag}>: write ?popover-open=${H} on an element with a popover ` +
+        `attribute; it calls showPopover() and hidePopover() as the value changes ` +
+        `(view/02-bindings.md, "Dialogs and popovers").`,
   // 5
   unquoted: (name: string): string =>
     `${name}=… mixes static text and holes without quotes, which is ambiguous. Quote the ` +
@@ -64,14 +72,32 @@ export const msg = {
       : `The template ends inside a tag, so the parser would drop it. Close the tag with ">".`,
   // 10
   svgOnly: (tag: string): string =>
-    `<${tag}> is an SVG element outside an <svg>: there is no svg tag, and the HTML parser ` +
-    `creates SVG elements only inside <svg>. Wrap it: <svg viewBox="…"><${tag} …></${tag}></svg>.`,
+    `<${tag}> is an SVG element outside an <svg>: in an html template the parser creates SVG ` +
+    `elements only inside <svg>. For an SVG fragment of its own, write it with the svg tag ` +
+    `(import { svg } from '@gyral/core'): svg\`<${tag} …></${tag}>\`, rendered inside an <svg>. ` +
+    `Or wrap it: <svg viewBox="…"><${tag} …></${tag}></svg>.`,
+  htmlInSvg: (tag: string, top: boolean): string =>
+    (top
+      ? `<${tag}> is HTML, but this is an svg template: its top level is SVG content (it renders ` +
+        `inside an <svg>), where the parser `
+      : `<${tag}> is an HTML element inside SVG content, where the parser `) +
+    `would not create an HTML <${tag}>. Write HTML with html\`…\`, or put it inside ` +
+    `<foreignObject>.`,
+  namespacedAttr: (name: string): string =>
+    `${name}=${H} binds a namespaced attribute: the parser puts ${name} in its own namespace, ` +
+    `and a bound value can't be. Bind the plain attribute instead (SVG 2): href=${H} for ` +
+    `xlink:href, lang=${H} for xml:lang; write xmlns statically, if at all.`,
   // 11
   serverOnly: (): string => SERVER_ONLY,
   // 12
   textContent: (tag: string): string =>
     `A hole in <${tag}> must be its whole content. Write <${tag}>${H}</${tag}> and build the ` +
     `text in the value: <${tag}>\${\`\${page} | Site\`}</${tag}>.`,
+  // 14
+  booleanAttr: (tag: string, name: string): string =>
+    `${name}=${H} on <${tag}> sets a boolean attribute to a string: any value, even "false", ` +
+    `turns it on. Write ?${name}=${H} to add the attribute when the value is truthy and ` +
+    `remove it otherwise.`,
   // 13
   charRef: (ref: string): string =>
     `&${ref}; in the static text of a bound or custom-element attribute is a named character ` +
@@ -89,7 +115,7 @@ const FORM_STATE: Record<string, Record<string, string> | undefined> = {
   select: { value: `?selected=${H} on the chosen <option>` },
   option: { selected: `?selected=${H}`, value: `value=${H}` },
   details: { open: `?open=${H}` },
-  dialog: { open: `?open=${H}` },
+  dialog: { open: `?open=${H}`, modal: `?modal=${H}` },
 };
 
 /**
@@ -99,6 +125,19 @@ const FORM_STATE: Record<string, Record<string, string> | undefined> = {
 export function formStateFix(tag: string, name: string): string | undefined {
   return FORM_STATE[tag]?.[name];
 }
+
+/**
+ * Rule 14: HTML boolean attributes (present means true). `hidden` is left out because
+ * hidden="until-found" is a real string value.
+ */
+export const BOOLEAN_ATTRS = new Set(
+  (
+    'allowfullscreen async autofocus autoplay checked controls default defer disabled ' +
+    'disablepictureinpicture disableremoteplayback formnovalidate inert ismap itemscope loop ' +
+    'multiple muted nomodule novalidate open playsinline readonly required reversed selected ' +
+    'shadowrootclonable shadowrootdelegatesfocus shadowrootserializable'
+  ).split(' '),
+);
 
 /** Rule 10: SVG element names that HTML doesn't share (lower case). */
 export const SVG_ONLY = new Set(

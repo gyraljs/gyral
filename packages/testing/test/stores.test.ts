@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { changed, define, defineStore, html, send, settled } from '@gyral/core';
-import { run, sentTo, step, stepStore, testStore } from '../src/index.js';
+import { inputsFor, run, step, stepStore } from '../src/index.js';
 
 interface Cart {
   readonly lines: readonly string[];
@@ -21,10 +21,9 @@ interface State {
   readonly seen: number;
 }
 
-const Buyer = define<State, Msg>('testing-buyer', {
+const Buyer = define<State, Msg>()('testing-buyer', {
   stores: [cart],
   init: () => ({ bought: 0, seen: 0 }),
-  intent: {},
   update: {
     Buy: (s, m, { read }) => [
       { ...s, bought: read(cart).lines.length + 1 },
@@ -50,8 +49,8 @@ describe('store testing helpers', () => {
     ]);
   });
 
-  it('step reads the given store instances and sentTo extracts writes', () => {
-    const instance = testStore(cart, { lines: ['x', 'y'] });
+  it('step reads the given store instances and inputsFor extracts writes', () => {
+    const instance = cart.instance({ lines: ['x', 'y'] });
     const { state, commands } = step(
       Buyer.spec,
       { bought: 0, seen: 0 },
@@ -60,7 +59,7 @@ describe('store testing helpers', () => {
       [instance],
     );
     expect(state.bought).toBe(3);
-    expect(sentTo(commands, cart)).toEqual([{ _tag: 'Add', sku: 'z' }]);
+    expect(inputsFor(commands, cart)).toEqual([{ _tag: 'Add', sku: 'z' }]);
   });
 
   it('step explains a missing store instance', () => {
@@ -80,13 +79,13 @@ describe('store testing helpers', () => {
           prev: { lines: [] },
         },
       ],
-      { stores: [testStore(cart)] },
+      { stores: [cart.instance()] },
     );
     expect(state.seen).toBe(2);
   });
 
-  it('testStore instances plug into elements through el.stores', async () => {
-    const instance = testStore(cart, { lines: ['a'] });
+  it('store instances plug into elements through el.stores', async () => {
+    const instance = cart.instance({ lines: ['a'] });
     const el = new Buyer();
     el.stores = { [cart.name]: instance };
     document.body.append(el);

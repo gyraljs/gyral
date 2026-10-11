@@ -87,6 +87,17 @@ export function fosterError(text: string, parent: string): never {
   );
 }
 
+/** An svg template written outside SVG content (`parent`: its parent's name, if known). */
+export function svgPlacementError(parent: string | undefined): never {
+  throw new Error(
+    `gyral: an svg template is written ${parent === undefined ? 'at the root of a view' : `inside <${parent}>`}, ` +
+      "which isn't SVG content, so the parser would not create SVG elements and the page " +
+      'would differ from what the client renders. Render svg`…` fragments inside an <svg> (or ' +
+      'another SVG element, not <foreignObject>) of an html template, or write the whole ' +
+      `graphic with html (${SPEC}/01-templates.md "svg templates").`,
+  );
+}
+
 /** A light-DOM component owns its children (ADR 0014). */
 export function lightChildrenError(tag: string): never {
   throw new Error(

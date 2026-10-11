@@ -5,7 +5,7 @@
 // Rules:
 // - Whitespace-only text that contains a newline is removed when it sits next to a template
 //   edge, a block-level tag (head-only tags count: <head>, <meta>, <link>, <base>, <title>),
-//   or the inside edge of a <button>/<select> (CSS never renders it there). Inside <head>,
+//   or the inside edge of a <button>/<select>/<svg> (never rendered there). Inside <head>,
 //   whitespace-only text is always removed, newline or not, between holes too: nothing there
 //   renders. Between two inline neighbours (phrasing elements, custom elements, holes,
 //   comments) it collapses to one space.
@@ -40,9 +40,10 @@ type Edge = 'template' | 'inline' | 'block';
 
 /**
  * Inline-block controls: they sit inline among their neighbours, but whitespace at the start or
- * end of their own content is never rendered (it is at the edge of their own line box).
+ * end of their own content is never rendered (it is at the edge of their own line box). Same
+ * for <svg>: SVG content renders no text outside its text elements.
  */
-const INLINE_BOX = new Set(['button', 'select']);
+const INLINE_BOX = new Set(['button', 'select', 'svg']);
 
 /**
  * The edge a tag makes for the text next to it. `inside` is true when the text is inside the

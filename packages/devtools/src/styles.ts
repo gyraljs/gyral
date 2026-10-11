@@ -16,6 +16,7 @@ export const panelStyles = `
     --gd-line: light-dark(oklch(85% 0.01 250), oklch(38% 0.015 250));
     --gd-accent: light-dark(oklch(48% 0.16 280), oklch(78% 0.13 280));
     --gd-accent-ink: light-dark(oklch(99% 0 0), oklch(18% 0.02 280));
+    --gd-error: light-dark(oklch(50% 0.19 25), oklch(75% 0.15 25));
     --gd-font: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 }
@@ -51,6 +52,7 @@ export const panelStyles = `
     font-variant-numeric: tabular-nums;
     padding-inline-start: 0.25rem;
   }
+  li[data-kind='error'] { color: var(--gd-error); }
   button:focus-visible, input:focus-visible, summary:focus-visible {
     outline: 2px solid var(--gd-accent);
     outline-offset: 2px;

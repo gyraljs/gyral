@@ -1,16 +1,8 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { afterEach, describe, expect, it } from 'vitest';
 import { splitNext } from '../src/command.js';
-import {
-  child,
-  define,
-  each,
-  emit,
-  html,
-  prop,
-  settled,
-  type GyralElementClass,
-} from '../src/index.js';
+import { child, define, each, html, prop, settled, type GyralElementClass } from '../src/index.js';
+import { emit } from '../src/internal.js';
 import { ctxOf } from './ctx.js';
 
 interface Item {
@@ -36,15 +28,15 @@ type ItemMsg =
   { readonly _tag: 'Toggle' } | { readonly _tag: 'Remove' } | { readonly _tag: 'Poke' };
 
 // Child: owns local UI state (pokes), reports changes up as outputs.
-const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>(
+const TestItem = define<{ readonly pokes: number }, ItemMsg, { readonly item: Item }, ItemOut>()(
   'test-item',
   {
     props: { item: prop.value(itemSchema, { required: true }) },
     init: () => ({ pokes: 0 }),
     intent: {
-      Toggle: () => ({ _tag: 'Toggle' }),
-      Remove: () => ({ _tag: 'Remove' }),
-      Poke: () => ({ _tag: 'Poke' }),
+      Toggle: true,
+      Remove: true,
+      Poke: true,
     },
     update: {
       Toggle: (s, _m, { props }) => [s, [emit({ _tag: 'Toggled', done: !props.item.done })]],
@@ -64,7 +56,7 @@ type ListMsg =
   | { readonly _tag: 'Item'; readonly id: string; readonly out: ItemOut }
   | { readonly _tag: 'Reverse' };
 
-const TestList = define<{ readonly items: readonly Item[] }, ListMsg>('test-list', {
+const TestList = define<{ readonly items: readonly Item[] }, ListMsg>()('test-list', {
   init: () => ({
     items: [
       { id: 'a', text: 'A', done: false },
@@ -73,7 +65,7 @@ const TestList = define<{ readonly items: readonly Item[] }, ListMsg>('test-list
   }),
   intent: {
     Item: child(TestItem, (out, el) => ({ _tag: 'Item', id: el.item.id, out })),
-    Reverse: () => ({ _tag: 'Reverse' }),
+    Reverse: true,
   },
   update: {
     Item: (s, { id, out }) => {
@@ -186,12 +178,12 @@ describe('child() with a lazy source', () => {
 
   // A recursive component: it renders itself and parses its own outputs.
   const Tree: GyralElementClass<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut> =
-    define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>('test-tree', {
+    define<{ readonly kids: readonly string[] }, TreeMsg, TreeProps, TreeOut>()('test-tree', {
       props: { nodeId: prop.string({ required: true }) },
       init: () => ({ kids: [] }),
       intent: {
-        Add: () => ({ _tag: 'Add' }),
-        Remove: () => ({ _tag: 'Remove' }),
+        Add: true,
+        Remove: true,
         Child: child(
           () => Tree,
           (_out, el) => ({ _tag: 'Child', id: el.nodeId }),

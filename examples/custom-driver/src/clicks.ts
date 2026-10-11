@@ -1,5 +1,5 @@
 import { css, define, html } from '@gyral/core';
-import { periodic } from '@gyral/time';
+import { every } from '@gyral/time';
 import { chartClicks, drawChart, type ChartData } from './chart-driver.js';
 
 export const TIMEFRAME_SECONDS = 1;
@@ -31,16 +31,16 @@ export function recordClick(s: State): State {
   return { ...s, count, history };
 }
 
-export const Clicks = define<State, Msg>('gy-clicks', {
-  init: () => [
-    { count: 0, history: [], inspected: undefined },
-    [
-      periodic(TIMEFRAME_SECONDS * 1000, () => ({ _tag: 'Tick' })),
-      chartClicks((bar) => ({ _tag: 'Inspect', bar })),
-    ],
+export const Clicks = define<State, Msg>()('gy-clicks', {
+  init: () => ({ count: 0, history: [], inspected: undefined }),
+  // Running for as long as the component is in the page: the timeframe tick and the chart's
+  // click stream (ADR 0025).
+  subscriptions: () => [
+    every(TIMEFRAME_SECONDS * 1000, () => ({ _tag: 'Tick' })),
+    chartClicks((bar) => ({ _tag: 'Inspect', bar })),
   ],
   intent: {
-    Click: () => ({ _tag: 'Click' }),
+    Click: true,
   },
   update: {
     Click: (s) => {
@@ -127,9 +127,3 @@ export const Clicks = define<State, Msg>('gy-clicks', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-clicks': InstanceType<typeof Clicks>;
-  }
-}

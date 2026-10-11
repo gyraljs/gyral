@@ -1,22 +1,27 @@
 import { css, define, html } from '@gyral/core';
-import { periodic } from '@gyral/time';
+import { every } from '@gyral/time';
 
 export interface State {
+  /** The wall-clock time of the first tick (ms). */
+  readonly since: number | undefined;
   readonly seconds: number;
 }
 
-export type Msg = { readonly _tag: 'Tick'; readonly seconds: number };
+export type Msg = { readonly _tag: 'Tick'; readonly now: number };
 
 /** ISO 8601 duration for `<time datetime>`, e.g. 75 → "PT75S". */
 export const duration = (seconds: number): string => `PT${String(seconds)}S`;
 
-// The periodic command streams 1, 2, 3… one per second; the initial state supplies the 0
-// shown before the first tick.
-export const SecondsElapsed = define<State, Msg>('gy-seconds-elapsed', {
-  init: () => [{ seconds: 0 }, [periodic(1000, (seconds) => ({ _tag: 'Tick', seconds }))]],
-  intent: {},
+// A clock subscription: `every` sends the time at once and then once a second, for as long as
+// the component is in the page (ADR 0025). Seconds are counted from the first tick.
+export const SecondsElapsed = define<State, Msg>()('gy-seconds-elapsed', {
+  init: () => ({ since: undefined, seconds: 0 }),
+  subscriptions: () => [every(1000, (now) => ({ _tag: 'Tick', now }))],
   update: {
-    Tick: (_s, m) => ({ seconds: m.seconds }),
+    Tick: (s, m) => {
+      const since = s.since ?? m.now;
+      return { since, seconds: Math.round((m.now - since) / 1000) };
+    },
   },
   view: (s) => html`
     <p>
@@ -38,9 +43,3 @@ export const SecondsElapsed = define<State, Msg>('gy-seconds-elapsed', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-seconds-elapsed': InstanceType<typeof SecondsElapsed>;
-  }
-}

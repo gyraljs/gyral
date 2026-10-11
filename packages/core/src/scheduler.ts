@@ -1,12 +1,15 @@
 // The global scheduler (docs/design-docs/view/04-scheduler.md). Every host's render goes
 // through it: reducers run at once, the render waits for one microtask flush shared by the
 // whole page. A flush renders dirty hosts parents first (smallest depth, then marking order),
-// then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
+// then their element hooks (children first, view/02 "Commit order"), then runs the post-render queue (focus, custom states, `Hydrated`, deferred init commands),
 // and loops until nothing is dirty. Messages a spec lists in `renderOnFrame` mark their host in
-// the frame lane instead: it renders in the next animation frame (04 "Frame lane"). It lives
-// outside view/ (view/ never imports it) and drives the renderer through view/index.ts.
-import { canTransition, startTransition } from './transitions.js';
-import { DEV, renderBatch } from './view/index.js';
+// the frame lane instead: it renders in the next animation frame (04 "Frame lane",
+// frame-lane.ts). The frame lane and view transitions come through `#spec-features`, present
+// unless a compiled build found no module naming them (gyral-c5d.12). It lives outside view/
+// (view/ never imports it) and drives the renderer through view/index.ts.
+import { fail } from './errors.js';
+import { frameLane, viewTransitions } from '#spec-features';
+import { DEV, flushHooks, message, renderBatch } from './view/index.js';
 
 /** One host as the scheduler sees it. define() creates one per element. */
 export interface HostTask {
@@ -38,16 +41,7 @@ const SCHEDULED = 1;
 const TRANSITION = 2;
 const FLUSHING = 3;
 
-/** A frame-lane flush that no animation frame has run by then runs from a timer (hidden pages). */
-const FRAME_FALLBACK_MS = 100;
-
-const ignore = (): void => undefined;
 const dirty = new Set<HostTask>();
-/** Hosts marked only in the frame lane: they join `dirty` when the frame comes. */
-const framed = new Set<HostTask>();
-let frameRaf = 0;
-/** Set while a frame-lane flush is requested. */
-let frameTimer: ReturnType<typeof setTimeout> | undefined;
 let post: PostTask[] = [];
 let phase = IDLE;
 let transitionWanted = false;
@@ -55,25 +49,29 @@ let transitionWanted = false;
 let deferred = 0;
 let quiet: { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } | null =
   null;
+/** Messages delivered and hosts marked so far; settled() restarts its quiet window on a change. */
+let activity = 0;
+
+/** A message reached a host or a store (04 "`settled()`": messages restart the quiet window). */
+export function noteActivity(): void {
+  activity += 1;
+}
+
+/** How much activity (messages, marks) the page has seen; only differences matter. */
+export const activityCount = (): number => activity;
 
 /**
  * True when no host is dirty (in either lane), no flush or transition update is pending and
  * nothing is deferred.
  */
 export const isQuiet = (): boolean =>
-  phase === IDLE && dirty.size === 0 && framed.size === 0 && deferred === 0;
+  phase === IDLE && dirty.size === 0 && frameLane?.pending() !== true && deferred === 0;
 
 /** Resolves at the end of the flush that leaves the scheduler quiet. */
 export function whenQuiet(): Promise<void> {
   if (isQuiet()) return Promise.resolve();
   if (quiet === null) {
-    let resolve: () => void = ignore;
-    let reject: (error: unknown) => void = ignore;
-    const promise = new Promise<void>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    quiet = { promise, resolve, reject };
+    quiet = Promise.withResolvers();
   }
   return quiet.promise;
 }
@@ -86,31 +84,20 @@ function schedule(): void {
 
 /**
  * Marks `task` for the next flush: the microtask one, or with `onFrame` the next animation
- * frame's (04 "Frame lane"). Marking an already-dirty host does nothing; a microtask mark moves a
- * host waiting for the frame into the microtask flush. `requestAnimationFrame` doesn't run in
- * hidden pages, so a timer runs the frame's flush if no frame came first.
+ * frame's (04 "Frame lane"; the microtask one when the build left the frame lane out). Marking
+ * an already-dirty host does nothing; a microtask mark moves a host waiting for the frame into
+ * the microtask flush.
  */
 export function markDirty(task: HostTask, onFrame = false): void {
+  activity += 1;
   if (dirty.has(task)) return;
-  if (onFrame) {
-    framed.add(task);
-    if (frameTimer === undefined) {
-      frameRaf = requestAnimationFrame(runFrame);
-      frameTimer = setTimeout(runFrame, FRAME_FALLBACK_MS);
-    }
+  if (onFrame && frameLane !== undefined) {
+    frameLane.add(task, markDirty);
     return;
   }
-  framed.delete(task);
+  frameLane?.drop(task);
   dirty.add(task);
   schedule();
-}
-
-/** The frame lane's hosts join a microtask flush, which runs right after this callback. */
-function runFrame(): void {
-  cancelAnimationFrame(frameRaf);
-  clearTimeout(frameTimer);
-  frameTimer = undefined;
-  for (const task of framed) markDirty(task);
 }
 
 /** Queues post-render work for the current (or next) flush. */
@@ -131,7 +118,7 @@ export function defer(fn: () => void): void {
     try {
       fn();
     } catch (error) {
-      console.error('gyral: a deferred callback failed', error);
+      fail(error, 'command', message(30));
     } finally {
       deferred -= 1;
       settle();
@@ -152,12 +139,11 @@ export function hold(work: Promise<void>): void {
 }
 
 function start(): void {
-  if (transitionWanted && canTransition()) {
+  if (transitionWanted) {
     phase = TRANSITION;
-    startTransition(flush);
-  } else {
-    flush();
+    if (viewTransitions?.(flush) === true) return;
   }
+  flush();
 }
 
 /** The dirty host with the smallest depth; ties go to the one marked first. */
@@ -177,7 +163,7 @@ function renderAll(counts: Map<HostTask, number>): void {
     try {
       task.render();
     } catch (error) {
-      console.error(`<${task.tag}> failed to render; its previous DOM stays.`, error);
+      fail(error, 'view', message(31, task.tag), { tag: task.tag });
     }
   }
 }
@@ -189,20 +175,14 @@ function runPost(): void {
     try {
       task.run();
     } catch (error) {
-      console.error('gyral: post-render work failed', error);
+      fail(error, 'view', message(32));
     }
   }
 }
 
 function loopError(counts: Map<HostTask, number>): Error {
   const tags = [...new Set([...counts.keys()].map((t) => `<${t.tag}>`))].join(', ');
-  return new Error(
-    `gyral: rendering did not settle in one flush (a cycle between ${tags}).` +
-      (DEV
-        ? ' Components are probably feeding each other props or messages; break the cycle ' +
-          'with a condition in update (docs/design-docs/view/04-scheduler.md "Loop guard").'
-        : ''),
-  );
+  return new Error(message(33, tags));
 }
 
 function flush(): void {
@@ -213,8 +193,9 @@ function flush(): void {
     renderBatch(() => {
       for (let pass = 1; ; pass++) {
         renderAll(counts);
-        if (post.length === 0) return;
-        runPost();
+        flushHooks(); // every dirty host rendered: element hooks run, children first
+        // Client calls can deliver intents: commit their new state before focus/other work.
+        if (dirty.size === 0 && post.length > 0) runPost();
         if (dirty.size === 0 && post.length === 0) return;
         if (pass >= MAX_PASSES) throw loopError(counts);
       }
@@ -229,7 +210,7 @@ function flush(): void {
   if (failure === undefined) {
     settle();
   } else if (!DEV) {
-    console.error(failure); // production: log and drop the rest, so the page doesn't freeze
+    fail(failure, 'view', failure.message); // production: report and drop the rest, so the page doesn't freeze
     settle();
   } else if (quiet !== null) {
     const waiting = quiet;

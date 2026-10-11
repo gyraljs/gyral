@@ -1,7 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { define, html, settled } from '@gyral/core';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { command, define, html, settled } from '@gyral/core';
 import {
-  back,
   listen,
   makeRouter,
   navigate,
@@ -9,7 +8,11 @@ import {
   type RouteLocation,
   type RouteMatch,
   type RouterDriver,
+  router,
 } from '../src/index.js';
+
+// History back and forward are router inputs (the skill's "History back and forward" recipe).
+const back = () => command(router, { _tag: 'Traverse', delta: -1 });
 
 const app = routes({ home: '/', user: '/users/:id' });
 
@@ -24,9 +27,8 @@ type Msg =
 
 const toRouted = (location: RouteLocation): Msg => ({ _tag: 'Routed', location });
 
-const App = define<State, Msg>('test-router-app', {
+const App = define<State, Msg>()('test-router-app', {
   init: () => [{ route: undefined, seen: [] }, [listen(toRouted)]],
-  intent: {},
   update: {
     Routed: (s, m) => ({
       route: app.match(m.location.href),
@@ -54,6 +56,12 @@ const guard = (event: MouseEvent): void => {
   captured.push(event.defaultPrevented);
   event.preventDefault();
 };
+
+// The History API path loads with import() on first use (ADR 0003 tier 3); load it before the
+// tests, so a slow first fetch doesn't count against each test's waits.
+beforeAll(async () => {
+  await import('../src/internal/history.js');
+});
 
 const modes: [string, boolean][] = [
   ['History API only (Navigation API forced off)', false],
@@ -95,7 +103,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('navigates by command and delivers the new route', async () => {
     el.send({ _tag: 'Go', url: '/users/7' });
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '7' }, path: '/users/7' });
     });
     expect(location.pathname).toBe('/users/7');
   });
@@ -127,7 +135,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
   it('captures same-origin link clicks inside shadow roots', async () => {
     link('in').click();
     await vi.waitFor(() => {
-      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' } });
+      expect(routeOf()).toEqual({ name: 'user', params: { id: '9' }, path: '/users/9' });
     });
     expect(captured).toEqual([true]);
   });
@@ -147,6 +155,7 @@ describe.each(modes)('router: %s', (_label, navigationApi) => {
 
   it('stops listening when the component disconnects', async () => {
     el.remove();
+    await Promise.resolve(); // commands stop one microtask after a real removal
     history.pushState(null, '', '/users/99');
     window.dispatchEvent(new PopStateEvent('popstate'));
     await new Promise((r) => setTimeout(r, 20));

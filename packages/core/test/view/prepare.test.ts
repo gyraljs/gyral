@@ -115,6 +115,6 @@ describe('rule 11: server templates in the browser (view/09)', () => {
     );
     expect(shell.server).toBe(true);
     expect(() => templateElement(shell)).toThrow(TemplateError);
-    expect(() => templateElement(shell)).toThrow(/rule 11.*@gyral\/core\/server/s);
+    expect(() => templateElement(shell)).toThrow(/rule 11.*@gyral\/ssr/s);
   });
 });

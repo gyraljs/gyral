@@ -7,7 +7,6 @@ import {
   field,
   fieldErrors,
   form,
-  formDataToObject,
   html,
   invalid,
   settled,
@@ -34,7 +33,7 @@ const Taken = z.string().refine(async (s) => {
   return s !== 'admin';
 }, 'Name taken');
 
-const SignupEl = define<State, Msg>('test-signup', {
+const SignupEl = define<State, Msg>()('test-signup', {
   init: () => ({ saved: [], errors: {}, nick: '' }),
   intent: {
     Register: form(Signup, (d) => ({ _tag: 'Register', email: d.email, age: d.age })),
@@ -82,7 +81,12 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-describe('formDataToObject', () => {
+// A schema that accepts anything shows what the schema is given.
+const Raw = defineForm({
+  '~standard': { version: 1, vendor: 'test', validate: (value: unknown) => ({ value }) },
+});
+
+describe('what a form schema receives from FormData', () => {
   it('collapses single values, keeps repeats and name[] as arrays, passes Files', () => {
     const fd = new FormData();
     const file = new File(['x'], 'a.txt');
@@ -91,7 +95,10 @@ describe('formDataToObject', () => {
     fd.append('tags', 'y');
     fd.append('one[]', 'z');
     fd.append('file', file);
-    expect(formDataToObject(fd)).toEqual({ a: '1', tags: ['x', 'y'], one: ['z'], file });
+    expect(Raw.validate(fd)).toEqual({
+      ok: true,
+      data: { a: '1', tags: ['x', 'y'], one: ['z'], file },
+    });
   });
 });
 
@@ -155,7 +162,7 @@ interface NameState {
   readonly live: boolean;
   readonly errors: Readonly<Record<string, readonly string[]>>;
 }
-const NameEl = define<NameState, NameMsg>('test-schema-messages', {
+const NameEl = define<NameState, NameMsg>()('test-schema-messages', {
   init: () => ({ live: false, errors: {} }),
   intent: { Save: form(Named, (d) => ({ _tag: 'Save', name: d.name })) },
   update: {

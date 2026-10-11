@@ -13,12 +13,16 @@ import {
   type LocalHost,
   type StoreLink,
 } from './features.js';
+import { fail, type ErrorPhase, type GyralError } from './errors.js';
 import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
-import { requestTransition } from './scheduler.js';
+import { noteActivity, requestTransition } from './scheduler.js';
+import { errored, subscriptions as subscriptionSet } from '#spec-features';
+import type { Subscriptions } from './subscriptions.js';
 import type { AnyStore } from './store.js';
-import type { ComponentSpec, Ctx, IntentRejected, Tagged } from './types.js';
+import type { ComponentSpec, Ctx, IntentRejected, ParserCtx, Tagged } from './types.js';
+import { message } from './view/index.js';
 
 type Bag = Readonly<Record<string, unknown>>;
 type Reducer<S> = (state: S, msg: Tagged, ctx: Ctx<object>) => Next<S, Tagged>;
@@ -52,6 +56,14 @@ export class HostModel<S, P> implements LocalHost {
   #interpreter: Interpreter<Tagged | IntentRejected> | undefined;
   /** Commands kept while disconnected (init's, before the first connect); undefined once connected. */
   #pending: Cmd[] | undefined = [];
+  /** Connected to the document (a pending stop checks it, so a move cancels the stop). */
+  #on = false;
+  /** `spec.subscriptions`, kept running once the host has rendered (ADR 0025). */
+  #subs: Subscriptions | undefined;
+  /** `init` threw (ADR 0024): the host shows its error view, or stays empty. */
+  #failure: GyralError | undefined;
+  /** Handling `Errored`: a failure now is reported, never sent again (no loops). */
+  #erroring = false;
 
   constructor(host: ModelHost, spec: ComponentSpec<S, Tagged, P>) {
     this.#host = host;
@@ -59,8 +71,11 @@ export class HostModel<S, P> implements LocalHost {
     this.tag = host.tag;
     this.root = host.root;
     this.#spec = spec;
-    // Sound: dispatch() only calls the reducer whose key equals msg._tag.
-    this.#reducers = spec.update as unknown as Readonly<Record<string, Reducer<S> | undefined>>;
+    // Sound: dispatch() only calls the reducer whose key equals msg._tag. A component without
+    // messages may have no `update` (its spec type is widened to Tagged here).
+    this.#reducers = ((spec as { readonly update?: object }).update ?? {}) as unknown as Readonly<
+      Record<string, Reducer<S> | undefined>
+    >;
   }
 
   /** The store binding, created on first use. Only reached once `defineStore()` has run. */
@@ -78,14 +93,49 @@ export class HostModel<S, P> implements LocalHost {
     return this.#model !== undefined;
   }
 
+  /** Set when `init` threw; the host has no state then. */
+  get failure(): GyralError | undefined {
+    return this.#failure;
+  }
+
   /** The current state, running `init` (and `initialMessages`) on first read. */
   state(initialMessages: readonly Tagged[] = []): S {
     if (this.#model === undefined) {
       this.#seen = this.#host.props();
-      this.apply(runInit(this.#spec, this.#seen as P));
+      const next = this.#init();
+      if (next === undefined) return undefined as S; // init threw: `failure` says so
+      this.apply(next);
       for (const msg of initialMessages) this.dispatch(msg, false);
     }
     return (this.#model as { value: S }).value;
+  }
+
+  /** `init(props)`, or undefined after reporting its failure (ADR 0024). */
+  #init(): Next<S, Tagged> | undefined {
+    try {
+      return runInit(this.#spec, this.#seen as P);
+    } catch (cause) {
+      this.#failure = this.fail(cause, 'init', message(74, this.tag));
+      this.#model = { value: undefined as S };
+      return undefined;
+    }
+  }
+
+  /**
+   * Reports a failure of this host (ADR 0024) and, for a failed update, parse or command, sends
+   * `Errored` to its optional reducer. A failure while handling `Errored` is only reported.
+   */
+  fail(cause: unknown, phase: ErrorPhase, text: string, msg?: string): GyralError {
+    const error = fail(cause, phase, text, { host: this.el, tag: this.tag, msg });
+    if (!this.#erroring && errored !== undefined && this.#reducers['Errored'] !== undefined) {
+      this.#erroring = true;
+      try {
+        errored((msg) => this.dispatch(msg), phase, error);
+      } finally {
+        this.#erroring = false;
+      }
+    }
+    return error;
   }
 
   hasReducer(tag: string): boolean {
@@ -98,38 +148,58 @@ export class HostModel<S, P> implements LocalHost {
    */
   resume(seed: Seed): readonly Cmd[] {
     this.#seen = this.#host.props();
-    const [initial, commands] = splitNext(runInit(this.#spec, this.#seen as P));
+    const next = this.#init();
+    if (next === undefined) return [];
+    const [initial, commands] = splitNext(next);
     // Sound: the seed is this component's own state, written by the server.
     this.#model = { value: 'state' in seed ? (seed.state as S) : initial };
     return commands;
   }
 
-  /** PropsChanged when props differ from the last ones seen (`Object.is` per prop). */
+  /**
+   * PropsChanged when props differ from the last ones seen (`Object.is` per prop). A reducer
+   * that throws leaves them unseen, so the next render sends PropsChanged again (ADR 0024).
+   */
   syncProps(names: readonly string[]): void {
     const prev = this.#seen;
-    if (prev === undefined) return;
+    if (prev === undefined || this.#failure !== undefined) return;
     const props = this.#host.props();
     if (names.every((name) => Object.is(props[name], prev[name]))) return;
-    this.#seen = props;
-    this.dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false);
+    if (this.dispatch({ _tag: 'PropsChanged', props, prev } as Tagged, false)) this.#seen = props;
+    this.#resubscribe();
   }
 
-  dispatch(msg: Tagged, schedule = true): void {
+  /**
+   * Runs `msg`'s reducer. A reducer that throws changes nothing (no state, no commands): the
+   * failure is reported (ADR 0024) and dispatch returns false.
+   */
+  dispatch(msg: Tagged, schedule = true): boolean {
+    noteActivity(); // settled() keeps waiting while messages arrive (04)
     const reducer = this.#reducers[msg._tag];
     if (reducer === undefined) {
       // Framework messages have optional reducers; props and stores stay readable as context.
-      if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged') {
-        console.warn(`<${this.#host.tag}> has no update for message "${msg._tag}".`);
+      if (msg._tag !== 'PropsChanged' && msg._tag !== 'StoreChanged' && msg._tag !== 'Errored') {
+        console.warn(message(10, this.#host.tag, msg._tag));
       }
-      return;
+      return true;
     }
+    if (this.#failure !== undefined) return false;
     const prev = this.state();
-    this.apply(reducer(prev, msg, this.ctx() as Ctx<object>));
-    const next = this.state();
-    if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, next);
-    if (!schedule) return;
-    if (this.#spec.viewTransition?.(prev, next, msg) === true) requestTransition();
+    let next: Next<S, Tagged>;
+    try {
+      next = reducer(prev, msg, this.ctx() as Ctx<object>);
+    } catch (cause) {
+      this.fail(cause, 'update', message(73, this.tag, msg._tag), msg._tag);
+      return false;
+    }
+    this.apply(next);
+    const state = this.state();
+    if (DEVTOOLS_ENABLED) devUpdate(this.#host.el, this.#host.tag, msg, prev, state);
+    this.#resubscribe();
+    if (!schedule) return true;
+    if (this.#spec.viewTransition?.(prev, state, msg) === true) requestTransition();
     this.#host.invalidate(this.#onFrame(msg._tag));
+    return true;
   }
 
   apply(next: Next<S, Tagged> | Next<S, Tagged | IntentRejected>): void {
@@ -148,25 +218,65 @@ export class HostModel<S, P> implements LocalHost {
     this.apply([this.state(), commands]);
   }
 
-  ctx(): Ctx<P> {
-    return { props: this.#host.props() as P, read: (store) => this.stores().read(store) };
+  // Reducers and the view get this too; only parsers' type (ParserCtx) names `state`.
+  ctx(): ParserCtx<P, S> {
+    return {
+      props: this.#host.props() as P,
+      read: (store) => this.stores().read(store),
+      state: this.state(),
+    };
   }
 
-  /** Resolves stores and runs kept commands. Returns true if store instances were bound. */
+  /**
+   * Resolves stores and runs kept commands; after a real detach, starts the subscriptions again
+   * (05 "Lifecycle"). Returns true if store instances were bound.
+   */
   connect(): boolean {
+    this.#on = true; // a move: the pending stop finds the host connected and does nothing
     // The nearest <gyral-stores> may differ after a move.
     const rebound = (this.#spec.stores?.length ?? 0) > 0 && this.stores().connect();
     const pending = this.#pending ?? [];
     this.#pending = undefined;
     for (const cmd of pending) this.#commands().run(cmd);
+    this.#resubscribe(); // a move: unchanged, nothing restarts
     return rebound;
   }
 
+  /**
+   * Starts `spec.subscriptions` (ADR 0025): after the first render, as init's commands of a
+   * server-rendered host are, so nothing they emit can change what hydration adopts.
+   */
+  subscribe(): void {
+    const derive = this.#spec.subscriptions;
+    if (derive === undefined || subscriptionSet === undefined) return;
+    this.#subs ??= subscriptionSet(this, derive);
+    this.#resubscribe();
+  }
+
+  /** Aborts the running command of `lane` (a subscription that left, ADR 0025). */
+  cancel(lane: string): void {
+    this.#interpreter?.cancel(lane);
+  }
+
+  /** Syncs the subscriptions while connected and healthy. */
+  #resubscribe(): void {
+    if (this.#pending === undefined && this.#failure === undefined) this.#subs?.update();
+  }
+
+  /**
+   * Stops the commands one microtask later, unless the host is connected again first: a move
+   * (`appendChild`, `insertBefore`) disconnects and connects in one task and keeps them running.
+   */
   disconnect(): void {
     this.#binding?.disconnect();
-    this.#interpreter?.dispose();
-    this.#interpreter = undefined;
     this.#pending ??= [];
+    this.#on = false;
+    queueMicrotask(() => {
+      if (this.#on) return;
+      this.#interpreter?.dispose();
+      this.#interpreter = undefined;
+      this.#subs?.reset();
+    });
   }
 
   /**
@@ -177,11 +287,20 @@ export class HostModel<S, P> implements LocalHost {
     const el = this.el;
     return (this.#interpreter ??= (features.commands as NonNullable<typeof features.commands>)(
       el,
-      this.#spec.drivers,
       (msg) => {
         this.dispatch(msg);
       },
       DEVTOOLS_ENABLED ? devCommands(() => devOwner(el, this.tag)) : undefined,
+      (cause, code, driver) => {
+        const owner = `<${this.tag}>`;
+        const text =
+          code === 40
+            ? message(40, owner, driver)
+            : code === 41
+              ? message(41, owner, driver)
+              : message(43, owner, driver);
+        this.fail(cause, 'command', text, driver);
+      },
     ));
   }
 

@@ -28,6 +28,7 @@ first-render error (09).
 | --------------------------------------- | ------------------------------------------------------------- |
 | `string`, `number`                      | A Text node (`String(v)`); updates set `.data` in place       |
 | template result                         | An instance; same template as before → its parts update       |
+| `svg` template result                   | The same, inside SVG content only (01 "svg templates")        |
 | `each(…)` (03), array of child values   | A list; arrays are positional (by index), `each` is keyed     |
 | `raw(html)`                             | Parsed markup (below)                                         |
 | `null`, `undefined`, `false`, `nothing` | Nothing                                                       |
@@ -78,6 +79,20 @@ so the server writes exactly the same ones (06), and hydration finds them where 
 No more `?? nothing`: `href=${s.url}` with an undefined URL simply leaves `href` out. For
 presence-only attributes use `?name`.
 
+**Attribute names** are written as the HTML parser spells them, so the client sets the same
+attribute the server's markup creates: lower case on HTML elements; on SVG elements (inline
+`<svg>` in `html`, and `svg` templates) lower case except SVG's camelCase attributes, which take
+their SVG spelling whatever the case written (`viewbox=${v}` and `viewBox=${v}` both bind
+`viewBox`; WHATWG HTML's "adjust SVG attributes" table, `normalize/svg.ts`). Namespaced
+attributes can't be bound: `xlink:href=${v}`, `xml:lang=${v}` and `xmlns…` are rule 10 errors
+(09) that point to the plain SVG 2 attribute (`href=${v}`, `lang=${v}`), since the parser puts
+them in their own namespace and `setAttribute` can't. Static ones (`xlink:href="#a"`) are fine:
+the parser handles them on both sides (0.3.1).
+
+Intent attributes are plain attribute bindings: `data-intent=${i.Save}` and the per-event
+`data-intent-pointerdown=${i.Grab}` (05 "Per-event intents") write the intent's name, and
+`nothing` removes one, so an intent can come and go with the state.
+
 **Multi** (`name="a ${x} b"`): pieces are joined with the static strings. `null`/`undefined`
 pieces become `''`; `nothing` in any piece removes the attribute.
 
@@ -86,6 +101,33 @@ values are rejected before any DOM change.
 
 All attribute parts compare the new value (or joined string) with the committed one and write
 only on change.
+
+## Style attributes
+
+**`style` is written through the CSSOM** (0.3.1, gyral-dyn.5): a single or multi `style`
+binding sets `el.style.cssText` to the value (or the joined string) where any other attribute
+calls `setAttribute`; `null`, `undefined` and `nothing` remove the attribute as above. HTML,
+SVG and MathML elements all have `.style`.
+
+Why: a strict Content Security Policy (`style-src` without `'unsafe-inline'`) blocks every
+`style` attribute the HTML parser creates and `setAttribute('style', …)`, but not CSSOM writes
+from script (MDN, "CSP: style-src"). Verified with a real `style-src 'self'` header in Chromium,
+Firefox and WebKit: `setAttribute` is refused; `style.cssText`, `style.setProperty` (custom
+properties too) and `el.style = '…'` apply. So `style=${…}` and `style="--w: ${w}px"` keep
+working under such a policy, on the first render and every update
+(`core/test/view/style-csp.test.ts`).
+
+- Parts compare with the committed value, never with the serialized `cssText`: an unchanged
+  value writes nothing.
+- The attribute reads back as the CSSOM serializes it (`color: red;`), and declarations the
+  browser doesn't parse are dropped, as with any CSSOM write. The server writes the text as
+  given (06); hydration adopts it without a write.
+- **Static** `style="…"` in a template is applied the same way, once, when an instance is
+  created (01 "Normalization"): Firefox blocks a `style` attribute in a `<template>`'s HTML
+  under a strict CSP, and Chromium reports a violation for it.
+- `.style=${'--x: 1'}` (a property binding) was already a CSSOM write and is unchanged.
+- What a strict CSP does to the server's `style` attributes, and how hydration repairs them:
+  08 "Style attributes under a strict CSP".
 
 ## Boolean attributes
 
@@ -98,6 +140,23 @@ falsy. Names in the form-state table below also drive the live property.
 data props to Gyral components. On the server a property binding on a Gyral component becomes a
 prop for that component's render (06). On any other element it is dropped, so form state must
 not use property bindings (09, rule 4).
+
+**Functions** (0.3.1, gyral-g1r.28): views attach no closures, so a function value warns in
+development, once per part, when a client render commits it (hydration adopts values without
+the check: a warning there would keep the code alive in production bundles, which share it
+across chunks), and is still set:
+
+- on a built-in element (`.onclick=${fn}`): events are intents (`data-intent=${i.Name}`),
+  behaviour on an element is a hook;
+- on a Gyral component: props are data. They travel in hydration seeds (JSON), and a function
+  prop is a closure over the parent's view. Pass data and hear back through outputs. No
+  exception for a `prop.value` whose guard accepts functions: the seed couldn't carry it;
+- not on other custom elements (a dash in the name, not Gyral's): a third-party widget's API
+  may take a callback, and that is the author's call.
+
+`@gyral/core/eslint`'s `gyral/template` also reports a function written directly in any hole
+(`${() => …}`, `${function () {}}`), which is never right: a child hole can't render it, an
+attribute would get its source text, a hook position rejects it (09 "ESLint").
 
 ## Live form state
 
@@ -169,22 +228,93 @@ export const invalid = defineHook<[errors?: readonly string[] | string]>({
 - `client(el, args, prev)` runs after the instance's parts have committed, when `args` differ
   from the previous call (shallow `Object.is` per argument). `prev` is `undefined` on the first
   call. During hydration it runs once with the hydrated args (07).
+- `update: 'always'` (0.3.1, gyral-1zd.27) runs `client` on every render that commits the
+  hook's position, even with the same arguments (a skipped `each` row doesn't commit): for a
+  hook that measures or re-applies something each time, without a counter in the model only
+  there to change an argument. The default is `'args'`.
+- `dispose(el, args)` (0.3.1, gyral-c5d.2) is the teardown, with the last arguments `client`
+  got (an optional key of the spec `defineHook` takes). See "Widgets with a lifecycle" below.
 - Hooks may only act on their own element. Listeners they add to it are collected with it, so
-  there is no disconnection tracking and no cleanup callback.
-- Core ships `invalid` and `labelledBy` as hooks.
+  a hook that only listens needs no `dispose`.
+- Core ships `invalid` as a hook. Pointer capture for press-and-release intents (05 "Press and
+  release") and naming an element after one outside the shadow root are short recipes in the
+  agent skill (0.3.1, gyral-1zd.24: they were `capturePointer` and `labelledBy`).
+
+### Widgets with a lifecycle
+
+Something with setup and teardown (a WebGL or Three.js stage, a chart library, a map, an
+observer, a timer, a connection) has a native home: **a custom element of its own**. Give it
+one property for its input (`<my-stage .view=${s.scene}>`), keep its state inside, set up in
+`connectedCallback`, tear down in `disconnectedCallback`, and report back with events (a Gyral
+component, or any custom element dispatching `OUTPUT_EVENT`, ADR 0010). The platform then tells
+it about every connect, disconnect and move, the view stays a pure description, and the
+widget can be tested on its own. A Gyral component works for it too (`prop.value` for the
+input, `outputs<Out>()` for its events), and so does a plain `HTMLElement` subclass when its
+work is all imperative.
+
+For **small imperative behaviours** on an element of the view (scrolling it into view,
+observing its size, a third-party enhancer on one input), a hook with a teardown (`defineHook`
+with `dispose`) is the lighter option:
+
+```ts
+const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/** Highlights the element for a moment whenever `value` changes. */
+export const flash = defineHook<[value: unknown]>({
+  client: (el, _args, prev) => {
+    if (prev === undefined) return; // not on first render
+    el.classList.add('flash');
+    clearTimeout(timers.get(el));
+    timers.set(
+      el,
+      setTimeout(() => el.classList.remove('flash'), 600),
+    );
+  },
+  dispose: (el) => {
+    clearTimeout(timers.get(el));
+  },
+});
+```
+
+- **When:** `dispose` runs when the element leaves its render root (Gyral removed it: its part
+  cleared, its instance replaced by another template or by text, its `each` row or array item
+  removed, its list emptied), when the position stops holding the hook (`nothing`, or another
+  hook, whose `client` then starts with `prev` undefined), and when the host disconnects. It
+  never runs for moves: rows reordered within a list, or a host moved with `moveBefore()`
+  (`connectedMoveCallback`).
+- **Timing:** removal is noticed after the render's commit (the element has left the DOM),
+  before that render's `client` calls; a disconnect disposes in `disconnectedCallback`.
+- **Reconnect:** after a host disconnects and reconnects (a plain move without `moveBefore`, or
+  re-inserting it later), the host renders, and each hook disposed by the disconnect runs
+  `client` again with `prev` undefined, with its current arguments.
+- **How:** a disposable hook is tracked per render root from its commit, with the spec and
+  arguments to dispose (`render/dispose.ts`). After each render of a root commits, every
+  tracked hook whose element is no longer inside the root (`root.contains`), or whose position
+  holds something else, is disposed. Moves keep elements inside the root, so nothing else is
+  needed to tell a move from a removal.
+- **Cost (measured 2026-10-09, gzip):** `dispose` is an option of `defineHook` (owner decision
+  O6, gyral-1zd.24, replacing 0.3.0's separate `defineDisposableHook`). The tracking registers
+  itself like a spec-field feature (05 "Features register themselves"): with the Vite preset it
+  is bundled only when some module names `dispose`; without a build step it is always present.
+  Apps with hooks and no teardown pay about 5-20 B for the check that picks the commit; apps
+  that use `dispose` about 0.25 KiB more, which runs only once such a hook has committed.
+- Tested in `core/test/view/render-hooks-dispose.test.ts`.
 
 ## `raw(html)`
 
 - Child position only. The string is trusted markup from your own code (Markdown output, JSON-LD
   scripts). Never pass user input.
 - Server: written verbatim, preceded by an anchor comment, so hydration knows where it starts.
-- Browser: parsed with a `<template>` (`innerHTML`) and inserted after the same start anchor,
-  only when the string changes.
+- Browser: parsed with a `<template>` (`innerHTML`, through the `gyral` Trusted Types policy,
+  01 "Instantiation") and inserted after the same start anchor, only when the string changes.
+  Under `require-trusted-types-for 'script'` that policy is what lets `raw()` parse, so the
+  string must still never be user input: the policy trusts it as the template's own HTML.
 - A `raw()` value in a component that renders in the browser is a development warning (09):
   every change re-parses it.
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`
   don't bundle it. Hook results do the same (`defineHook`, render/hook-part.ts): argument
-  comparison and queueing come with the first hook an app defines.
+  comparison and queueing come with the first hook an app defines, and disposal tracking with
+  the `dispose` registration (render/dispose.ts, use-disposal.ts).
 
 ## `nothing`
 
@@ -195,7 +325,57 @@ removes the attribute (also in a multi-attribute).
 
 - Parts commit in document order. On first render an instance's parts commit **before** the
   instance is inserted, so a child component connects with its props already set.
-- After commit, hooks run (in document order), then the scheduler's post-render work (04).
+- Connection-dependent dialog/popover actions are queued during that commit and run with
+  the post-commit client calls, after insertion and the whole component flush, before the
+  scheduler's focus commands. They never open a node removed before those calls run.
+- After commit, disposable hooks whose element left the root (or whose position changed) are
+  disposed, then hooks run `client`, then the scheduler's post-render work (04).
+- **Hooks run once the whole flush has rendered, children first** (0.3.1, gyral-1zd.27). The
+  scheduler renders every dirty host (parents before children, 04) and only then runs their
+  queued `client` calls: the last-rendered component's first, each component's own in document
+  order. So a parent's hook sees the child components it rendered in the same flush, already
+  rendered (measuring a list, scrolling to a child's row), as React's and Vue's effects run
+  child components first. A `render` call outside the scheduler runs its own calls when it
+  returns. ADR 0018 addendum "Hook order".
+
+## Dialogs and popovers
+
+Opening a modal dialog or a popover is state the model owns, written with the platform's
+methods (0.3.1, gyral-1zd.27):
+
+| Element                   | Binding                 | Server writes | Browser does                                                    |
+| ------------------------- | ----------------------- | ------------- | --------------------------------------------------------------- |
+| `<dialog>`                | `?modal=${open}`        | nothing       | `showModal()` when it turns true, `close()` when it turns false |
+| an element with `popover` | `?popover-open=${open}` | nothing       | `showPopover()` / `hidePopover()`                               |
+
+```ts
+view: (s, i) => html`
+  <button type="button" data-intent=${i.Edit}>Edit</button>
+  <dialog ?modal=${s.editing} data-intent-on="close" data-intent=${i.Closed}>…</dialog>
+  <p popover="manual" ?popover-open=${s.saved}>Saved</p>
+`,
+```
+
+- Like live form state, the part writes only when the model's value changes, and then only if
+  the element isn't already open (or closed). A dialog the user closed (Escape, a
+  `form[method=dialog]`) fires `close`: name it in `data-intent-on` so the model hears it, or
+  the next change to `true` is the one that reopens it.
+- Native opening waits for the connected, fully committed DOM (gyral-c5o). This includes
+  conditional/nested templates, new keyed rows, initially open components and hydration.
+  Values are committed before insertion; the native action uses the latest committed value
+  when its post-commit call runs. Failed renders discard their queued calls. Outside the
+  scheduler, `render()`/`hydrate()` runs these calls before returning. Rendering into a
+  detached root does not open a dialog/popover; render into a connected root to open it.
+  [The HTML show-modal steps](https://html.spec.whatwg.org/multipage/interactive-elements.html#show-a-modal-dialog)
+  require a connected dialog.
+- The platform returns focus to the element focused before the dialog or popover opened.
+- A modal can't be opened in server HTML: neither binding writes an attribute, and hydration
+  opens what the model says (07). Use `?open` for a non-modal dialog that should show before
+  scripts run.
+- Template rule 4: `?modal` goes only on `<dialog>`, `?popover-open` only on an element with a
+  `popover` attribute, and both only with `?`.
+- The code is registered like a spec feature (05 "Features register themselves"): builds with
+  the preset bundle it only when a module writes either binding.
 
 ## Native primitives
 
@@ -203,6 +383,9 @@ removes the attribute (also in a multi-attribute).
 | ---------- | ---------------------------------------------------------------------------------------------------- | ------------------------------ |
 | Text       | `Text.data`                                                                                          | widely                         |
 | Attributes | `setAttribute`, `removeAttribute`, `toggleAttribute`                                                 | widely                         |
+| `style`    | `el.style.cssText` (CSSOM), which `style-src` doesn't restrict                                       | widely                         |
 | Insertion  | `insertBefore` / `before`, `DocumentFragment`                                                        | widely                         |
 | Form state | `.value`, `.checked`, `.selected`, `.indeterminate`, `defaultValue`/`defaultChecked`, `form.reset()` | widely                         |
 | Raw markup | `<template>` + `innerHTML`; Sanitizer API later                                                      | widely; Sanitizer not Baseline |
+| Dialogs    | `HTMLDialogElement.showModal()`/`close()`                                                            | widely                         |
+| Popovers   | `showPopover()`/`hidePopover()`, `:popover-open`; nothing happens without them                       | newly (widely 2027-07)         |

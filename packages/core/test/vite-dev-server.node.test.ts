@@ -72,7 +72,7 @@ beforeAll(() => {
   write(
     'node_modules/ds/index.js',
     `import { define, html } from '@gyral/core';
-define('ds-badge', { init: () => ({ n: 1 }), intent: {}, update: (s) => s, view: (s) => html\`<b>\${s.n}</b>\` });`,
+define()('ds-badge', { init: () => ({ n: 1 }), intent: {}, update: (s) => s, view: (s) => html\`<b>\${s.n}</b>\` });`,
   );
   write(
     'package.json',
@@ -82,7 +82,7 @@ define('ds-badge', { init: () => ({ n: 1 }), intent: {}, update: (s) => s, view:
     'app.ts',
     `import 'ds';
 import { html } from '@gyral/core';
-import { renderToString } from '@gyral/core/server';
+import { renderToString } from '@gyral/core/internal/server';
 export const page = (): string => renderToString(html\`<p>\${'hi'}</p><ds-badge></ds-badge>\`);`,
   );
 }, 60_000);
@@ -118,7 +118,7 @@ await build({
   build: { ssr: 'app.ts', outDir: 'dist-ssr', minify: false, rolldownOptions: { output: { entryFileNames: 'app.js' } } },
 });`);
     const bundle = readFileSync(join(root, 'dist-ssr/app.js'), 'utf8');
-    expect(bundle).toContain('@gyral/core/server');
+    expect(bundle).toContain('@gyral/core/internal/server');
     const html = node(
       `const app = await import('./dist-ssr/app.js'); process.stdout.write(app.page());`,
     );

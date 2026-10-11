@@ -19,12 +19,12 @@ const read = (path) => readFileSync(path, 'utf8');
  * template compiler's output, `@gyral/ssr/hydrate` an empty 0.2 leftover: neither is listed).
  */
 const ENTRIES = [
-  ['core', ['.', './server', './vite', './eslint']],
-  ['http', ['.', './testing']],
+  ['core', ['.', './storage', './indexeddb', './vite', './eslint']],
+  ['http', ['.', './sse', './websocket', './testing']],
   ['router', ['.']],
   ['time', ['.']],
-  ['ssr', ['.', './static']],
-  ['testing', ['.', './arbitraries']],
+  ['ssr', ['.', './static', './node']],
+  ['testing', ['.', './vitest']],
   ['devtools', ['.']],
 ];
 
@@ -61,6 +61,13 @@ function declarationText(node, name, checker) {
     return `const ${name}: ${type}`;
   }
   return upTo(node, node.end);
+}
+
+/** A function's overload signatures (every one, without the implementation), else its declaration. */
+function overloadsOf(symbol) {
+  const declarations = symbol.declarations ?? [];
+  const overloads = declarations.filter((d) => ts.isFunctionDeclaration(d) && d.body === undefined);
+  return overloads.length > 1 ? overloads : declarations.slice(0, 1);
 }
 
 function kindOf(node, checker) {
@@ -109,7 +116,9 @@ function buildApi() {
         name: exported.name,
         specifier,
         kind: kindOf(node, checker),
-        declaration: declarationText(node, exported.name, checker),
+        declaration: overloadsOf(symbol)
+          .map((n) => declarationText(n, exported.name, checker))
+          .join('\n'),
         doc,
       };
     });

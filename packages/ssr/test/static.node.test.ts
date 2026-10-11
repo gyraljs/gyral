@@ -3,12 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  clientEntryFromManifest,
+  clientAssetsFromManifest,
   prerender,
   productionServer,
-  staticFileFor,
   type FetchApp,
 } from '../src/static.js';
+import { staticFileFor } from '../src/assets.js';
 
 const dirs: string[] = [];
 const tmp = (): string => {
@@ -66,10 +66,12 @@ describe('@gyral/ssr/static (gyral-4k7.3)', () => {
     const dist = tmp();
     fakeBuild(dist);
     const manifest = join(dist, 'client', '.vite', 'manifest.json');
-    await expect(clientEntryFromManifest(manifest, 'src/entry-client.ts')).resolves.toBe(
-      '/assets/entry-AbC1.js',
+    await expect(clientAssetsFromManifest(manifest, 'src/entry-client.ts')).resolves.toMatchObject({
+      entry: '/assets/entry-AbC1.js',
+    });
+    await expect(clientAssetsFromManifest(manifest, 'src/other.ts')).rejects.toThrow(
+      /not an entry/,
     );
-    await expect(clientEntryFromManifest(manifest, 'src/other.ts')).rejects.toThrow(/not an entry/);
   });
 
   it('serves assets, prerendered pages and per-request renders with their cache policies', async () => {
@@ -82,7 +84,7 @@ describe('@gyral/ssr/static (gyral-4k7.3)', () => {
     });
     const server = await productionServer({
       distDir: dist,
-      createApp: ({ clientEntry }) => echo(clientEntry),
+      createApp: ({ clientEntry }) => echo(clientEntry ?? ''),
     });
     const get = (path: string, method = 'GET') =>
       server.fetch(new Request(new URL(path, 'http://x'), { method }));

@@ -1,13 +1,7 @@
-// Forms without JavaScript: the server half of ADR 0008. The same `defineForm` schema and the
-// same `validateForm` as the client's `form()` intent, so both paths reject identically.
-import {
-  formDataToObject,
-  formFields,
-  validateForm,
-  type FieldIssue,
-  type FormDefinition,
-  type IntentRejected,
-} from '@gyral/core';
+// Forms without JavaScript: the server half of ADR 0008. The same `defineForm` definition and
+// the same `definition.validate` as the client's `form()` intent, so both paths reject
+// identically, and neither echoes the definition's secret fields.
+import type { FieldIssue, FormDefinition, FormFields, IntentRejected } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 /** A server-side rejection of a schema-valid submission (see `rejectWith`). */
@@ -43,15 +37,21 @@ export interface FormActionHandlers<T> {
     request: Request,
   ) => Response | FormReject | Promise<Response | FormReject>;
   /**
-   * Invalid submission: re-render the page with the component's `.initialMessages` set to
-   * `[rejected]`, typically with status 422. The component's own `IntentRejected` reducer
-   * turns it into state, so the errors render through the same view as with JavaScript.
+   * Invalid submission without JavaScript: re-render the page with the component's
+   * `.initialMessages` set to `[rejected]`, typically with status 422. The component's own
+   * `IntentRejected` reducer turns it into state, so the errors render through the same view as
+   * with JavaScript. Leave it out for an endpoint only `submitForm` calls: every rejection is
+   * then the JSON 422.
    */
-  readonly invalid: (rejected: IntentRejected, request: Request) => Response | Promise<Response>;
+  readonly invalid?: (rejected: IntentRejected, request: Request) => Response | Promise<Response>;
 }
 
-/** `submitForm` (and any fetch asking for JSON) gets JSON; a browser form post gets HTML. */
-const wantsJson = (request: Request): boolean => {
+/**
+ * Whether the request asks for JSON rather than a page (`Accept: application/json` without
+ * `text/html`): `submitForm` and other fetch calls do, a browser's form post doesn't. The rule
+ * `formAction` answers by; for your own routes that serve both.
+ */
+export const wantsJson = (request: Request): boolean => {
   const accept = request.headers.get('accept') ?? '';
   return accept.includes('application/json') && !accept.includes('text/html');
 };
@@ -74,7 +74,8 @@ function asJson(response: Response): Response {
  * A request handler for a `<form method="post">` that works with JavaScript disabled, and
  * answers the JS path (`submitForm` in `@gyral/http`, `Accept: application/json`) with JSON:
  * valid → the handler's response, a redirect turned into `{ _tag: 'Redirected', location }`;
- * invalid → `422` with the `IntentRejected` (without `values`, so passwords aren't echoed).
+ * invalid → `422` with the `IntentRejected` (without `values`). On the no-JS path `values`
+ * never includes the definition's secret fields (`defineForm(schema, { secret })`).
  */
 export function formAction<Schema extends StandardSchemaV1>(
   definition: FormDefinition<Schema>,
@@ -87,18 +88,18 @@ export function formAction<Schema extends StandardSchemaV1>(
     } catch {
       return new Response('Expected a form submission', { status: 415 });
     }
-    const result = await validateForm(definition, handlers.intent, data);
+    const result = await definition.validate(data, handlers.intent);
     const json = wantsJson(request);
     let rejected: IntentRejected;
     if (result.ok) {
       const answer = await handlers.valid(result.data, request);
       if (answer instanceof Response) return json ? asJson(answer) : answer;
-      const values = formFields(formDataToObject(data));
+      const values = definition.values(data) as FormFields;
       rejected = { _tag: 'IntentRejected', intent: handlers.intent, issues: answer.issues, values };
     } else {
       rejected = result.rejected;
     }
-    if (json) {
+    if (json || handlers.invalid === undefined) {
       const { _tag, intent, issues } = rejected;
       return Response.json({ _tag, intent, issues }, { status: 422 });
     }

@@ -1,5 +1,15 @@
 # @gyral/devtools
 
+## 0.3.1
+
+### Patch Changes
+
+- Align the timeline with typed intents, subscriptions, driver commands and unified errors.
+- Respect secret form-field redaction in diagnostics and previews.
+- Keep `mountDevtools` and its types as the public surface; internal panel/protocol helpers
+  are no longer application exports. Update core to 0.3.1 and see the
+  [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md).
+
 ## 0.3.0
 
 ### Minor Changes

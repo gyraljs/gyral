@@ -88,7 +88,7 @@ describe('listExamples', () => {
     expect(all.map((e) => e.name)).toEqual(dirs);
     expect(all[0]?.port).toBe(5401);
     expect(all[0]?.hmr).toBe(25000);
-    const two = listExamples(['counter', 'register'], 5400, resolve('examples'));
+    const two = listExamples(['hello-world', 'register'], 5400, resolve('examples'));
     expect(two.map((e) => e.port)).toEqual([5401, 5402]);
     expect(two.find((e) => e.name === 'register')?.ssr).toBe(true);
   });

@@ -3,12 +3,11 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { css, define, html } from '@gyral/core';
+import { registryVersion } from '@gyral/core/internal/server';
 import { contentSecurityPolicy, renderPage, renderToString } from '../src/index.js';
 
-define<{ readonly n: number }, never>('csp-styled', {
+define<{ readonly n: number }>()('csp-styled', {
   init: () => ({ n: 0 }),
-  intent: {},
-  update: {},
   view: () => html`<p>styled</p>`,
   styles: css`
     p {
@@ -19,10 +18,8 @@ define<{ readonly n: number }, never>('csp-styled', {
 
 /** A shadow component with its own CSS, defined when called (late registration). */
 const styled = (tag: string, color: string) =>
-  define<{ readonly n: number }, never>(tag, {
+  define<{ readonly n: number }>()(tag, {
     init: () => ({ n: 0 }),
-    intent: {},
-    update: {},
     view: () => html`<p>${tag}</p>`,
     styles: css`
       p {
@@ -92,6 +89,42 @@ describe('renderPage({ csp: options }) builds the header at render time', () => 
   });
 });
 
+describe('the registry version the cache keys on (gyral-g1r.23)', () => {
+  it('changes with every registration, light components included, and not on a repeat', () => {
+    const before = registryVersion();
+    define<{ readonly n: number }>()('csp-light', {
+      shadow: false,
+      init: () => ({ n: 0 }),
+      view: () => html`<p>light</p>`,
+    });
+    const afterLight = registryVersion();
+    expect(afterLight).toBeGreaterThan(before);
+    styled('csp-versioned', 'rgb(20, 21, 22)');
+    const afterStyled = registryVersion();
+    expect(afterStyled).toBeGreaterThan(afterLight);
+    styled('csp-versioned', 'rgb(23, 24, 25)'); // same tag: the first definition is kept
+    expect(registryVersion()).toBe(afterStyled);
+  });
+
+  it('rebuilds the cached header after any registration, and keeps hashes in sync', async () => {
+    const options = {};
+    const header = () =>
+      renderPage({ title: 't', body: html`<p>x</p>`, csp: options }).headers.get(
+        'content-security-policy',
+      ) ?? '';
+    const first = header();
+    define<{ readonly n: number }>()('csp-light-2', {
+      shadow: false,
+      init: () => ({ n: 0 }),
+      view: () => html`<p>light</p>`,
+    });
+    expect(header()).toBe(first); // rebuilt: a light component adds no <style>, so no hash
+    styled('csp-versioned-2', 'rgb(26, 27, 28)');
+    const out = await renderToString(html`<csp-versioned-2></csp-versioned-2>`);
+    expect(header()).toContain(sha(styleOf(out)));
+  });
+});
+
 describe('a policy built before a component registered (development)', () => {
   it('warns once, naming the component whose <style> hash is missing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -107,5 +140,25 @@ describe('a policy built before a component registered (development)', () => {
     renderPage({ title: 't', body, csp, dev: false }); // production: no check
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
+  });
+
+  it('allows the page head scripts in script-src by hash (gyral-1zd.26)', async () => {
+    const theme = "document.documentElement.dataset.theme = 'dark';";
+    const sha = (text: string) => `'sha256-${createHash('sha256').update(text).digest('base64')}'`;
+    const res = renderPage({ title: 't', body: html`<p>x</p>`, headScripts: theme, csp: {} });
+    const header = res.headers.get('content-security-policy') ?? '';
+    expect(header).toContain(`script-src 'self' ${sha(theme)}`);
+    const kept = renderPage({
+      title: 't',
+      body: html`<p>x</p>`,
+      headScripts: theme,
+      csp: { directives: { 'script-src': "'self' https://cdn.example" } },
+    });
+    expect(kept.headers.get('content-security-policy')).toContain(
+      `script-src 'self' https://cdn.example ${sha(theme)}`,
+    );
+    expect(await contentSecurityPolicy({ scripts: theme })).toContain(sha(theme));
+    const none = renderPage({ title: 't', body: html`<p>x</p>`, csp: {} });
+    expect(none.headers.get('content-security-policy')).not.toContain('script-src');
   });
 });

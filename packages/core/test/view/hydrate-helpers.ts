@@ -5,6 +5,8 @@
 import { renderToString } from '../../src/server.js';
 import { DEV, type ChildValue } from '../../src/view/index.js';
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
 /** Server-only attributes: hydration's inputs, not part of the view (06 "Components"). */
 const SERVER_ONLY = new Set(['data-gyral-seed', 'data-gyral-light']);
 /** Form-state attributes the browser writes on first creation only. */
@@ -95,12 +97,13 @@ export function canon(parent: ParentNode, merge = false, liveOnly = false): stri
       .filter(
         (a) => !SERVER_ONLY.has(a.name) && !(liveOnly && FORM.has(`${el.localName} ${a.name}`)),
       )
-      .map((a) => ` ${a.name}=${JSON.stringify(a.value)}`)
+      .map((a) => ` ${a.namespaceURI === null ? '' : '~'}${a.name}=${JSON.stringify(a.value)}`)
       .sort()
       .join('');
     const root = el.shadowRoot === null ? '' : `#shadow(${canon(el.shadowRoot, merge, liveOnly)})`;
     const inner = liveOnly && el.localName === 'textarea' ? '' : canon(el, merge, liveOnly);
-    out += `<${el.localName}${attrs}${live(el)}>${root}${inner}</${el.localName}>`;
+    const tag = el.namespaceURI === SVG_NS ? `svg:${el.localName}` : el.localName;
+    out += `<${tag}${attrs}${live(el)}>${root}${inner}</${tag}>`;
   }
   flush();
   return out;

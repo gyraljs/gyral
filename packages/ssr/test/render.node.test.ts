@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as v from 'valibot';
 import { command, define, defineDriver, html, prop } from '@gyral/core';
-import { page, renderPage, renderToString } from '../src/index.js';
+import { renderPage, renderToString } from '../src/index.js';
+import { page } from '../src/page.js';
 
 const runs: string[] = [];
 const load = defineDriver<string, string>({
@@ -26,7 +27,7 @@ type Msg =
 
 const HOSTILE = `'</script><script>alert(1)</script>`;
 
-define<State, Msg, Props>('ssr-card', {
+define<State, Msg, Props>()('ssr-card', {
   props: {
     label: prop.string({ required: true }),
     items: prop.value(v.array(v.string()), { required: true }),
@@ -35,7 +36,6 @@ define<State, Msg, Props>('ssr-card', {
     { title: p.label.toUpperCase(), note: '' },
     [command(load, p.label, { onSuccess: (id) => ({ _tag: 'Loaded', id }) })],
   ],
-  intent: {},
   update: { Loaded: (s) => s, Noted: (s, m) => ({ ...s, note: m.text }) },
   view: (s, _i, { props }) => html`
     <h2>${s.title}</h2>
@@ -46,13 +46,11 @@ define<State, Msg, Props>('ssr-card', {
 });
 
 // State copied from props: the case seed deduplication exists for.
-define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>(
+define<{ readonly items: readonly string[] }, never, { readonly items: readonly string[] }>()(
   'ssr-copy',
   {
     props: { items: prop.value(v.array(v.string()), { required: true }) },
     init: (p) => ({ items: p.items }),
-    intent: {},
-    update: {},
     view: (s) => html`<p>${String(s.items.length)}</p>`,
   },
 );
@@ -125,7 +123,7 @@ describe('server rendering (ADR 0012)', () => {
       page({
         title: 'A <b> title',
         description: 'About us',
-        head: html`<link rel="icon" href="/favicon.ico" />`,
+        extraHead: html`<link rel="icon" href="/favicon.ico" />`,
         body: html`<ssr-card label="p" .items=${[]}></ssr-card>`,
         scripts: ['/src/entry-client.ts'],
       }),
@@ -133,7 +131,9 @@ describe('server rendering (ADR 0012)', () => {
     expect(out.startsWith('<!doctype html>')).toBe(true);
     expect(out).toContain('<html lang="en" dir="ltr">');
     expect(out).toContain('<title>A &lt;b&gt; title</title>');
-    expect(out).toContain('<meta name="description" content="About us">');
+    expect(out).toContain(
+      '<meta name="description" content="About us" data-gyral-head="name:description">',
+    );
     expect(out).toContain('<script type="module" src="/src/entry-client.ts"></script>');
     expect(out).toContain('<link rel="icon" href="/favicon.ico">');
     expect(out).toMatch(/<ssr-card\s+label="p"/);

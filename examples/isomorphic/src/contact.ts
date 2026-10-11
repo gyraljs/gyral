@@ -13,10 +13,10 @@ export type Msg = { readonly _tag: 'Reveal' };
 
 export const ADDRESS = 'hello@example.com';
 
-export const Contact = define<State, Msg>('gy-iso-contact', {
+export const Contact = define<State, Msg>()('gy-iso-contact', {
   shadow: false,
   init: () => ({ revealed: false }),
-  intent: { Reveal: () => ({ _tag: 'Reveal' }) },
+  intent: { Reveal: true },
   update: { Reveal: () => ({ revealed: true }) },
   view: (s) =>
     html`<p>
@@ -28,9 +28,3 @@ export const Contact = define<State, Msg>('gy-iso-contact', {
       }
     </p>`,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-iso-contact': InstanceType<typeof Contact>;
-  }
-}

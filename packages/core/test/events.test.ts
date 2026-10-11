@@ -7,18 +7,17 @@ type Msg =
   | { readonly _tag: 'Toggled'; readonly open: boolean }
   | { readonly _tag: 'Pressed' };
 
-const Keys = define<{ readonly log: readonly string[] }, Msg>('test-events', {
+const Keys = define<{ readonly log: readonly string[] }, Msg>()('test-events', {
   init: () => ({ log: [] }),
-  events: ['pointerdown'],
   intent: {
     Key: ({ key, event }) => {
       if (key !== 'ArrowDown' && key !== 'Escape') return undefined;
       event.preventDefault(); // parsers may cancel default input handling (ADR 0001)
       return { _tag: 'Key', key };
     },
-    Left: () => ({ _tag: 'Left' }),
+    Left: true,
     Toggled: ({ newState }) => ({ _tag: 'Toggled', open: newState === 'open' }),
-    Pressed: () => ({ _tag: 'Pressed' }),
+    Pressed: true,
   },
   update: {
     Key: (s, m) => ({ log: [...s.log, `key:${m.key}`] }),

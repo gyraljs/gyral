@@ -1,5 +1,26 @@
 # @gyral/ssr
 
+## 0.3.1
+
+### Patch Changes
+
+- `renderPage` produces pull-based chunks from synchronous rendering. Load data before
+  rendering; status and headers are final before the first byte. Component failures can
+  render a fallback without a seed, or fail the response under `onError: 'throw'`.
+- Automatic components load only the modules a page renders, including folded/entry-owned
+  modules. Client assets include hashed stylesheets and preloads; shared head data supports
+  canonical URLs, JSON-LD, media-qualified metadata and pre-stylesheet head scripts.
+- CSP supports hashed server style attributes and invalidates cached policies when component
+  registration changes. Forms redact secrets and support validation/refilling and JSON-only
+  rejection responses.
+- `@gyral/ssr/node` supplies `toNodeListener` with request context and `gyralDevServer`.
+  Node request bodies, response cancellation and keep-alive paths are handled correctly.
+- Production serving handles HEAD, malformed asset escapes, content types, cache headers,
+  immutable hashed assets, response hooks and server-rendered fallback routes.
+- Use `renderPage`, `clientAssetsFromManifest` and the production/static helpers; redundant
+  low-level public APIs are removed. Update core to 0.3.1 and read the
+  [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md).
+
 ## 0.3.0
 
 ### Minor Changes

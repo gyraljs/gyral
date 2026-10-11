@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { collectErrors } from './collect-errors.js';
 import {
   changed,
   command,
@@ -6,12 +7,12 @@ import {
   defineDriver,
   defineStore,
   html,
-  resetDocumentStores,
   send,
   settled,
-  STORE_SEED_ATTRIBUTE,
   type AnyStoreInstance,
 } from '../src/index.js';
+import { resetDocumentStores } from '../src/internal.js';
+import { STORE_SEED_ATTRIBUTE } from '../src/internal.js';
 
 interface Cart {
   readonly lines: readonly string[];
@@ -43,10 +44,9 @@ const cart = defineStore<Cart, CartMsg>('test-cart', {
 });
 
 // Two distant components: a badge that only reads, a button that only writes.
-define<{ readonly changes: number }, never>('test-badge', {
+define<{ readonly changes: number }>()('test-badge', {
   stores: [cart],
   init: () => ({ changes: 0 }),
-  intent: {},
   update: {
     StoreChanged: (s, m) => (changed(cart, m) === undefined ? s : { changes: s.changes + 1 }),
   },
@@ -55,20 +55,18 @@ define<{ readonly changes: number }, never>('test-badge', {
 });
 
 type AddMsg = { readonly _tag: 'AddOne' };
-define<{ readonly n: number }, AddMsg>('test-add', {
+define<{ readonly n: number }, AddMsg>()('test-add', {
   stores: [cart],
   init: () => ({ n: 0 }),
-  intent: { AddOne: () => ({ _tag: 'AddOne' }) },
+  intent: { AddOne: true },
   update: {
     AddOne: (s) => [{ n: s.n + 1 }, [send(cart, { _tag: 'Add', sku: `sku-${String(s.n)}` })]],
   },
   view: (_s, i) => html`<button data-intent=${i.AddOne}>add</button>`,
 });
 
-define<{ readonly x: number }, never>('test-undeclared', {
+define<{ readonly x: number }>()('test-undeclared', {
   init: () => ({ x: 0 }),
-  intent: {},
-  update: {},
   view: (_s, _i, { read }) => html`${read(cart).lines.length}`,
 });
 
@@ -198,17 +196,15 @@ describe('components and stores (ADR 0013)', () => {
   });
 
   it('rejects reading a store the spec does not declare', async () => {
-    // The view throws; the scheduler logs it with the tag and carries on (view/04 "Errors").
-    const errors: unknown[][] = [];
-    const original = console.error;
-    console.error = (...args: unknown[]) => errors.push(args);
+    // The view throws; it is reported with the tag and the page carries on (ADR 0024).
+    const reported = collectErrors();
     try {
       document.body.append(document.createElement('test-undeclared'));
       await settled();
     } finally {
-      console.error = original;
+      reported.stop();
     }
-    expect(String(errors[0]?.[0])).toContain('<test-undeclared> failed to render');
-    expect(String(errors[0]?.[1])).toMatch(/without declaring it/);
+    expect(reported.errors[0]?.component).toBe('test-undeclared');
+    expect(String(reported.errors[0]?.cause)).toMatch(/without declaring it/);
   });
 });

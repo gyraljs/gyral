@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { define, html, invokersSupported, settled } from '../src/index.js';
+import { define, html, settled } from '../src/index.js';
+import { invokersSupported } from '../src/internal.js';
 
 interface State {
   readonly items: readonly string[];
@@ -7,7 +8,7 @@ interface State {
 }
 type Msg = { readonly _tag: 'Clear'; readonly from: string | undefined };
 
-const List = define<State, Msg>('test-invokers', {
+const List = define<State, Msg>()('test-invokers', {
   init: () => ({ items: ['a', 'b'], from: undefined }),
   intent: {
     Clear: ({ command }) =>

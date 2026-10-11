@@ -66,7 +66,7 @@ function gyralPaths() {
   return paths;
 }
 
-function main() {
+function checkSkill() {
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
   const sources = [];
@@ -106,8 +106,15 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  rmSync(outDir, { recursive: true, force: true });
   console.log(`check-skill: ${String(sources.length)} code blocks typecheck`);
+}
+
+function main() {
+  try {
+    checkSkill();
+  } finally {
+    rmSync(outDir, { recursive: true, force: true });
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

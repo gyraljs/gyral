@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as v from 'valibot';
 import { z } from 'zod';
-import { define, defineForm, fieldErrors, html, settled, validateForm } from '../src/index.js';
+import { define, defineForm, fieldErrors, html, settled } from '../src/index.js';
 import type { IntentRejected } from '../src/index.js';
 
 const Contact = defineForm(v.object({ email: v.pipe(v.string(), v.email('Bad email')) }));
@@ -12,9 +12,9 @@ const data = (entries: Record<string, string | File>): FormData => {
   return fd;
 };
 
-describe('validateForm (shared by form() and the server formAction)', () => {
+describe('definition.validate (shared by form() and the server formAction)', () => {
   it('returns the parsed data for valid input', () => {
-    expect(validateForm(Contact, 'Send', data({ email: 'a@b.co' }))).toEqual({
+    expect(Contact.validate(data({ email: 'a@b.co' }), 'Send')).toEqual({
       ok: true,
       data: { email: 'a@b.co' },
     });
@@ -22,7 +22,7 @@ describe('validateForm (shared by form() and the server formAction)', () => {
 
   it('returns IntentRejected with issues and the submitted text values (no Files)', () => {
     const file = new File(['x'], 'cv.pdf');
-    const result = validateForm(Contact, 'Send', data({ email: 'nope', cv: file }));
+    const result = Contact.validate(data({ email: 'nope', cv: file }), 'Send');
     expect(result).toEqual({
       ok: false,
       rejected: {
@@ -38,7 +38,7 @@ describe('validateForm (shared by form() and the server formAction)', () => {
     const Async = defineForm(
       z.object({ name: z.string().refine(async (n) => Promise.resolve(n !== 'root'), 'Taken') }),
     );
-    await expect(validateForm(Async, 'Join', data({ name: 'root' }))).resolves.toMatchObject({
+    await expect(Async.validate(data({ name: 'root' }), 'Join')).resolves.toMatchObject({
       ok: false,
       rejected: { issues: [{ path: 'name', message: 'Taken' }] },
     });
@@ -51,9 +51,8 @@ interface State {
 }
 type Msg = { readonly _tag: 'Noop' };
 
-const Seeded = define<State, Msg>('test-initial-messages', {
+const Seeded = define<State, Msg>()('test-initial-messages', {
   init: () => ({ errors: {}, inits: 1 }),
-  intent: {},
   update: {
     Noop: (s) => s,
     IntentRejected: (s, m) => ({ ...s, errors: fieldErrors(m.issues) }),

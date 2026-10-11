@@ -27,7 +27,7 @@ const describeError = (error: HttpError): string =>
     ? 'GitHub rate limit reached. Try again in a minute.'
     : `Search failed (${error._tag}).`;
 
-export const GithubSearch = define<State, Msg>('gy-github-search', {
+export const GithubSearch = define<State, Msg>()('gy-github-search', {
   init: () => ({ query: '', results: { _tag: 'Idle' } }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
@@ -178,10 +178,4 @@ function repoItem(repo: Repo) {
       <p><data value=${repo.stargazers_count}>★ ${repo.stargazers_count.toLocaleString()}</data></p>
     </article>
   </li>`;
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-github-search': InstanceType<typeof GithubSearch>;
-  }
 }

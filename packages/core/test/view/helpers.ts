@@ -65,9 +65,10 @@ export function readable(p: PartSpec): ReadablePart {
  * no id either (compile.ts).
  */
 export function clientObject(template: TemplateObject, production = false): TemplateObject {
-  const { id, html, parts, server } = template;
+  const { id, html, parts, server, svg } = template;
   const object = production || id === undefined ? { html, parts } : { id, html, parts };
-  return server === true ? { ...object, server } : object;
+  const flagged = server === true ? { ...object, server } : object;
+  return svg === true ? { ...flagged, svg } : flagged;
 }
 
 /** How many values a template consumes, counted from its parts and from its segments. */

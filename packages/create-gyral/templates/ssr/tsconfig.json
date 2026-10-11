@@ -11,9 +11,8 @@
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "useDefineForClassFields": false,
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "server", "vite.config.ts", "vitest.config.ts"]
+  "include": [".gyral/elements.d.ts", "src", "server", "vite.config.ts", "vitest.config.ts"]
 }

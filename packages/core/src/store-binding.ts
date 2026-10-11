@@ -3,6 +3,7 @@
 import type { FeatureHost, StoreLink } from './features.js';
 import { scopeFor } from './store-scope.js';
 import type { AnyStore, AnyStoreInstance, StoreRef, StoreSendInput } from './store.js';
+import { message } from './view/index.js';
 
 type OnChange = (store: AnyStore, state: unknown, prev: unknown) => void;
 
@@ -33,10 +34,7 @@ export class StoreBinding implements StoreLink {
   #declaredStore(name: string): AnyStore {
     const store = this.#declared.get(name);
     if (store === undefined) {
-      throw new Error(
-        `<${this.#tag}> uses store "${name}" without declaring it. Add it to the spec: ` +
-          `stores: [${name}] (ADR 0013), so the component subscribes to its changes.`,
-      );
+      throw new Error(message(50, this.#tag, name));
     }
     return store;
   }

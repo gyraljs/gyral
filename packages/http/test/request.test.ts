@@ -7,9 +7,9 @@ type Msg =
   | { readonly _tag: 'Loaded'; readonly body: unknown }
   | { readonly _tag: 'LoadFailed'; readonly error: HttpError };
 
-const Loader = define<{ readonly status: string }, Msg>('test-http-loader', {
+const Loader = define<{ readonly status: string }, Msg>()('test-http-loader', {
   init: () => ({ status: 'idle' }),
-  intent: { Load: () => ({ _tag: 'Load' }) },
+  intent: { Load: true },
   update: {
     Load: () => [
       { status: 'loading' },

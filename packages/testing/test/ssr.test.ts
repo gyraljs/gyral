@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { define, html } from '@gyral/core';
-import {
-  customElementsIn,
-  hydrated,
-  mountSsr,
-  undefinedElementsIn,
-  type MountedSsr,
-} from '../src/index.js';
+import { hydrated, mountSsr, type MountedSsr } from '../src/index.js';
+import { customElementsIn, undefinedElementsIn } from '../src/ssr.js';
 
 const DOC = `<!doctype html><html><head>
 <style>.from-head { color: rgb(1, 2, 3); }</style>
@@ -28,10 +23,10 @@ afterEach(() => {
 type Msg = { readonly _tag: 'Inc' };
 
 // Hand-written server markup (production style: no development markers), hydrated in place.
-define<{ readonly n: number }, Msg>('test-ssr-counter', {
+define<{ readonly n: number }, Msg>()('test-ssr-counter', {
   hydrate: 'idle',
   init: () => ({ n: 0 }),
-  intent: { Inc: () => ({ _tag: 'Inc' }) },
+  intent: { Inc: true },
   update: { Inc: (s) => ({ n: s.n + 1 }) },
   view: (s, i) => html`<button data-intent=${i.Inc}>${s.n}</button>`,
 });

@@ -22,7 +22,7 @@ export function hydrate(
   seen?: SeenMarkup,
 ): void {
   const part = new ChildPart(root, null, null, 0, false, 0);
-  const mark = hookMark();
+  const mark = hookMark(root);
   const outer = listenFor(seen);
   try {
     adopt(part, value, root, host);
@@ -33,5 +33,5 @@ export function hydrate(
     listenFor(outer);
   }
   setRootPart(root, part);
-  runHooks(mark);
+  runHooks(mark, root);
 }

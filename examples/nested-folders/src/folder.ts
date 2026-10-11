@@ -3,9 +3,9 @@ import {
   css,
   define,
   each,
-  emit,
   html,
   nothing,
+  outputs,
   prop,
   type GyralElementClass,
 } from '@gyral/core';
@@ -22,6 +22,9 @@ export interface Props {
 }
 
 export type FolderOutput = { readonly _tag: 'Removed' };
+
+/** Typed `emit` for this component's outputs. */
+const emit = outputs<FolderOutput>();
 
 export type Msg =
   | { readonly _tag: 'Add' }
@@ -53,7 +56,7 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
   Msg,
   Props,
   FolderOutput
->('gy-folder', {
+>()('gy-folder', {
   props: {
     folderId: prop.string({ required: true }), // attribute "folder-id"
     // A boolean attribute: absent on the root folder means "not removable" (found by ui:check).
@@ -61,8 +64,8 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
   },
   init: () => ({ children: [], next: 1 }),
   intent: {
-    Add: () => ({ _tag: 'Add' }),
-    Remove: () => ({ _tag: 'Remove' }),
+    Add: true,
+    Remove: true,
     // Lazy source: `Folder` is still being defined here (recursion), so pass a function.
     Child: child(
       () => Folder,
@@ -138,9 +141,3 @@ export const Folder: GyralElementClass<State, Msg, Props, FolderOutput> = define
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-folder': InstanceType<typeof Folder>;
-  }
-}

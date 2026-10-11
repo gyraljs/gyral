@@ -18,10 +18,8 @@ const props = {
 
 type Props = PropsOf<typeof props>;
 
-const Shop = define<Stateless, never, Props>('test-prop-shop', {
+const Shop = define<Stateless, never, Props>()('test-prop-shop', {
   props,
-  intent: {},
-  update: {},
   view: (_s, _i, { props: p }) =>
     html`<p>
       ${p.label}|${p.minPrice}|${String(p.open)}|${p.sort}|${p.filters?.tags.join('+') ?? '-'}|${p.items.join(',')}|${p.note ?? '-'}
@@ -47,10 +45,8 @@ describe('prop builders', () => {
   });
 
   it('infers P from the builders when define() gets no type arguments (types)', () => {
-    const Inferred = define('test-prop-inferred', {
+    const Inferred = define()('test-prop-inferred', {
       props: { count: prop.number({ default: 1 }), title2: prop.string() },
-      intent: {},
-      update: {},
       view: (_s, _i, { props: p }) => {
         expectTypeOf(p.count).toEqualTypeOf<number>();
         expectTypeOf(p.title2).toEqualTypeOf<string | undefined>();
@@ -114,10 +110,8 @@ describe('prop builders', () => {
 
   it('warns in development when a schema transforms a property value', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const Trimmed = define('test-prop-trim', {
+    const Trimmed = define()('test-prop-trim', {
       props: { name: prop.string({ schema: v.pipe(v.string(), v.trim()) }) },
-      intent: {},
-      update: {},
       view: () => html`<p></p>`,
     });
     const el = new Trimmed();
@@ -127,10 +121,8 @@ describe('prop builders', () => {
   });
 
   it('rejects asynchronous schemas', () => {
-    const Async = define('test-prop-async', {
+    const Async = define()('test-prop-async', {
       props: { code: prop.string({ schema: v.pipeAsync(v.string()) }) },
-      intent: {},
-      update: {},
       view: () => html`<p></p>`,
     });
     const el = new Async();
@@ -140,14 +132,70 @@ describe('prop builders', () => {
     }).toThrow(/asynchronous schema/);
   });
 
+  it('keeps the object a property set passes, even when the schema copies it (identity)', () => {
+    const Point = v.object({ x: v.number() });
+    const Plot = define()('test-prop-identity', {
+      props: { at: prop.value(Point) },
+      view: () => html`<p></p>`,
+    });
+    const el = new Plot();
+    const at = { x: 1 };
+    el.at = at;
+    expect(el.at).toBe(at); // the schema's output is a copy; the element keeps the input
+  });
+
+  it('takes a plain type guard in prop.value and prop.json (gyral-c5d.7)', async () => {
+    interface Seat {
+      readonly row: string;
+      readonly n: number;
+    }
+    const isSeat = (u: unknown): u is Seat =>
+      typeof u === 'object' &&
+      u !== null &&
+      typeof (u as Seat).row === 'string' &&
+      typeof (u as Seat).n === 'number';
+    const isNumbers = (u: unknown): u is readonly number[] =>
+      Array.isArray(u) && u.every((x) => typeof x === 'number');
+    const guarded = {
+      seat: prop.value(isSeat),
+      held: prop.value(isSeat, { required: true }),
+      picks: prop.json(isNumbers, { default: [] }),
+    };
+    expectTypeOf<PropsOf<typeof guarded>>().toEqualTypeOf<{
+      readonly seat: Seat | undefined;
+      readonly held: Seat;
+      readonly picks: readonly number[];
+    }>();
+    const Booth = define()('test-prop-guard', {
+      props: guarded,
+      view: (_s, _i, { props: p }) =>
+        html`<p>${p.seat?.row ?? '-'}${p.seat?.n ?? ''}|${p.picks.join(',')}</p>`,
+    });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const el = new Booth();
+    const seat = { row: 'B', n: 4 };
+    el.seat = seat;
+    el.held = seat;
+    el.setAttribute('picks', '[1,2]');
+    document.body.append(el);
+    await settled();
+    expect(el.seat).toBe(seat);
+    expect(text(el)).toBe('B4|1,2');
+    (el as unknown as { seat: unknown }).seat = { row: 3 };
+    el.setAttribute('picks', '["x"]');
+    await settled();
+    expect(text(el)).toBe('-|'); // both invalid: treated as missing (picks' default is [])
+    expect(errors).toHaveBeenCalledTimes(2);
+    expect(String(errors.mock.calls[0]?.[0])).toContain('failed isSeat');
+    expect(String(errors.mock.calls[1]?.[0])).toContain('the attribute picks');
+  });
+
   it('captures properties set before the element was defined (upgrade capture)', async () => {
     const el = document.createElement('test-prop-late') as HTMLElement & { label?: string };
     el.label = 'early';
     document.body.append(el);
-    const Late = define('test-prop-late', {
+    const Late = define()('test-prop-late', {
       props: { label: prop.string({ default: '?' }) },
-      intent: {},
-      update: {},
       view: (_s, _i, { props: p }) => html`<p>${p.label}</p>`,
     });
     await settled();

@@ -12,6 +12,7 @@ export const devUpdate: typeof Dev.devUpdate = noop;
 export const devHydrated: typeof Dev.devHydrated = noop;
 export const devMismatch: typeof Dev.devMismatch = noop;
 export const devStore: typeof Dev.devStore = noop;
+export const devError: typeof Dev.devError = noop;
 export const devCommands: typeof Dev.devCommands = () => noop;
 export const devOwner: typeof Dev.devOwner = () => '';
 export const devLiveComponents: typeof Dev.devLiveComponents = () => [];

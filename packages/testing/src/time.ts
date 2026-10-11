@@ -15,9 +15,11 @@ export interface VirtualTime {
  * Replaces timers and `Date` with a virtual clock (ADR 0006, "Testing"). It patches the
  * platform rather than Gyral's runtime, so it covers drivers, debounces and retry delays
  * alike and does not depend on how the interpreter is implemented. Microtasks stay real,
- * so promises and the runtime keep working.
+ * so promises and the runtime keep working. Animation frames are faked only where they exist,
+ * so model and driver tests can use it in a Node project.
  */
 export function virtualTime(): VirtualTime {
+  const frames = typeof globalThis.requestAnimationFrame === 'function';
   const clock = install({
     toFake: [
       'setTimeout',
@@ -25,9 +27,8 @@ export function virtualTime(): VirtualTime {
       'setInterval',
       'clearInterval',
       'Date',
-      'requestAnimationFrame',
-      'cancelAnimationFrame',
       'performance',
+      ...(frames ? (['requestAnimationFrame', 'cancelAnimationFrame'] as const) : []),
     ],
   });
   return {

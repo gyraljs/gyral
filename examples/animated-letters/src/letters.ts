@@ -43,13 +43,11 @@ export function toggle(s: State, letter: string): Next<State, Msg> {
   ];
 }
 
-export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
-  init: () => [
-    // The original starts with just "A"; "GYRAL" shows the staggered entrance.
-    { letters: ['A', 'G', 'L', 'R', 'Y'].map((key) => ({ key, leaving: false })) },
-    [letterKeys<Msg>((letter) => ({ _tag: 'Key', letter }))],
-  ],
-  intent: {},
+export const AnimatedLetters = define<State, Msg>()('gy-animated-letters', {
+  // The original starts with just "A"; "GYRAL" shows the staggered entrance.
+  init: () => ({ letters: ['A', 'G', 'L', 'R', 'Y'].map((key) => ({ key, leaving: false })) }),
+  // Key presses stream in for as long as the component is in the page (ADR 0025).
+  subscriptions: () => [letterKeys<Msg>((letter) => ({ _tag: 'Key', letter }))],
   update: {
     Key: (s, m) => toggle(s, m.letter),
     // Ignore a stale timer if the letter came back while it was shrinking.
@@ -132,9 +130,3 @@ export const AnimatedLetters = define<State, Msg>('gy-animated-letters', {
     }
   `,
 });
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'gy-animated-letters': InstanceType<typeof AnimatedLetters>;
-  }
-}

@@ -17,7 +17,10 @@ export const CHILD_SOLE = 1;
 export const CHILD_BEFORE = 2;
 /** `[ATTR_PART, path, name]`: `name=${v}`. */
 export const ATTR_PART = 3;
-/** `[MULTI_PART, path, name, strings]`: `name="a ${x} b"`. */
+/**
+ * `[MULTI_PART, path, name, strings]`: `name="a ${x} b"`; with one string and no values, a
+ * static `style` attribute the client applies through the CSSOM (01 "Normalization").
+ */
 export const MULTI_PART = 4;
 /** `[BOOL_PART, path, name]`: `?name=${v}`. */
 export const BOOL_PART = 5;
@@ -62,7 +65,8 @@ export type PartSpec =
  * - `child`: the value per 02's child table. Anchors are already in the next static string.
  *   `in` is the parent element's local name (absent at the template root, where the parent is
  *   wherever the instance is written): the development check for text the parser would move
- *   out of table structure needs it.
+ *   out of table structure needs it. `svg` is set when the parent is SVG content (an SVG
+ *   element other than <foreignObject>, <desc>, <title>), where svg templates may render.
  * - `text`: the value as escaped text (`<textarea>`, `<title>` content).
  * - `attr`: ` name="escaped"`, or nothing for null/undefined/nothing. With `strings`, the
  *   pieces and `strings.length - 1` values are joined first (`nothing` in any piece: nothing).
@@ -77,11 +81,12 @@ export type PartSpec =
  * - `close`: write `</tag>`. Everything between `openEnd` and `close` is the element's children.
  *
  * Joining the strings with every op written empty (`open` as `html`, `openEnd` as `>`, `close`
- * as `</tag>`) gives exactly the template's `html`.
+ * as `</tag>`) gives exactly the template's `html`, plus its static `style` attributes, which
+ * the client's `html` leaves to the part table.
  */
 export type Segment =
   | string
-  | { readonly k: 'child'; readonly in?: string }
+  | { readonly k: 'child'; readonly in?: string; readonly svg?: true }
   | { readonly k: 'text' }
   | { readonly k: 'attr'; readonly name: string; readonly strings?: readonly string[] }
   | { readonly k: 'bool'; readonly name: string }
@@ -102,7 +107,10 @@ export interface TemplateObject {
    * production client (01 "Template ids"): there the renderer compares templates by identity.
    */
   readonly id?: string;
-  /** Normalized template HTML for the client: bound attributes removed, anchors added. */
+  /**
+   * Normalized template HTML for the client: bound attributes and static `style` attributes
+   * (zero-hole multi-attribute parts) removed, anchors added.
+   */
   readonly html: string;
   readonly parts: readonly PartSpec[];
   /**
@@ -111,10 +119,21 @@ export interface TemplateObject {
    */
   readonly server?: true;
   /**
+   * `true` for an svg template (`` svg`…` ``, 01 "svg templates"): its HTML is SVG content,
+   * parsed inside an <svg>. Absent otherwise.
+   */
+  readonly svg?: true;
+  /**
    * Server writing plan. Absent from client-compiled template objects (the compiler drops it),
    * so the client renderer never reads it; the runtime preparer and server builds keep it.
    */
   readonly segments?: readonly Segment[];
+  /**
+   * Server only, like `segments`: the decoded values of the template's non-empty static
+   * `style` attributes, deduplicated, so a server render can collect every `style` value it
+   * writes for a CSP (ADR 0020) without parsing its string segments. Absent when there are none.
+   */
+  readonly staticStyles?: readonly string[];
   /** Development only: file:line:column of the call site. */
   readonly loc?: string;
 }
