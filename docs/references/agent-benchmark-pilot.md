@@ -6,6 +6,11 @@ the pilot's behavioral contracts and measurements. Scaffolds, the browser oracle
 provider-specific runner are in `scripts/agent-pilot/`; `scripts/agent-pilot.mjs` is the
 entry point. The protected oracle and local validation must pass before measured runs.
 
+The subsequent [ecosystem and trace review](ecosystem-review-2026-10-11.md) documents
+corpus imbalance, omitted MCP workflow instructions and a latent generated-cache sandbox
+restriction. It includes separately retained continuation diagnostics; the original
+36-run results and frozen artifacts below remain unchanged.
+
 ## Conditions and versions
 
 | Condition        | Framework              | Additional assistance                                |
