@@ -1,0 +1,6 @@
+import { define, html } from '@gyral/core';
+const App = define()('pilot-app', {
+  init: () => ({}),
+  view: () => html`<h1>Benchmark app</h1><p>Implement the requested feature here.</p>`
+});
+document.querySelector('main')?.append(new App());

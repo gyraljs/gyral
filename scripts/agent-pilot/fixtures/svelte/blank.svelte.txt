@@ -1,0 +1,2 @@
+<script lang="ts"></script>
+<h1>Benchmark app</h1><p>Implement the requested feature here.</p>

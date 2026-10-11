@@ -1,0 +1,30 @@
+import { useState } from 'react';
+type Item = { id: number; title: string; done: boolean };
+type Filter = 'All' | 'Active' | 'Completed';
+export default function App() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [draft, setDraft] = useState('');
+  const [filter, setFilter] = useState<Filter>('All');
+  const [nextId, setNextId] = useState(1);
+  const visible = items.filter(item => filter === 'All' || item.done === (filter === 'Completed'));
+  function add() {
+    if (!draft.trim()) return;
+    setItems([...items, { id: nextId, title: draft.trim(), done: false }]);
+    setNextId(nextId + 1); setDraft('');
+  }
+  function toggle(id: number | undefined) { setItems(items.map(item => item.id === id ? { ...item, done: !item.done } : item)); }
+  return <>
+    <h1>Task list</h1>
+    <form onSubmit={event => { event.preventDefault(); add(); }}>
+      <label htmlFor="new-task">New task</label>
+      <input id="new-task" value={draft} onChange={event => setDraft(event.target.value)} />
+      <button type="submit">Add task</button>
+    </form>
+    <nav aria-label="Task filters">{(['All', 'Active', 'Completed'] as Filter[]).map(value => <button key={value} type="button" aria-pressed={value === filter} onClick={() => setFilter(value)}>{value}</button>)}</nav>
+    <p role="status">{items.filter(item => !item.done).length} active tasks</p>
+    <ul>{visible.map((item, index) => <li key={item.id}>
+      <label><input type="checkbox" checked={item.done} onChange={() => toggle(__TOGGLE_ID__)} />{item.title}</label>
+      <button type="button" aria-label={`Delete ${item.title}`} onClick={() => setItems(items.filter(value => value.id !== item.id))}>Delete</button>
+    </li>)}</ul>
+  </>;
+}
