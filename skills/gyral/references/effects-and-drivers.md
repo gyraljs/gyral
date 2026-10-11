@@ -454,3 +454,14 @@ provideDrivers(document.body, {
 
 Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `provideDrivers`,
 `el.drivers` or `mountSsr`.
+
+## Optional route segments and catch-all routes (0.3.1)
+
+`routes({ product: '/products/:id?', docs: '/docs/:path*', notFound: '/:path*' })` supports
+optional string captures and trailing catch-all arrays. Omitted optional captures are absent
+from params; empty catch-alls are `[]`, including at `/`. Build links with `href`:
+`site.href('product', {})` and `site.href('docs', { path: ['guides', 'a/b'] })`.
+The latter encodes the slash inside the array item as `%2F`. Keep the not-found route last;
+the server must explicitly return status 404. Required values/array entries cannot be empty
+or dot segments. Avoid ambiguous omissions in adjacent optional parameters: use a literal
+separator; href throws when the URL would capture different parameters.

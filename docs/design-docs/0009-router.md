@@ -2,6 +2,44 @@
 
 Status: **accepted** (2026-10-04). Bead: gyral-ud5.2. Builds on ADR 0003 and ADR 0006.
 
+## Optional segments and trailing catch-all routes (0.3.1, gyral-1zd.10)
+
+The grammar now includes optional named segments (`/products/:id?`, `id?: string`) and
+named trailing catch-all segments (`/docs/:path*`, `path: readonly string[]`). A catch-all
+captures zero or more nonempty segments; the empty capture is an empty array, including
+`/:path*` at `/`. Splitting happens before percent decoding, so `%2F` stays one array item.
+An omitted optional parameter is absent from the matched params object. Optional segments
+may precede literals or required params; present optional captures are tried first, then
+omitted if the remainder would not match. This is the native URLPattern ordering.
+
+`href()` omits absent optional segments and encodes each catch-all segment independently.
+Required string parameters and array entries must be nonempty and cannot be `.` or `..`
+(the URL parser normalizes dot segments). Catch-all parameters must be arrays and must be
+present, even when empty. Ambiguous optional omissions are rejected by `href()`: for
+`/:first?/:second?`, `{ second: 'x' }` would match as `{ first: 'x' }`, so it throws instead
+of silently producing a URL for different params. Use a literal separator for such routes.
+Unknown route names and missing/wrong-shaped parameters also throw.
+
+Names must be unique within a pattern; catch-all segments must be last. Bare wildcards,
+regexes, groups, literal question marks and other URLPattern-only grammar remain rejected.
+First match in declaration order wins; put `notFound: '/:path*'` last. Selecting that route
+does not set an HTTP status: the application's server response explicitly returns 404.
+Canonical paths, the single trailing-slash normalization and SSR-safe URL matching remain
+unchanged. Empty internal path segments do not match, including inside a catch-all.
+
+Native URLPattern does not match `/` against `/:path*` or a fully optional pattern; Gyral
+supplies the zero-segment result for this case so native and fallback matchers agree.
+Conformance runs in Chromium and Node and checks matching, href construction, ordering,
+encoded slashes, omitted captures, invalid patterns and canonical round trips.
+Source: [URLPattern constructor and syntax](https://developer.mozilla.org/en-US/docs/Web/API/URLPattern/URLPattern).
+
+Measured against the form-associated-components commit `90e7075`, the extended grammar and
+href validation add 440 B gzip to isomorphic (426 B initial) and 453 B to routing-view
+(451 B initial). The router is opt-in; apps without it keep their budgets. The two router
+budgets are adjusted to measured + 0.05 KiB, rounded up to 0.1 KiB: isomorphic 18.4 / 15.4
+(all / initial), routing-view 15.1 / 14.6. This is the cost of the approved grammar and
+round-trip validation, not a relaxation for unused form machinery.
+
 ## Decision
 
 ### Route tables are pure and typed
@@ -13,8 +51,9 @@ app.href('user', { id: 'a b' }); // '/users/a%20b'
 ```
 
 - Matching never touches `window`, so the same table serves SSR (gyral-4k7).
-- Patterns are **literal segments and `:param` only**. `routes()` rejects URLPattern-only
-  syntax (`*`, `?`, groups, regex) so both matchers behave identically. One trailing slash is
+- Patterns are literal, required `:param`, optional `:param?`, and trailing `:path*` segments
+  (see the 0.3.1 extension above). `routes()` rejects other URLPattern-only syntax
+  (bare wildcards, groups, regex) so both matchers behave identically. One trailing slash is
   ignored (the match's `path` is the canonical spelling, see "Canonical paths" below); params
   are percent-decoded; first match in table order wins.
 - URLPattern is used when present (it is not Baseline widely available); otherwise a small

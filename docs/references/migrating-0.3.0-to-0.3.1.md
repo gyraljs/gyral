@@ -10,6 +10,12 @@ CHANGELOGs).
 
 ## Router (`@gyral/router`)
 
+`href()` now rejects unknown route names, missing required parameters, empty/dot-segment
+values and invalid catch-all arrays. Supply every required string and catch-all array
+(use `[]` for an empty catch-all), and use literal separators where optional omissions
+would make the generated URL capture different params. Optional `:id?` and trailing
+`:path*` routes are supported in 0.3.1; see ADR 0009.
+
 | Change                                                                                                                                                                                                | Who is affected                                                                          | Fix                                                                                                                             |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `routes()` throws at startup for patterns the two matchers would read differently: `:post-id`, `/v:id`, empty or dot segments, a param named twice, `#`.                                              | Route tables with such patterns.                                                         | Rename params to identifiers (`/:postId`) and drop the odd segments.                                                            |
