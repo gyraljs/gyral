@@ -101,7 +101,7 @@ describe('gyralVitePreset({ components: true }) in a build', () => {
       configFile: false,
       logLevel: 'silent',
       ...gyralVitePreset({ components: true }),
-      input: join(root, 'src/main.ts'),
+      input: { components: join(root, 'src/main.ts') },
       build: {
         outDir: dist,
         minify: false,
@@ -117,11 +117,11 @@ describe('gyralVitePreset({ components: true }) in a build', () => {
     const written = JSON.parse(readFileSync(join(dist, '.vite/gyral-components.json'), 'utf8')) as {
       loader: string;
     };
-    expect(written.loader).toMatch(/^custom\/components-/);
+    expect(written.loader).toMatch(/^custom\/components-loader-/);
     expect(readFileSync(join(dist, written.loader), 'utf8')).not.toContain('__vite__mapDeps');
-    expect(calls.some(({ host, deps }) => host.startsWith('custom/main-') && deps.length > 0)).toBe(
-      true,
-    );
+    expect(
+      calls.some(({ host, deps }) => host.startsWith('custom/components-') && deps.length > 0),
+    ).toBe(true);
     expect(calls.some(({ host }) => host === written.loader)).toBe(false);
     expect(
       (await componentsFromManifest(dist))?.modules.get('vt-list')?.preload.length,

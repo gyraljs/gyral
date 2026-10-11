@@ -57,10 +57,13 @@ function withLoader(input: Input): string[] | Record<string, string> {
   if (input === undefined) return { components: COMPONENTS_ID };
   if (typeof input === 'string') {
     const name = input.replace(/^.*\//, '').replace(/\.[^.]*$/, '');
-    return { [name]: input, components: COMPONENTS_ID };
+    return withLoader({ [name]: input });
   }
   if (Array.isArray(input)) return [...(input as readonly string[]), COMPONENTS_ID];
-  return { ...(input as Readonly<Record<string, string>>), components: COMPONENTS_ID };
+  const entries = input as Readonly<Record<string, string>>;
+  let name = 'components';
+  while (name in entries) name += '-loader';
+  return { ...entries, [name]: COMPONENTS_ID };
 }
 
 /** The API `gyralDevServer` reads from this plugin (the tags it found, fresh). */
