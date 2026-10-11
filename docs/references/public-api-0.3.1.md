@@ -347,6 +347,19 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `EventSourceOutput`     | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
 | `makeEventSourceDriver` | value | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
 
+### `@gyral/http/websocket`
+
+| Export                | Kind  | Status          | Documented in                                                                                  |
+| --------------------- | ----- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `makeWebSocketDriver` | value | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `WebSocketClosed`     | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `WebSocketError`      | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `WebSocketIncoming`   | type  | supporting type |                                                                                                |
+| `WebSocketInput`      | type  | supporting type |                                                                                                |
+| `WebSocketOptions`    | type  | supporting type |                                                                                                |
+| `WebSocketOutput`     | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `WebSocketPayload`    | type  | supporting type |                                                                                                |
+
 ### `@gyral/mcp`
 
 | Export         | Kind  | Status          | Documented in                                          |

@@ -18,7 +18,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing.ts",
-    "./sse": "./src/sse.ts"
+    "./sse": "./src/sse.ts",
+    "./websocket": "./src/websocket.ts"
   },
   "publishConfig": {
     "exports": {
@@ -33,6 +34,10 @@
       "./sse": {
         "types": "./dist/sse.d.ts",
         "default": "./dist/sse.js"
+      },
+      "./websocket": {
+        "types": "./dist/websocket.d.ts",
+        "default": "./dist/websocket.js"
       }
     }
   },

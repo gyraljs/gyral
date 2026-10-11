@@ -198,6 +198,10 @@ export const watchSignals = <T>(name: string, read: () => T) =>
 
 ## A WebSocket feed
 
+For connections Gyral owns, prefer `@gyral/http/websocket` (network-streams.md): typed
+receive/send/close commands, outgoing buffer limits, close metadata and cancellation.
+The recipe below illustrates a lower-level subscription over text events.
+
 ```ts
 import { command, retry, subscription, type Command } from '@gyral/core';
 

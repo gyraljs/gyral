@@ -106,6 +106,9 @@ provideDrivers(document.body, {
 
 ## Streaming drivers
 
+For Gyral-owned native EventSource/WebSocket connections, use the optional drivers in
+network-streams.md. The lower-level contracts below remain useful for other transports.
+
 `run` may call `ctx.emit(output)` many times (each goes through `onSuccess`) and usually never
 resolves; `ctx.signal` aborts when the command is switched away or the component disconnects.
 When a stream delivers many messages per frame (market data, sensors) and the view isn't
