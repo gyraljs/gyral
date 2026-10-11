@@ -71,11 +71,17 @@ describe('optional IndexedDB operations', () => {
     });
     const db = await connect(database, 1);
     try {
-      const request = db.transaction('values').objectStore('values').get('label');
+      const tx = db.transaction('values');
+      const request = tx.objectStore('values').get('label');
       expect(
-        await new Promise<unknown>((resolve) => {
-          request.onsuccess = () => {
+        await new Promise<unknown>((resolve, reject) => {
+          // Request success precedes transaction completion. Closing here would leave
+          // this test-owned connection pending and race afterEach's leak assertion.
+          tx.oncomplete = () => {
             resolve(request.result);
+          };
+          tx.onabort = () => {
+            reject(tx.error ?? new Error('Verification read aborted.'));
           };
         }),
       ).toBe('committed');
