@@ -12,6 +12,7 @@ import { componentsFromManifest } from '../src/static.js';
 const SSR = resolve(import.meta.dirname, '../src/index.ts');
 
 const files: Record<string, string> = {
+  'src/main.ts': `globalThis.loadList = () => import('./list.js');`,
   'src/card.ts': `
     import { define, html } from '@gyral/core';
     export const Card = define()('vt-card', { init: () => ({}), view: () => html\`<p>card</p>\` });
@@ -80,6 +81,8 @@ describe('gyralVitePreset({ components: true }) in a build', () => {
     const loader = readFileSync(join(dist, written.loader), 'utf8');
     expect(loader).toContain('vt-list');
     expect(loader).toContain('MutationObserver');
+    expect(loader).not.toContain('__vite__mapDeps');
+    expect(loader).not.toContain('__gyral_load_chunk__');
 
     const components = await componentsFromManifest(dist);
     const list = components?.modules.get('vt-list');
@@ -88,6 +91,41 @@ describe('gyralVitePreset({ components: true }) in a build', () => {
     // list.ts imports card.ts, so a page rendering <vt-list> preloads card's chunk too.
     expect(list?.preload).toContain(card?.preload[0]);
     for (const url of list?.preload ?? []) expect(existsSync(join(dist, url))).toBe(true);
+  }, 60_000);
+
+  it('filters only the loader’s JS dependencies with custom filenames and a user resolver', async () => {
+    const dist = join(root, 'dist-resolver');
+    const calls: { host: string; deps: string[] }[] = [];
+    await build({
+      root,
+      configFile: false,
+      logLevel: 'silent',
+      ...gyralVitePreset({ components: true }),
+      input: join(root, 'src/main.ts'),
+      build: {
+        outDir: dist,
+        minify: false,
+        modulePreload: {
+          resolveDependencies: (_file, deps, context) => {
+            calls.push({ host: context.hostId, deps });
+            return deps;
+          },
+        },
+        rolldownOptions: { output: { entryFileNames: 'custom/[name]-[hash].js' } },
+      },
+    });
+    const written = JSON.parse(readFileSync(join(dist, '.vite/gyral-components.json'), 'utf8')) as {
+      loader: string;
+    };
+    expect(written.loader).toMatch(/^custom\/components-/);
+    expect(readFileSync(join(dist, written.loader), 'utf8')).not.toContain('__vite__mapDeps');
+    expect(calls.some(({ host, deps }) => host.startsWith('custom/main-') && deps.length > 0)).toBe(
+      true,
+    );
+    expect(calls.some(({ host }) => host === written.loader)).toBe(false);
+    expect(
+      (await componentsFromManifest(dist))?.modules.get('vt-list')?.preload.length,
+    ).toBeGreaterThan(0);
   }, 60_000);
 });
 

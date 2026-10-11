@@ -14,6 +14,7 @@ const files: Record<string, string> = {
     import './card.js';
     import './shell.js';
   `,
+  'src/empty.ts': '',
   'src/card.ts': `
     import { define, html } from '@gyral/core';
     export const Card = define()('ft-card', { init: () => ({}), view: () => html\`<p>card</p>\` });
@@ -50,7 +51,11 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-async function buildApp(dist: string, components: Parameters<typeof gyralVitePreset>[0]) {
+async function buildApp(
+  dist: string,
+  components: Parameters<typeof gyralVitePreset>[0],
+  entry = 'src/main.ts',
+) {
   await build({
     root,
     configFile: false,
@@ -60,13 +65,14 @@ async function buildApp(dist: string, components: Parameters<typeof gyralVitePre
       outDir: dist,
       emptyOutDir: true,
       minify: false,
-      rollupOptions: { input: { main: join(root, 'src/main.ts') } },
+      rollupOptions: { input: { main: join(root, entry) } },
     },
   });
   return JSON.parse(readFileSync(join(dist, '.vite', 'gyral-components.json'), 'utf8')) as {
     loader: string;
     modules: Record<string, string>;
     chunks: Record<string, string>;
+    entryTags: string[];
   };
 }
 
@@ -74,11 +80,82 @@ it('serves components whose module was folded into the entry or another componen
   const dist = join(root, 'dist-folded');
   const written = await buildApp(dist, { components: true });
   expect(Object.keys(written.chunks).sort()).toEqual(['ft-badge', 'ft-card', 'ft-shell']);
+  // This fixture inherits the package's sideEffects:false: static imports alone cannot
+  // guarantee registration. Keep these modules in the loader so they aren't shaken away.
+  expect(written.entryTags).toEqual([]);
   // `productionServer` calls this at startup: it used to throw for a folded module.
   const components = await componentsFromManifest(dist);
   for (const tag of ['ft-card', 'ft-shell', 'ft-badge']) {
     // Each preloads the chunk its module is in.
     expect(components?.modules.get(tag)?.preload, tag).toContain(`/${written.chunks[tag] ?? tag}`);
+  }
+}, 60_000);
+
+it('allows explicit groups while keeping shared children independently loadable', async () => {
+  const packageFile = join(root, 'package.json');
+  writeFileSync(packageFile, JSON.stringify({ type: 'module', sideEffects: true }));
+  const added = ['src/other-shell.ts', 'src/cycle-a.ts', 'src/cycle-b.ts'];
+  try {
+    const folded = await buildApp(
+      join(root, 'dist-lazy-folded'),
+      { components: { modules: { 'ft-badge': 'src/shell.ts' } } },
+      'src/empty.ts',
+    );
+    expect(folded.chunks['ft-shell']).toBe(folded.chunks['ft-badge']);
+    expect(folded.chunks['ft-card']).not.toBe(folded.chunks['ft-shell']);
+    writeFileSync(
+      join(root, 'src/other-shell.ts'),
+      `
+      import { define, html } from '@gyral/core';
+      import './badge.js';
+      define()('ft-other-shell', { init: () => ({}), view: () => html\`<ft-badge></ft-badge>\` });
+    `,
+    );
+    for (const [tag, other] of [
+      ['a', 'b'],
+      ['b', 'a'],
+    ] as const) {
+      writeFileSync(
+        join(root, `src/cycle-${tag}.ts`),
+        `
+        import { define, html } from '@gyral/core';
+        import './cycle-${other}.js';
+        define()('ft-cycle-${tag}', { init: () => ({}), view: () => html\`<p>cycle</p>\` });
+      `,
+      );
+    }
+    const shared = await buildApp(
+      join(root, 'dist-lazy-shared'),
+      { components: { modules: { 'ft-cycle-b': 'src/cycle-a.ts' } } },
+      'src/empty.ts',
+    );
+    expect(shared.chunks['ft-badge']).not.toBe(shared.chunks['ft-shell']);
+    expect(shared.chunks['ft-badge']).not.toBe(shared.chunks['ft-other-shell']);
+    expect(shared.chunks['ft-cycle-a']).toBeDefined();
+    expect(shared.chunks['ft-cycle-a']).toBe(shared.chunks['ft-cycle-b']);
+  } finally {
+    rmSync(packageFile);
+    for (const file of added) rmSync(join(root, file), { force: true });
+  }
+}, 60_000);
+
+it('keeps entry-defined components together without emitting duplicate component entries', async () => {
+  const packageFile = join(root, 'package.json');
+  writeFileSync(packageFile, JSON.stringify({ type: 'module', sideEffects: true }));
+  try {
+    const dist = join(root, 'dist-entry');
+    const written = await buildApp(dist, { components: true });
+    expect(written.entryTags.sort()).toEqual(['ft-badge', 'ft-card', 'ft-shell']);
+    expect(new Set(Object.values(written.chunks)).size).toBe(1);
+    const loader = readFileSync(join(dist, written.loader), 'utf8');
+    expect(loader).not.toContain('import(');
+    expect(loader).not.toContain('__vitePreload');
+    const components = await componentsFromManifest(dist);
+    expect(components?.modules.get('ft-card')?.preload).toContain(
+      `/${written.chunks['ft-card'] ?? 'missing'}`,
+    );
+  } finally {
+    rmSync(packageFile);
   }
 }, 60_000);
 

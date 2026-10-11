@@ -183,8 +183,9 @@ the page loads exactly the components it rendered.
 - **Build.** `gyralVitePreset({ components: true })` (include: `['src']` by default) finds every
   two-call `define<…>()('tag', …)` in the app's source files (test files and
   `customElements.define` excluded) and adds a loader, `virtual:gyral/components`, to the client
-  build's input. The loader holds a `tag → () => import(module)` table, so each component module
-  becomes its own chunk. The build writes `.vite/gyral-components.json` next to Vite's manifest:
+  build's input. The loader holds a `tag → () => import(module)` table; statically retained
+  app-entry components stay in the entry (gyral-1zd.31). Other targets become dynamic chunks.
+  The build writes `.vite/gyral-components.json` next to Vite's manifest:
   the loader's file and each tag's manifest key.
 - **Render.** Core's server render collects the tag of every component it writes (`tags`
   option, server only). `renderPage({ components })` writes the tail after the body, where
@@ -198,7 +199,8 @@ the page loads exactly the components it rendered.
   never twice. Since gyral-1zd.29 it also watches the shadow roots of the components it defined
   (their nested roots too, with the same MutationObserver), so tags rendered there load without
   the parent importing them; a removed host's root is dropped from the scan and its observer
-  registration is collected with it. The loader registers itself under
+  registration is collected with it. Entry-defined tags are watched too, including when the
+  entry registers after the loader runs. The loader registers itself under
   `Symbol.for('gyral.components')`, and core's `componentsReady()` awaits it: every rendered tag
   it knows is defined, then `settled()` (tests and page scripts; plain `settled()` without the
   loader). `hydrate:` strategies are unchanged: they
@@ -237,6 +239,30 @@ dynamic-import targets and shared chunks, never for a module folded into one of 
   call: it needs no parsing, can't drift out of a reformatted line, and is visible in one place
   (the config). The generated element typings don't cover listed tags (the scan doesn't know
   their class); such a module declares its own `HTMLElementTagNameMap` entry.
+
+## Addendum: loader overhead in large apps (gyral-1zd.31, 2026-10-11)
+
+The shop migration exposed costs the small examples missed: duplicated dynamic-import preload
+lists and entry-imported components split into separate chunks. Production now traverses the
+app's static imports and excludes retained components from the loader's import table. A path
+through `moduleSideEffects: false` stays loadable: reachability alone does not ensure registration
+after tree shaking. The loader still awaits entry-defined tags and watches their shadow roots.
+
+The preset filters JavaScript preload dependencies only for its loader via Vite's
+`modulePreload.resolveDependencies`; `renderPage` already writes those preloads. Other imports
+retain the app's resolver. Vite's shared helper remains for CSS and import errors, so components
+inserted later still load their stylesheets. Rewriting raw imports after bundling would lose that
+CSS behavior.
+
+Keep reusable tags as independent load targets. For a group whose root already imports and
+registers its children, existing `components.modules` overrides can point the child tags at that
+root. The shop does this for admin sections: their root also provides their drivers. Automatically
+folding every statically imported child is unsuitable: the independently rendered wishlist tag
+would fetch the whole catalog component on home and product pages.
+
+[Shop measurements and reproduction](../references/component-loading-size-2026-10-11.md) record
+both initial-page and all-chunk costs with matching grouping. Size depends on the app's import
+graph and configuration; the small-example figures above are not a universal overhead budget.
 
 ## Addendum: development server (gyral-1zd.22, 2026-10-09)
 

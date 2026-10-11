@@ -91,4 +91,36 @@ describe('component loader', () => {
     expect(customElements.get(deep)).toBeDefined();
     expect(loads()[deep]).toBe(1);
   });
+
+  it('waits for an entry-defined host and discovers children in its new shadow root', async () => {
+    const suffix = Math.random().toString(36).slice(2);
+    const outer = `ld-entry-${suffix}`;
+    const inner = `ld-child-${suffix}`;
+    document.body.innerHTML = `<${outer}></${outer}>`;
+    await import(
+      /* @vite-ignore */ moduleUrl(
+        loaderSource(new Map([[inner, definer(inner)]]), { known: [outer] }),
+      )
+    );
+    let finished = false;
+    const ready = componentsReady().then(() => {
+      finished = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(finished).toBe(false);
+    customElements.define(
+      outer,
+      class extends HTMLElement {
+        connectedCallback() {
+          const root = this.attachShadow({ mode: 'open' });
+          queueMicrotask(() => {
+            root.innerHTML = `<${inner}></${inner}>`;
+          });
+        }
+      },
+    );
+    await ready;
+    expect(customElements.get(inner)).toBeDefined();
+    expect(loads()[inner]).toBe(1);
+  });
 });

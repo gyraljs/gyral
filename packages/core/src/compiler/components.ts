@@ -5,6 +5,7 @@
 // first hook, as it loads the compiler.
 import { relative, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
+import { staticallyReachable } from './component-entries.js';
 import type { ComponentsOptions } from '../vite.js';
 import { loaderSource } from './loader-source.js';
 import { discoverComponents } from './tag-map.js';
@@ -43,6 +44,14 @@ function scanComponents(
 
 type Input = string | readonly string[] | Readonly<Record<string, string>> | undefined;
 
+/** The app's own inputs (everything but the loader), as module specifiers. */
+function inputsOf(input: Input): string[] {
+  if (input === undefined) return [];
+  if (typeof input === 'string') return [input];
+  if (Array.isArray(input)) return [...(input as readonly string[])];
+  return Object.values(input as Readonly<Record<string, string>>);
+}
+
 /** The client build's input with the loader added. */
 function withLoader(input: Input): string[] | Record<string, string> {
   if (input === undefined) return { components: COMPONENTS_ID };
@@ -64,6 +73,11 @@ export function createComponents(options: ComponentsOptions): Plugin {
   const include = options.include ?? ['src'];
   let root = process.cwd();
   let tags = new Map<string, string>();
+  /** The app's own build inputs, recorded before the loader is added. */
+  let appInputs: string[] = [];
+  /** Tags the app's entry defines itself (statically imported): not loaded by the loader. */
+  let entryTags: string[] = [];
+  let loaderFile = '';
   const scan = (): Map<string, string> => (tags = scanComponents(root, include, options.modules));
   const api: ComponentsPluginApi = { tags: scan };
   return {
@@ -80,11 +94,21 @@ export function createComponents(options: ComponentsOptions): Plugin {
       const build = ((config as { build?: Build }).build ??= {});
       const key = build.rolldownOptions !== undefined ? 'rolldownOptions' : 'rollupOptions';
       const bundler = (build[key] ??= {});
-      bundler.input = withLoader(bundler.input);
+      const input = bundler.input ?? config.input;
+      appInputs = inputsOf(input);
+      bundler.input = withLoader(input);
       build.manifest ??= true;
     },
     configResolved(config) {
       root = config.root;
+      if (config.command !== 'build' || config.build.ssr !== false) return;
+      const preload = config.build.modulePreload;
+      if (preload === false) return;
+      const previous = preload.resolveDependencies;
+      preload.resolveDependencies = (file, deps, context) =>
+        context.hostType === 'js' && context.hostId === loaderFile
+          ? []
+          : (previous?.(file, deps, context) ?? deps);
     },
     buildStart() {
       scan();
@@ -92,10 +116,27 @@ export function createComponents(options: ComponentsOptions): Plugin {
     resolveId(source) {
       return source === COMPONENTS_ID ? COMPONENTS_RESOLVED : null;
     },
-    load(id) {
+    async load(id) {
       if (id !== COMPONENTS_RESOLVED) return null;
-      if (this.environment.config.command === 'serve') scan();
-      return loaderSource(tags);
+      if (this.environment.config.command === 'serve') {
+        scan();
+        return loaderSource(tags);
+      }
+      // A production build: components the app's entry imports are already defined at startup,
+      // and every other one becomes a dynamic import. The dependency filter removes repeated
+      // JS preload lists (renderPage already preloads them); Vite still loads their CSS.
+      const inEntry = await staticallyReachable(this, appInputs);
+      entryTags = [];
+      const lazy = new Map<string, string>();
+      for (const [tag, url] of tags) {
+        const file = resolve(root, url.slice(1));
+        if (inEntry.has(file)) {
+          entryTags.push(tag);
+          continue;
+        }
+        lazy.set(tag, url);
+      }
+      return loaderSource(lazy, { known: entryTags });
     },
     configureServer(server) {
       // A new or edited component module changes the loader's table.
@@ -114,6 +155,7 @@ export function createComponents(options: ComponentsOptions): Plugin {
         (chunk) => chunk.type === 'chunk' && chunk.facadeModuleId === COMPONENTS_RESOLVED,
       );
       if (loader?.type !== 'chunk') return;
+      loaderFile = loader.fileName;
       const modules = Object.fromEntries([...tags].map(([tag, url]) => [tag, url.slice(1)]));
       // Each tag's chunk by file. A module another chunk imports statically is bundled into
       // that chunk (often the entry), so Vite's manifest has no key for it; the server finds
@@ -128,7 +170,13 @@ export function createComponents(options: ComponentsOptions): Plugin {
         const file = chunkOf.get(resolve(root, url.slice(1)));
         if (file !== undefined) chunks[tag] = file;
       }
-      const written = { loader: loader.fileName, loaderImports: loader.imports, modules, chunks };
+      const written = {
+        loader: loader.fileName,
+        loaderImports: loader.imports,
+        modules,
+        chunks,
+        entryTags,
+      };
       this.emitFile({
         type: 'asset',
         fileName: COMPONENTS_MANIFEST,
