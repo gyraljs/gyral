@@ -1,5 +1,21 @@
 # @gyral/testing
 
+## 0.3.1
+
+### Patch Changes
+
+- Add typed mounting, SSR mounting/hydration helpers, Vitest server rendering commands and
+  diagnostics collection for real-browser component and hydration tests.
+- Model tests inspect outputs, focus/call commands and declarative subscriptions. Parsers
+  can be tested with supplied stores, and fake drivers support both recorded commands and
+  streaming emissions by driver name.
+- Virtual time works in Node and browsers and controls declarative timer/retry behavior.
+  Scheduler waiters and recording fakes release completed work correctly.
+- Use core `provideDrivers`, `parse(..., { stores })`, store instances and `inputsFor` in place
+  of redundant helper exports. The arbitraries entry is removed; applications define their
+  own fast-check message arbitraries.
+- Update the `@gyral/core` dependency to 0.3.1; see the [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md).
+
 ## 0.3.0
 
 ### Minor Changes

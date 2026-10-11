@@ -1,5 +1,17 @@
 # @gyral/time
 
+## 0.3.1
+
+### Patch Changes
+
+- Provide declarative `every` subscriptions with an immediate emission and virtual-time
+  support; delay/debounce-only apps keep timer-stream code out of their bundles.
+- Remove completed delays' abort listeners and stop streams when an emission aborts the
+  command, including the initial synchronous emission.
+- Keep delays/debounce in `@gyral/time`; the separate delay entry and convenience frame/time
+  factory exports are removed. Use typed time commands and driver substitution by name.
+- Update the `@gyral/core` dependency to 0.3.1; see the [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md).
+
 ## 0.3.0
 
 ### Minor Changes

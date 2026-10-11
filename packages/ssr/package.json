@@ -1,6 +1,6 @@
 {
   "name": "@gyral/ssr",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.",
   "license": "MIT",
   "author": "Mike Zupper",

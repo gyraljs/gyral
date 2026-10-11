@@ -1,4 +1,4 @@
-# Gyral 0.3.1-next.9: complete documentation
+# Gyral 0.3.1: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -2162,6 +2162,12 @@ own. `?modal=${s.open}` on a `<dialog>` calls `showModal()` when the value turns
 when a modal closes. Escape and form `method="dialog"` close the dialog on their own, so listen
 for that with an intent and keep the model in step:
 
+Native opening runs after the element is inserted and its children render, before focus
+commands. Conditional views, keyed replacements and initially open components follow the
+same order. An opening action is cancelled if its element is removed before commit. If native
+opening triggers a focus intent, Gyral renders that intent's new state before running focus
+commands or resolving `settled()`.
+
 ```ts
 // src/confirm-delete.ts
 import { define, html } from '@gyral/core';
@@ -3174,6 +3180,9 @@ native validation, and every JavaScript submit reaches `form()`.
 
 ## File uploads
 
+For a custom element that submits a native form value, see
+[Custom form controls](https://gyral.dev/docs/form-associated/).
+
 Use a native file input and keep the raw `FormData` from the parsed submit. This sends the
 file bytes instead of converting them to JSON:
 
@@ -3224,6 +3233,86 @@ rules and apply authentication/CSRF checks. The schema above checks only that a 
 exists; add your application's browser checks and validate again on the server. File inputs
 cannot be restored from a hydration seed or sticky rejected values; keep files in the submit
 boundary, not model state. See [Security](https://gyral.dev/docs/security/#uploaded-files).
+
+---
+
+# Custom form controls
+
+> Make a Gyral component participate in native forms, with reset, disabled state, validity and a server-rendered fallback.
+
+Source: https://gyral.dev/docs/form-associated/
+
+Use `formAssociated` when the custom element itself should submit a native form value under
+its `name` attribute. The projection stays pure; Gyral owns the ElementInternals attachment.
+
+```ts
+// src/choice-field.ts
+import { define, html } from '@gyral/core';
+
+interface State {
+  readonly value: string;
+  readonly live: boolean;
+  readonly disabled: boolean;
+}
+type Msg = { readonly _tag: 'Edited'; readonly value: string };
+
+export const ChoiceField = define<State, Msg>()('my-choice-field', {
+  init: () => ({ value: 'Default', live: false, disabled: false }),
+  intent: { Edited: ({ value }) => ({ _tag: 'Edited', value: value ?? '' }) },
+  update: {
+    Edited: (s, m) => ({ ...s, value: m.value, live: true }),
+    FormDisabled: (s, m) => ({ ...s, disabled: m.disabled }),
+    FormReset: (s) => ({ ...s, value: 'Default' }),
+    FormStateRestore: (s, m) =>
+      typeof m.state === 'string' ? { ...s, value: m.state, live: true } : s,
+  },
+  formAssociated: { value: (s) => (s.live ? s.value : null) },
+  shadow: false,
+  view: (s, i) => html`
+    <label>
+      Choice
+      <input
+        name=${s.live ? undefined : 'choice'}
+        value=${s.value}
+        ?disabled=${s.disabled}
+        data-intent=${i.Edited}
+      />
+    </label>
+  `,
+});
+```
+
+```html
+<form action="/choices" method="post">
+  <my-choice-field name="choice"></my-choice-field>
+  <button type="submit">Save</button>
+  <button type="reset">Reset</button>
+</form>
+```
+
+The light DOM fallback input participates in the outer form before JavaScript runs. The
+custom control returns `null` until an input event captures the live value in the model.
+It then submits that value and removes the fallback's `name`, avoiding duplicate entries.
+The input remains usable. Switching solely on `Hydrated` can lose a value typed before
+hydration; Gyral does not automatically read arbitrary fallback inputs into state.
+
+`value` may return a string, File, FormData or null. An optional `state` projection supplies
+a separate restoration value. Keep server-rendered model state JSON-compatible; binary
+values belong at the browser boundary.
+
+An optional `validity` projection returns native flags, a message and an anchor selector:
+
+```ts
+const validity = (s: { readonly value: string }) =>
+  s.value === ''
+    ? { flags: { customError: true }, message: 'Enter a choice.', anchor: 'input' }
+    : undefined;
+```
+
+Returning `undefined` clears validity. Mirror effective disabled state to inner controls.
+`FormReset`, `FormDisabled` and `FormStateRestore` reducers are optional; reset does not rerun
+`init`. Restoration messages carry `state` and `mode` (`restore` or `autocomplete`). Forms
+and the `states` spec share Gyral's single internals attachment.
 
 ---
 
@@ -3937,6 +4026,425 @@ test before changing the implementation. See [Testing](https://gyral.dev/docs/te
 
 ---
 
+# Browser storage
+
+> Typed localStorage and IndexedDB drivers: persist values, watch settings, query records and run atomic transactions.
+
+Source: https://gyral.dev/docs/browser-storage/
+
+Storage is a driver effect. Keep reads/writes out of reducers, init and views. The optional
+`@gyral/core/storage` entry adds no storage code to apps that do not import it. Factories and
+imports are safe on the server; browser access starts only when commands run.
+
+## localStorage
+
+```ts
+// src/theme-storage.ts
+import { command, define, html } from '@gyral/core';
+import { makeLocalStorageDriver, type StorageError, type StorageOutput } from '@gyral/core/storage';
+import * as v from 'valibot';
+
+const settings = makeLocalStorageDriver(v.object({ theme: v.string() }), { prefix: 'app:' });
+interface State {
+  readonly theme: string;
+  readonly error?: StorageError;
+}
+type Msg =
+  | { readonly _tag: 'Stored'; readonly result: StorageOutput<{ theme: string }> }
+  | { readonly _tag: 'Failed'; readonly error: StorageError }
+  | { readonly _tag: 'Dark' };
+
+export const Theme = define<State, Msg>()('my-storage-theme', {
+  init: () => ({ theme: 'light' }),
+  subscriptions: () => [
+    command(
+      settings,
+      { _tag: 'Watch', key: 'settings' },
+      {
+        key: 'settings-watch',
+        onSuccess: (result) => ({ _tag: 'Stored', result }),
+        onFailure: (error) => ({ _tag: 'Failed', error }),
+      },
+    ),
+  ],
+  intent: { Dark: true },
+  update: {
+    Stored: (s, m) =>
+      m.result._tag === 'StorageChanged' && m.result.entry.found
+        ? { theme: m.result.entry.value.theme }
+        : s,
+    Failed: (s, m) => ({ ...s, error: m.error }),
+    Dark: (s) => [
+      s,
+      [
+        command(
+          settings,
+          {
+            _tag: 'Write',
+            key: 'settings',
+            value: { theme: 'dark' },
+          },
+          { key: 'settings-write', onFailure: (error) => ({ _tag: 'Failed', error }) },
+        ),
+      ],
+    ],
+  },
+  view: (s, i) =>
+    html`<p>${s.theme}</p>
+      <button type="button" data-intent=${i.Dark}>Dark theme</button>`,
+});
+```
+
+`Read { key }` returns `StorageValue` with `entry: { found: false }` or
+`{ found: true, value }`. `Write { key, value }`, `Remove { key }` and `Clear` return
+completion tags. Clear removes only the configured prefix (default empty: all localStorage).
+Watch emits an initial snapshot, then changes from driver writes (`source: 'driver'`) and
+native events in other tabs (`'tab'`). Direct same-tab localStorage writes are not observed.
+Removal/clear emit absence. A malformed Watch value emits `StorageDecodeFailed` and leaves
+the watch running; Read rejects with `StorageDecodeError`. Access/quota/security failures
+go through `StorageAccessError` and command `onFailure`. Handle both watch output variants.
+
+The Standard Schema decodes parsed JSON, including async validation. If it transforms the
+input, configure `encode(value)` to reconstruct its JSON input shape. No transactions or
+cross-tab atomicity are promised. Use distinct command keys for watches and writes. Abort
+removes listeners and suppresses late decoder results. Tests use `fakeDriver(settings)`
+with `el.drivers = { localStorage: fake }`, or an isolated `storage: () => storageObject`.
+
+Initial watches belong in `subscriptions`: the server's seed hydrates first, then browser
+storage updates the model. Keep server-rendered state JSON-compatible.
+
+## IndexedDB
+
+Use the separate `@gyral/core/indexeddb` entry for structured records, object stores,
+indexes, migrations and atomic transaction batches. It uses the same command and fake-driver
+conventions, with native IndexedDB semantics:
+
+```ts
+// src/contacts-storage.ts
+import { command, type Command } from '@gyral/core';
+import {
+  makeIndexedDBDriver,
+  type IndexedDBError,
+  type IndexedDBOutput,
+} from '@gyral/core/indexeddb';
+import * as v from 'valibot';
+
+const stores = { contacts: v.object({ id: v.string(), name: v.string() }) };
+type Contact = v.InferOutput<typeof stores.contacts>;
+const contacts = makeIndexedDBDriver(stores, {
+  database: 'address-book',
+  version: 1,
+  upgrade: (db, oldVersion) => {
+    if (oldVersion < 1) {
+      const store = db.createObjectStore('contacts', { keyPath: 'id' });
+      store.createIndex('name', 'name');
+    }
+  },
+});
+type Msg =
+  | { readonly _tag: 'Database'; readonly result: IndexedDBOutput<typeof stores> }
+  | { readonly _tag: 'Failed'; readonly error: IndexedDBError };
+const handlers = {
+  onSuccess: (result: IndexedDBOutput<typeof stores>): Msg => ({ _tag: 'Database', result }),
+  onFailure: (error: IndexedDBError): Msg => ({ _tag: 'Failed', error }),
+};
+export const readContact = (id: string): Command<Msg> =>
+  command(contacts, { _tag: 'Read', store: 'contacts', key: id }, handlers);
+export const saveContacts = (values: readonly Contact[]): Command<Msg> =>
+  command(
+    contacts,
+    {
+      _tag: 'Transaction',
+      operations: values.map(
+        (value) =>
+          ({
+            _tag: 'Put',
+            store: 'contacts',
+            value,
+          }) as const,
+      ),
+    },
+    { ...handlers, concurrency: 'queue' },
+  );
+export const findContacts = (name: string): Command<Msg> =>
+  command(
+    contacts,
+    {
+      _tag: 'Query',
+      store: 'contacts',
+      index: 'name',
+      range: { _tag: 'Only', key: name },
+      limit: 20,
+    },
+    handlers,
+  );
+```
+
+`Read` returns `Record` with a found/absent entry. `Put` returns its actual primary key
+(optional input key, or the store's inline/auto-increment key); `Delete` returns `Deleted`.
+`Query` returns `Records` with primary keys and decoded values. Queries require a positive
+integer limit, allow `direction` (`next`, `prev`, `nextunique`, `prevunique`), and optional
+range data: Only/Lower/Upper with `key`, or Bound with `lower`/`upper`. Bounds accept `open`,
+`lowerOpen` and `upperOpen` as appropriate. Store names/record values are typed; index names
+are strings defined by the application migration and checked by the browser.
+
+A nonempty Transaction batch queues all requests synchronously across its stores and
+returns `Committed { results }` in operation order after the native transaction completes.
+Read-only batches use readonly transactions; batches containing Put/Delete use readwrite.
+A failure aborts the whole batch. Stored Read/Query values decode after commit, including
+async schemas; a decode failure carries `committed: true`, so earlier batch writes remain.
+An optional `encode(store, value)` reconstructs a transforming schema's stored input shape.
+
+The version and synchronous `upgrade(db, oldVersion, newVersion, transaction)` callback
+belong to the application. Queue migration requests before returning; never await. A blocked
+upgrade rejects with `IndexedDBBlockedError`, aborts any abandoned late upgrade and closes
+any late connection. Retry explicitly once older connections close. Migration/access/native
+transaction failures use `IndexedDBAccessError`; invalid query limits/empty batches use
+`IndexedDBInputError`; invalid persisted records use `IndexedDBDecodeError`.
+
+Abort attempts rollback and suppresses late output; it cannot undo an already committed
+transaction. Connections close after each native transaction, before async decoding, and
+on versionchange. No resources open on import/factory creation. Start browser reads after
+the first render (init commands or subscriptions), and keep SSR model state JSON-compatible.
+Tests substitute `fakeDriver(contacts)` by name (`indexeddb` by default). No storage watches
+or automatic cross-tab synchronization are promised for this driver.
+
+---
+
+# Network streams
+
+> Native EventSource and WebSocket drivers: receive validated streams, send messages and handle connection lifecycles.
+
+Source: https://gyral.dev/docs/network-streams/
+
+Optional `@gyral/http/sse` and `@gyral/http/websocket` entries use browser-native transports.
+They are separate from the fetch entry, add no runtime dependencies, and open no resources
+on import or factory creation. Use normal commands, declarative subscriptions and fake
+substitution by driver name. Feeds start after the first render, preserving SSR seeds.
+
+## Server-sent events
+
+```ts
+// src/server-count.ts
+import { command, define, html } from '@gyral/core';
+import {
+  makeEventSourceDriver,
+  type EventSourceError,
+  type EventSourceOutput,
+} from '@gyral/http/sse';
+import * as v from 'valibot';
+
+const schema = v.object({ count: v.number() });
+const feed = makeEventSourceDriver(schema, { events: ['count'], withCredentials: false });
+type Msg =
+  | { readonly _tag: 'Feed'; readonly value: EventSourceOutput<v.InferOutput<typeof schema>> }
+  | { readonly _tag: 'Failed'; readonly error: EventSourceError };
+interface State {
+  readonly count: number;
+  readonly status: string;
+}
+export const Counter = define<State, Msg>()('my-server-count', {
+  init: () => ({ count: 0, status: 'connecting' }),
+  subscriptions: () => [
+    command(
+      feed,
+      { url: '/events' },
+      {
+        onSuccess: (value) => ({ _tag: 'Feed', value }),
+        onFailure: (error) => ({ _tag: 'Failed', error }),
+      },
+    ),
+  ],
+  update: {
+    Feed: (s, m) => {
+      switch (m.value._tag) {
+        case 'EventSourceMessage':
+          return { ...s, count: m.value.data.count };
+        case 'EventSourceState':
+          return { ...s, status: m.value.state };
+        case 'EventSourceDecodeFailed':
+          return { ...s, status: 'invalid event' };
+      }
+    },
+    Failed: (s) => ({ ...s, status: 'closed' }),
+  },
+  view: (s) =>
+    html`<output>${s.count}</output>
+      <p role="status">${s.status}</p>`,
+});
+```
+
+The driver always observes `message` and adds configured named events (no wildcard native
+listener). `EventSourceMessage` preserves `eventType` and `lastEventId`; empty IDs are valid.
+Default parsing is JSON followed by Standard Schema validation. Use `parse(text)` for another
+text format. Async decoders preserve arrival order. Bad JSON/schema data emits
+`EventSourceDecodeFailed { issues, eventType, lastEventId }` without ending the connection.
+
+Native EventSource owns GET requests, cookie credentials, reconnection, server `retry:`
+timing and Last-Event-ID. `withCredentials` configures cross-origin credentials; same-origin
+cookies follow native behavior. CONNECTING errors report connecting state and keep the same
+source. Terminal CLOSED errors report closed state and reject with `EventSourceError` through
+`onFailure`; detailed HTTP status/body are unavailable. The driver adds no second retry loop.
+Abort removes listeners, closes the source and suppresses pending decoded results.
+
+Headers, POST streams and fetch-based transports are outside this driver. Event IDs do not
+guarantee exactly-once delivery or replay; handle deduplication/resynchronization in your
+protocol. Tests use `fakeDriver(feed)` with `el.drivers = { sse: fake }` (or the configured
+name) and `fake.emitNext(...)` to deliver events/states.
+
+## WebSocket
+
+```ts
+// src/native-chat.ts
+import { command, define, html, retry } from '@gyral/core';
+import {
+  makeWebSocketDriver,
+  type WebSocketError,
+  type WebSocketOutput,
+} from '@gyral/http/websocket';
+import * as v from 'valibot';
+
+const schema = v.object({ text: v.string() });
+const raw = makeWebSocketDriver(schema, {
+  encode: (value: { text: string }) => JSON.stringify(value),
+});
+const socket = retry(raw, {
+  times: 3,
+  delayMs: 500,
+  backoff: 'exponential',
+  jitter: true,
+  retryIf: (error) => error._tag === 'WebSocketClosedError' && error.code === 1006,
+});
+interface State {
+  readonly live: boolean;
+  readonly text: string;
+  readonly status: string;
+}
+type Msg =
+  | { readonly _tag: 'Socket'; readonly value: WebSocketOutput<v.InferOutput<typeof schema>> }
+  | { readonly _tag: 'Failed'; readonly error: WebSocketError }
+  | { readonly _tag: 'Send'; readonly text: string }
+  | { readonly _tag: 'Stop' };
+const handlers = {
+  onSuccess: (value: WebSocketOutput<v.InferOutput<typeof schema>>): Msg => ({
+    _tag: 'Socket',
+    value,
+  }),
+  onFailure: (error: WebSocketError): Msg => ({ _tag: 'Failed', error }),
+};
+export const Chat = define<State, Msg>()('my-native-chat', {
+  init: () => ({ live: true, text: '', status: 'connecting' }),
+  subscriptions: (s) =>
+    s.live
+      ? [
+          command(
+            socket,
+            {
+              _tag: 'Connect',
+              connection: 'room',
+              url: 'wss://example.test/chat',
+            },
+            { ...handlers, key: 'room-connect' },
+          ),
+        ]
+      : [],
+  intent: { Send: ({ value }) => ({ _tag: 'Send', text: value ?? '' }), Stop: true },
+  update: {
+    Send: (s, m) => [
+      s,
+      [
+        command(
+          socket,
+          {
+            _tag: 'Send',
+            connection: 'room',
+            value: { text: m.text },
+          },
+          { ...handlers, key: 'room-send' },
+        ),
+      ],
+    ],
+    Stop: (s) => [
+      s,
+      [
+        command(
+          socket,
+          {
+            _tag: 'Close',
+            connection: 'room',
+            code: 1000,
+          },
+          { ...handlers, key: 'room-close' },
+        ),
+      ],
+    ],
+    Failed: (s, m) => ({ ...s, live: false, status: m.error._tag }),
+    Socket: (s, m) => {
+      switch (m.value._tag) {
+        case 'WebSocketMessage':
+          return { ...s, text: m.value.data.text };
+        case 'WebSocketState':
+          return { ...s, status: m.value.state };
+        case 'WebSocketDecodeFailed':
+          return { ...s, status: 'invalid message' };
+        case 'WebSocketClosed':
+          return m.value.requested || (m.value.code === 1000 && m.value.wasClean)
+            ? { ...s, live: false, status: 'closed' }
+            : { ...s, status: 'reconnecting' };
+        case 'WebSocketSent':
+          return s; // enqueued, awaiting application acknowledgement
+        case 'WebSocketCloseRequested':
+          return s;
+      }
+    },
+  },
+  view: (s, i) =>
+    html`<p>${s.text}</p>
+      <p role="status">${s.status}</p>
+      <button type="button" value="Hello" data-intent=${i.Send}>Send hello</button>
+      <button type="button" data-intent=${i.Stop}>Close connection</button>`,
+});
+```
+
+Each factory owns sockets by explicit connection ID. Only one active Connect owns an ID;
+duplicates reject. Send/Close use the same socket; another factory has separate ownership.
+Choose unique IDs when providing one driver to multiple components and distinct command keys
+for Connect, Send and Close. A shared connection should have one subscribing owner; fan its
+messages out through application state instead of issuing duplicate Connect commands.
+
+Default incoming parse is JSON text followed by Standard Schema; binary messages are
+ArrayBuffers (`binaryType: 'arraybuffer'`). Set synchronous `parse(payload)` for binary/other
+text formats. Async schemas preserve message order. Malformed payloads emit
+`WebSocketDecodeFailed` without ending the connection. Required `encode(value)` returns a
+native string, Blob, ArrayBuffer or ArrayBufferView. Server-rendered model state stays JSON;
+binary protocol values belong at the driver boundary or in client-only state.
+
+The outgoing limit defaults to 65,536 bytes. `maxBufferedBytes` must be a nonnegative safe
+integer (invalid configuration throws before resources open). Send requires an owned OPEN
+socket and native bufferedAmount plus encoded bytes within the limit (UTF-8 for strings).
+Failure uses `WebSocketSendError` with reason not-open/buffer-limit/encode/send. A successful
+`WebSocketSent` means browser enqueue, not server processing or acknowledgement. No offline
+queue or automatic resend exists. Native WebSocket has no inbound backpressure; the outgoing
+limit does not bound incoming load.
+
+Clean normal code 1000 closure resolves Connect with `WebSocketClosed`; an explicit Close
+(default code 1000) also completes, including application close codes. `requested: true`
+identifies that explicit request. Other closures emit `WebSocketClosed`, then reject with
+`WebSocketClosedError` retaining code/reason/wasClean and `errored` (native error occurred).
+Constructor/duplicate-ID errors use `WebSocketConnectError`; invalid Close requests use
+`WebSocketCloseError`. Native errors expose no HTTP details.
+
+Reconnection is opt-in through `retry`. Choose backoff/jitter and a retryIf predicate that
+accepts your recoverable connection failures and excludes Send errors. Do not drop the
+Connect subscription merely because an abnormal attempt emitted Closed: that aborts the
+retry wrapper too. Drop it on requested/normal completion or final onFailure. An ended
+subscription stays ended until its lane/input is removed and re-added/changed. Abort never
+retries; cleanup removes listeners, releases ownership, closes the socket and suppresses
+late events/decoders. Application acknowledgements and resynchronization are protocol data.
+Tests use `fakeDriver(raw)` by name (`websocket` by default) for both streams and sends.
+
+---
+
 # Shared state
 
 > Share state between distant components with stores, read like props from the side and written with messages, on the client and per request on the server.
@@ -4362,11 +4870,37 @@ export const app = routes({
   pattern. `path` is the route's canonical path, `href(name, params)`: see
   [One URL per page](#one-url-per-page).
 - `app.href('user', { id: 'a b' })` builds `/users/a%20b`.
-- Patterns are literal segments and `:params`, nothing more, so matching behaves the same with
-  the browser's URLPattern and with Gyral's own matcher. One trailing slash is ignored, an empty
+- Patterns support literal segments, required `:params`, optional `:params?` and trailing
+  `:path*` captures, with the same behavior in URLPattern and Gyral's fallback. One trailing slash is ignored, an empty
   segment (`/users//7`) never matches, params are decoded, and the first match in table order
   wins.
 - Matching never touches `window`, so it's safe on a server.
+
+### Optional segments and catch-all routes
+
+```ts
+// src/content-routes.ts
+import { routes } from '@gyral/router';
+
+export const contentRoutes = routes({
+  product: '/products/:id?',
+  docs: '/docs/:path*',
+  notFound: '/:path*',
+});
+
+export const products = contentRoutes.href('product', {}); // /products
+export const guide = contentRoutes.href('docs', { path: ['guide', 'a/b'] });
+// /docs/guide/a%2Fb: an encoded slash stays in one captured segment.
+```
+
+An omitted optional parameter is absent from `params`. A catch-all always returns a readonly
+array, including `[]` when it captures no segments. Catch-all segments must be last, and the
+first matching route wins: put the not-found route last and explicitly return HTTP 404 from
+your server when it matches. Selecting that route alone does not change the response status.
+
+`href` rejects missing required parameters, empty or dot segments, and ambiguous optional
+omissions. For `/:first?/:second?`, `{ second: 'x' }` would match as `{ first: 'x' }`; use a
+literal separator instead. Bare wildcards, regexes and groups are outside the route grammar.
 
 ## Listening to navigation
 
@@ -7120,6 +7654,10 @@ number, are ES modules with TypeScript types, and are published from GitHub Acti
 npm install @gyral/core
 ```
 
+`@gyral/core/storage` and `@gyral/core/indexeddb` are optional entry points in the same
+package. They provide separate native [localStorage and IndexedDB drivers](https://gyral.dev/docs/browser-storage/).
+Apps that do not import them carry no storage driver code.
+
 ## Optional packages
 
 | Package           | What it gives you                                                                                                                                                                                                                                    |
@@ -7157,6 +7695,10 @@ including ones built with Lit; install that library yourself if you use it. Upgr
 [from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
 
 ## The Vite preset
+
+The same `@gyral/http` installation includes optional `@gyral/http/sse` and
+`@gyral/http/websocket` entries for [native network streams](https://gyral.dev/docs/network-streams/).
+The fetch entry does not include those transports.
 
 `gyralVitePreset()` from `@gyral/core/vite` holds the settings every Gyral app needs:
 
@@ -8246,13 +8788,12 @@ multiple versions. The [package guide](https://gyral.dev/docs/packages/) explain
 
 ## Releases and tester builds
 
-As of 2026-10-11, **0.3.0 is published on npm** and **0.3.1 is under development**. This site
-tests `0.3.1-next.9` tarballs and documents the upcoming APIs. A tester tarball's version is
-not a promise that a corresponding npm prerelease exists. Follow your app's established
-tester setup until the final release is published.
+These guides describe **0.3.1**. Public installation instructions use released npm packages;
+check that your chosen version is available on the registry before upgrading. Internal tester
+builds may carry a `-next` suffix without a corresponding npm prerelease. They are for
+release verification and are outside the public installation path.
 
-For a released application, pin the version you verified and retain the lockfile. To test a
-candidate, install the matched tarballs and overrides described by that candidate's setup.
+For a released application, pin the registry version you verified and retain the lockfile.
 Deploy server output and client assets from the same build: stale HTML with new component
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
@@ -8290,7 +8831,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1-next.9, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.1, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -8818,7 +9359,7 @@ Gyral core: Model-View-Intent web components on the web platform, with their own
 npm install @gyral/core
 ```
 
-Generated from the package's type declarations. Entry points: [`@gyral/core`](#gyralcore), [`@gyral/core/vite`](#gyralcorevite), [`@gyral/core/eslint`](#gyralcoreeslint).
+Generated from the package's type declarations. Entry points: [`@gyral/core`](#gyralcore), [`@gyral/core/storage`](#gyralcorestorage), [`@gyral/core/indexeddb`](#gyralcoreindexeddb), [`@gyral/core/vite`](#gyralcorevite), [`@gyral/core/eslint`](#gyralcoreeslint).
 
 ## `@gyral/core`
 
@@ -9297,10 +9838,16 @@ The prop builders.
 | [`FieldIssue`](#core-fieldissue) | One validation problem. |
 | [`FieldName`](#core-fieldname) | The definition's field names, when its input is an object; otherwise any string. |
 | [`FocusOptions`](#core-focusoptions) |  |
+| [`FormAssociation`](#core-formassociation) | Pure model projections applied by Gyral to the host's ElementInternals (ADR 0008). |
+| [`FormControlValidity`](#core-formcontrolvalidity) | Native constraint flags and a validation bubble anchor in the component's render root. |
+| [`FormControlValue`](#core-formcontrolvalue) | A native submitted value, or null to omit this component from the submission. |
 | [`FormDefinition`](#core-formdefinition) | A form's schema, shared by the client component and (with `@gyral/ssr`) the server route. |
+| [`FormDisabled`](#core-formdisabled) | Framework message: the host or its fieldset changed the effective disabled state. |
 | [`FormFields`](#core-formfields) | Submitted text values of a form (Files are dropped: they can't be re-filled). |
 | [`FormOptions`](#core-formoptions) |  |
+| [`FormReset`](#core-formreset) | Framework message: the owning native form was reset. |
 | [`FormResult`](#core-formresult) |  |
+| [`FormStateRestore`](#core-formstaterestore) | Framework message: native session restoration or autofill supplied control state. |
 | [`FormValue`](#core-formvalue) |  |
 | [`FormValues`](#core-formvalues) | A form's submitted text values, keyed by the definition's fields, for re-rendering the form with what was typed (sticky fields). |
 | [`GyralElement`](#core-gyralelement) | The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public instance API"). |
@@ -9629,6 +10176,38 @@ interface FocusOptions {
 ```
 
 
+#### `FormAssociation`
+
+```ts
+interface FormAssociation<S, P> {
+    readonly value: (state: S, ctx: Ctx<P>) => FormControlValue;
+    readonly state?: (state: S, ctx: Ctx<P>) => FormControlValue;
+    readonly validity?: (state: S, ctx: Ctx<P>) => FormControlValidity | undefined;
+}
+```
+
+Pure model projections applied by Gyral to the host's ElementInternals (ADR 0008).
+
+#### `FormControlValidity`
+
+```ts
+interface FormControlValidity {
+    readonly flags: ValidityStateFlags;
+    readonly message: string;
+    readonly anchor?: string;
+}
+```
+
+Native constraint flags and a validation bubble anchor in the component's render root.
+
+#### `FormControlValue`
+
+```ts
+type FormControlValue = string | File | FormData | null;
+```
+
+A native submitted value, or null to omit this component from the submission.
+
 #### `FormDefinition`
 
 ```ts
@@ -9648,6 +10227,17 @@ interface FormDefinition<Schema extends StandardSchemaV1> {
 ```
 
 A form's schema, shared by the client component and (with `@gyral/ssr`) the server route.
+
+#### `FormDisabled`
+
+```ts
+interface FormDisabled {
+    readonly _tag: 'FormDisabled';
+    readonly disabled: boolean;
+}
+```
+
+Framework message: the host or its fieldset changed the effective disabled state.
 
 #### `FormFields`
 
@@ -9673,6 +10263,16 @@ interface FormOptions<Schema extends StandardSchemaV1> {
 ```
 
 
+#### `FormReset`
+
+```ts
+interface FormReset {
+    readonly _tag: 'FormReset';
+}
+```
+
+Framework message: the owning native form was reset.
+
 #### `FormResult`
 
 ```ts
@@ -9685,6 +10285,18 @@ type FormResult<T> = {
 };
 ```
 
+
+#### `FormStateRestore`
+
+```ts
+interface FormStateRestore {
+    readonly _tag: 'FormStateRestore';
+    readonly state: FormControlValue;
+    readonly mode: 'restore' | 'autocomplete';
+}
+```
+
+Framework message: native session restoration or autofill supplied control state.
 
 #### `FormValue`
 
@@ -9742,6 +10354,8 @@ interface GyralElementClass<S, M extends Tagged, P, O extends Tagged = never, N 
     };
     readonly spec: ComponentSpec<S, M, P, N>;
     readonly tagName: string;
+    /** Native custom-element registration flag, true when the spec opts into forms. */
+    readonly formAssociated?: boolean;
     /** Type-only: the outputs this component emits (read by `child()`). */
     readonly outputs?: O;
     /** Type-only: the component's intent names, the keys of `intent` (read by `intentsOf()`). */
@@ -10401,11 +11015,329 @@ type Update<S, M extends Tagged, P = object> = {
     readonly StoreChanged?: Reducer<S, M, StoreChanged, P>;
     readonly Hydrated?: Reducer<S, M, Hydrated, P>;
     readonly Errored?: Reducer<S, M, Errored, P>;
+    readonly FormReset?: Reducer<S, M, FormReset, P>;
+    readonly FormDisabled?: Reducer<S, M, FormDisabled, P>;
+    readonly FormStateRestore?: Reducer<S, M, FormStateRestore, P>;
 };
 ```
 
 One pure reducer per message tag (exhaustive by construction), plus optional reducers
 for framework messages. Reducers may return commands.
+
+## `@gyral/core/storage`
+
+### Functions
+
+| Name | Summary |
+| --- | --- |
+| [`makeLocalStorageDriver`](#core-storage-makelocalstoragedriver) | JSON storage with typed reads/writes and cancellable native + own-write change streams. |
+
+#### `makeLocalStorageDriver`
+
+```ts
+function makeLocalStorageDriver<T>(schema: StandardSchemaV1<unknown, T>, options?: LocalStorageOptions<T>): Driver<StorageInput<T>, StorageOutput<T>, StorageError>;
+```
+
+JSON storage with typed reads/writes and cancellable native + own-write change streams.
+
+### Types and interfaces
+
+| Name | Summary |
+| --- | --- |
+| [`LocalStorageOptions`](#core-storage-localstorageoptions) |  |
+| [`StorageChangeSource`](#core-storage-storagechangesource) |  |
+| [`StorageDecodeError`](#core-storage-storagedecodeerror) |  |
+| [`StorageError`](#core-storage-storageerror) |  |
+| [`StorageInput`](#core-storage-storageinput) |  |
+| [`StorageOutput`](#core-storage-storageoutput) |  |
+| [`StoredValue`](#core-storage-storedvalue) | Absence differs from a decoded value, even when the schema accepts null or undefined. |
+
+#### `LocalStorageOptions`
+
+```ts
+interface LocalStorageOptions<T> {
+    /** Name for normal driver substitution. Default localStorage. */
+    readonly name?: string;
+    /** Keys and Clear are restricted to this namespace. Default empty (all keys). */
+    readonly prefix?: string;
+    /** Accessed only when a command runs. Default native localStorage. */
+    readonly storage?: () => Storage;
+    /** A transformed schema may need to encode model values back into its input shape. */
+    readonly encode?: (value: T) => unknown;
+}
+```
+
+
+#### `StorageChangeSource`
+
+```ts
+type StorageChangeSource = 'initial' | 'driver' | 'tab';
+```
+
+
+#### `StorageDecodeError`
+
+```ts
+interface StorageDecodeError {
+    readonly _tag: 'StorageDecodeError';
+    readonly key: string;
+    readonly issues: readonly StandardSchemaV1.Issue[];
+}
+```
+
+
+#### `StorageError`
+
+```ts
+type StorageError = StorageDecodeError | {
+    readonly _tag: 'StorageAccessError';
+    readonly operation: StorageInput<unknown>['_tag'];
+    readonly key: string | undefined;
+    readonly message: string;
+};
+```
+
+
+#### `StorageInput`
+
+```ts
+type StorageInput<T> = {
+    readonly _tag: 'Read';
+    readonly key: string;
+} | {
+    readonly _tag: 'Write';
+    readonly key: string;
+    readonly value: T;
+} | {
+    readonly _tag: 'Remove';
+    readonly key: string;
+} | {
+    readonly _tag: 'Clear';
+} | {
+    readonly _tag: 'Watch';
+    readonly key: string;
+};
+```
+
+
+#### `StorageOutput`
+
+```ts
+type StorageOutput<T> = {
+    readonly _tag: 'StorageValue';
+    readonly key: string;
+    readonly entry: StoredValue<T>;
+} | {
+    readonly _tag: 'StorageWritten' | 'StorageRemoved';
+    readonly key: string;
+} | {
+    readonly _tag: 'StorageCleared';
+} | {
+    readonly _tag: 'StorageChanged';
+    readonly key: string;
+    readonly source: StorageChangeSource;
+    readonly entry: StoredValue<T>;
+} | {
+    readonly _tag: 'StorageDecodeFailed';
+    readonly key: string;
+    readonly source: StorageChangeSource;
+    readonly error: StorageDecodeError;
+};
+```
+
+
+#### `StoredValue`
+
+```ts
+type StoredValue<T> = {
+    readonly found: false;
+} | {
+    readonly found: true;
+    readonly value: T;
+};
+```
+
+Absence differs from a decoded value, even when the schema accepts null or undefined.
+
+## `@gyral/core/indexeddb`
+
+### Functions
+
+| Name | Summary |
+| --- | --- |
+| [`makeIndexedDBDriver`](#core-indexeddb-makeindexeddbdriver) | Typed record operations and atomic batches over application-owned stores and migrations. |
+
+#### `makeIndexedDBDriver`
+
+```ts
+function makeIndexedDBDriver<S extends IndexedDBStores>(stores: S, options: IndexedDBOptions<S>): Driver<IndexedDBInput<S>, IndexedDBOutput<S>, IndexedDBError>;
+```
+
+Typed record operations and atomic batches over application-owned stores and migrations.
+
+### Types and interfaces
+
+| Name | Summary |
+| --- | --- |
+| [`IndexedDBError`](#core-indexeddb-indexeddberror) |  |
+| [`IndexedDBInput`](#core-indexeddb-indexeddbinput) |  |
+| [`IndexedDBOperation`](#core-indexeddb-indexeddboperation) |  |
+| [`IndexedDBOptions`](#core-indexeddb-indexeddboptions) |  |
+| [`IndexedDBOutput`](#core-indexeddb-indexeddboutput) |  |
+| [`IndexedDBRange`](#core-indexeddb-indexeddbrange) |  |
+| [`IndexedDBRecord`](#core-indexeddb-indexeddbrecord) |  |
+| [`IndexedDBResult`](#core-indexeddb-indexeddbresult) |  |
+| [`IndexedDBStores`](#core-indexeddb-indexeddbstores) |  |
+
+#### `IndexedDBError`
+
+```ts
+type IndexedDBError = {
+    readonly _tag: 'IndexedDBBlockedError';
+    readonly database: string;
+    readonly version: number;
+} | {
+    readonly _tag: 'IndexedDBInputError';
+    readonly message: string;
+} | {
+    readonly _tag: 'IndexedDBAccessError';
+    readonly database: string;
+    readonly phase: 'encode' | 'open' | 'upgrade' | 'transaction';
+    readonly name: string;
+    readonly message: string;
+} | {
+    readonly _tag: 'IndexedDBDecodeError';
+    readonly store: string;
+    readonly issues: readonly StandardSchemaV1.Issue[];
+    /** Native transaction completed before decoding. Its writes cannot be undone. */
+    readonly committed: true;
+};
+```
+
+
+#### `IndexedDBInput`
+
+```ts
+type IndexedDBInput<S extends IndexedDBStores> = IndexedDBOperation<S> | {
+    readonly _tag: 'Transaction';
+    readonly operations: readonly IndexedDBOperation<S>[];
+};
+```
+
+
+#### `IndexedDBOperation`
+
+```ts
+type IndexedDBOperation<S extends IndexedDBStores> = {
+    [K in keyof S & string]: {
+        readonly _tag: 'Read' | 'Delete';
+        readonly store: K;
+        readonly key: IDBValidKey;
+    } | {
+        readonly _tag: 'Put';
+        readonly store: K;
+        readonly value: IndexedDBRecord<S[K]>;
+        readonly key?: IDBValidKey;
+    } | {
+        readonly _tag: 'Query';
+        readonly store: K;
+        readonly index?: string;
+        readonly range?: IndexedDBRange;
+        readonly direction?: IDBCursorDirection;
+        readonly limit: number;
+    };
+}[keyof S & string];
+```
+
+
+#### `IndexedDBOptions`
+
+```ts
+interface IndexedDBOptions<S extends IndexedDBStores> {
+    readonly database: string;
+    readonly version: number;
+    readonly name?: string;
+    readonly factory?: () => IDBFactory;
+    /** Synchronous: queue migration requests before returning; never await. */
+    readonly upgrade?: (db: IDBDatabase, oldVersion: number, newVersion: number, transaction: IDBTransaction) => void;
+    readonly encode?: <K extends keyof S & string>(store: K, value: IndexedDBRecord<S[K]>) => unknown;
+}
+```
+
+
+#### `IndexedDBOutput`
+
+```ts
+type IndexedDBOutput<S extends IndexedDBStores> = IndexedDBResult<S> | {
+    readonly _tag: 'Committed';
+    readonly results: readonly IndexedDBResult<S>[];
+};
+```
+
+
+#### `IndexedDBRange`
+
+```ts
+type IndexedDBRange = {
+    readonly _tag: 'Only';
+    readonly key: IDBValidKey;
+} | {
+    readonly _tag: 'Lower' | 'Upper';
+    readonly key: IDBValidKey;
+    readonly open?: boolean;
+} | {
+    readonly _tag: 'Bound';
+    readonly lower: IDBValidKey;
+    readonly upper: IDBValidKey;
+    readonly lowerOpen?: boolean;
+    readonly upperOpen?: boolean;
+};
+```
+
+
+#### `IndexedDBRecord`
+
+```ts
+type IndexedDBRecord<S extends StandardSchemaV1> = StandardSchemaV1.InferOutput<S>;
+```
+
+
+#### `IndexedDBResult`
+
+```ts
+type IndexedDBResult<S extends IndexedDBStores> = {
+    [K in keyof S & string]: {
+        readonly _tag: 'Record';
+        readonly store: K;
+        readonly key: IDBValidKey;
+        readonly entry: {
+            readonly found: false;
+        } | {
+            readonly found: true;
+            readonly value: IndexedDBRecord<S[K]>;
+        };
+    } | {
+        readonly _tag: 'Put' | 'Deleted';
+        readonly store: K;
+        readonly key: IDBValidKey;
+    } | {
+        readonly _tag: 'Records';
+        readonly store: K;
+        readonly records: readonly {
+            readonly key: IDBValidKey;
+            readonly value: IndexedDBRecord<S[K]>;
+        }[];
+    };
+}[keyof S & string];
+```
+
+
+#### `IndexedDBStores`
+
+```ts
+type IndexedDBStores = Readonly<Record<string, StandardSchemaV1>>;
+```
+
 
 ## `@gyral/core/vite`
 
@@ -10582,7 +11514,7 @@ Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decodin
 npm install @gyral/http
 ```
 
-Generated from the package's type declarations. Entry points: [`@gyral/http`](#gyralhttp), [`@gyral/http/testing`](#gyralhttptesting).
+Generated from the package's type declarations. Entry points: [`@gyral/http`](#gyralhttp), [`@gyral/http/sse`](#gyralhttpsse), [`@gyral/http/websocket`](#gyralhttpwebsocket), [`@gyral/http/testing`](#gyralhttptesting).
 
 ## `@gyral/http`
 
@@ -10842,6 +11774,241 @@ interface SubmitFormOptions<MS, MF> {
 ```
 
 
+## `@gyral/http/sse`
+
+### Functions
+
+| Name | Summary |
+| --- | --- |
+| [`makeEventSourceDriver`](#http-sse-makeeventsourcedriver) | A cancellable feed; native EventSource owns reconnection, credentials and Last-Event-ID. |
+
+#### `makeEventSourceDriver`
+
+```ts
+function makeEventSourceDriver<T>(schema: StandardSchemaV1<unknown, T>, options?: EventSourceOptions): Driver<EventSourceInput, EventSourceOutput<T>, EventSourceError>;
+```
+
+A cancellable feed; native EventSource owns reconnection, credentials and Last-Event-ID.
+
+### Types and interfaces
+
+| Name | Summary |
+| --- | --- |
+| [`EventSourceError`](#http-sse-eventsourceerror) |  |
+| [`EventSourceInput`](#http-sse-eventsourceinput) |  |
+| [`EventSourceOptions`](#http-sse-eventsourceoptions) |  |
+| [`EventSourceOutput`](#http-sse-eventsourceoutput) |  |
+
+#### `EventSourceError`
+
+```ts
+interface EventSourceError {
+    readonly _tag: 'EventSourceError';
+    readonly url: string | undefined;
+    readonly message: string;
+}
+```
+
+
+#### `EventSourceInput`
+
+```ts
+interface EventSourceInput {
+    readonly url: string;
+}
+```
+
+
+#### `EventSourceOptions`
+
+```ts
+interface EventSourceOptions {
+    readonly name?: string;
+    readonly withCredentials?: boolean;
+    /** Named events in addition to the default message event. No wildcard native listener. */
+    readonly events?: readonly string[];
+    /** Default JSON parsing. Validation may be asynchronous. */
+    readonly parse?: (text: string) => unknown;
+}
+```
+
+
+#### `EventSourceOutput`
+
+```ts
+type EventSourceOutput<T> = {
+    readonly _tag: 'EventSourceState';
+    readonly url: string;
+    readonly state: 'connecting' | 'open' | 'closed';
+} | {
+    readonly _tag: 'EventSourceMessage';
+    readonly url: string;
+    readonly eventType: string;
+    readonly lastEventId: string;
+    readonly data: T;
+} | {
+    readonly _tag: 'EventSourceDecodeFailed';
+    readonly url: string;
+    readonly eventType: string;
+    readonly lastEventId: string;
+    readonly issues: readonly StandardSchemaV1.Issue[];
+};
+```
+
+
+## `@gyral/http/websocket`
+
+### Functions
+
+| Name | Summary |
+| --- | --- |
+| [`makeWebSocketDriver`](#http-websocket-makewebsocketdriver) | Typed receive/send/close commands on one owned socket, with bounded outgoing buffering. |
+
+#### `makeWebSocketDriver`
+
+```ts
+function makeWebSocketDriver<T, Out>(schema: StandardSchemaV1<unknown, T>, options: WebSocketOptions<Out>): Driver<WebSocketInput<Out>, WebSocketOutput<T>, WebSocketError>;
+```
+
+Typed receive/send/close commands on one owned socket, with bounded outgoing buffering.
+
+### Types and interfaces
+
+| Name | Summary |
+| --- | --- |
+| [`WebSocketClosed`](#http-websocket-websocketclosed) |  |
+| [`WebSocketError`](#http-websocket-websocketerror) |  |
+| [`WebSocketIncoming`](#http-websocket-websocketincoming) |  |
+| [`WebSocketInput`](#http-websocket-websocketinput) |  |
+| [`WebSocketOptions`](#http-websocket-websocketoptions) |  |
+| [`WebSocketOutput`](#http-websocket-websocketoutput) |  |
+| [`WebSocketPayload`](#http-websocket-websocketpayload) |  |
+
+#### `WebSocketClosed`
+
+```ts
+interface WebSocketClosed {
+    readonly _tag: 'WebSocketClosed';
+    readonly connection: string;
+    readonly url: string;
+    readonly code: number;
+    readonly reason: string;
+    readonly wasClean: boolean;
+    /** The application issued a valid Close command on this connection. */
+    readonly requested: boolean;
+}
+```
+
+
+#### `WebSocketError`
+
+```ts
+type WebSocketError = {
+    readonly _tag: 'WebSocketConnectError';
+    readonly connection: string | undefined;
+    readonly url: string | undefined;
+    readonly message: string;
+} | {
+    readonly _tag: 'WebSocketClosedError';
+    readonly connection: string;
+    readonly url: string;
+    readonly code: number;
+    readonly reason: string;
+    readonly wasClean: boolean;
+    readonly errored: boolean;
+    readonly requested: boolean;
+} | {
+    readonly _tag: 'WebSocketSendError';
+    readonly connection: string;
+    readonly reason: 'not-open' | 'buffer-limit' | 'encode' | 'send';
+    readonly message: string;
+    readonly bufferedBytes?: number;
+    readonly bytes?: number;
+    readonly limit?: number;
+} | {
+    readonly _tag: 'WebSocketCloseError';
+    readonly connection: string;
+    readonly message: string;
+};
+```
+
+
+#### `WebSocketIncoming`
+
+```ts
+type WebSocketIncoming = string | ArrayBuffer;
+```
+
+
+#### `WebSocketInput`
+
+```ts
+type WebSocketInput<T> = {
+    readonly _tag: 'Connect';
+    readonly connection: string;
+    readonly url: string;
+    readonly protocols?: string | readonly string[];
+} | {
+    readonly _tag: 'Send';
+    readonly connection: string;
+    readonly value: T;
+} | {
+    readonly _tag: 'Close';
+    readonly connection: string;
+    readonly code?: number;
+    readonly reason?: string;
+};
+```
+
+
+#### `WebSocketOptions`
+
+```ts
+interface WebSocketOptions<T> {
+    readonly name?: string;
+    readonly encode: (value: T) => WebSocketPayload;
+    /** Synchronous parse; default JSON text. Validation may be async. */
+    readonly parse?: (payload: WebSocketIncoming) => unknown;
+    /** Maximum native bufferedAmount + encoded payload bytes. Default 65536. */
+    readonly maxBufferedBytes?: number;
+}
+```
+
+
+#### `WebSocketOutput`
+
+```ts
+type WebSocketOutput<T> = {
+    readonly _tag: 'WebSocketState';
+    readonly connection: string;
+    readonly url: string;
+    readonly state: 'connecting' | 'open' | 'closing';
+} | {
+    readonly _tag: 'WebSocketMessage';
+    readonly connection: string;
+    readonly data: T;
+} | {
+    readonly _tag: 'WebSocketDecodeFailed';
+    readonly connection: string;
+    readonly issues: readonly StandardSchemaV1.Issue[];
+} | {
+    readonly _tag: 'WebSocketSent';
+    readonly connection: string;
+    readonly bytes: number;
+} | {
+    readonly _tag: 'WebSocketCloseRequested';
+    readonly connection: string;
+} | WebSocketClosed;
+```
+
+
+#### `WebSocketPayload`
+
+```ts
+type WebSocketPayload = string | Blob | ArrayBuffer | ArrayBufferView<ArrayBuffer>;
+```
+
+
 ## `@gyral/http/testing`
 
 ### Functions
@@ -10982,7 +12149,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/router`](
 | [`listen`](#router-listen) | Streams the current location, then every URL change, as messages until the component disconnects (a streaming command, ADR 0006/0009). |
 | [`makeRouter`](#router-makerouter) | A router driver. |
 | [`navigate`](#router-navigate) | Navigates in-app (pushes a history entry, or replaces the current one). |
-| [`routes`](#router-routes) | Declares a route table. |
+| [`routes`](#router-routes) |  |
 | [`setHead`](#router-sethead) | Makes the document's head this `Head` (ADR 0019): the title, `lang`/`dir`, and every managed element (description, robots, canonical, meta, links, JSON-LD). |
 
 #### `listen`
@@ -11028,8 +12195,6 @@ function routes<const T extends RouteTable>(table: T, options?: {
 }): Routes<T>;
 ```
 
-Declares a route table. Patterns are literal segments and `:param` segments only, so the
-URLPattern and fallback matchers behave identically. `matcher` is for tests.
 
 #### `setHead`
 
@@ -11072,9 +12237,9 @@ The default router (global window, Navigation API when available).
 | [`Matcher`](#router-matcher) |  |
 | [`MemoryOptions`](#router-memoryoptions) |  |
 | [`NavigateOptions`](#router-navigateoptions) | Options of `navigate()`. |
-| [`Params`](#router-params) | `Params<'/users/:id'>` is `{ readonly id: string }`. |
+| [`Params`](#router-params) | Named required strings, optional strings and trailing catch-all arrays, inferred by path. |
 | [`RouteLocation`](#router-routelocation) | The document location, numbered in the order this router saw changes. |
-| [`RouteMatch`](#router-routematch) | A matched route: its name, decoded params and canonical path, discriminated by `name`. |
+| [`RouteMatch`](#router-routematch) | The route name discriminates its params. |
 | [`RouterDriver`](#router-routerdriver) |  |
 | [`RouterInput`](#router-routerinput) |  |
 | [`RouterOptions`](#router-routeroptions) |  |
@@ -11147,12 +12312,10 @@ Options of `navigate()`.
 #### `Params`
 
 ```ts
-type Params<Path extends string> = {
-    readonly [K in ParamNames<Path>]: string;
-};
+type Params<Path extends string> = Path extends `${infer Head}/${infer Rest}` ? Param<Head> & Params<Rest> : Param<Path>;
 ```
 
-`Params<'/users/:id'>` is `{ readonly id: string }`.
+Named required strings, optional strings and trailing catch-all arrays, inferred by path.
 
 #### `RouteLocation`
 
@@ -11181,10 +12344,7 @@ type RouteMatch<T extends RouteTable> = {
 }[keyof T & string];
 ```
 
-A matched route: its name, decoded params and canonical path, discriminated by `name`.
-`path` is `href(name, params)`: the one path this page answers at. A URL whose pathname
-differs (a trailing slash, `%c3%bc` for `%C3%BC`) matched the same route; a server redirects
-it to `path` (ADR 0009 "Canonical paths").
+The route name discriminates its params. `path` is the canonical href for those captures.
 
 #### `RouterDriver`
 
@@ -11270,12 +12430,9 @@ The router's current URL and last head, for tests and server-side assertions.
 ```ts
 interface Routes<T extends RouteTable> {
     readonly table: T;
-    /**
-     * First route (in table order) whose pathname pattern matches `url`, or `undefined`. A string
-     * starting with `/` is a path (`//a/b` too, never a host).
-     */
+    /** First route in table order matching the pathname. A string beginning with / is a path. */
     match(url: string | URL): RouteMatch<T> | undefined;
-    /** Builds a path for a route, percent-encoding params. */
+    /** Percent-encode each parameter or catch-all segment; omit absent optional parameters. */
     href<N extends keyof T & string>(name: N, params: Params<T[N]>): string;
 }
 ```

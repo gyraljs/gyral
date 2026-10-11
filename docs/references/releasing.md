@@ -96,8 +96,15 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    Packages** → review → **Approve** (2FA) for each, or `npm stage list @gyral/NAME` then
    `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
    That is 9 approvals: the eight `@gyral/*` packages and `create-gyral`.
-6. Check npmjs.com shows the version with the provenance badge, then try
-   `npm create gyral@latest` (both templates) in a scratch directory.
+6. Verify all nine versions and `latest` tags on the registry, including npm provenance.
+   Generate both templates in fresh directories using `npm create gyral@X.Y.Z app-basic --
+--template basic --yes` and the equivalent `ssr` command. Install with npm, then run each
+   app's `typecheck`, `build` and `test`. Check manifests and lockfiles contain registry
+   dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral.
+7. Switch gyral.dev from its internal tester tarballs to the verified npm release, remove
+   its overrides/vendor directory, run its gate and deploy matching docs and llms files.
+   Only after the stable registry installs and deployed docs pass may Context7 be submitted
+   or refreshed (gyral-b2g → gyral-7se.5).
 
 The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the first one,
 0.1.0, came from a `minor` changeset).
@@ -117,19 +124,15 @@ The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the
   with npm and runs the generated app's `typecheck`, `build` and `test`. Run it after changing
   create-gyral or its templates, and before every release.
 
-Last recorded result before 0.3 (2026-10-05, 0.0.0): pack:check ok for all 7 packages;
-verify:install ok (9 entries imported, `<gy-hello>` rendered to Declarative Shadow DOM), then
-with Lit and its SSR packages as peers. Since 0.3 the only peer installed is fast-check ^4.
+Recorded 0.3.1 candidate checks (2026-10-11): `verify:install` passes with nine tarballs,
+all Node-loadable entries (including storage and network subpaths), native SSR output and
+the installed MCP stdio binary's seven tools. API lookup verifies all four new driver
+factories. The verifier adds no extra peers, and no Lit package is installed.
 
-Last recorded `verify:create` (2026-10-05, 0.0.0, 31 s): both templates typecheck, build and
-pass their tests (basic: 2 browser tests in Chromium; ssr: 2 server-render tests, and
-`dist/static/index.html` is the prerendered page). Client builds: basic 151.6 KiB JS
-(49.8 KiB gzip), ssr 157.3 KiB JS (51.8 KiB gzip), mostly the Effect 3 runtime (ADR 0015).
-0.2.0 dropped Effect; 0.3.0's sizes are in ADR 0018's measured sections and
-`scripts/size-budget.json`.
-
-Last recorded `verify:install` with `@gyral/mcp` (2026-10-05, 9 tarballs): all entries imported,
-SSR ok, and `gyral-mcp` answered over stdio with 7 tools.
+Both `verify:create` templates typecheck, build and pass their tests (basic: two Chromium
+tests; SSR: three server tests and a prerendered page). Client builds: basic 21.9 KiB JS
+(8.3 KiB gzip), SSR 34.4 KiB JS (14.1 KiB gzip). These are pre-publication tarball checks;
+they do not replace step 6's registry-only checks after npm approval.
 
 ## When something goes wrong
 

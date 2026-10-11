@@ -1,5 +1,19 @@
 # create-gyral
 
+## 0.3.1
+
+### Patch Changes
+
+- Generate the basic template with the client-only Vite preset and the SSR template with
+  automatic component loading and `gyralDevServer`, without a manual client entry.
+- Use two-call `define`, generated element typings and the current public API in both
+  templates. State must be JSON-compatible when server-rendered; client-only state may use
+  other values.
+- Serve SSR apps through `@gyral/ssr/node` rather than an external Node adapter. Remove the
+  obsolete `useDefineForClassFields: false` setting.
+- Generated apps install the aligned 0.3.1 packages from npm; internal tarball overrides are
+  only used by the repository's pre-publication verification.
+
 ## 0.3.0
 
 ### Minor Changes

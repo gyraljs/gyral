@@ -5,8 +5,8 @@ one-time exception before 1.0's strict versioning: these changes fix defaults th
 or close gaps that 0.3.0 left open, and each has a one-line fix. Testers on a 0.3.1-next.N build
 should read this list too, because some items changed between those builds.
 
-Every change is also marked "Behavior change" in its changeset (and so in the package
-CHANGELOGs).
+The package changelogs summarize the final release surface; the tables below collect the
+behavior changes and their migration steps.
 
 ## Router (`@gyral/router`)
 

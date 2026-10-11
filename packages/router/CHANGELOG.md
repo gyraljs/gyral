@@ -1,5 +1,21 @@
 # @gyral/router
 
+## 0.3.1
+
+### Patch Changes
+
+- Support optional named segments (`:id?`) and trailing catch-all captures (`:path*`,
+  readonly arrays), including zero-segment captures. Native URLPattern, fallback and server
+  matching agree; encoded slashes remain within their original segments.
+- `href` encodes each capture and rejects ambiguous optional omissions, invalid shapes,
+  empty/dot segments and missing required values. First match wins; applications explicitly
+  set HTTP 404 for their final not-found route.
+- Matches include the canonical path. Navigation handles scroll restoration, fragments and
+  focus consistently across Navigation API and the lazy History API fallback.
+- Share typed head data with server rendering through `setHead`. Traverse history through
+  router commands; standalone back/forward/go helpers are removed.
+- Update the `@gyral/core` dependency to 0.3.1; see the [migration guide](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md).
+
 ## 0.3.0
 
 ### Minor Changes
