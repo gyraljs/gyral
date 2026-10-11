@@ -128,6 +128,7 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/view.md` — template rules, live form state, `each` with pure rows, element hooks (`defineHook`, with `dispose` for teardown), widgets with a lifecycle, `focus`
 - `references/effects-and-drivers.md` — drivers, `command()`, concurrency, retry, streaming, http/time/router, substitution
 - `references/browser-storage.md` — optional localStorage and IndexedDB drivers, typed decoding, watches, transactions, migrations, SSR ordering
+- `references/network-streams.md` — optional native EventSource/WebSocket drivers, typed codecs, connection lifetime and transport limits
 - `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
 - `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path

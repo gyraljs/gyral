@@ -337,6 +337,16 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `FakeHttpResponderError` | value | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md) |
 | `FakeResponse`           | type  | supporting type |                                                                                       |
 
+### `@gyral/http/sse`
+
+| Export                  | Kind  | Status          | Documented in                                                                                  |
+| ----------------------- | ----- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `EventSourceError`      | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `EventSourceInput`      | type  | supporting type |                                                                                                |
+| `EventSourceOptions`    | type  | supporting type |                                                                                                |
+| `EventSourceOutput`     | type  | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+| `makeEventSourceDriver` | value | documented      | [skills/gyral/references/network-streams.md](../../skills/gyral/references/network-streams.md) |
+
 ### `@gyral/mcp`
 
 | Export         | Kind  | Status          | Documented in                                          |

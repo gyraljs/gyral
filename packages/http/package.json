@@ -17,7 +17,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./testing": "./src/testing.ts"
+    "./testing": "./src/testing.ts",
+    "./sse": "./src/sse.ts"
   },
   "publishConfig": {
     "exports": {
@@ -28,6 +29,10 @@
       "./testing": {
         "types": "./dist/testing.d.ts",
         "default": "./dist/testing.js"
+      },
+      "./sse": {
+        "types": "./dist/sse.d.ts",
+        "default": "./dist/sse.js"
       }
     }
   },

@@ -45,6 +45,8 @@ it('a fetch-only app bundles no CSRF lookup and no retry delays', async () => {
   expect(code).toContain('application/json'); // the driver is there
   expect(code).not.toContain('meta[name=');
   expect(code).not.toContain('exponential');
+  expect(code).not.toContain('EventSource');
+  expect(code).not.toContain('WebSocket');
 }, 60_000);
 
 it('csrfFromMeta and retry are bundled once the app calls them', async () => {
