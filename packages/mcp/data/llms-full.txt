@@ -1,4 +1,4 @@
-# Gyral 0.3.1-next.8: complete documentation
+# Gyral 0.3.1-next.9: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -3172,6 +3172,59 @@ component is live:
 with `Hydrated: (s) => ({ ...s, live: true })` in `update`. No-JavaScript visitors still get
 native validation, and every JavaScript submit reaches `form()`.
 
+## File uploads
+
+Use a native file input and keep the raw `FormData` from the parsed submit. This sends the
+file bytes instead of converting them to JSON:
+
+```ts
+// src/photo-upload.ts
+import { define, defineForm, form, html } from '@gyral/core';
+import { submitForm } from '@gyral/http';
+import * as v from 'valibot';
+
+const PhotoForm = defineForm(v.object({ photo: v.instance(File) }));
+type State = { readonly status: string };
+type Msg =
+  | { readonly _tag: 'Submit'; readonly data: FormData }
+  | { readonly _tag: 'Uploaded' }
+  | { readonly _tag: 'Failed' };
+
+export const PhotoUpload = define<State, Msg>()('photo-upload', {
+  init: () => ({ status: 'Choose a photo.' }),
+  intent: { Submit: form(PhotoForm, (_data, raw) => ({ _tag: 'Submit', data: raw })) },
+  update: {
+    Submit: (_s, m) => [
+      { status: 'Uploading…' },
+      [
+        submitForm('/photos', m.data, {
+          onSuccess: (): Msg => ({ _tag: 'Uploaded' }),
+          onFailure: (): Msg => ({ _tag: 'Failed' }),
+        }),
+      ],
+    ],
+    Uploaded: () => ({ status: 'Photo uploaded.' }),
+    Failed: () => ({ status: 'Upload failed. Try again.' }),
+    IntentRejected: () => ({ status: 'Choose a photo before uploading.' }),
+  },
+  view: (s, i) => html`
+    <form action="/photos" method="post" enctype="multipart/form-data" data-intent=${i.Submit}>
+      <label for="photo">Photo</label>
+      <input id="photo" name="photo" type="file" accept="image/*" required />
+      <button type="submit">Upload</button>
+      <output aria-live="polite">${s.status}</output>
+    </form>
+  `,
+});
+```
+
+Do not set `content-type` yourself: the browser adds the multipart boundary. `accept` is a
+picker hint, not server validation. The server must enforce size, count, content and storage
+rules and apply authentication/CSRF checks. The schema above checks only that a file object
+exists; add your application's browser checks and validate again on the server. File inputs
+cannot be restored from a hydration seed or sticky rejected values; keep files in the submit
+boundary, not model state. See [Security](https://gyral.dev/docs/security/#uploaded-files).
+
 ---
 
 # Effects and drivers
@@ -3853,6 +3906,34 @@ it('shows the error state when the orders fail to load', async () => {
 ```
 
 In a model test, `step()` accepts `Errored`, so you can test that reducer without a DOM.
+
+## Debugging a failure
+
+Start with the production diagnostic code, for example `Gyral G0010`. The
+[diagnostics reference](https://gyral.dev/errors/) expands it into the cause and a suggested fix. A development
+build includes the explanation; the [devtools panel](https://gyral.dev/docs/devtools/) shows the message,
+previous/next state, component and command lane around the failure. Inspect the underlying
+`GyralError.cause` without putting private user data into shared logs.
+
+Distinguish three outcomes:
+
+- A parser returning `undefined` ignores an event; no message reaches the reducer.
+- A schema failure in `form()` or `field()` produces `IntentRejected`, which belongs in your
+  validation UI. It is expected invalid input, not a thrown defect.
+- A parser, reducer, view, hook or command mapper throwing uses the error channel described
+  above. A planned driver failure with `onFailure` instead becomes its typed message.
+
+On the server, `onError(error)` observes component failures. Without a throwing policy, a
+failed component can render its fallback while the page continues. `onError: 'throw'` makes
+the render fail before returning the response; chunked output cannot change an HTTP status
+after bytes have been sent. See [Server rendering](https://gyral.dev/docs/server-rendering/).
+
+For a hydration mismatch, reproduce with the production build and the exact server/client
+assets. Check stale HTML, unseeded current time, locale differences, invalid parser-repaired
+markup, and third-party changes before scripts arrive. Use `mountSsr()` and `hydrated()` to
+exercise real server markup; they report mounting/hydration problems. Keep a small failing
+test before changing the implementation. See [Testing](https://gyral.dev/docs/testing/),
+[Security](https://gyral.dev/docs/security/) and [Versioning](https://gyral.dev/docs/versioning/).
 
 ---
 
@@ -4840,6 +4921,28 @@ rendered tag that no client module defines is a development warning, so a missin
 fail silently. For app-wide setup in the browser (providing drivers to the page), keep a small
 client entry and pass it in `scripts` next to `components`.
 
+The preset finds components written as `export const X = define<…>()('my-tag', …)`. A component
+created through a helper of your own (one that calls `define()` with a tag it was given) is
+invisible to that scan, so list it with its module, relative to the project root:
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import { gyralVitePreset } from '@gyral/core/vite';
+
+export default defineConfig({
+  ...gyralVitePreset({
+    components: { modules: { 'member-form': 'src/forms/member.ts' } },
+  }),
+  build: { outDir: 'dist/client', emptyOutDir: true },
+});
+```
+
+A component module that the client entry or another component also imports is bundled into that
+chunk; it still loads, and its preload is that chunk. In a large app, measure before you switch
+from a hand-written loader: each component becomes its own chunk, and the loader carries the
+list of their dependencies.
+
 To wait until the page's components are defined and have rendered, await `componentsReady()`
 from `@gyral/core`, in a page script or a browser test. It resolves once every rendered tag the
 loader knows about is defined and the page has settled; without automatic components it is
@@ -5603,12 +5706,21 @@ How far each one is tested today:
 
 - **Bun**: `renderPage` with Declarative Shadow DOM output and `contentSecurityPolicy()` were
   checked by hand on Bun 1.3.14 with Gyral 0.3. It isn't part of Gyral's CI.
-- **Deno and Cloudflare Workers**: not tested yet. The renderer uses no Node-only APIs (it
-  hashes in plain JavaScript and has no DOM shim), but check it there before you rely on it.
+- **Deno 2.9.6**: the same self-contained SSR bundle passes native stream chunking,
+  declarative shadow roots, slotted content, request-store isolation, CSP and cancellation
+  checks without a DOM shim or runtime permissions.
+- **Cloudflare Workers**: those checks pass in local workerd through Wrangler 4.147.0, with
+  compatibility date `2025-01-01` and no `nodejs_compat` flag. This verifies the local runtime;
+  deployed bindings, asset hosting and edge behavior still need your application's checks.
 - **`@gyral/ssr/static`** (`prerender`, `productionServer`, `assetHandler`) reads and writes
   files with `node:fs`. Use it in Node at build time; on an edge runtime, serve the static files
   from the platform's asset hosting instead. **`@gyral/ssr/node`** is for Node's `http` module
   only; the runtimes above take `app.fetch` directly.
+
+Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
+and workerd checks. The
+[spike report](https://github.com/gyraljs/gyral/blob/next/docs/references/platform-spikes-2026-10-11.md)
+describes the tested boundary.
 
 ## Cache headers
 
@@ -5675,6 +5787,30 @@ Gyral's loop is made of pure functions and data, so most of a component can be t
 browser: feed messages to `update`, look at the state and the commands. What's left, rendering
 and the platform, you test in a real browser. `@gyral/testing` covers both, and works with any
 test runner.
+
+## Accessibility checks for your app
+
+Use a browser accessibility scanner alongside component behavior tests. An app-level helper
+can use Playwright and axe directly; `@gyral/testing` does not need to wrap their APIs:
+
+```ts
+// test/accessibility.ts
+import assert from 'node:assert/strict';
+import { AxeBuilder } from '@axe-core/playwright';
+import type { Page } from 'playwright';
+
+export async function expectAccessible(page: Page): Promise<void> {
+  const result = await new AxeBuilder({ page }).analyze();
+  assert.deepEqual(result.violations, []);
+}
+```
+
+Install `@axe-core/playwright` and `playwright` as development dependencies. Navigate to a
+built page, wait for its application-ready condition, then call the helper. Scan meaningful
+states such as invalid forms and open dialogs in both color schemes. Axe traverses open
+shadow roots; keep those components mounted during the scan. The platform spike checks that
+its shadow-root button is actually scanned. See [Accessibility](https://gyral.dev/docs/accessibility/) for
+keyboard, focus and screen-reader checks that an automated scan cannot replace.
 
 ```sh
 npm install -D @gyral/testing vitest
@@ -6463,9 +6599,10 @@ export function SizePicker({ onPick }: { onPick: (id: string) => void }) {
 TypeScript needs to know the tag in JSX; declare it in React's `JSX.IntrinsicElements`
 (`declare module 'react' { namespace JSX { interface IntrinsicElements { 'my-picker': … } } }`).
 
-Not yet tested by Gyral: React's own `on…` props for custom events with `gyral-output`, and
-server-rendering Gyral components inside a React server render. The `ref` approach above uses
-only the DOM.
+The client spike verifies React 19.2.8 assigning array properties, updating them and hearing
+`gyral-output` with an exact-case `'ongyral-output'` handler passed to `createElement`.
+The `ref` approach above also uses the DOM directly. React server rendering is outside that
+check; see the server-rendering boundary below.
 
 ## Vue
 
@@ -6490,13 +6627,22 @@ Then bind properties with `.prop` (or `:items` once the element is defined) and 
 <my-picker label="Choose a size" :items.prop="['S', 'M', 'L']" @gyral-output="onPick" />
 ```
 
-Not yet tested by Gyral; this follows Vue's custom elements guide.
+The client spike verifies Vue 3.5.43 with `isCustomElement`, `.prop`, property updates and
+`@gyral-output`.
 
 ## Svelte
 
 Svelte sets a value as a property when the element defines that property, so import the
 component's module before the markup renders. For outputs, listen on the element with
-`addEventListener` in an effect, as in the React example. Not yet tested by Gyral.
+`addEventListener` in an effect, as in the React example. The client spike verifies Svelte
+5.57.2 assigning and updating array properties and hearing outputs with an effect listener.
+
+These checks run in real Chromium against Gyral's `next` implementation with
+`pnpm verify:platforms` in the framework repository. They install pinned host packages in a
+temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover client
+mounts, not each host's SSR/hydration integration. The
+[spike report](https://github.com/gyraljs/gyral/blob/next/docs/references/platform-spikes-2026-10-11.md)
+records the fixtures and limits.
 
 ## Server rendering in another framework
 
@@ -6664,6 +6810,292 @@ mechanisms, so one set of design tokens can drive your components and the librar
 Libraries usually register their tags in `HTMLElementTagNameMap` when you import their types,
 which lets `target instanceof` checks and `querySelector` know the element's class. Without
 that, read properties defensively, as `valueOf` does above.
+
+---
+
+# Security
+
+> Escape template data, protect form requests, keep secrets out of hydration seeds, and serve Gyral with a strict Content Security Policy.
+
+Source: https://gyral.dev/docs/security/
+
+Render untrusted text through a normal template hole:
+
+```ts
+// src/greeting.ts
+import { html } from '@gyral/core';
+
+export const greeting = (name: string) => html`<p>Hello, <bdi>${name}</bdi>.</p>`;
+```
+
+Gyral writes child strings as text and escapes them in server output. Attribute values are
+escaped too. This protects the HTML boundary; it does not decide whether a URL, CSS value,
+request or uploaded file is safe for your application.
+
+## Trusted markup and URLs
+
+`raw()` accepts trusted author HTML. It does not sanitize it. Never pass a user's comment,
+translation, query parameter or network response to `raw()` without a separately chosen
+sanitization policy. Use ordinary template holes for text and explicit elements for rich text.
+
+For links from untrusted data, parse the URL at the boundary and allow only the schemes and
+origins your application needs. Escaping `href` cannot make a `javascript:` URL safe. Treat
+interpolated CSS, page styles and head scripts as trusted author code too. Follow the
+[OWASP XSS prevention guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)
+when choosing allowed contexts and sanitizers.
+
+## Form requests and CSRF
+
+Authenticate and authorize each state-changing request on the server, and validate the
+submitted data there even when the browser already validated it. Browser validation improves
+the interface; it is not an authorization boundary.
+
+For a cookie-authenticated app, use your server's CSRF protection. Gyral's HTTP driver can
+carry a token supplied in the document:
+
+```ts
+// src/api.ts
+import { csrfFromMeta, makeHttpDriver } from '@gyral/http';
+
+export const api = makeHttpDriver({ headers: csrfFromMeta('csrf-token') });
+```
+
+The server renders the session's token in a `meta` element named `csrf-token` and validates
+the `x-csrf-token` request header. A native no-JavaScript form post needs the server's
+corresponding hidden-field token mechanism. Restrict this driver to your own trusted API;
+do not send a token to arbitrary destinations. `SameSite` cookies are useful defense in
+depth, but are not a universal replacement for server CSRF checks. See
+[OWASP's CSRF guide](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
+
+## Hydration seeds and secrets
+
+SSR sends model state, declared props and store state to the browser so hydration can resume.
+Those values are public to anyone who receives the page. Keep credentials, private backend
+data and privileged tokens out of them. Use JSON-safe values; functions, DOM nodes and cyclic
+objects cannot be faithfully restored. Gyral diagnoses unsafe seed values and escapes JSON
+for its HTML context; escaping does not make a secret private.
+
+`defineForm(schema, { secret: [...] })` prevents named fields from being echoed in rejected
+form values. Password-like fields are secret by default. This does not redact arbitrary
+copies you put in state, application logs or your own error payloads. Return only the
+information the browser needs. See [Forms](https://gyral.dev/docs/forms/).
+
+## A strict Content Security Policy
+
+The SSR package can add hashes for component and page styles while preserving your other
+directives:
+
+```ts
+// server/page.ts
+import { html } from '@gyral/core';
+import { renderPage } from '@gyral/ssr';
+
+export const response = renderPage({
+  title: 'Account',
+  body: html`<main><h1>Account</h1></main>`,
+  csp: {
+    directives: {
+      'default-src': "'self'",
+      'script-src': "'self'",
+      'object-src': "'none'",
+      'base-uri': "'none'",
+      'frame-ancestors': "'none'",
+      'trusted-types': 'gyral',
+      'require-trusted-types-for': "'script'",
+    },
+  },
+});
+```
+
+Where Trusted Types exist, Gyral parses templates through the policy named `gyral`. That
+policy accepts trusted author markup; it is not a sanitizer. Allow its name in your CSP. If
+the page refuses the policy, development warns; an enforced HTML sink still rejects the
+operation. Support varies by browser; keep CSP's other protections in place.
+
+Static hosting must deliver CSP as an HTTP response header. Review the
+[SSR CSP options](https://gyral.dev/docs/server-rendering/#content-security-policy) and
+[style-attribute policy](https://gyral.dev/docs/styling/#inline-styles-under-a-strict-csp). Test the production
+page under its actual headers rather than relying on the development server.
+
+## Uploaded files
+
+Use `FormData` so the browser generates the multipart boundary; do not set its content type
+by hand. On the server, enforce file count and size limits, validate content, and control
+storage names and download permissions. A filename or MIME type supplied by the client is
+untrusted. The [file-upload recipe](https://gyral.dev/docs/forms/#file-uploads) shows the transport boundary.
+
+---
+
+# Accessibility
+
+> Build Gyral views with native controls, useful labels, announced errors, predictable focus, and browser tests that cover keyboard interaction.
+
+Source: https://gyral.dev/docs/accessibility/
+
+Start with the element that already has the behavior you need:
+
+```html
+<form action="/search" method="get">
+  <label for="query">Search products</label>
+  <input id="query" name="q" type="search" />
+  <button type="submit">Search</button>
+</form>
+```
+
+Native controls provide keyboard behavior, focus and accessible roles. Your Gyral view keeps
+those semantics while `data-intent` names the messages. Use links for navigation, buttons for
+actions, labels for inputs, and `fieldset`/`legend` for related choices. A placeholder does
+not replace a visible label.
+
+## Labels and shadow roots
+
+A label and its control must share the relevant tree. A page's `label for` cannot simply
+point at an input hidden in another component's shadow root. Put the label inside the
+component, or use a deliberate naming contract that copies the external label into its
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/next/skills/gyral/references/view.md)
+include naming a component's form from the page. The former `labelledBy` export was removed
+in 0.3.1; the recipe is application code.
+
+Test the computed accessible name in the browser. Setting a prop called `label` does not
+itself guarantee the rendered control has a name. Prefer native semantics before adding ARIA;
+the [WAI guidance](https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/) explains when custom
+interaction patterns need more work.
+
+## Form errors
+
+Keep schema failures as `IntentRejected` messages and visible errors in state.
+`invalid(errors)` mirrors an error to native validity and `aria-invalid` on the server and
+client. Add visible error text and connect it to the control:
+
+```ts
+// src/email-control.ts
+import { html, invalid } from '@gyral/core';
+
+export const emailControl = (errors: readonly string[]) => html`
+  <label for="email">Email address</label>
+  <input
+    id="email"
+    name="email"
+    type="email"
+    required
+    aria-describedby="email-error"
+    ${invalid(errors)}
+  />
+  <p id="email-error">${errors.join(' ')}</p>
+`;
+```
+
+For a submit failure, show a useful summary and move focus to it or the first invalid control
+when that helps the user recover. Do not put every keystroke's validation message in an alert
+region. See the complete [form validation example](https://gyral.dev/docs/forms/).
+
+## Focus after an update or navigation
+
+Return `focus(selector)` as a command. Gyral applies it after the DOM update, within the
+component's own root. A heading needs `tabindex="-1"` to accept programmatic focus without
+becoming a normal Tab stop. `focus(selector, { wait: true })` can wait for a target that appears
+in a later render. Avoid moving focus for routine background changes.
+
+The router's [scroll and focus options](https://gyral.dev/docs/routing/#scroll-and-focus) handle navigation
+after rendering settles. Test forward navigation and back/forward traversal; preserving a
+user's place and announcing a new page require different behavior. Lists should use stable
+`each()` keys so focus follows the same item when rows move. Where `moveBefore()` is absent,
+the renderer uses `insertBefore()`; check your application's focus-sensitive interactions on
+the browsers you support.
+
+## Announcements, language and motion
+
+Use `output` for a computed result and a restrained status/live region for asynchronous
+results that need announcing. Give a busy region `aria-busy` when appropriate. Do not announce
+the whole page on every render. Use `dialog.showModal()` through a modal binding for modal
+interaction, and keep a visible close control and a useful accessible name.
+
+Set the document's `lang` and text direction. Keep machine date values locale-neutral and
+isolate unknown-direction names with `bdi`. Honor `prefers-reduced-motion`; Gyral skips its
+view transition when reduced motion is requested, but your own CSS animations need the same
+care. Color must not be the only signal of selection, errors or status.
+
+## Verify the real interface
+
+Use browser tests to check roles, names, keyboard actions, focus after errors, Escape/close
+behavior and focus return. Run axe on the rendered document and its shadow roots; the Gyral
+repository's `pnpm ui:check` runs axe, overflow and console checks across desktop/phone and
+light/dark. Apps own their equivalent checks. Automated checks catch some defects; also
+exercise keyboard-only and screen-reader flows for your important tasks.
+
+See [Testing](https://gyral.dev/docs/testing/) for browser helpers and [Browser support](https://gyral.dev/docs/browser-support/)
+for enhancement behavior.
+
+---
+
+# Performance
+
+> Measure Gyral's production payload, rendering work and hydration cost, then use keyed rows, structural sharing and islands where they help.
+
+Source: https://gyral.dev/docs/performance/
+
+Measure your production page before changing its update strategy. Include the entry, static
+imports and modules the page actually fetches; a small entry can still load a large set of
+component, hydration and fallback chunks.
+
+## Rendering and keyed rows
+
+Reducers run immediately. One scheduler batches DOM work in a microtask, renders parents
+before children, and runs focus and other post-render work after the commit. A message can
+trigger a view even when the reducer returns the same state; unchanged binding values do not
+rewrite the DOM. Keep views pure and deterministic.
+
+Use `each(items, key, row, pick?)` for lists that insert, remove or reorder items. It skips a
+row when its item reference and picked inputs are unchanged. Preserve unchanged objects in
+your reducers and put changing external row inputs in `pick`; do not capture outer view state
+in the row function. Development checks and the row-purity lint help detect mistakes. See
+[Views](https://gyral.dev/docs/views/) and [Update](https://gyral.dev/docs/update/).
+
+Child components receive props by property. Unchanged declared props avoid a prop-triggered
+render; a child's own messages and stores can still update it. Mutating an object in place
+can hide a real change, while rebuilding every unchanged object defeats structural sharing.
+For a costly subtree, first isolate it as a component with explicit inputs and measure again.
+
+## Production compilation and payload
+
+Use `gyralVitePreset()` for production builds. It compiles template strings and binding paths
+ahead of time and removes development diagnostics. A client-only app can use
+`clientOnly: true` to exclude hydration machinery when no server markup needs it. This is a
+build contract: do not use that option for a server-rendered page.
+
+The repository's `pnpm size --json` measures production JavaScript with gzip level 9 and
+reports the initial payload separately from all chunks. `pnpm size:check` enforces example
+budgets. The [package overview](https://gyral.dev/docs/packages/#whats-inside) and
+[migration guide](https://gyral.dev/docs/migrating-0-2-to-0-3/#size) give dated measurements; they are examples,
+not a guarantee of your app's size. Compare versions with the same build options and assets.
+
+## Hydration and loading
+
+Hydration adopts server nodes rather than rebuilding the page. Its first view must agree with
+the server's state, props, stores and formatted text. Recovery from a mismatch adds work and
+can disturb user input. Read [Server rendering](https://gyral.dev/docs/server-rendering/) and use production
+hydration tests, including forms edited before scripts arrive.
+
+Choose islands when a region can wait until visible, idle or interaction. Keep initial HTML
+useful and ensure keyboard users can reach the interactive part. Preload the modules a page
+needs using its build manifest; avoid preloading every route just to make one navigation
+faster. Automatic component loading and manual route splitting should be measured on the
+whole page, including their loader and preload overhead. See
+[Code splitting](https://gyral.dev/docs/code-splitting/) and [Rendering modes](https://gyral.dev/docs/rendering-modes/).
+
+## Reproduce a speed claim
+
+The 2026-10-06 renderer comparison ran 0.2.0 and the 0.3 candidate in the same calibrated
+session. Its [raw data and notes](https://github.com/gyraljs/benchmarks/tree/main/results/2026-10-06-gyral-0.3-final)
+describe the machines, versions and variation. That comparison is not a measurement of every
+later 0.3.1 feature or your application.
+
+For your page, record network payloads and a browser performance trace for the action users
+care about. Separate script, layout, paint and frame wait; fewer reducer milliseconds need
+not make the visible action faster. Warm up, repeat the same tasks, retain raw results and
+compare in one environment. Check input correctness alongside timings. For bursty external
+sources, evaluate `renderOnFrame`; discrete clicks and submits usually need the default
+microtask rendering. See [Testing](https://gyral.dev/docs/testing/).
 
 ---
 
@@ -6857,6 +7289,80 @@ from the code.
   `@gyral/core/eslint` the template rules. Server rendering is `@gyral/ssr`.
 
 The guides explain how the pieces fit together: start with [Components](https://gyral.dev/docs/components/).
+
+---
+
+# Browser support
+
+> Gyral targets Baseline widely available browser features, with explicit fallbacks and progressive enhancement for newer platform APIs.
+
+Source: https://gyral.dev/docs/browser-support/
+
+Shipped browser code targets **Baseline widely available**: features supported across the
+major browser engines for at least 30 months. The repository uses the Browserslist query
+`baseline widely available`; compatibility lint checks JavaScript and CSS. This is a moving
+feature floor, not a promise to support one permanently fixed browser version.
+
+Custom elements, Shadow DOM, template cloning, constructable stylesheets and declarative
+shadow roots are part of that floor. Gyral renders with these native primitives. Node 24+
+is the repository's server/build target; browser support and server-runtime support are
+separate questions.
+
+## What happens without newer APIs
+
+| Native enhancement      | Baseline behavior                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `URLPattern`            | A constrained literal/parameter matcher with the same supported patterns                |
+| Navigation API          | Lazy History API implementation, popstate and link capture                              |
+| `command`/`commandfor`  | Lazy component-scoped command shim                                                      |
+| `moveBefore()`          | `insertBefore()`; test focus-sensitive moves in your app                                |
+| `requestIdleCallback()` | A short timer releases the island                                                       |
+| `startViewTransition()` | Ordinary rendering; reduced motion also skips the transition                            |
+| `:state()`              | State enhancement is skipped; keep meaning in markup and ARIA                           |
+| Popover API             | Model-driven toggling is skipped; provide an accessible inline alternative where needed |
+| The `gyral` HTML policy | Ordinary string parsing when the API is absent                                          |
+
+Gyral never installs a global browser polyfill. Substantial fallbacks are internal modules
+loaded when needed; small fallbacks stay beside the native call. Capability checks for Node
+or workers, such as the absence of animation frames, remain even as browser support improves.
+
+## Removal dates
+
+These dates follow the `web-features` 3.35.0 snapshot in
+[ADR 0003](https://github.com/gyraljs/gyral/blob/next/docs/design-docs/0003-browser-baseline.md),
+adding 30 months to newly available. They are scheduled review points, not claims that the
+fallback has already been removed:
+
+| Primitive                 | Widely available date |
+| ------------------------- | --------------------- |
+| `Promise.withResolvers()` | 2026-09-05            |
+| `AbortSignal.any()`       | 2026-09-19            |
+| `AbortSignal.timeout()`   | 2026-10-18            |
+| Custom states             | 2026-11-17            |
+| Popover                   | 2027-07-27            |
+| `URLPattern`              | 2028-03-15            |
+| View Transitions          | 2028-04-14            |
+| Invoker commands          | 2028-06-12            |
+| Navigation API            | 2028-07-13            |
+| Trusted Types             | 2028-08-24            |
+
+`moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
+The [native-first audit](https://github.com/gyraljs/gyral/blob/next/docs/references/native-first-audit-2026-10-11.md)
+records why cancellable and virtual-time timers remain useful even when native timeout
+signals become widely available.
+
+## Your application's features
+
+Feature-detect newer JavaScript APIs and keep a working experience when they are absent.
+Guard newer CSS with `@supports`, preserving an accessible baseline layout. Do not make
+essential labels, errors or interactions depend on a skipped enhancement. Check current
+[Baseline data](https://web.dev/baseline) before choosing a new primitive, and test your actual
+minimum browser versions.
+
+SSR mounting in `@gyral/testing` uses `setHTMLUnsafe()` to reproduce declarative shadow roots,
+so choose a test browser that supports it. The repository runs real Chromium tests in
+development and production configurations. Those tests are not evidence that every app flow
+has also been tested in Firefox or Safari.
 
 ---
 
@@ -7716,6 +8222,60 @@ and HTTP packages, `step()` and `run()`. If your app's views were already plain 
 
 ---
 
+# Versioning and stability
+
+> Understand Gyral's 0.x API policy, package versions, migration guides, internal entry points and the difference between releases and tester tarballs.
+
+Source: https://gyral.dev/docs/versioning/
+
+Gyral is in **0.x**. A minor version can include breaking changes. Read its migration guide
+and package changelogs before upgrading; do not treat every 0.x minor as an interchangeable
+dependency update.
+
+## Public and internal APIs
+
+Use documented public package entries. Entries containing `/internal` are for Gyral's own
+packages and have no stability promise. A symbol being technically exported does not make
+an internal entry an application API. The
+[0.3.1 export inventory](https://github.com/gyraljs/gyral/blob/next/docs/references/public-api-0.3.1.md)
+records the public boundary.
+
+The `@gyral/*` packages release together at a shared version. Keep core, router, HTTP, time,
+testing, devtools and SSR aligned; verify your lockfile when a package manager resolves
+multiple versions. The [package guide](https://gyral.dev/docs/packages/) explains what each app needs.
+
+## Releases and tester builds
+
+As of 2026-10-11, **0.3.0 is published on npm** and **0.3.1 is under development**. This site
+tests `0.3.1-next.9` tarballs and documents the upcoming APIs. A tester tarball's version is
+not a promise that a corresponding npm prerelease exists. Follow your app's established
+tester setup until the final release is published.
+
+For a released application, pin the version you verified and retain the lockfile. To test a
+candidate, install the matched tarballs and overrides described by that candidate's setup.
+Deploy server output and client assets from the same build: stale HTML with new component
+templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
+
+## Upgrade with evidence
+
+1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/) or
+   [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
+2. Update packages together and install from the lockfile.
+3. Run typechecking, component/browser tests and the production build.
+4. Test server/client hydration, edited forms, routing and the production CSP if your app
+   uses them. Check payload size for the pages whose loading matters.
+
+The generated [API reference](https://gyral.dev/docs/api/) describes the packages installed for this site's
+build. Consult the changelog for the exact version your app runs:
+[core](https://github.com/gyraljs/gyral/blob/main/packages/core/CHANGELOG.md),
+[HTTP](https://github.com/gyraljs/gyral/blob/main/packages/http/CHANGELOG.md),
+[router](https://github.com/gyraljs/gyral/blob/main/packages/router/CHANGELOG.md),
+[SSR](https://github.com/gyraljs/gyral/blob/main/packages/ssr/CHANGELOG.md) and the other package
+directories. Report a regression with the versions, a small reproducer and the expected
+behavior. The repository's `pnpm check` is its release-quality gate.
+
+---
+
 # Error codes
 
 > Every code a production build of Gyral prints, such as G0010: what the message says, what it means and how to fix it.
@@ -7730,7 +8290,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1-next.8, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.1-next.9, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -9886,6 +10446,12 @@ With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
 interface ComponentsOptions {
     /** Directories (relative to Vite's root) whose modules' `define()` tags are found. Default `['src']`. */
     readonly include?: readonly string[];
+    /**
+     * Tag → module (relative to Vite's root) for components the scan can't find: those defined
+     * through a wrapper such as `defineMemberForm({ tag: 'member-form' })`, which calls
+     * `define()` itself. Listed entries win over scanned ones.
+     */
+    readonly modules?: Readonly<Record<string, string>>;
 }
 ```
 
@@ -12529,6 +13095,116 @@ Performance claims come from measurements. Bundle size is tracked per example wi
 builds, and changes such as the devtools hook are measured before and after. Budgets follow
 measurements, not the other way round: when Gyral 0.3 set out to make the smallest app 8 KiB, it
 measured 8.9 KiB and says so.
+
+---
+
+# Coming from Lit
+
+> Move a Lit component to Gyral's Model-View-Intent loop: explicit props, pure views, typed messages, keyed rows, drivers, stores and native hydration.
+
+Source: https://gyral.dev/docs/coming-from-lit/
+
+Gyral components are standard custom elements, so you can migrate one at a time alongside
+your existing Lit elements. Gyral 0.3 uses its own renderer. Its templates are not Lit
+templates, and Lit directives do not work in them.
+
+## A small component
+
+In Lit, a click handler often mutates a reactive property and waits for the component's
+update. In Gyral, intent names a message, a reducer returns state, and the view renders it:
+
+```ts
+// src/counter.ts
+import { define, html } from '@gyral/core';
+
+type State = { readonly count: number };
+type Msg = { readonly _tag: 'Increment' };
+
+export const Counter = define<State, Msg>()('my-counter', {
+  init: () => ({ count: 0 }),
+  intent: { Increment: true },
+  update: { Increment: (s) => ({ count: s.count + 1 }) },
+  view: (s, i) => html`
+    <button type="button" data-intent=${i.Increment}>Increment</button>
+    <output aria-live="polite">${s.count}</output>
+  `,
+});
+```
+
+There is no event closure in the template. `true` creates the tag-only message; a parser
+extracts typed data for a message that needs it. Reducers and views are pure, while commands
+describe work performed by drivers. This example uses the 0.3.1 curried `define` spelling;
+the [0.3.1 migration guide](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/) covers that change.
+
+## Translate responsibilities
+
+| Lit concept                         | Gyral equivalent                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `LitElement` subclass               | `define<State, Msg, Props>()(tag, spec)` returns a custom-element class                                  |
+| Internal reactive fields / `@state` | Immutable model returned from `init` and `update`                                                        |
+| Reactive properties / converters    | Declared `prop.string`, `number`, `boolean`, `json` or schema-validated `value`; read `ctx.props`        |
+| Property-change lifecycle logic     | Optional `PropsChanged` reducer; keep external props out of state unless synchronization is needed       |
+| `render()`                          | Pure `view(state, intents, ctx)` returning Gyral `html` or `svg`                                         |
+| `@click=${handler}`                 | `data-intent=${i.Name}` plus a parser in `intent`                                                        |
+| `repeat()`                          | `each(items, key, row, pick?)`, with pure rows and explicit changing inputs                              |
+| `classMap` / `styleMap`             | Explicit attribute/CSS-variable bindings or an application helper; no matching built-in directive        |
+| `live()` for controls               | Gyral's native live form bindings: `value`, `?checked`, `?selected` and textarea text                    |
+| `ref()` / element work              | An explicit element hook, with a server half where markup is needed                                      |
+| Reactive controller / observer      | A subscription driver for outside sources, or a lifecycle hook with `dispose` for element-owned work     |
+| `@lit/task`                         | Commands, a driver, and loading/success/failure messages in the model                                    |
+| `@lit/context`                      | Declared Gyral stores through `ctx.stores`, or props for parent-owned inputs                             |
+| `requestUpdate()`                   | Send a typed message or change a declared prop/store; no general manual update API                       |
+| `updateComplete`                    | `await settled()` for the page's pending Gyral rendering                                                 |
+| Lit SSR / hydration                 | `renderPage` or `renderToString` from `@gyral/ssr`, with Gyral seeds and native declarative shadow roots |
+
+`settled()` waits for Gyral rendering and outputs, not pending network work or updates inside
+a Lit element. Await those elements' own lifecycle promises separately. Props default to
+kebab-case attribute names and do not automatically reflect properties back into attributes.
+See [Components](https://gyral.dev/docs/components/) for validation, defaults and synchronization.
+
+## Templates and directives
+
+Import `html`, `svg`, `each`, `nothing` and hooks from Gyral. A template result from Lit is
+not a Gyral child value. Render a Lit component by its custom-element tag instead:
+
+```ts
+// src/interop.ts
+import { html } from '@gyral/core';
+
+// Import the module defining vendor-chart separately before this template renders.
+export const chart = (values: readonly number[]) =>
+  html`<vendor-chart .values=${values}></vendor-chart>`;
+```
+
+Gyral's compiler checks its own template grammar. Avoid expressions in tag/attribute names,
+event bindings, parser-repaired markup and promises in child holes. `each` rows cannot capture
+changing state from the view; expose it through `pick`. Read [Views](https://gyral.dev/docs/views/) rather than
+assuming every lit-html directive or binding rule transfers.
+
+## Effects, styles and server rendering
+
+Move fetches, timers and listeners out of the view. Return commands from `init`/reducers for
+one-off work; use `subscriptions(state, props)` for sources that should keep running while
+their inputs remain active. Gyral cancels their lanes on replacement or disconnect. The
+[effects guide](https://gyral.dev/docs/effects/) shows expected failures and concurrency policies.
+
+Move component styles into `styles: css\`...\``or trusted CSS strings. Gyral shares native
+constructable stylesheets; expose`part` names and custom properties as your public theme
+contract. Existing third-party components keep their own style system.
+
+On the server, register component definitions before rendering or use the component manifest.
+Commands wait for the client; initial state, props and request-scoped stores are serialized
+for hydration. Test edited controls and node identity under a production build. You can keep
+Lit installed for your remaining Lit elements, but Gyral itself does not depend on it. See
+[Server rendering](https://gyral.dev/docs/server-rendering/) and
+[Using third-party components](https://gyral.dev/docs/third-party-components/).
+
+For Lit's original contracts, see its official
+[properties](https://lit.dev/docs/components/properties/),
+[lifecycle](https://lit.dev/docs/components/lifecycle/) and
+[controllers](https://lit.dev/docs/composition/controllers/) documentation. The
+[0.2-to-0.3 guide](https://gyral.dev/docs/migrating-0-2-to-0-3/) is for upgrading a Gyral application that
+previously used Lit internally; it is a separate migration.
 
 ---
 

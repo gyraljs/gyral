@@ -77,8 +77,17 @@ describe('?modal', () => {
     const dialog = root.querySelector('dialog') as HTMLDialogElement;
     host.send({ _tag: 'Open' });
     await settled();
+    const closed = new Promise<void>((resolve) => {
+      dialog.addEventListener(
+        'close',
+        () => {
+          resolve();
+        },
+        { once: true },
+      );
+    });
     dialog.close(); // as Escape or a form[method=dialog] would
-    await new Promise((resolve) => setTimeout(resolve)); // the close event is a queued task
+    await closed;
     await settled();
     expect(host.state).toMatchObject({ open: false, closes: 1 });
   });

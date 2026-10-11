@@ -71,6 +71,9 @@ export default defineConfig({
       {
         test: {
           name: 'node',
+          // Real Vite fixture builds compete for CPU; avoid cold-build timeout starvation.
+          maxWorkers: 2,
+          sequence: { groupOrder: 1 },
           include: [
             'scripts/test/**/*.test.mjs',
             'packages/*/test/**/*.node.test.ts',

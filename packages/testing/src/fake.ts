@@ -80,26 +80,25 @@ export function fakeDriver<I = unknown, O = unknown, E = unknown>(
       });
       return impl(input, ctx);
     }
-    return new Promise<O>((resolveRun, rejectRun) => {
-      const call: MutableCall<I, O> = {
-        input,
-        signal: ctx.signal,
-        settled: false,
-        emit: ctx.emit,
-        resolve: (output) => {
-          call.settled = true;
-          resolveRun(output);
-        },
-        reject: (error) => {
-          call.settled = true;
-          // Deliberately not an Error: fakes reject with the driver's typed error (e.g. a
-          // tagged HttpError), which reaches onFailure unchanged when there is no toError.
-          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-          rejectRun(error);
-        },
-      };
-      calls.push(call);
-    });
+    const { promise, resolve: resolveRun, reject: rejectRun } = Promise.withResolvers<O>();
+    const call: MutableCall<I, O> = {
+      input,
+      signal: ctx.signal,
+      settled: false,
+      emit: ctx.emit,
+      resolve: (output) => {
+        call.settled = true;
+        resolveRun(output);
+      },
+      reject: (error) => {
+        call.settled = true;
+        // Deliberately not an Error: fakes reject with the driver's typed error (e.g. a
+        // tagged HttpError), which reaches onFailure unchanged when there is no toError.
+        rejectRun(error);
+      },
+    };
+    calls.push(call);
+    return promise;
   };
 
   return {

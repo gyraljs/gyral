@@ -33,6 +33,13 @@ function until(signal: AbortSignal, start: () => () => void): Promise<never> {
       return;
     }
     const stop = start();
+    // Starting a stream can emit synchronously, and the receiver may abort in that emit.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- start can abort
+    if (signal.aborted) {
+      stop();
+      reject(abortError(signal));
+      return;
+    }
     signal.addEventListener(
       'abort',
       () => {
@@ -83,7 +90,7 @@ function frames({ signal, emit }: DriverContext<TimeOutput>): Promise<never> {
     const loop = (time: number): void => {
       emit({ time, delta: previous === undefined ? 0 : time - previous });
       previous = time;
-      cancel = scheduleFrame(loop);
+      if (!signal.aborted) cancel = scheduleFrame(loop);
     };
     cancel = scheduleFrame(loop);
     return () => {

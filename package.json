@@ -30,6 +30,7 @@
     "pack:next": "node scripts/pack-next.mjs",
     "verify:install": "node scripts/verify-install.mjs",
     "verify:create": "node scripts/verify-create.mjs",
+    "verify:platforms": "node scripts/verify-platforms.mjs",
     "mcp:refresh": "pnpm --filter @gyral/mcp run refresh"
   },
   "devDependencies": {

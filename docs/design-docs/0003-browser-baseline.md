@@ -57,6 +57,9 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 | Primitive                                                             | Newly available | Widely available |
 | --------------------------------------------------------------------- | --------------- | ---------------- |
 | Declarative shadow DOM                                                | 2024-02-20      | 2026-08-20 (now) |
+| `Promise.withResolvers()`                                             | 2024-03-05      | 2026-09-05 (now) |
+| `AbortSignal.any()`                                                   | 2024-03-19      | 2026-09-19 (now) |
+| `AbortSignal.timeout()`                                               | 2024-04-18      | 2026-10-18       |
 | `shadowrootdelegatesfocus` (declarative shadow DOM)                   | 2024-03-22      | 2026-09-22 (now) |
 | Custom states (`:state()`)                                            | 2024-05-17      | 2026-11-17       |
 | `popover`                                                             | 2025-01-27      | 2027-07-27       |
@@ -68,6 +71,10 @@ Dates from `web-features` 3.35.0 (widely available = newly + 30 months):
 | Trusted Types (`trustedTypes.createPolicy`)                           | 2026-02-24      | 2028-08-24       |
 | CSS `@scope`                                                          | 2026-03-24      | 2028-09-24       |
 | `moveBefore`, `requestIdleCallback`, `scheduler.yield`, Sanitizer API | not Baseline    | —                |
+
+The [2026-10-11 native-first audit](../references/native-first-audit-2026-10-11.md)
+records every package's choices and the fallbacks retained. Native timeout signals do not
+replace timers that must be cancelled on completion or controlled with virtual time.
 
 ## CSS is checked too (gyral-8ht.5)
 

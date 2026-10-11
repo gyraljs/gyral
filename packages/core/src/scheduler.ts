@@ -41,7 +41,6 @@ const SCHEDULED = 1;
 const TRANSITION = 2;
 const FLUSHING = 3;
 
-const ignore = (): void => undefined;
 const dirty = new Set<HostTask>();
 let post: PostTask[] = [];
 let phase = IDLE;
@@ -72,13 +71,7 @@ export const isQuiet = (): boolean =>
 export function whenQuiet(): Promise<void> {
   if (isQuiet()) return Promise.resolve();
   if (quiet === null) {
-    let resolve: () => void = ignore;
-    let reject: (error: unknown) => void = ignore;
-    const promise = new Promise<void>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    quiet = { promise, resolve, reject };
+    quiet = Promise.withResolvers();
   }
   return quiet.promise;
 }

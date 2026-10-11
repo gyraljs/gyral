@@ -37,16 +37,14 @@ export function wait(ms: number, signal: AbortSignal): Promise<undefined> {
       reject(abortError(signal));
       return;
     }
+    const stop = (): void => {
+      clearTimeout(timer);
+      reject(abortError(signal));
+    };
     const timer = setTimeout(() => {
+      signal.removeEventListener('abort', stop);
       resolve(undefined);
     }, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        reject(abortError(signal));
-      },
-      { once: true },
-    );
+    signal.addEventListener('abort', stop, { once: true });
   });
 }

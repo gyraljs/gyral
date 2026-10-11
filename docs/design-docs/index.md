@@ -3,6 +3,9 @@
 The system of record for _why_ Gyral is built the way it is. Work items (_what/when_) live in
 beads, not here. Every file in this folder must be listed below (`pnpm invariants` checks).
 
+[ADR 0027 — Internationalization](0027-internationalization.md) is **proposed**: native Intl,
+application-owned catalogs, request-scoped locale/time zone and deterministic first hydration.
+
 Status values: **accepted** (in force), **proposed** (under discussion), **superseded**.
 
 | Doc                                                              | Status     | Summary                                                                                                                                                                                                                                                      |
