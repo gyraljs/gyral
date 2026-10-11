@@ -256,6 +256,19 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `default`     | value | documented | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md) |
 | `GyralPlugin` | type  | documented | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                 |
 
+### `@gyral/core/storage`
+
+| Export                   | Kind  | Status          | Documented in                                                                                  |
+| ------------------------ | ----- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `LocalStorageOptions`    | type  | supporting type |                                                                                                |
+| `makeLocalStorageDriver` | value | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `StorageChangeSource`    | type  | supporting type |                                                                                                |
+| `StorageDecodeError`     | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `StorageError`           | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `StorageInput`           | type  | supporting type |                                                                                                |
+| `StorageOutput`          | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `StoredValue`            | type  | supporting type |                                                                                                |
+
 ### `create-gyral`
 
 | Export            | Kind  | Status          | Documented in                                                            |

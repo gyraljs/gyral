@@ -42,6 +42,14 @@ every component has rendered and messages have stopped arriving.
 
 ## Documentation
 
+`@gyral/core/storage` (0.3.1) exports `makeLocalStorageDriver(schema, { prefix?, name?,
+storage?, encode? })`: JSON Read/Write/Remove/Clear commands and cancellable Watch streams.
+Reads validate persisted values with Standard Schema; watches report invalid data and keep
+listening. Driver writes and native other-tab events produce changes. Clear respects the
+prefix namespace. Start initial watches in `subscriptions` so SSR state hydrates first;
+imports and factories do not access browser globals. This optional entry is absent from
+apps that do not import it. See [the storage guide](../../skills/gyral/references/browser-storage.md).
+
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, template compiler):
 [github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:

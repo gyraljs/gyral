@@ -25,7 +25,8 @@
     "./vite": "./src/vite.ts",
     "./compiled": "./src/view/compiled.ts",
     "./eslint": "./src/eslint/index.ts",
-    "./errors.json": "./src/errors.json"
+    "./errors.json": "./src/errors.json",
+    "./storage": "./src/storage.ts"
   },
   "imports": {
     "#devtools": {
@@ -82,7 +83,11 @@
         "types": "./dist/eslint/index.d.ts",
         "default": "./dist/eslint/index.js"
       },
-      "./errors.json": "./dist/errors.json"
+      "./errors.json": "./dist/errors.json",
+      "./storage": {
+        "types": "./dist/storage.d.ts",
+        "default": "./dist/storage.js"
+      }
     },
     "imports": {
       "#devtools": {
