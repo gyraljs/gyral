@@ -26,7 +26,8 @@
     "./compiled": "./src/view/compiled.ts",
     "./eslint": "./src/eslint/index.ts",
     "./errors.json": "./src/errors.json",
-    "./storage": "./src/storage.ts"
+    "./storage": "./src/storage.ts",
+    "./indexeddb": "./src/indexeddb.ts"
   },
   "imports": {
     "#devtools": {
@@ -87,6 +88,10 @@
       "./storage": {
         "types": "./dist/storage.d.ts",
         "default": "./dist/storage.js"
+      },
+      "./indexeddb": {
+        "types": "./dist/indexeddb.d.ts",
+        "default": "./dist/indexeddb.js"
       }
     },
     "imports": {

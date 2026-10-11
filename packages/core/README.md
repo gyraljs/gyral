@@ -50,6 +50,13 @@ prefix namespace. Start initial watches in `subscriptions` so SSR state hydrates
 imports and factories do not access browser globals. This optional entry is absent from
 apps that do not import it. See [the storage guide](../../skills/gyral/references/browser-storage.md).
 
+`@gyral/core/indexeddb` (0.3.1) exports `makeIndexedDBDriver(stores, { database, version,
+upgrade?, name?, factory?, encode? })`: typed Read/Put/Delete, bounded Query and atomic
+Transaction batches. Applications own stores, indexes and synchronous migrations. Success
+means the native transaction committed; stored records decode afterward. Blocked upgrades,
+access and decoding failures are typed. Commands close connections and cancel native work;
+an already committed write cannot be undone. This entry is also optional and SSR-safe.
+
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, template compiler):
 [github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:

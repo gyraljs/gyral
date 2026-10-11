@@ -40,9 +40,46 @@ their size budgets stay unchanged. This is an entry cost, not an app-specific de
 
 ## IndexedDB
 
-IndexedDB remains a distinct driver: structured records, object stores, bounded index
-queries, versioned upgrades and transaction batches retain their native semantics. Its
-detailed API is specified with its implementation; localStorage does not emulate it.
+`makeIndexedDBDriver(stores, { database, version, upgrade?, name?, factory?, encode? })`
+from `@gyral/core/indexeddb` takes a Standard Schema per store. Store names and record values
+are typed together. The name defaults to `indexeddb`; the native factory is accessed lazily.
+`encode(store, value)` optionally transforms a model record into its stored input shape.
+
+Operations are `Read { store, key }`, `Put { store, value, key? }`,
+`Delete { store, key }`, and `Query { store, index?, range?, direction?, limit }`.
+Keys retain native `IDBValidKey` semantics. An omitted Put key uses the store's inline key or
+auto-increment policy. Queries return primary keys and decoded records, iterate a cursor,
+and require a positive integer limit (at most 2^32 - 1). Range data uses `Only { key }`,
+`Lower { key, open? }`, `Upper { key, open? }` or
+`Bound { lower, upper, lowerOpen?, upperOpen? }`; no browser key-range object in command data.
+Index names are application-defined strings checked by IndexedDB.
+
+`Transaction { operations }` runs a nonempty batch atomically across its named stores;
+results stay in operation order. All native requests are queued synchronously. A batch with
+Put/Delete is readwrite; otherwise readonly. Results are delivered only after the native
+transaction completes, never after an individual write request succeeds. Read and Query
+decode stored values after commit, allowing async schemas without keeping a transaction
+alive. Decode failures carry `committed: true`: a committed batch cannot be rolled back by
+a later decoder rejection. Write values are typed model records; encoding must produce
+values consistent with the read schema. Absence is distinct from a stored undefined value.
+
+The synchronous `upgrade(db, oldVersion, newVersion, transaction)` callback owns migrations,
+object stores and indexes. It must queue any migration requests before returning; never
+await inside it. A thrown migration aborts the upgrade and becomes a typed access failure.
+Blocked upgrades reject promptly with `IndexedDBBlockedError`; since open requests cannot
+be cancelled, any late upgrade is aborted and any late connection is closed. Retry is an
+explicit application decision after the older tab/connection closes.
+
+Abort attempts native transaction rollback and suppresses late output. It cannot undo an
+already committed transaction. Connections close after each command's native transaction,
+before async decoding, and on versionchange. Access/transaction failures, invalid operation
+data, and decode failures use `IndexedDBError` through `toError`/`onFailure`. There is no
+observation stream or localStorage emulation. Use `queue` for application-ordered writes.
+Server-rendered model state still needs JSON-compatible values, even though IndexedDB can
+store structured values such as dates and binary data. Tests substitute the driver by name.
+
+The standalone production IndexedDB entry, measured with the same method as localStorage,
+is 4,971 bytes / 1,900 bytes gzip. It adds no runtime code to examples that do not import it.
 
 Sources: [storage events](https://developer.mozilla.org/en-US/docs/Web/API/Window/storage_event),
 [IndexedDB transaction completion](https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction/complete_event).

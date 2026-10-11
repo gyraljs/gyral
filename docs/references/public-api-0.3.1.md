@@ -72,7 +72,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `ChildSource`         | type  | supporting type |                                                                                                        |
 | `ChildValue`          | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
 | `command`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
-| `Command`             | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
+| `Command`             | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md)         |
 | `CommandHandlers`     | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `CommandInfo`         | type  | supporting type |                                                                                                        |
 | `ComponentSpec`       | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
@@ -268,6 +268,21 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `StorageInput`           | type  | supporting type |                                                                                                |
 | `StorageOutput`          | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
 | `StoredValue`            | type  | supporting type |                                                                                                |
+
+### `@gyral/core/indexeddb`
+
+| Export                | Kind  | Status          | Documented in                                                                                  |
+| --------------------- | ----- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `IndexedDBError`      | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `IndexedDBInput`      | type  | supporting type |                                                                                                |
+| `IndexedDBOperation`  | type  | supporting type |                                                                                                |
+| `IndexedDBOptions`    | type  | supporting type |                                                                                                |
+| `IndexedDBOutput`     | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
+| `IndexedDBRange`      | type  | supporting type |                                                                                                |
+| `IndexedDBRecord`     | type  | supporting type |                                                                                                |
+| `IndexedDBResult`     | type  | supporting type |                                                                                                |
+| `IndexedDBStores`     | type  | supporting type |                                                                                                |
+| `makeIndexedDBDriver` | value | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md) |
 
 ### `create-gyral`
 
