@@ -36,6 +36,11 @@ update maps or completion promises.
    hosts dirty, loop again within the same flush.
 6. Resolve waiting `settled()` promises.
 
+Post-commit client calls, including native modal/popover opening, can synchronously dispatch
+intents and mark hosts dirty (gyral-cps). Render those hosts before post-render commands run;
+`settled()` resolves only after both host renders and post-render work are drained. Focus
+commands returned by such an intent therefore see the DOM its new model produces.
+
 **Errors:** a host whose view throws is reported for that host (05 "Errors", ADR 0024): it
 renders its `error` view or keeps its previous DOM, and the flush continues with the other
 hosts. Reducers never throw into the flush (a failed reducer changes nothing). Post-render work

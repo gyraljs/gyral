@@ -15,7 +15,8 @@ export default defineConfig({
   ...gyralVitePreset(),
   test: {
     include: [
-      'packages/core/test/view/{render-style,style-hydration,style-csp,trusted-types,render-raw,render-svg,dialogs}.test.ts',
+      'packages/core/test/view/{render-style,style-hydration,style-csp,trusted-types,render-raw,render-svg,dialogs,dialogs-insertion,dialogs-hydration}.test.ts',
+      'packages/core/test/dialog-focus.test.ts',
       'packages/ssr/test/style-attribute-hashes.test.ts',
     ],
     browser: {

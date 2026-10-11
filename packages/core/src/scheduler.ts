@@ -194,8 +194,8 @@ function flush(): void {
       for (let pass = 1; ; pass++) {
         renderAll(counts);
         flushHooks(); // every dirty host rendered: element hooks run, children first
-        if (post.length === 0) return;
-        runPost();
+        // Client calls can deliver intents: commit their new state before focus/other work.
+        if (dirty.size === 0 && post.length > 0) runPost();
         if (dirty.size === 0 && post.length === 0) return;
         if (pass >= MAX_PASSES) throw loopError(counts);
       }

@@ -477,6 +477,10 @@ model says. `?modal` goes only on `<dialog>`, `?popover-open` only on an element
 `popover` attribute (template rule 4). For a non-modal dialog that should show before scripts
 run, use `?open`.
 
+Native opening runs after new DOM is inserted and child components have rendered, before
+`focus()` commands. Conditional dialogs, keyed replacements and initial/hydrated true values
+follow the same order.
+
 ## Calling a method on an element
 
 When the model must tell an element to do something (play a video, reset a canvas, a widget's

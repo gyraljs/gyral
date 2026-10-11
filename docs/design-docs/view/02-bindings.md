@@ -325,6 +325,9 @@ removes the attribute (also in a multi-attribute).
 
 - Parts commit in document order. On first render an instance's parts commit **before** the
   instance is inserted, so a child component connects with its props already set.
+- Connection-dependent dialog/popover actions are queued during that commit and run with
+  the post-commit client calls, after insertion and the whole component flush, before the
+  scheduler's focus commands. They never open a node removed before those calls run.
 - After commit, disposable hooks whose element left the root (or whose position changed) are
   disposed, then hooks run `client`, then the scheduler's post-render work (04).
 - **Hooks run once the whole flush has rendered, children first** (0.3.1, gyral-1zd.27). The
@@ -357,6 +360,14 @@ view: (s, i) => html`
   the element isn't already open (or closed). A dialog the user closed (Escape, a
   `form[method=dialog]`) fires `close`: name it in `data-intent-on` so the model hears it, or
   the next change to `true` is the one that reopens it.
+- Native opening waits for the connected, fully committed DOM (gyral-c5o). This includes
+  conditional/nested templates, new keyed rows, initially open components and hydration.
+  Values are committed before insertion; the native action uses the latest committed value
+  when its post-commit call runs. Failed renders discard their queued calls. Outside the
+  scheduler, `render()`/`hydrate()` runs these calls before returning. Rendering into a
+  detached root does not open a dialog/popover; render into a connected root to open it.
+  [The HTML show-modal steps](https://html.spec.whatwg.org/multipage/interactive-elements.html#show-a-modal-dialog)
+  require a connected dialog.
 - The platform returns focus to the element focused before the dialog or popover opened.
 - A modal can't be opened in server HTML: neither binding writes an attribute, and hydration
   opens what the model says (07). Use `?open` for a non-modal dialog that should show before

@@ -178,7 +178,7 @@ export class AttrPart implements Part {
         const on = truthy(v);
         if (on === this.value) return;
         this.value = on;
-        if (toggle !== undefined) toggle(el, this.name, on);
+        if (toggle !== undefined) toggle(this, this.name, on);
         else if (DEV) warnToggle(el, this.name);
         return;
       }
