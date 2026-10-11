@@ -45,10 +45,20 @@ describe('agent pilot isolation and evidence', () => {
       expect(() => safePath(root, path, true)).toThrow();
     expect(safePath(root, 'src/new.ts', true)).toBe(join(root, 'src/new.ts'));
   });
-  it('uses a conservative context-byte guard and preserves unavailable provider usage', () => {
+  it('uses prior provider token counts to avoid premature context refusal', () => {
     expect(() =>
-      requestBody('Qwen3.8-27B', [{ role: 'user', content: 'x'.repeat(LIMITS.inputBytes) }], []),
-    ).toThrow('context_byte_limit');
+      requestBody('Qwen3.8-27B', [{ role: 'user', content: 'x'.repeat(LIMITS.contextTokens) }], []),
+    ).toThrow('context_limit');
+    const history = [{ role: 'user', content: 'x'.repeat(300000) }];
+    expect(() =>
+      requestBody('Qwen3.8-27B', history, [], { messageCount: 1, promptTokens: 60000 }),
+    ).not.toThrow();
+    expect(() =>
+      requestBody('Qwen3.8-27B', [...history, { role: 'tool', content: 'x'.repeat(75000) }], [], {
+        messageCount: 1,
+        promptTokens: 60000,
+      }),
+    ).toThrow('context_limit');
     expect(usageSummary([{ ok: false, data: { error: 'outage' } }]).totalTokens).toBeNull();
     expect(
       usageSummary([
@@ -123,5 +133,31 @@ describe('agent pilot isolation and evidence', () => {
       'fake-private-key',
     );
     expect(readFileSync(join(root, 'result/changes.patch'), 'utf8')).toContain('item.id');
+  });
+  it('records a dispatched request that times out without inventing billable usage', async () => {
+    const root = temporary();
+    const corpus = join(root, 'corpus');
+    mkdirSync(join(corpus, 'seeds/react/src'), { recursive: true });
+    mkdirSync(join(corpus, 'docs/react'), { recursive: true });
+    save(join(corpus, 'frozen.json'), {});
+    save(join(corpus, 'seeds/react/package.json'), {});
+    const result = await trial(
+      corpus,
+      join(root, 'result'),
+      { id: 'fake-timeout', condition: 'react-docs', framework: 'react', task: 'bug', trial: 0 },
+      { model: 'Qwen3.8-27B', baseUrl: 'https://example.invalid/v1', apiKey: 'fake-private-key' },
+      {
+        complete: async () => {
+          throw new Error('Simulated timeout');
+        },
+        grade: async () => ({ passed: false, infrastructure: false }),
+      },
+    );
+    expect(result.reason).toBe('provider_failure');
+    expect(result.infrastructure).toBe(true);
+    expect(result.usage.requests).toBe(1);
+    expect(result.usage.totalTokens).toBeNull();
+    const response = JSON.parse(readFileSync(join(root, 'result/response-1.json')));
+    expect(response.data.error).toContain('Simulated timeout');
   });
 });

@@ -82,8 +82,10 @@ with a recorded deterministic seed. Save the final ordering before starting. Giv
 run the same limits: 15 minutes of agent work, 24 model requests, 60 tool calls, 8,192
 maximum output tokens per request and 65,536 cumulative completion tokens. Reserve a
 request's maximum completion before dispatch against that cumulative limit. The provider
-context limit is 131,072 tokens; a conservative 110,000-byte serialized-request guard
-prevents context growth without estimating or inventing provider token counts. Tools and
+context limit is 131,072 tokens. The context guard uses the provider's actual prior input
+count plus a conservative UTF-8-byte bound for newly appended text, a 4,096-token framing
+reserve and the maximum output allocation. It does not reinterpret the entire accumulated
+history as bytes on every request. Bounds are recorded separately from actual usage. Tools and
 the final independent grade have finite deadlines; cleanup can extend the agent deadline
 slightly. The final grade is outside the agent's 15-minute allocation. Count failed requests,
 keep all reported cached/reasoning usage fields and stop on missing usage. There is no
@@ -154,3 +156,20 @@ provider usage, browser checks and screenshot. Source is in each run's `app/src/
 production build is in `final/dist/`. `report.md` and `summary.json` give portable summaries.
 Setup/compatibility probes and fake-agent tests are separate from the measured 36 runs.
 Context7 submission remains held until the owner provides its separate API key.
+
+## Initial harness correction
+
+The first frozen revision (`62839d3`) completed two initial attempts before a safe batch
+stop. Its whole-history byte guard stopped the assisted trial at 26,535 provider-reported
+input tokens, far below the model window. Its browser oracle also rejected valid
+`aria-live` announcements because it required `role="status"`. These are harness failures.
+The original sources, transcripts, usage and outcomes are preserved without rewriting.
+
+The revised guard uses actual prior input usage, and the oracle accepts equivalent native
+labels, ARIA labels and live regions. Six additional live-region reference variants join
+the original 18 positive/negative checks. Run the corrected 36-trial pilot in a new
+directory with `--prior /private/pilot/initial-results`; correction/replacement work falls
+within the owner's instruction to complete this pilot with unlimited monetary spend.
+The report retains initial attempts separately and states the total attempted denominator
+across revisions, alongside usage from both revisions. Comparative cells use the corrected
+protocol's trials only. Setup probes remain separately identified.

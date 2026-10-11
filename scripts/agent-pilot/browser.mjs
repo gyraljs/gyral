@@ -6,7 +6,7 @@ async function add(page, title) {
   await field(page, 'New task').fill(title);
   await button(page, 'Add task').click();
 }
-async function equal(read, expected) {
+async function equal(read, expected, message) {
   const deadline = Date.now() + 1500;
   let actual;
   do {
@@ -14,17 +14,39 @@ async function equal(read, expected) {
     if (JSON.stringify(actual) === JSON.stringify(expected)) return;
     await new Promise((resolve) => setTimeout(resolve, 50));
   } while (Date.now() < deadline);
-  assert.deepEqual(actual, expected);
+  assert.deepEqual(actual, expected, message);
 }
 const titles = (page) =>
-  page
-    .getByRole('checkbox')
-    .evaluateAll((nodes) => nodes.map((node) => node.labels?.[0]?.textContent?.trim()));
+  page.getByRole('checkbox').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const root = node.getRootNode();
+      const ids = node.getAttribute('aria-labelledby')?.split(/\s+/) ?? [];
+      const text = ids
+        .map(
+          (id) =>
+            [...root.querySelectorAll('[id]')].find((element) => element.id === id)?.textContent ??
+            '',
+        )
+        .join(' ')
+        .trim();
+      return (
+        text ||
+        node.getAttribute('aria-label') ||
+        [...(node.labels ?? [])].map((label) => label.textContent?.trim()).join(' ')
+      );
+    }),
+  );
+const announced = (page) =>
+  page.locator('[role="status"], [role="alert"], [aria-live="polite"], [aria-live="assertive"]');
 const count = (page, expected) =>
-  equal(async () => {
-    const text = await page.getByRole('status').allTextContents();
-    return text.some((value) => new RegExp(`\\b${expected}\\b`).test(value));
-  }, true);
+  equal(
+    async () => {
+      const text = await announced(page).allTextContents();
+      return text.some((value) => new RegExp(`\\b${expected}\\b`).test(value));
+    },
+    true,
+    `Expected an announced active task count of ${expected}.`,
+  );
 
 export const taskCases = {
   'blank and trimmed additions': async (page) => {
@@ -106,6 +128,7 @@ const focused = (page, name) =>
   equal(
     () => field(page, name).evaluate((node) => node.getRootNode().activeElement === node),
     true,
+    `Expected ${name} to receive focus.`,
   );
 async function validValues(page) {
   await field(page, 'Name').fill('  Ada  ');
@@ -114,7 +137,7 @@ async function validValues(page) {
 }
 async function success(page) {
   await equal(async () => {
-    const text = (await page.getByRole('status').allTextContents()).join(' ');
+    const text = (await announced(page).allTextContents()).join(' ');
     return text.includes('Ada') && text.includes('ada@example.com');
   }, true);
   await equal(() => page.locator('[aria-invalid="true"]').count(), 0);
@@ -127,7 +150,7 @@ export const formCases = {
   'multiple errors and first focus': async (page) => {
     await button(page, 'Sign up').click();
     for (const name of ['Name', 'Email', 'I agree to the terms']) await invalid(page, name);
-    assert.ok((await page.getByRole('alert').allTextContents()).join('').trim());
+    assert.ok((await announced(page).allTextContents()).join('').trim());
     await focused(page, 'Name');
   },
   'native email validity and value preservation': async (page) => {

@@ -5,7 +5,7 @@ import { hashes, save, sha256, workspace } from './corpus.mjs';
 import { prompt } from './prompts.mjs';
 import { createTools } from './tools.mjs';
 import { connectMcp } from './mcp.mjs';
-import { complete, LIMITS, requestBody, usageSummary } from './provider.mjs';
+import { complete, contextGuard, LIMITS, requestBody, usageSummary } from './provider.mjs';
 import { grade } from './grader.mjs';
 
 export async function trial(corpus, output, run, config, adapters = {}) {
@@ -34,6 +34,7 @@ export async function trial(corpus, output, run, config, adapters = {}) {
   ];
   const responses = [];
   const calls = [];
+  let previousContext;
   let mcp;
   let tools;
   let reason = 'request_limit';
@@ -77,9 +78,25 @@ export async function trial(corpus, output, run, config, adapters = {}) {
         reason = 'completion_token_limit';
         break;
       }
-      const body = requestBody(config.model, messages, tools.definitions);
+      const body = requestBody(config.model, messages, tools.definitions, previousContext);
+      save(
+        join(output, `context-guard-${request + 1}.json`),
+        contextGuard(messages, tools.definitions, previousContext),
+      );
       save(join(output, `request-${request + 1}.json`), body);
-      const response = await completion(config, body, remaining);
+      let response;
+      try {
+        response = await completion(config, body, remaining);
+      } catch (caught) {
+        response = {
+          ok: false,
+          status: null,
+          data: {
+            error: String(caught),
+            usageUnavailable: 'Request dispatched but no usable response returned.',
+          },
+        };
+      }
       responses.push(response);
       save(join(output, `response-${request + 1}.json`), response);
       if (!response.ok) {
@@ -88,6 +105,10 @@ export async function trial(corpus, output, run, config, adapters = {}) {
         break;
       }
       const message = response.data.choices[0].message;
+      previousContext = {
+        messageCount: messages.length,
+        promptTokens: response.data.usage?.prompt_tokens,
+      };
       messages.push(message);
       if (!message.tool_calls?.length) {
         reason = 'agent_finished';
@@ -118,7 +139,11 @@ export async function trial(corpus, output, run, config, adapters = {}) {
     }
   } catch (caught) {
     error = String(caught);
-    reason = error.includes('context_byte_limit') ? 'context_byte_limit' : 'infrastructure_failure';
+    reason = error.includes('context_limit')
+      ? 'context_limit'
+      : error.includes('usage_unavailable')
+        ? 'usage_unavailable'
+        : 'infrastructure_failure';
   } finally {
     await mcp?.close();
   }

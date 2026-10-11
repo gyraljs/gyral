@@ -16,6 +16,7 @@ const { positionals, values } = parseArgs({
     out: { type: 'string' },
     credentials: { type: 'string' },
     validation: { type: 'string' },
+    prior: { type: 'string' },
     resume: { type: 'boolean', default: false },
   },
 });
@@ -47,7 +48,13 @@ else if (command === 'freeze') {
   });
 } else if (command === 'run')
   console.log(
-    await runPilot(required('corpus'), required('out'), required('credentials'), values.resume),
+    await runPilot(
+      required('corpus'),
+      required('out'),
+      required('credentials'),
+      values.resume,
+      values.prior ? resolve(values.prior) : undefined,
+    ),
   );
 else if (command === 'report') {
   const out = required('out');

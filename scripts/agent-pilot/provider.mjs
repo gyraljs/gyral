@@ -7,7 +7,7 @@ export const LIMITS = Object.freeze({
   maxOutputTokens: 8192,
   completionTokens: 65536,
   contextTokens: 131072,
-  inputBytes: 110000,
+  framingReserveTokens: 4096,
   temperature: 0.2,
 });
 
@@ -27,7 +27,24 @@ export function credentials(path) {
   return config;
 }
 
-export function requestBody(model, messages, tools) {
+export function contextGuard(messages, tools, previous) {
+  const promptTokens = previous?.promptTokens ?? 0;
+  if (previous && (!Number.isInteger(previous.promptTokens) || previous.promptTokens < 0))
+    throw new Error('usage_unavailable');
+  const added = previous ? messages.slice(previous.messageCount) : { messages, tools };
+  const addedBytes = Buffer.byteLength(JSON.stringify(added));
+  // Bound newly appended byte-level text conservatively; prior input uses actual usage.
+  const upperBound =
+    promptTokens + addedBytes + LIMITS.framingReserveTokens + LIMITS.maxOutputTokens;
+  if (upperBound > LIMITS.contextTokens) throw new Error('context_limit');
+  return {
+    priorProviderPromptTokens: promptTokens,
+    addedUtf8Bytes: addedBytes,
+    upperBoundIncludingOutputAndFraming: upperBound,
+  };
+}
+
+export function requestBody(model, messages, tools, previous) {
   const body = {
     model,
     messages,
@@ -37,8 +54,7 @@ export function requestBody(model, messages, tools) {
     max_tokens: LIMITS.maxOutputTokens,
     stream: false,
   };
-  if (Buffer.byteLength(JSON.stringify(body)) > LIMITS.inputBytes)
-    throw new Error('context_byte_limit');
+  contextGuard(messages, tools, previous);
   return body;
 }
 

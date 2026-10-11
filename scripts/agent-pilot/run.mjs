@@ -15,7 +15,7 @@ export function verifyFrozen(corpus) {
   return frozen;
 }
 
-export async function runPilot(corpus, output, credentialFile, resume = false) {
+export async function runPilot(corpus, output, credentialFile, resume = false, priorOutput) {
   const frozen = verifyFrozen(corpus);
   const config = credentials(credentialFile);
   let plan;
@@ -41,6 +41,23 @@ export async function runPilot(corpus, output, credentialFile, resume = false) {
       runs: ordering(),
     };
     save(join(output, 'plan.json'), plan);
+    if (priorOutput) {
+      const prior = JSON.parse(readFileSync(join(priorOutput, 'plan.json')));
+      const attempts = prior.runs
+        .filter((run) => existsSync(join(priorOutput, run.id, 'result.json')))
+        .map((run) => JSON.parse(readFileSync(join(priorOutput, run.id, 'result.json'))));
+      plan.invalidated = {
+        reason:
+          'Initial byte-only context guard stopped below the model window; the oracle also rejected valid aria-live markup. Revised and revalidated before restarting.',
+        authorization:
+          'Owner authorized completion of the pilot and unlimited monetary spend. Harness correction required replacement trials; all initial evidence remains available.',
+        attempted: attempts.length,
+        sourceCommit: prior.frozen.sourceCommit,
+        results: attempts,
+      };
+      cpSync(priorOutput, join(output, 'invalidated'), { recursive: true });
+      save(join(output, 'plan.json'), plan);
+    }
     cpSync(join(corpus, 'docs'), join(output, 'frozen-docs'), { recursive: true });
     for (const framework of ['gyral', 'react', 'svelte']) {
       mkdirSync(join(output, 'locks'), { recursive: true });
