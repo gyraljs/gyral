@@ -5,8 +5,8 @@ feature pins, authorization, storage quotas and release retention. A dynamic imp
 not enough to classify an asset as feature-owned. Vite can merge workspace modules into
 chunks with no separate source or `isDynamicEntry` manifest entry.
 
-The staged component metadata includes `chunkModules`, mapping each emitted JavaScript
-chunk to its original module paths relative to the build root. Paths outside that root
+The component metadata of the next release (unreleased) includes `chunkModules`, mapping
+each emitted JavaScript chunk to its original module paths relative to the build root. Paths outside that root
 can contain `../`; use them as ownership identifiers, never as unchecked filesystem paths.
 `chunks` still maps tags to their actual emitted chunks. This addition is compatible with
 the existing `componentsFromManifest` reader; npm 0.3.1 does not yet emit `chunkModules`.
@@ -36,7 +36,7 @@ Removing links after hydration cannot stop parser-initiated fetches. Vite's runt
 also need an application policy: filter JavaScript dependency hints while keeping CSS
 dependency loading. Changing only server HTML does not change lazy-import hints.
 
-Joystyk's reported cross-world warning and local workaround are documented in its consumer
+One consumer's reported cross-world warning and local workaround are documented in its
 feedback. The expanded graph error was an application ownership error; no framework loader
 defect is established. The exact warning has not been reproduced by this Gyral fixture.
 There is no verified claim here that Chromium 154 or another version fixes it. Record the

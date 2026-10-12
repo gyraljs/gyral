@@ -1,8 +1,8 @@
 # Deploying a strict Content Security Policy
 
-This recipe extends npm 0.3.1 with the staged build metadata API in
-[ADR 0031](../design-docs/0031-build-style-metadata.md). Publish a matching release before
-using that API in registry consumers. Existing 0.3.1 applications can obtain the same
+This recipe extends npm 0.3.1 with the **unreleased** (next release) build metadata API in
+[ADR 0031](../design-docs/0031-build-style-metadata.md). Wait for that release before using the
+API from npm. Existing 0.3.1 applications can obtain the same
 shadow-style sources by importing their components and calling `styleHashes()` at build time.
 
 ## Build policy metadata

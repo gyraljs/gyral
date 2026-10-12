@@ -1,8 +1,8 @@
 # Real workload boundaries
 
 The runnable [workload lab](https://github.com/gyraljs/gyral/tree/main/examples/workload-lab)
-demonstrates these patterns. Its source/tests are staged after 0.3.1; the lifetime rules and
-driver APIs already exist in 0.3.1. Start it in the framework checkout with
+demonstrates these patterns. The lab and this guide are unreleased (added after 0.3.1, next
+release); the lifetime rules and driver APIs they use already exist in npm 0.3.1. Start it in the framework checkout with
 `pnpm examples workload-lab`. Read the companion files, not just the component's view.
 
 ## Work derived from state

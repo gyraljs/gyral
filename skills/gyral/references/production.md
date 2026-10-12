@@ -12,7 +12,7 @@ inline `style` attribute sources are different directives. Document CSS should b
 from Vite's manifest; `style-src 'self'` permits same-origin files without changing native
 nesting, theme functions or local `color-scheme` behavior.
 
-The staged next-release `@gyral/ssr/static` helper `writeComponentStyleManifest({ root,
+The **unreleased** (next release, not in npm 0.3.1) `@gyral/ssr/static` helper `writeComponentStyleManifest({ root,
 clientDir, outFile, vite? })` automatically imports the client metadata's component modules
 in an isolated build-time Node process. It writes `{ schema: 1, hashes: [...] }`. Pass validated
 hashes as `CspOptions.componentStyleHashes`; these APIs are absent from npm 0.3.1.
@@ -47,8 +47,8 @@ HTTP/upgrades, close sockets and dispose app resources within the application's 
 
 ## Offline lazy workspaces
 
-A merged dynamic chunk may lack `src` or `isDynamicEntry`. The staged component metadata's
-`chunkModules` maps actual emitted chunks to root-relative original module IDs; npm 0.3.1
+A merged dynamic chunk may lack `src` or `isDynamicEntry`. The unreleased (next release) component
+metadata's `chunkModules` maps actual emitted chunks to root-relative original module IDs; npm 0.3.1
 does not emit it. Assign app feature ownership from emitted IDs, following static edges for
 shared code/CSS and selected dynamic edges for feature pins. Worker outputs are a separate
 build graph. Keep worker/font/image URLs too. Explicit `components.modules` handles wrappers
@@ -64,11 +64,11 @@ need separate caching/logout policy; never serve new bytes at an old hashed URL.
 ## Rust
 
 Choose Rust API plus build-time pages, Askama plus client widgets, or experimental `gyral-rs`
-embedded SSR. Gymtime uses the first path, not gyral-rs. The reviewed embedded ABI is 1,
+embedded SSR. The first path needs no gyral-rs. The reviewed embedded ABI is 1,
 exact core/SSR npm 0.3.1, Linux x86_64 GNU, Rust 1.99.0, deno_core 0.412.0/V8 150.4.0.
 The crates are unpublished. Trusted SSR code is a bundled IIFE; the browser has one
 self-contained ESM entry. Props/HTML/bundle limits are 256 KiB/2 MiB/8 MiB. Rust verifies
 digests/SRI/CSP, owns request DTO permissions, cancellation and worker shutdown. These
 resource bounds are not an untrusted-code sandbox. Candidate Gyral releases need a newly
 reviewed Rust contract/fixture; the 0.3.1 fixture does not establish split chunks, streaming,
-dynamic CSS or full Gymtime readiness. The snapshot experiment remains test-only.
+dynamic CSS or full-application readiness. The snapshot experiment remains test-only.

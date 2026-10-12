@@ -61,13 +61,13 @@ Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component)
 `check_snippet` uses the TypeScript installed in your project (an optional peer dependency),
 so `npx` doesn't download a second compiler.
 
-## Public hosting (staged after 0.3.1)
+## Public hosting (unreleased: next release)
 
 The new `gyral-mcp-http` binary provides stateless Streamable HTTP at `/mcp` with six docs
 tools. It excludes `check_snippet`, project paths and live refresh. Set
 `GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the default bind address is `127.0.0.1`, port 3000.
 Deploy a pinned, reviewed package behind TLS following
-[the production runbook](../../docs/references/production-mcp.md).
+[the production runbook](https://github.com/gyraljs/gyral/blob/main/docs/references/production-mcp.md).
 The registry's existing 0.3.1 package has only the stdio binary; this addition needs the
 normal release gate before claiming it is available through npm.
 

@@ -25,6 +25,11 @@ Commands are data: `inputsFor(commands, driver)` lists a driver's inputs,
 output union), `focusTargetsIn(commands)` the `focus()` requests and `callsIn(commands)` the
 `call()` requests.
 
+**Unreleased (next release, not in npm 0.3.1):** `viewOf(Component, state, { props, stores })`
+calls a component's pure view in Node with its named intents and context; render the result
+with `renderToString(…, { dev: false })` from `@gyral/ssr` for stable HTML. Use the browser for
+hooks, focus, validity and hydration.
+
 Element tests run in a real browser (Vitest browser mode, not jsdom). `mount()` creates the
 element with its drivers, stores and props set before it connects, waits for the first render,
 and gives you shadow-root queries plus `type()` and `click()` that wait for the result:
@@ -166,10 +171,13 @@ builds of core too (a mismatch there warns and re-renders instead of throwing).
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, server rendering):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading:
+[from 0.3.0 to 0.3.1](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md),
+[from 0.2 to 0.3](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
 
-> Status: pre-alpha. APIs change between 0.x releases.
+> Status: 0.x, on npm. Breaking changes to the
+> [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
+> come only in a new minor version, with a migration guide.
 
 ## License
 

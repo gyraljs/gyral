@@ -15,6 +15,12 @@ this list disagree, or when a value is exported without documentation.
   of the public API and not covered by semver**: any release may change or remove it. Apps
   never import it.
 
+The inventory tracks `main`, so it can list exports added after the 0.3.1 release. These are
+**unreleased** (next release) and absent from npm 0.3.1: `viewOf` and `ViewOptions`
+(`@gyral/testing`), `writeComponentStyleManifest`, `ComponentStyleManifest` and
+`ComponentStyleManifestOptions` (`@gyral/ssr/static`), plus the `componentStyleHashes` field of
+`CspOptions` (`@gyral/ssr`).
+
 ## Removed from the public API in 0.3.1
 
 0.3.1 is the one release that may break 0.3.0's API (Gyral is still pre-release). Before it

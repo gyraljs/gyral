@@ -314,7 +314,7 @@ No in-place patching of a mismatched DOM: rebuilding one component is simple and
 
 ## Preloads under a service worker (gyral-dyn.11, 0.3.1)
 
-Joystyk reports "preload … not used because it is a cross-world service worker resource
+A consumer app reports "preload … not used because it is a cross-world service worker resource
 mismatch" under worker-controlled reloads. The former claim that Chrome 154 fixes it was
 not verified against that workload and is withdrawn. Preserve the exact browser version,
 worker and navigation case when reproducing it; a passing ordinary hydration test does

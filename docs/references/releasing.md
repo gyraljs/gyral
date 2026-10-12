@@ -85,7 +85,10 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    instead: `pnpm mcp:refresh --from ../gyral.dev/dist` (a relative path is resolved from where
    you run pnpm; the directory must hold `llms.txt` and `llms-full.txt`). It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
-   `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge.
+   `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
+   "unreleased (next release)" markers on features this release ships: they are in package
+   READMEs, the skill (which the MCP corpus bundles), `docs/references` and example READMEs
+   (`git grep -in 'unreleased'`). Say "since X.Y.Z" instead.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
    deployment when asked.
 4. The workflow refuses unconsumed changesets, runs `pnpm check`, builds, runs
@@ -101,8 +104,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 --template basic --yes` and the equivalent `ssr` command. Install with npm, then run each
    app's `typecheck`, `build` and `test`. Check manifests and lockfiles contain registry
    dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral.
-7. Switch gyral.dev from its internal tester tarballs to the verified npm release, remove
-   its overrides/vendor directory, run its gate and deploy matching docs and llms files.
+7. Move gyral.dev to the verified npm release (registry dependencies only, no overrides or
+   vendored packages), run its gate and deploy matching docs and llms files.
    Only after the stable registry installs and deployed docs pass may Context7 be submitted
    or refreshed (gyral-b2g → gyral-7se.5). Use the [Context7 runbook](context7.md) to
    submit the released corpus and record live component, form and driver retrieval.

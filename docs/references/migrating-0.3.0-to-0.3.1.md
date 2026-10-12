@@ -10,8 +10,9 @@ behavior changes and their migration steps.
 
 ## Import-aware dry run
 
-From the Gyral checkout, run `node scripts/migrate-gyral.mjs path/to/component.ts` (multiple
-files accepted). It prints proposed source and file/line review items without writing.
+The migration script was added after the 0.3.1 release and is not in any npm package: from a
+clone of the Gyral repository's `main` branch, run
+`node scripts/migrate-gyral.mjs path/to/component.ts` (multiple files accepted). It prints proposed source and file/line review items without writing.
 After review, `--write` applies the mechanical edits. The tool resolves lexical import
 bindings, including aliases and namespace imports: native `customElements.define`, local
 functions, comments and strings stay unchanged. Generics are preserved.

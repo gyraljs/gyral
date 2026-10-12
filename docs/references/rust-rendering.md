@@ -3,13 +3,13 @@
 Rust owns authentication, approved DTOs, transactions and HTTP response policy in all three
 paths. Choose the path from the page's initial HTML and deployment requirements.
 
-| Path                          | Server rendering                                                                 | Browser activation                                         | Suitable boundary                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Rust API and build-time pages | Static generation runs Gyral during the JS build. Rust serves the API and files. | Hydrate generated pages; first-render client-only widgets. | Public stable pages and authenticated application UI. Gymtime uses this path.     |
-| Askama and client components  | Rust renders templates/native forms, with fallback content. No server JS engine. | Gyral first-renders selected widgets.                      | Multi-page applications where native form submissions must work without JS.       |
-| `gyral-rs` embedded SSR       | Bounded Rust workers run the app's real Gyral SSR bundle in deno_core/V8.        | Matching JS hydrates the serialized component DOM.         | Per-request component HTML where an embedded JS engine is an accepted dependency. |
+| Path                          | Server rendering                                                                 | Browser activation                                         | Suitable boundary                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Rust API and build-time pages | Static generation runs Gyral during the JS build. Rust serves the API and files. | Hydrate generated pages; first-render client-only widgets. | Public stable pages and authenticated application UI. No JS runtime on the server. |
+| Askama and client components  | Rust renders templates/native forms, with fallback content. No server JS engine. | Gyral first-renders selected widgets.                      | Multi-page applications where native form submissions must work without JS.        |
+| `gyral-rs` embedded SSR       | Bounded Rust workers run the app's real Gyral SSR bundle in deno_core/V8.        | Matching JS hydrates the serialized component DOM.         | Per-request component HTML where an embedded JS engine is an accepted dependency.  |
 
-Gymtime does **not** currently depend on `gyral-rs`. Its shared browser Effect runtime is
+This path does **not** need `gyral-rs`. A shared browser Effect runtime in such an app is
 an application-owned driver adapter, not a Rust renderer. A backend committed write is
 authoritative even if a browser request is aborted; a redraw cannot replace authorization.
 
@@ -46,7 +46,7 @@ Only execute reviewed app bundles.
 
 The snapshot experiment restores fresh isolates from a prepared bundle. It remains test-only.
 Full application artifact/lifecycle validation is owned by `gyral-rs-xun.5` in the Rust
-repository; fixture throughput is insufficient to claim Gymtime readiness or framework
+repository; fixture throughput is insufficient to claim full-application readiness or framework
 performance superiority. Crate publication requires an explicit distribution decision,
 native archive/build preparation, supported-target evidence and a compatible release policy.
 
