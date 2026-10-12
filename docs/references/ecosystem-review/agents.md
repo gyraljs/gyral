@@ -173,7 +173,8 @@ validate exported/multi-file components with isolated generated outputs. Track f
 write/check, repeated reads, useful-tool use and correctness together; improving one
 counter alone is insufficient. Correct stale skill lifetimes in `gyral-49t.1`.
 
-A new measured study needs agreed scope and a newly frozen protocol. Do not retroactively
+[Protocol v3](../agent-benchmark-pilot-v3.md) implements these harness fixes (H1–H7) for
+new runs. A new measured study needs agreed scope and a newly frozen protocol. Do not retroactively
 rescore the original pilot, replace outages with successes or pool prompted continuations
 with independent trials. Include additional frameworks only with equivalent validated
 contracts; Astro needs an explicit island renderer. The [comparison](frameworks.md)

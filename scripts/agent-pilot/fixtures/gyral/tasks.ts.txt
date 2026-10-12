@@ -1,51 +1,114 @@
-import { define, html, each, type TemplateResult } from '@gyral/core';
+import { define, each, html, intentsOf, type TemplateResult } from '@gyral/core';
 
-type Item = { id: number; title: string; done: boolean };
-type Filter = 'All' | 'Active' | 'Completed';
-type State = { items: Item[]; draft: string; filter: Filter; nextId: number };
-type Msg = { _tag: 'Draft'; value: string } | { _tag: 'Add' } |
-  { _tag: 'Toggle'; id: number; index: number } | { _tag: 'Delete'; id: number } |
-  { _tag: 'Filter'; filter: Filter };
-const filters: Filter[] = ['All', 'Active', 'Completed'];
-const visible = (s: State) => s.items.filter(item => s.filter === 'All' || item.done === (s.filter === 'Completed'));
+export interface Item {
+  readonly id: number;
+  readonly title: string;
+  readonly done: boolean;
+}
 
-const App = define<State, Msg>()('pilot-app', {
+export type Filter = 'All' | 'Active' | 'Completed';
+
+export interface State {
+  readonly items: readonly Item[];
+  readonly draft: string;
+  readonly filter: Filter;
+  readonly nextId: number;
+}
+
+export type Msg =
+  | { readonly _tag: 'Draft'; readonly value: string }
+  | { readonly _tag: 'Add' }
+  | { readonly _tag: 'Toggle'; readonly id: number }
+  | { readonly _tag: 'Delete'; readonly id: number }
+  | { readonly _tag: 'Filter'; readonly filter: Filter };
+
+const filters: readonly Filter[] = ['All', 'Active', 'Completed'];
+
+const visible = (s: State): readonly Item[] =>
+  s.items.filter((item) => s.filter === 'All' || item.done === (s.filter === 'Completed'));
+
+// The intent names as a module constant, so rows can use them and stay pure.
+const i = intentsOf<typeof App>();
+
+// A row: reads only its item, what `pick` returned (the id its checkbox toggles), and
+// module constants.
+const Row = (item: Item, toggleId: number | undefined): TemplateResult =>
+  html`<li>
+    <label>
+      <input type="checkbox" value=${toggleId} ?checked=${item.done} data-intent=${i.Toggle} />
+      ${item.title}
+    </label>
+    <button type="button" value=${item.id} data-intent=${i.Delete} aria-label=${`Delete ${item.title}`}>
+      Delete
+    </button>
+  </li>`;
+
+const idOf = (value: string | undefined): number | undefined => {
+  const id = Number(value);
+  return Number.isInteger(id) ? id : undefined;
+};
+
+const isFilter = (value: string | undefined): value is Filter =>
+  filters.some((filter) => filter === value);
+
+export const App = define<State, Msg>()('pilot-app', {
   init: () => ({ items: [], draft: '', filter: 'All', nextId: 1 }),
   intent: {
     Draft: ({ value }) => ({ _tag: 'Draft', value: value ?? '' }),
     Add: true,
-    Toggle: ({ target }) => ({ _tag: 'Toggle', id: Number(target.getAttribute('data-id')), index: Number(target.getAttribute('data-index')) }),
-    Delete: ({ target }) => ({ _tag: 'Delete', id: Number(target.getAttribute('data-id')) }),
-    Filter: ({ target }) => ({ _tag: 'Filter', filter: target.textContent as Filter }),
+    Toggle: ({ value }) => {
+      const id = idOf(value);
+      return id === undefined ? undefined : { _tag: 'Toggle', id };
+    },
+    Delete: ({ value }) => {
+      const id = idOf(value);
+      return id === undefined ? undefined : { _tag: 'Delete', id };
+    },
+    Filter: ({ value }) => (isFilter(value) ? { _tag: 'Filter', filter: value } : undefined),
   },
   update: {
-    Draft: (s, msg) => ({ ...s, draft: msg.value }),
-    Add: s => s.draft.trim() ? { ...s, draft: '', nextId: s.nextId + 1, items: [...s.items, { id: s.nextId, title: s.draft.trim(), done: false }] } : s,
-    Toggle: (s, msg) => {
-      const id = __TOGGLE_ID__;
-      return { ...s, items: s.items.map(item => item.id === id ? { ...item, done: !item.done } : item) };
+    Draft: (s, m) => ({ ...s, draft: m.value }),
+    Add: (s) => {
+      const title = s.draft.trim();
+      return title === ''
+        ? s
+        : {
+            ...s,
+            draft: '',
+            nextId: s.nextId + 1,
+            items: [...s.items, { id: s.nextId, title, done: false }],
+          };
     },
-    Delete: (s, msg) => ({ ...s, items: s.items.filter(item => item.id !== msg.id) }),
-    Filter: (s, msg) => ({ ...s, filter: msg.filter }),
+    Toggle: (s, m) => ({
+      ...s,
+      items: s.items.map((item) => (item.id === m.id ? { ...item, done: !item.done } : item)),
+    }),
+    Delete: (s, m) => ({ ...s, items: s.items.filter((item) => item.id !== m.id) }),
+    Filter: (s, m) => ({ ...s, filter: m.filter }),
   },
-  view: (s, i) => html`
-    <h1>Task list</h1>
-    <form data-intent=${i.Add}>
-      <label for="new-task">New task</label>
-      <input id="new-task" value=${s.draft} data-intent=${i.Draft}>
-      <button type="submit">Add task</button>
-    </form>
-    <nav aria-label="Task filters">
-      ${filters.map(filter => html`<button type="button" data-intent=${i.Filter} aria-pressed=${s.filter === filter}>${filter}</button>`)}
-    </nav>
-    <p role="status">${s.items.filter(item => !item.done).length} active tasks</p>
-    <ul>
-      ${each(visible(s), item => item.id, (item, picked: { index: number; toggle: string; remove: string }): TemplateResult => html`
-        <li>
-          <label><input type="checkbox" ?checked=${item.done} data-id=${item.id} data-index=${picked.index} data-intent=${picked.toggle}>${item.title}</label>
-          <button type="button" data-id=${item.id} data-intent=${picked.remove} aria-label=${`Delete ${item.title}`}>Delete</button>
-        </li>
-      `, item => ({ index: visible(s).indexOf(item), toggle: i.Toggle, remove: i.Delete }))}
-    </ul>`
+  view: (s, i) => {
+    const shown = visible(s);
+    return html`
+      <h1>Task list</h1>
+      <form data-intent=${i.Add}>
+        <label for="new-task">New task</label>
+        <input id="new-task" value=${s.draft} data-intent=${i.Draft} />
+        <button type="submit">Add task</button>
+      </form>
+      <nav aria-label="Task filters">
+        ${filters.map(
+          (filter) =>
+            html`<button type="button" value=${filter} data-intent=${i.Filter} aria-pressed=${s.filter === filter}>
+              ${filter}
+            </button>`,
+        )}
+      </nav>
+      <p role="status">${s.items.filter((item) => !item.done).length} active tasks</p>
+      <ul>
+        ${each(shown, (item) => item.id, Row, (item) => __TOGGLE_ID__)}
+      </ul>
+    `;
+  },
 });
+
 document.querySelector('main')?.append(new App());

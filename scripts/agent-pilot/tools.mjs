@@ -8,6 +8,7 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { hashes } from './corpus.mjs';
+import { DOC_LIMITS, getDoc, listDocs, loadLibrary, searchDocs, tokens } from './docs.mjs';
 import { feedback, grade } from './grader.mjs';
 
 function schema(properties = {}, required = []) {
@@ -19,7 +20,7 @@ const tool = (name, description, parameters) => ({
   function: { name, description, parameters },
 });
 export const BASE_TOOLS = [
-  tool('list_files', 'List the application files and available frozen documentation.', schema()),
+  tool('list_files', 'List the application files.', schema()),
   tool(
     'read_file',
     'Read a source or fixed configuration file.',
@@ -31,17 +32,22 @@ export const BASE_TOOLS = [
     schema({ path: string, content: string }, ['path', 'content']),
   ),
   tool(
-    'read_doc',
-    'Read a documentation excerpt. Optional query starts the excerpt at the first case-insensitive match. Offset is a character offset; limit is at most 16000 characters.',
+    'list_docs',
+    'List every documentation page: page id, title, group and a one-line description.',
+    schema(),
+  ),
+  tool(
+    'search_docs',
+    `Ranked keyword search over documentation headings and text. Returns page ids, section headings and snippets. limit is 1-${DOC_LIMITS.searchMax} (default ${DOC_LIMITS.searchDefault}).`,
     schema(
-      {
-        path: string,
-        query: string,
-        offset: { type: 'integer', minimum: 0 },
-        limit: { type: 'integer', minimum: 1, maximum: 16000 },
-      },
-      ['path'],
+      { query: string, limit: { type: 'integer', minimum: 1, maximum: DOC_LIMITS.searchMax } },
+      ['query'],
     ),
+  ),
+  tool(
+    'get_doc',
+    `Read a documentation page by page id, or only one section of it by heading text. Long pages and sections return their first ${DOC_LIMITS.pageCharacters} characters and an outline of the headings you can request.`,
+    schema({ page: string, section: string }, ['page']),
   ),
   tool(
     'check',
@@ -49,6 +55,41 @@ export const BASE_TOOLS = [
     schema(),
   ),
 ];
+const ARGUMENTS = {
+  list_files: [],
+  read_file: ['path'],
+  write_file: ['path', 'content'],
+  list_docs: [],
+  search_docs: ['query', 'limit'],
+  get_doc: ['page', 'section'],
+  check: [],
+};
+export const DOC_TOOLS = new Set([
+  'list_docs',
+  'search_docs',
+  'get_doc',
+  'mcp_search_docs',
+  'mcp_get_doc',
+  'mcp_get_api',
+  'mcp_list_examples',
+  'mcp_get_example',
+  'mcp_get_prompt',
+  'mcp_read_resource',
+]);
+
+/** The documentation directories a condition can read: the same base docs, plus the skill. */
+export function libraryDirectories(corpus, run) {
+  const dirs = [join(corpus, 'docs', run.framework)];
+  if (run.condition === 'gyral-assisted') dirs.push(join(corpus, 'docs/skill'));
+  return dirs;
+}
+
+const sortedJson = (value) =>
+  JSON.stringify(value, (key, inner) =>
+    inner && typeof inner === 'object' && !Array.isArray(inner)
+      ? Object.fromEntries(Object.entries(inner).sort(([a], [b]) => a.localeCompare(b)))
+      : inner,
+  );
 
 export function safePath(root, path, writable = false) {
   if (
@@ -75,28 +116,44 @@ export function safePath(root, path, writable = false) {
 export function createTools(corpus, workspace, run, output, mcp, grading = grade) {
   const checks = [];
   const accesses = [];
-  const docRoot = join(corpus, 'docs', run.framework);
-  const docs = Object.keys(hashes(docRoot));
-  if (run.condition === 'gyral-assisted')
-    docs.push(...Object.keys(hashes(join(corpus, 'docs/skill'))).map((name) => `skill/${name}`));
+  const library = loadLibrary(libraryDirectories(corpus, run));
+  // First request at which each documentation read (by content) was returned.
+  const seen = new Map();
+  let request = 0;
   const sourceHashes = () =>
     Object.fromEntries(
       Object.entries(hashes(workspace)).filter(([name]) => name.startsWith('src/')),
     );
   let repairs = 0;
+  const repeated = (key, result) => {
+    const first = seen.get(key);
+    if (first === undefined) {
+      seen.set(key, request);
+      return { repeat: false, result };
+    }
+    return {
+      repeat: true,
+      result: {
+        warning: `Repeat read: this returns the same content as your call in request ${first}. Nothing has changed since.`,
+        ...(result && typeof result === 'object' && !Array.isArray(result) ? result : { result }),
+      },
+    };
+  };
+  const record = (name, args, extra = {}) => {
+    const entry = { request, name, arguments: args, ...extra };
+    accesses.push(entry);
+    return entry;
+  };
   const execute = async (name, args, remainingMs = 240000) => {
     if (name.startsWith('mcp_') && mcp) {
-      accesses.push({ name, arguments: args });
-      return mcp.call(name.slice(4), args, remainingMs);
+      const entry = record(name, args);
+      const { repeat, result } = repeated(`${name}:${sortedJson(args)}`, null);
+      entry.repeat = repeat;
+      const answer = await mcp.call(name.slice(4), args, remainingMs);
+      return repeat ? { ...result, result: answer } : answer;
     }
     if (!BASE_TOOLS.some((entry) => entry.function.name === name)) throw new Error('Unknown tool');
-    const allowed = {
-      list_files: [],
-      read_file: ['path'],
-      write_file: ['path', 'content'],
-      read_doc: ['path', 'query', 'offset', 'limit'],
-      check: [],
-    }[name];
+    const allowed = ARGUMENTS[name];
     if (
       !args ||
       typeof args !== 'object' ||
@@ -105,7 +162,10 @@ export function createTools(corpus, workspace, run, output, mcp, grading = grade
     )
       throw new Error('Invalid tool arguments');
     if (name === 'list_files')
-      return { files: Object.keys(hashes(workspace)), documentation: docs };
+      return {
+        files: Object.keys(hashes(workspace)),
+        documentation: 'Use list_docs, search_docs and get_doc.',
+      };
     if (name === 'read_file') {
       if (
         !args.path?.startsWith('src/') &&
@@ -120,40 +180,43 @@ export function createTools(corpus, workspace, run, output, mcp, grading = grade
       const file = safePath(workspace, args.path, true);
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, args.content);
+      record(name, { path: args.path }, { bytes: Buffer.byteLength(args.content) });
       return { written: args.path, sourceHashes: sourceHashes() };
     }
-    if (name === 'read_doc') {
-      if (!docs.includes(args.path))
-        throw new Error('Documentation path unavailable in this condition');
-      const root = args.path.startsWith('skill/') ? join(corpus, 'docs') : docRoot;
-      const text = readFileSync(safePath(root, args.path), 'utf8');
-      const offset = args.offset ?? 0;
-      const limit = args.limit ?? 12000;
-      if (
-        !Number.isInteger(offset) ||
-        offset < 0 ||
-        !Number.isInteger(limit) ||
-        limit < 1 ||
-        limit > 16000 ||
-        (args.query !== undefined && typeof args.query !== 'string')
-      )
-        throw new Error('Invalid excerpt arguments');
-      const match = args.query
-        ? text.toLowerCase().indexOf(args.query.toLowerCase(), offset)
-        : offset;
-      accesses.push({ name, ...args });
-      return {
-        path: args.path,
-        totalCharacters: text.length,
-        offset: match,
-        excerpt: match < 0 ? 'No match' : text.slice(match, match + limit),
-      };
+    if (name === 'list_docs') {
+      const entry = record(name, args);
+      const { repeat, result } = repeated('list_docs', listDocs(library));
+      entry.repeat = repeat;
+      return result;
+    }
+    if (name === 'search_docs') {
+      const found = searchDocs(library, args.query, args.limit ?? DOC_LIMITS.searchDefault);
+      const entry = record(name, args);
+      const key = `search:${tokens(args.query).sort().join(' ')}:${args.limit ?? DOC_LIMITS.searchDefault}`;
+      const { repeat, result } = repeated(key, found);
+      entry.repeat = repeat;
+      return result;
+    }
+    if (name === 'get_doc') {
+      const found = getDoc(library, args.page, args.section);
+      const entry = record(name, args, { resolved: found.key ?? null });
+      if (!found.key) return found;
+      const { key, ...shown } = found;
+      const { repeat, result } = repeated(`doc:${key}`, shown);
+      entry.repeat = repeat;
+      return result;
     }
     const hash = JSON.stringify(sourceHashes());
     if (checks.some((check) => !check.passed) && checks.at(-1)?.hash !== hash) repairs++;
     const dir = join(output, `check-${checks.length + 1}`);
     const result = await grading(corpus, workspace, run.framework, run.task, dir, remainingMs);
-    checks.push({ hash, passed: result.passed, directory: dir });
+    checks.push({
+      request,
+      hash,
+      passed: result.passed,
+      infrastructure: Boolean(result.infrastructure),
+      directory: dir,
+    });
     const summary = feedback(result);
     if (result.type.code !== 0)
       summary.typeErrors = readFileSync(join(dir, 'type.log'), 'utf8').slice(-12000);
@@ -166,6 +229,10 @@ export function createTools(corpus, workspace, run, output, mcp, grading = grade
     sourceHashes,
     checks,
     accesses,
+    library,
+    setRequest: (value) => {
+      request = value;
+    },
     repairs: () => repairs,
     definitions: [...BASE_TOOLS, ...(mcp?.definitions ?? [])],
   };
