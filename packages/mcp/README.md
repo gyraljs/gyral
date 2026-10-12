@@ -100,13 +100,27 @@ The public server at `https://mcp.gyral.dev/mcp` is live: Streamable HTTP, anony
 read-only. It currently serves the 0.3.1 corpus (six tools, no `start_here`) until it is
 redeployed with 0.3.2; `https://mcp.gyral.dev/healthz` reports the version it serves.
 
-Since 0.3.2 the package also ships the `gyral-mcp-http` binary that runs it: stateless
-Streamable HTTP at `/mcp` with seven docs tools (`scaffold_component` takes `installed` but no
-`project_dir`). It excludes `check_snippet`, project paths and live refresh. To host your own,
-set `GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the default bind address is `127.0.0.1`, port 3000.
+`gyral-mcp http` runs it: stateless Streamable HTTP at `/mcp` with seven docs tools
+(`scaffold_component` takes `installed` but no `project_dir`). It excludes `check_snippet`,
+project paths and live refresh. To host your own, set `GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the
+default bind address is `127.0.0.1`, port 3000. `gyral-mcp http --help` lists every setting.
 Deploy a pinned, reviewed package behind TLS following
 [the production runbook](https://github.com/gyraljs/gyral/blob/main/docs/references/production-mcp.md).
-0.3.1 has only the stdio binary.
+
+## Command line
+
+The package has one executable, `gyral-mcp`, so `npx -y @gyral/mcp` knows what to run:
+
+| Command            | Runs                                                         |
+| ------------------ | ------------------------------------------------------------ |
+| `gyral-mcp`        | The stdio server (what `npx -y @gyral/mcp` starts)           |
+| `gyral-mcp http`   | The public Streamable HTTP server, configured by environment |
+| `gyral-mcp --help` | Usage for both modes (`gyral-mcp http --help` for HTTP)      |
+
+Any other argument is an error. 0.3.2 shipped the HTTP server as a second binary,
+`gyral-mcp-http`, which broke `npx -y @gyral/mcp` ("could not determine executable to run");
+0.3.3 replaced it with `gyral-mcp http`. On 0.3.2, run `npx -y -p @gyral/mcp@0.3.2 gyral-mcp`.
+0.3.1 has only the stdio server.
 
 ## Embedding
 

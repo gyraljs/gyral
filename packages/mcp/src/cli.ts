@@ -1,20 +1,28 @@
 #!/usr/bin/env node
-// `npx -y @gyral/mcp`: the Gyral MCP server on stdio. Logs go to stderr; stdout is the protocol.
-//   GYRAL_PROJECT_DIR  where check_snippet finds TypeScript and @gyral/* (default: cwd)
-//   GYRAL_DOCS_URL     refresh the docs from a live llms-full.txt at startup (falls back silently)
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { loadCorpus, refreshDocs } from './corpus.js';
-import { createServer } from './server.js';
+// `gyral-mcp`, the package's only bin, so `npx -y @gyral/mcp` resolves it (npx needs one bin
+// or a bin named `mcp`). With no arguments it serves MCP on stdio, as it always has:
+// logs go to stderr; stdout is the protocol. `gyral-mcp http` serves public Streamable HTTP.
+// `gyral-mcp --help` lists both modes and their environment variables.
+import { parseArgs } from './cli-args.js';
 
-let corpus = await loadCorpus();
-const docsUrl = process.env.GYRAL_DOCS_URL;
-if (docsUrl !== undefined && docsUrl !== '') {
-  const refreshed = await refreshDocs(corpus, docsUrl);
-  corpus = refreshed.corpus;
-  console.error(`[gyral-mcp] ${refreshed.note}`);
+const command = parseArgs(process.argv.slice(2));
+switch (command.kind) {
+  case 'help':
+    process.stdout.write(command.text);
+    break;
+  case 'error':
+    console.error(`gyral-mcp: ${command.message}`);
+    process.exitCode = 2;
+    break;
+  case 'http':
+    try {
+      await (await import('./http-cli.js')).serveHttp(process.env);
+    } catch (error) {
+      console.error(`gyral-mcp http: ${error instanceof Error ? error.message : String(error)}`);
+      process.exitCode = 1;
+    }
+    break;
+  case 'stdio':
+    await (await import('./stdio-cli.js')).serveStdio(process.env);
+    break;
 }
-
-const projectDir = process.env.GYRAL_PROJECT_DIR ?? process.cwd();
-const server = createServer(corpus, { projectDir });
-await server.connect(new StdioServerTransport());
-console.error(`[gyral-mcp] Gyral ${corpus.version} docs ready (project: ${projectDir})`);

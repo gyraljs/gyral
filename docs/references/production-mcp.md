@@ -5,8 +5,9 @@ anonymous, read-only; no token). Point any MCP client that supports Streamable H
 URL; see [Client review](#client-review) for what to check. The deployed container serves the
 0.3.1 corpus (`/healthz` reports `"version":"0.3.1"`, and `initialize` answers as `gyral 0.3.1`
 with six tools) until it is rebuilt and redeployed with the 0.3.2 corpus, which adds
-`start_here`. The `gyral-mcp-http` binary ships in `@gyral/mcp` since 0.3.2; earlier npm
-versions have only the stdio binary. This page is the recipe for building, deploying and
+`start_here`. The server is `gyral-mcp http`, the HTTP mode of the package's only bin, since
+0.3.3. 0.3.2 shipped it as a second bin, `gyral-mcp-http`, which broke `npx -y @gyral/mcp`;
+0.3.1 has only the stdio server. This page is the recipe for building, deploying and
 updating that service. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).
 
 ## Artifact and local review
@@ -98,7 +99,13 @@ interpolation; the service's explicit `environment` map passes only its runtime 
 There are no application API keys, database URLs, volumes or build-time dependencies.
 
 The owner will deploy manually behind an existing Traefik instance. The Compose file joins
-its external network and publishes no host port. Labels route `mcp.gyral.dev` to internal
+its external network and publishes no host port. It runs `command: [gyral-mcp, http]`, so the
+image must be built from `@gyral/mcp` 0.3.3 source or later (the Dockerfile's default command
+is the same). An older image, including the one deployed today, has only the 0.3.2
+`gyral-mcp-http` bin; its `gyral-mcp` ignores `http`, starts the stdio server and never turns
+healthy. **When redeploying, build and push the 0.3.3 image first, then update `compose.yaml`
+and the image digest together**; to roll back to an older image, restore its compose file
+too. Labels route `mcp.gyral.dev` to internal
 port 3000, preserve Host, enable HTTPS using the existing certificate resolver, and attach
 request rate/concurrency/body limits. Traefik's Docker provider must already be enabled.
 
@@ -137,7 +144,8 @@ unhealthy even if the process answers. Run as the image's unprivileged user, rea
 no capabilities, 256 MiB memory, one CPU, 64 PIDs, ten-second stop grace and bounded logs.
 `restart: unless-stopped` handles process exits; unhealthy status needs monitoring, not an
 assumed automatic restart. Roll back by restoring the previous image and corpus digests
-together, pulling and repeating `up -d --wait`.
+together, pulling and repeating `up -d --wait` (with an image older than 0.3.3, also the
+compose file that runs its default command).
 
 `node scripts/verify-mcp-traefik.mjs` runs this actual Compose service behind a temporary
 Traefik 3.6.25 Docker provider with its real labels. It verifies corpus-aware health, no host
@@ -179,7 +187,9 @@ The owner deploys manually on an existing server using Traefik; agent server acc
 excluded. `mcp.gyral.dev` is live behind that Traefik instance with a source-built HTTP image
 serving the published 0.3.1 corpus. After each npm release, rebuild the image with that
 release's corpus (`--released-corpus X.Y.Z`), redeploy it by digest and check `/healthz`
-reports the new version and digest. Verify client-specific connection instructions against
+reports the new version and digest. The next redeploy needs an image built from 0.3.3 source
+(`node scripts/stage-mcp-container.mjs --released-corpus 0.3.3` once 0.3.3 is on npm) and the
+current `compose.yaml`, which runs `gyral-mcp http`. Verify client-specific connection instructions against
 installed client versions before announcing support; a client that only supports legacy
 HTTP+SSE should use stdio.
 

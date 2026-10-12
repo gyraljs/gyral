@@ -1,5 +1,11 @@
 # create-gyral
 
+## 0.3.3
+
+### Patch Changes
+
+- Generated apps depend on the 0.3.3 packages (`^0.3.3`).
+
 ## 0.3.2
 
 ### Patch Changes

@@ -16,4 +16,5 @@ RUN npm install --global --omit=dev --ignore-scripts /tmp/gyral-mcp.tgz \
 ENV NODE_ENV=production GYRAL_MCP_BIND=0.0.0.0 PORT=3000
 USER node
 EXPOSE 3000
-CMD ["gyral-mcp-http"]
+# The public HTTP mode of the single `gyral-mcp` bin (0.3.2 had a separate `gyral-mcp-http`).
+CMD ["gyral-mcp", "http"]

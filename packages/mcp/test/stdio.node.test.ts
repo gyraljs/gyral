@@ -1,11 +1,14 @@
 // The built server over stdio, driven by the official MCP client: what an agent actually sees.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer as reserveServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const pkgDir = fileURLToPath(new URL('..', import.meta.url));
+const cli = fileURLToPath(new URL('../dist/cli.js', import.meta.url));
 const client = new Client({ name: 'gyral-mcp-test', version: '0.0.0' });
 
 beforeAll(async () => {
@@ -14,7 +17,7 @@ beforeAll(async () => {
   await client.connect(
     new StdioClientTransport({
       command: process.execPath,
-      args: [fileURLToPath(new URL('../dist/cli.js', import.meta.url))],
+      args: [cli],
       env: { PATH: process.env.PATH ?? '', GYRAL_PROJECT_DIR: pkgDir },
       stderr: 'ignore',
     }),
@@ -169,4 +172,70 @@ describe('gyral MCP server over stdio', () => {
     });
     expect(JSON.stringify(prompt.messages)).toContain('Golden rules');
   });
+});
+
+describe('the gyral-mcp command line', () => {
+  const run = (...args: string[]) =>
+    spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', input: '', timeout: 30_000 });
+
+  it('prints help for both modes and exits 0', () => {
+    const help = run('--help');
+    expect(help.status).toBe(0);
+    expect(help.stdout).toContain('Usage: gyral-mcp [command]');
+    expect(help.stdout).toMatch(/^ {2}http +/m);
+    const http = run('http', '--help');
+    expect(http.status).toBe(0);
+    expect(http.stdout).toContain('GYRAL_MCP_PUBLIC_ORIGIN');
+  });
+
+  it('exits 2 with a clear message for unknown commands and flags', () => {
+    for (const args of [['serve'], ['--port', '3000'], ['http', '--port', '3000']]) {
+      const result = run(...args);
+      expect(result.status, args.join(' ')).toBe(2);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toMatch(/^gyral-mcp: unknown (command|option)/);
+    }
+  });
+
+  it('`http` without a public origin fails with a message, not a stack trace', () => {
+    const result = spawnSync(process.execPath, [cli, 'http'], {
+      encoding: 'utf8',
+      env: { PATH: process.env.PATH ?? '' },
+      timeout: 30_000,
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr.trim()).toBe(
+      'gyral-mcp http: Set GYRAL_MCP_PUBLIC_ORIGIN (see `gyral-mcp http --help`)',
+    );
+  });
+
+  it('`http` serves /healthz and stops on SIGTERM', async () => {
+    const reservation = reserveServer().listen(0, '127.0.0.1');
+    await once(reservation, 'listening');
+    const address = reservation.address();
+    if (address === null || typeof address === 'string') throw new Error('Missing address');
+    await new Promise((resolve) => reservation.close(resolve));
+    const origin = `http://127.0.0.1:${String(address.port)}`;
+    const child = spawn(process.execPath, [cli, 'http'], {
+      env: {
+        PATH: process.env.PATH ?? '',
+        PORT: String(address.port),
+        GYRAL_MCP_PUBLIC_ORIGIN: origin,
+      },
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+    try {
+      let stderr = '';
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', (chunk: string) => (stderr += chunk));
+      await vi.waitUntil(() => stderr.includes('public HTTP ready'), { timeout: 30_000 });
+      const health = (await (await fetch(`${origin}/healthz`)).json()) as { version: string };
+      expect(health.version).toMatch(/^\d+\.\d+\.\d+/);
+    } finally {
+      const exited = once(child, 'exit');
+      child.kill('SIGTERM');
+      const [code] = (await exited) as [number | null];
+      expect(code).toBe(0);
+    }
+  }, 60_000);
 });

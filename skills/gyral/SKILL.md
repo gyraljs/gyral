@@ -114,7 +114,9 @@ reading the docs end to end:
    for one concept you need.
 
 `start_here`, `form-native`, the installed-package checks and the suggested fixes are in
-`@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop.
+`@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop. On 0.3.2 exactly,
+`npx -y @gyral/mcp` fails with "could not determine executable to run"; use 0.3.3 or later, or
+`npx -y -p @gyral/mcp@0.3.2 gyral-mcp`. Self-hosting the HTTP server is `gyral-mcp http`.
 
 ## Decision tables
 

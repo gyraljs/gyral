@@ -1,6 +1,7 @@
 // pnpm verify:install — the consumer's view of a release. Packs every package, installs the
 // tarballs with npm into a fresh temp project (peers from the registry, so it needs network),
-// then imports every published entry point from Node and server-renders a tiny page.
+// then imports every published entry point from Node and server-renders a tiny page, and runs
+// @gyral/mcp the way users do, through `npx @gyral/mcp`, so npx's bin selection is exercised.
 // Run before a first publish and after packaging changes; it is too slow for `pnpm check`.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -63,14 +64,36 @@ console.log('ssr ok     <gy-hello> rendered to Declarative Shadow DOM (' + out.l
   );
   execFileSync('node', ['smoke.mjs'], { cwd: app, stdio: 'inherit' });
 
-  // @gyral/mcp: start the installed bin over stdio and call it the way an agent would.
+  // @gyral/mcp through npx, as its docs and MCP client configs run it. npx picks the command
+  // from the package's bins: 0.3.2's second bin made this fail ("could not determine executable
+  // to run") while the bin itself worked. --no-install keeps npx on the installed tarball.
+  const npxEnv = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.toLowerCase().startsWith('npm_config_')),
+  );
+  const help = execFileSync('npx', ['--no-install', '@gyral/mcp', '--help'], {
+    cwd: app,
+    env: npxEnv,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  if (!help.includes('Usage: gyral-mcp [command]') || !/^ {2}http +/m.test(help)) {
+    throw new Error('unexpected `npx @gyral/mcp --help` output:\n' + help);
+  }
+  console.log('npx ok     npx --no-install @gyral/mcp --help lists the stdio and http modes');
+
+  // Then start it through npx over stdio and call it the way an agent would.
   writeFileSync(
     join(app, 'mcp.mjs'),
     `
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 const client = new Client({ name: 'verify-install', version: '0.0.0' });
-await client.connect(new StdioClientTransport({ command: 'node_modules/.bin/gyral-mcp', stderr: 'ignore' }));
+await client.connect(new StdioClientTransport({
+  command: 'npx',
+  args: ['--no-install', '@gyral/mcp'],
+  env: JSON.parse(process.env.NPX_ENV),
+  stderr: 'ignore',
+}));
 const { tools } = await client.listTools();
 const result = await client.callTool({ name: 'get_api', arguments: { symbol: 'define' } });
 const text = result.content.map((c) => c.text).join('');
@@ -90,10 +113,14 @@ for (const [symbol, entry] of [
   }
 }
 await client.close();
-console.log('mcp ok     gyral-mcp answered over stdio (' + tools.length + ' tools)');
+console.log('mcp ok     npx @gyral/mcp answered over stdio (' + tools.length + ' tools)');
 `,
   );
-  execFileSync('node', ['mcp.mjs'], { cwd: app, stdio: 'inherit' });
+  execFileSync('node', ['mcp.mjs'], {
+    cwd: app,
+    env: { ...process.env, NPX_ENV: JSON.stringify(npxEnv) },
+    stdio: 'inherit',
+  });
   console.log(
     `verify:install ok (${tgz.length} tarballs, peers: ${PEERS.join(' ')}; no ${FORBIDDEN.join(', ')})`,
   );
