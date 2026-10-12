@@ -97,7 +97,10 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 
 ## With the Gyral MCP server
 
-When the `gyral` MCP tools are available (`npx -y @gyral/mcp`), work in this loop rather than
+The MCP server runs locally over stdio (`npx -y @gyral/mcp`, which has `check_snippet`), or is
+hosted at `https://mcp.gyral.dev/mcp` (Streamable HTTP, no token; every tool except
+`check_snippet`; it serves the 0.3.1 corpus until it is redeployed with 0.3.2). When the
+`gyral` MCP tools are available, work in this loop rather than
 reading the docs end to end:
 
 1. `start_here` once: the rules, the workflow and an index from use case to example and guide.
@@ -110,8 +113,8 @@ reading the docs end to end:
 5. `get_api` only for one specific symbol you are about to use; `search_docs` and `get_doc`
    for one concept you need.
 
-`start_here`, `form-native`, the installed-package checks and the suggested fixes are
-**unreleased** (next release); `@gyral/mcp` 0.3.1 has the other tools and the same loop.
+`start_here`, `form-native`, the installed-package checks and the suggested fixes are in
+`@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop.
 
 ## Decision tables
 

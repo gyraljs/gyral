@@ -182,9 +182,9 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 
 ## Content-Security-Policy
 
-The next release (unreleased) adds build-only `writeComponentStyleManifest` in `@gyral/ssr/static`
-and `CspOptions.componentStyleHashes` for policy-only servers. These APIs are not in npm 0.3.1;
-on 0.3.1 import components and call `styleHashes()` during the build. Keep the resulting
+Since 0.3.2, build-only `writeComponentStyleManifest` in `@gyral/ssr/static` and
+`CspOptions.componentStyleHashes` serve policy-only servers. On 0.3.1, which lacks them,
+import components and call `styleHashes()` during the build. Keep the resulting
 policy/HTML/assets in one release. Document CSS links use `style-src 'self'`; inline attributes
 need their separate bounded first-paint policy below. Follow Vite's CSP nonce placeholder
 replacement and exact HMR `connect-src` origin for development.

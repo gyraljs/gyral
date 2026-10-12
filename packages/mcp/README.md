@@ -36,6 +36,13 @@ codex mcp add gyral -- npx -y @gyral/mcp
 
 Any other client: run `npx -y @gyral/mcp` as a stdio server, from your project directory.
 
+**Hosted, no install**: a public server is live at `https://mcp.gyral.dev/mcp`. Configure your
+client for Streamable HTTP with that URL; no token is needed. For example
+`claude mcp add --transport http gyral https://mcp.gyral.dev/mcp`, or in `.vscode/mcp.json`
+`{ "servers": { "gyral": { "type": "http", "url": "https://mcp.gyral.dev/mcp" } } }`. It has
+every tool except `check_snippet`, which needs your project, so prefer the local stdio server
+when your agent writes code. See [Public hosting](#public-hosting).
+
 ## Tools
 
 | Tool                 | What it returns                                                                                                      |
@@ -57,9 +64,9 @@ minimal implementation; `check_snippet` it and apply the suggested fixes until i
 Resources: `gyral://llms.txt`, `gyral://skill` and `gyral://skill/references/{name}`.
 Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component).
 
-### Next release (unreleased)
+### Since 0.3.2
 
-These are on `main` and not in npm 0.3.1:
+These are new in 0.3.2 (0.3.1 lacks them):
 
 - `start_here`, and the workflow in every tool description.
 - `scaffold_component` reads the project's `package.json` (the server's project directory, or
@@ -87,15 +94,19 @@ These are on `main` and not in npm 0.3.1:
 `check_snippet` uses the TypeScript installed in your project (an optional peer dependency),
 so `npx` doesn't download a second compiler.
 
-## Public hosting (unreleased: next release)
+## Public hosting
 
-The new `gyral-mcp-http` binary provides stateless Streamable HTTP at `/mcp` with seven docs
-tools (`scaffold_component` takes `installed` but no `project_dir`). It excludes `check_snippet`, project paths and live refresh. Set
-`GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the default bind address is `127.0.0.1`, port 3000.
+The public server at `https://mcp.gyral.dev/mcp` is live: Streamable HTTP, anonymous and
+read-only. It currently serves the 0.3.1 corpus (six tools, no `start_here`) until it is
+redeployed with 0.3.2; `https://mcp.gyral.dev/healthz` reports the version it serves.
+
+Since 0.3.2 the package also ships the `gyral-mcp-http` binary that runs it: stateless
+Streamable HTTP at `/mcp` with seven docs tools (`scaffold_component` takes `installed` but no
+`project_dir`). It excludes `check_snippet`, project paths and live refresh. To host your own,
+set `GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the default bind address is `127.0.0.1`, port 3000.
 Deploy a pinned, reviewed package behind TLS following
 [the production runbook](https://github.com/gyraljs/gyral/blob/main/docs/references/production-mcp.md).
-The registry's existing 0.3.1 package has only the stdio binary; this addition needs the
-normal release gate before claiming it is available through npm.
+0.3.1 has only the stdio binary.
 
 ## Embedding
 

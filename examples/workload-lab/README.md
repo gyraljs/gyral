@@ -17,5 +17,5 @@ transactional receipt storage and conflict policy in a real application.
 
 See the [workload guide](../../skills/gyral/references/workloads.md) for lifecycle choices,
 shared Effect runtime integration at the application boundary, and explicit readiness waits.
-**Unreleased:** this example and its guide were added after 0.3.1 and are not in the npm
-0.3.1 skill or MCP corpus yet (next release). They use only APIs that npm 0.3.1 already has.
+This example and its guide are available since 0.3.2 (in the skill and the MCP corpus). They
+use only APIs that 0.3.1 already has.

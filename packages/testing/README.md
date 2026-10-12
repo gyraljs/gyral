@@ -25,7 +25,7 @@ Commands are data: `inputsFor(commands, driver)` lists a driver's inputs,
 output union), `focusTargetsIn(commands)` the `focus()` requests and `callsIn(commands)` the
 `call()` requests.
 
-**Unreleased (next release, not in npm 0.3.1):** `viewOf(Component, state, { props, stores })`
+**Since 0.3.2:** `viewOf(Component, state, { props, stores })`
 calls a component's pure view in Node with its named intents and context; render the result
 with `renderToString(…, { dev: false })` from `@gyral/ssr` for stable HTML. Use the browser for
 hooks, focus, validity and hydration.

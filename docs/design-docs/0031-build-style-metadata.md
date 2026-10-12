@@ -1,6 +1,6 @@
 # ADR 0031 — Build-time component style metadata
 
-Status: **accepted**, staged after 0.3.1. Bead: gyral-49t.10. Extends ADR 0016 and 0020.
+Status: **accepted**, shipped in 0.3.2. Bead: gyral-49t.10. Extends ADR 0016 and 0020.
 
 Policy-only servers and static proxies need the exact shadow `<style>` hashes without
 executing every component module at request time. AST extraction cannot correctly evaluate

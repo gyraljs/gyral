@@ -5,11 +5,11 @@ feature pins, authorization, storage quotas and release retention. A dynamic imp
 not enough to classify an asset as feature-owned. Vite can merge workspace modules into
 chunks with no separate source or `isDynamicEntry` manifest entry.
 
-The component metadata of the next release (unreleased) includes `chunkModules`, mapping
+Since 0.3.2, the component metadata includes `chunkModules`, mapping
 each emitted JavaScript chunk to its original module paths relative to the build root. Paths outside that root
 can contain `../`; use them as ownership identifiers, never as unchecked filesystem paths.
 `chunks` still maps tags to their actual emitted chunks. This addition is compatible with
-the existing `componentsFromManifest` reader; npm 0.3.1 does not yet emit `chunkModules`.
+the existing `componentsFromManifest` reader; 0.3.1 builds do not emit `chunkModules`.
 
 Assign ownership from the emitted module IDs and your workspace feature boundaries. Walk
 static imports to retain shared code and CSS. Walk dynamic edges only for features selected

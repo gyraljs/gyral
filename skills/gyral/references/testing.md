@@ -88,7 +88,7 @@ describe('search model', () => {
   named intents and context. Render it with `renderToString` from `@gyral/ssr`, passing
   `{ dev: false }` for stable HTML rather than stripping development markers with a regex.
   This tests the pure projection; use the browser for hooks, focus, validity and hydration.
-  Unreleased: `viewOf` is not in npm 0.3.1 (next release).
+  `viewOf` is available since 0.3.2.
 - Pure update functions make property tests easy with fast-check: generate messages, run
   `step`, assert invariants on the state.
 

@@ -1,8 +1,10 @@
-# Public API (0.3.1)
+# Public API (0.3.1 baseline, current 0.3.2)
 
 Everything the `@gyral/*` packages and `create-gyral` export, entry point by entry point, as of
-0.3.1. This list is Gyral's semver promise: from 0.3.1 on, removing or changing an export listed
-here as `documented` or `supporting type` takes a minor release (0.x) and a migration note.
+0.3.2. This list is Gyral's semver promise: from 0.3.1 on, removing or changing an export listed
+here as `documented` or `supporting type` takes a minor release (0.x) and a migration note. The
+file keeps the 0.3.1 name because 0.3.1 is the baseline the promise starts from; patch releases
+only add to it.
 `node scripts/public-api.mjs --check` (part of `pnpm invariants`) fails when an entry point and
 this list disagree, or when a value is exported without documentation.
 
@@ -15,15 +17,22 @@ this list disagree, or when a value is exported without documentation.
   of the public API and not covered by semver**: any release may change or remove it. Apps
   never import it.
 
-The inventory tracks `main`, so it can list exports added after the 0.3.1 release. These are
-**unreleased** (next release) and absent from npm 0.3.1: `viewOf` and `ViewOptions`
-(`@gyral/testing`), `writeComponentStyleManifest`, `ComponentStyleManifest` and
-`ComponentStyleManifestOptions` (`@gyral/ssr/static`), plus the `componentStyleHashes` field of
-`CspOptions` (`@gyral/ssr`); the type-only exports `Reducer`, `Variant`, `ParseResult` and
-`StandardSchemaV1` (`@gyral/core`: the types `Update`, `IntentParser`, `StoreUpdate` and the form
-helpers are built from, re-exported unchanged from `@standard-schema/spec` for the last), and
-`InternalType` with the optional `internalTypes` field of `Corpus` (`@gyral/mcp`), none of which is a
-runtime value.
+The inventory tracks `main`, so after a release it can also list exports that are not on npm
+yet; those are marked "unreleased" where they are documented.
+
+## Added in 0.3.2
+
+0.3.2 only adds exports; nothing listed for 0.3.1 changed or went away.
+
+- `viewOf` and `ViewOptions` (`@gyral/testing`): evaluate a component's pure view without
+  mounting it.
+- `writeComponentStyleManifest`, `ComponentStyleManifest` and `ComponentStyleManifestOptions`
+  (`@gyral/ssr/static`), plus the optional `componentStyleHashes` field of `CspOptions`
+  (`@gyral/ssr`): build-time component style hashes for strict CSP servers.
+- The type-only exports `Reducer`, `Variant`, `ParseResult` and `StandardSchemaV1`
+  (`@gyral/core`): the types `Update`, `IntentParser`, `StoreUpdate` and the form helpers are
+  built from. `StandardSchemaV1` is re-exported unchanged from `@standard-schema/spec`.
+- `InternalType` and the optional `internalTypes` field of `Corpus` (`@gyral/mcp`), types only.
 
 ## Removed from the public API in 0.3.1
 

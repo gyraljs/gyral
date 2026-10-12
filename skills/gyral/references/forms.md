@@ -3,7 +3,7 @@
 One schema validates on both sides: the client's `form()` intent and the server's
 `formAction`. Any **Standard Schema** library works (Valibot, Zod, ArkType, Effect Schema).
 To name the interface in your own helpers, import `type StandardSchemaV1` from `@gyral/core`
-(**unreleased**: next release; on 0.3.1 import it from `@standard-schema/spec`).
+(since 0.3.2; on 0.3.1 import it from `@standard-schema/spec`).
 Forms work **without JavaScript** (a normal `POST`) and enhance when JS is present.
 
 ## Define the schema once
@@ -123,7 +123,7 @@ the browser neither blocks the submit nor shows its own bubbles, read each contr
 `{ _tag: 'IntentRejected', intent: 'Submit', issues, values }` with your own message per field,
 all at once. The `IntentRejected` reducer stores `fieldErrors(issues)` and returns
 `focus('#' + firstInvalidField)`. The MCP tool `scaffold_component` with kind `form-native`
-writes this whole component (**unreleased**: next release).
+writes this whole component (since 0.3.2).
 
 Never keep passwords in state: state is serialized into the page. Secret fields never come back
 in `values` anyway: a name containing `password`, `passcode`, `csrf` or `xsrf` is secret by

@@ -5,17 +5,17 @@ proxy trust, resource budgets, metrics and graceful shutdown belong to the host 
 
 ## Strict CSP
 
-On npm 0.3.1, import trusted SSR-safe components during the build and collect `styleHashes()`.
+On 0.3.1, import trusted SSR-safe components during the build and collect `styleHashes()`.
 Store their quoted SHA-256 sources with the matching HTML/client release. A policy-only
 server or proxy can build its complete CSP from that artifact. Shadow `<style>` hashes and
 inline `style` attribute sources are different directives. Document CSS should be linked
 from Vite's manifest; `style-src 'self'` permits same-origin files without changing native
 nesting, theme functions or local `color-scheme` behavior.
 
-The **unreleased** (next release, not in npm 0.3.1) `@gyral/ssr/static` helper `writeComponentStyleManifest({ root,
-clientDir, outFile, vite? })` automatically imports the client metadata's component modules
-in an isolated build-time Node process. It writes `{ schema: 1, hashes: [...] }`. Pass validated
-hashes as `CspOptions.componentStyleHashes`; these APIs are absent from npm 0.3.1.
+Since 0.3.2, the `@gyral/ssr/static` helper `writeComponentStyleManifest({ root, clientDir,
+outFile, vite? })` automatically imports the client metadata's component modules in an
+isolated build-time Node process. It writes `{ schema: 1, hashes: [...] }`. Pass validated
+hashes as `CspOptions.componentStyleHashes`; 0.3.1 lacks both APIs.
 It executes module initialization, so review modules and split browser-only initialization.
 
 `styleAttributes: 'hash'` buffers the whole page before headers and caps distinct sources at
@@ -47,8 +47,8 @@ HTTP/upgrades, close sockets and dispose app resources within the application's 
 
 ## Offline lazy workspaces
 
-A merged dynamic chunk may lack `src` or `isDynamicEntry`. The unreleased (next release) component
-metadata's `chunkModules` maps actual emitted chunks to root-relative original module IDs; npm 0.3.1
+A merged dynamic chunk may lack `src` or `isDynamicEntry`. Since 0.3.2, the component
+metadata's `chunkModules` maps actual emitted chunks to root-relative original module IDs; 0.3.1
 does not emit it. Assign app feature ownership from emitted IDs, following static edges for
 shared code/CSS and selected dynamic edges for feature pins. Worker outputs are a separate
 build graph. Keep worker/font/image URLs too. Explicit `components.modules` handles wrappers
