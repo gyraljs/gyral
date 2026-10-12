@@ -117,7 +117,7 @@ export interface ProductionOptions<Env = unknown> {
    * `modulepreload` and `stylesheets` on to `renderPage` so pages preload what the entry needs
    * and link its hashed CSS. A page that imports modules lazily (a route's chunk) spreads
    * `assets(modules)` instead: both lists plus those modules, their imports and their CSS
-   * (`clientAssets`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
+   * (`clientAssetsFromManifest`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
    */
   readonly createApp: (options: AppAssets) => FetchApp<Env>;
   /**

@@ -53,7 +53,9 @@ const pkg = manifest('basic', 'my-app', '0.3.1'); // the package.json scaffold()
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source and issues:
 [github.com/gyraljs/gyral](https://github.com/gyraljs/gyral).
 
-> Status: pre-alpha. APIs change between 0.x releases.
+> Status: 0.x, on npm. Breaking changes to the
+> [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
+> come only in a new minor version, with a migration guide.
 
 ## License
 

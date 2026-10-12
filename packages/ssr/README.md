@@ -1,6 +1,6 @@
 # @gyral/ssr
 
-Gyral server rendering: whole pages of Gyral components rendered on the server (shadow components as Declarative Shadow DOM, light components as plain children), with hydration seeds so the browser picks up where the server left off. Rendering is `@gyral/core/server`'s: synchronous, no DOM, no Node-only APIs. Works in any runtime with the Fetch API `Response` (Node, Hono, Deno, workers).
+Gyral server rendering: whole pages of Gyral components rendered on the server (shadow components as Declarative Shadow DOM, light components as plain children), with hydration seeds so the browser picks up where the server left off. Rendering uses `@gyral/core`'s server renderer: synchronous, no DOM, no Node-only APIs. Works in any runtime with the Fetch API `Response` (Node, Hono, Deno, workers).
 
 ## Install
 
@@ -37,7 +37,7 @@ The head fields (`title`, `description`, `canonical`, `robots`, `meta`, `links`,
 
 `renderPage({ …, csp: { directives } })` sets a `Content-Security-Policy` whose `style-src` allows every component's `<style>` and the page's `styles` by hash, built when the page renders, so components imported late are covered. `contentSecurityPolicy({ styles, directives })` returns the same header ahead of time, for the components registered when it is called (development warns if a registered component's hash is missing from a header passed to `renderPage`). Add `styleAttributes: 'hash'` to also allow the page's `style` attributes by hash (`style-src-attr 'unsafe-hashes'`), so they apply on first paint; the page is then rendered to a string before the response is built. `formAction` handles no-JS form posts with the same schema as the browser.
 
-`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). Its `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts: [entry], modulepreload })` so server-rendered pages hydrate without extra round trips. CSS imported by the client entry comes back hashed as `css`: pass it as `renderPage({ stylesheets })` for `<link rel="stylesheet">` elements (served immutable, allowed by `style-src 'self'`). A route whose module is imported lazily adds it with `clientAssets(manifest, entry, also)`, or `assets(modules)` from `productionServer`'s `createApp` options (`{ modulepreload, stylesheets }` to spread into `renderPage`).
+`@gyral/ssr/static` prerenders pages to static files (SSG) and serves built apps in production (`prerender`, `productionServer`). Its `clientAssetsFromManifest()` reads Vite's manifest for the entry URL and the chunks to preload (its imports and the lazily loaded hydration chunk); pass them as `renderPage({ scripts: [entry], modulepreload })` so server-rendered pages hydrate without extra round trips. CSS imported by the client entry comes back hashed as `css`: pass it as `renderPage({ stylesheets })` for `<link rel="stylesheet">` elements (served immutable, allowed by `style-src 'self'`). A route whose module is imported lazily adds it with `clientAssetsFromManifest(manifestPath, entry, also)`, or `assets(modules)` from `productionServer`'s `createApp` options (`{ modulepreload, stylesheets }` to spread into `renderPage`).
 
 `productionServer` serves `/assets/*` from `assetsDir` (default `dist/client/assets`) through `assetHandler`: `GET` and `HEAD`, immutable caching, a `content-type` per file type, `content-length`, `nosniff`, traversal and dot-path refusal, a 400 for malformed escapes and `no-store` 404s, so a CDN never keeps a miss. Files stay in memory (bounded; `cache: false` to read from disk). Apps with no prerendered pages pass `staticDir: false`. `assetHandler({ dir, prefix, cache })` also works alone, for example for a volume that keeps every release's hashed files so tabs opened before a deploy still load theirs.
 
@@ -58,10 +58,13 @@ createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).liste
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, server rendering):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading:
+[from 0.3.0 to 0.3.1](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md),
+[from 0.2 to 0.3](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
 
-> Status: pre-alpha. APIs change between 0.x releases.
+> Status: 0.x, on npm. Breaking changes to the
+> [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
+> come only in a new minor version, with a migration guide.
 
 ## License
 

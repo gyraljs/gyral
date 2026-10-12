@@ -28,19 +28,19 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
 
-| Layer | Package           | Status  | May depend on                                                                                                                                                              |
-| ----- | ----------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | `@gyral/core`     | v0 work | `@standard-schema/spec` (types only); `vite`, `parse5`, `eslint` (optional peers for `./vite` and `./eslint`, build time only); `src/view/` imports nothing else from core |
-| 1     | `@gyral/testing`  | v0 work | core, `@sinonjs/fake-timers`; `vitest` (optional peer for `./vitest`)                                                                                                      |
-| 1     | `@gyral/http`     | v0 work | core, `@standard-schema/spec` (types only)                                                                                                                                 |
-| 1     | `@gyral/router`   | v0 work | core                                                                                                                                                                       |
-| 1     | `@gyral/time`     | v0 work | core                                                                                                                                                                       |
-| 1     | `@gyral/devtools` | v0 work | core (a dev-only panel built with `define()`, ADR 0017)                                                                                                                    |
-| 2     | `@gyral/ssr`      | v0 work | core (incl. its internal server entry), router (ADR 0012, 0018)                                                                                                            |
-| 2     | `@gyral/effect`   | planned | core; peer-depends on `effect` (opt-in API)                                                                                                                                |
-| tool  | `create-gyral`    | v0 work | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                                                              |
-| tool  | `@gyral/mcp`      | v0 work | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill)                                    |
-| app   | `examples/*`      | —       | any public package entry point, never `src/internal`                                                                                                                       |
+| Layer | Package           | Status   | May depend on                                                                                                                                                              |
+| ----- | ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | `@gyral/core`     | released | `@standard-schema/spec` (types only); `vite`, `parse5`, `eslint` (optional peers for `./vite` and `./eslint`, build time only); `src/view/` imports nothing else from core |
+| 1     | `@gyral/testing`  | released | core, `@sinonjs/fake-timers`; `vitest` (optional peer for `./vitest`)                                                                                                      |
+| 1     | `@gyral/http`     | released | core, `@standard-schema/spec` (types only)                                                                                                                                 |
+| 1     | `@gyral/router`   | released | core                                                                                                                                                                       |
+| 1     | `@gyral/time`     | released | core                                                                                                                                                                       |
+| 1     | `@gyral/devtools` | released | core (a dev-only panel built with `define()`, ADR 0017)                                                                                                                    |
+| 2     | `@gyral/ssr`      | released | core (incl. its internal server entry), router (ADR 0012, 0018)                                                                                                            |
+| 2     | `@gyral/effect`   | planned  | core; peer-depends on `effect` (opt-in API)                                                                                                                                |
+| tool  | `create-gyral`    | released | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                                                              |
+| tool  | `@gyral/mcp`      | released | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill)                                    |
+| app   | `examples/*`      | —        | any public package entry point, never `src/internal`                                                                                                                       |
 
 Enforced by `eslint.config.js` (import restrictions for core, layer-1 packages and the tools) and `scripts/check-public-api.mjs`.
 

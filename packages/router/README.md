@@ -32,20 +32,6 @@ position on back and forward, and resets focus; pass `scroll: false` / `focusRes
 `navigate` or `makeRouter` to manage them yourself. A `replace` leaves scroll and focus alone
 unless you pass `scroll: true` / `focusReset: true`.
 
-## Documentation
-
-Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
-consumer setup guide (packages, Vite preset, server rendering):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
-
-> Status: pre-alpha. APIs change between 0.x releases.
-
-## License
-
-MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and
-the Gyral logo are trademarks of Mike Zupper.
-
 ## Optional parameters and catch-all routes (0.3.1)
 
 `routes({ product: '/products/:id?', docs: '/docs/:path*', notFound: '/:path*' })` infers
@@ -55,3 +41,20 @@ Catch-all captures can be empty arrays and preserve encoded slashes within one i
 First matching route wins; put the not-found catch-all last and explicitly return HTTP 404
 from the server. Native URLPattern, the fallback and SSR agree, including the root path.
 Ambiguous optional omissions and invalid/missing href parameters throw (ADR 0009).
+
+## Documentation
+
+Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
+consumer setup guide (packages, Vite preset, server rendering):
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading:
+[from 0.3.0 to 0.3.1](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md),
+[from 0.2 to 0.3](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+
+> Status: 0.x, on npm. Breaking changes to the
+> [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
+> come only in a new minor version, with a migration guide.
+
+## License
+
+MIT © Mike Zupper. See LICENSE and NOTICE (Cycle.js attribution). Gyral, gyraljs and
+the Gyral logo are trademarks of Mike Zupper.

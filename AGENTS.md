@@ -16,7 +16,7 @@ details live in the linked docs, which are the system of record.
 | Command                                         | What it does                                                                                                       |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `pnpm install`                                  | Install (pnpm workspaces: `packages/*`, `examples/*`)                                                              |
-| `pnpm check`                                    | **The gate.** typecheck + lint + format + invariants + tests                                                       |
+| `pnpm check`                                    | **The gate.** typecheck + lint + format + invariants + tests + size budgets + fixtures + pack check                |
 | `pnpm test`                                     | Vitest: browser project (Chromium) + node project (scripts)                                                        |
 | `pnpm invariants`                               | Docs map, workflow triggers, public-API purity, skill/doc code blocks typecheck, clean-room provenance             |
 | `pnpm ci:local`                                 | Run `.github/workflows/ci.yml` locally in Docker via `gh act`                                                      |
@@ -35,7 +35,7 @@ First run needs `pnpm exec playwright install chromium`.
 | Path                                                                                             | Contents                                                                                           |
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | [ARCHITECTURE.md](ARCHITECTURE.md)                                                               | Packages, layers, allowed dependency edges                                                         |
-| `packages/core`                                                                                  | `define()`, intents, MVI runtime, view layer (`src/view/`); `/server`, `/vite`, `/eslint` entries  |
+| `packages/core`                                                                                  | `define()`, intents, MVI runtime, view layer (`src/view/`); `/vite`, `/eslint`, `/storage` entries |
 | `packages/*/src/internal`                                                                        | Implementation details (interpreter, adapters); never exported                                     |
 | `examples/*`                                                                                     | The acceptance suite                                                                               |
 | `scripts/`                                                                                       | Invariant checks (`lib/invariants.mjs` + tests)                                                    |

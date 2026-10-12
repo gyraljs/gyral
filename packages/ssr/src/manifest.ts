@@ -119,8 +119,10 @@ export function clientAssets(
 }
 
 /**
- * `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also`
- * as for `clientAssets`.
+ * `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). `also`:
+ * manifest keys of modules the page will import lazily (a route's module, by source path such
+ * as `src/routes/product.ts`), preloaded too, each with its static imports and CSS.
+ * `options.base`: Vite's `base`, which every URL starts with.
  */
 export async function clientAssetsFromManifest(
   manifestPath: string,

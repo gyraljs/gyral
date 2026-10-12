@@ -1,7 +1,9 @@
 # Contributing to Gyral
 
-Thanks for helping. Gyral is pre-alpha, so APIs still move; open an issue to discuss anything
-larger than a bug fix before you write the code.
+Thanks for helping. Gyral is 0.x: the public API
+([docs/references/public-api-0.3.1.md](docs/references/public-api-0.3.1.md)) changes only in a
+new minor version, with a migration guide. Open an issue to discuss anything larger than a bug
+fix before you write the code.
 
 ## Development setup
 

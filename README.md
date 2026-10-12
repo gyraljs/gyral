@@ -38,7 +38,11 @@ define<{ count: number }, Msg>()('gy-counter', {
 - **Model** is a set of pure reducers, one per message, so it is exhaustive by type.
 - **View** is a pure template that _names_ intents. It holds no event-handler closures.
 
-> Status: pre-alpha. The work plan lives in [beads](https://github.com/gastownhall/beads)
+Start an app with `npm create gyral@latest my-app` (guides at [gyral.dev](https://gyral.dev)).
+
+> Status: 0.x; 0.3.1 is on npm. `main` can be ahead of the release: unreleased changes are in
+> [.changeset/](.changeset/) and marked "unreleased" in the docs. The work plan lives in
+> [beads](https://github.com/gastownhall/beads)
 > (`bd ready`); architecture is in [ARCHITECTURE.md](ARCHITECTURE.md), decisions in
 > [docs/design-docs](docs/design-docs/index.md).
 
