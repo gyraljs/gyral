@@ -1,4 +1,4 @@
-# Gyral 0.3.1: complete documentation
+# Gyral 0.3.2: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -18,7 +18,8 @@ effects such as HTTP, routing and timers are returned from update as data, and d
 out at the edges of your app.
 
 New here? Start with [Getting started](https://gyral.dev/docs/getting-started/). It takes about ten minutes and
-ends with a working, tested component.
+ends with a working, tested component. Writing code with an agent? Connect it to Gyral's MCP
+server first: [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 
 The guides build on each other, but each one stands alone. The [API reference](https://gyral.dev/docs/api/) is
 generated from the published type declarations, so it always matches the code.
@@ -240,8 +241,11 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
 - See a whole application in [gyral-shop](https://github.com/gyraljs/gyral-shop).
 - Before you ship, read [Deploying](https://gyral.dev/docs/deploying/) and the
   [known issues](https://gyral.dev/docs/packages/#known-issues).
+- Working with a coding agent? Connect it to Gyral's MCP server and skill:
+  [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 - Coming from Gyral 0.2? Read [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/). From
-  0.3.0? Read [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
+  0.3.0? Read [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/). From 0.3.1,
+  [upgrading to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) needs no code changes.
 
 ---
 
@@ -254,7 +258,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.1, and the site tests each one in a browser when it builds.
+0.3.2, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -764,6 +768,152 @@ intent.
 **Fix.** Add `novalidate` to the `<form>` and keep the constraints on the fields. Read each
 field's `validity` in the submit parser, as the
 [signup form](#a-signup-form-with-native-validation) does.
+
+---
+
+# Use Gyral with coding agents
+
+> Connect Claude Code, VS Code or any MCP client to the Gyral MCP server, hosted or local, install the agent skill, and give agents llms-small.txt.
+
+Source: https://gyral.dev/docs/coding-agents/
+
+A coding agent writes better Gyral code when it can look things up instead of guessing. Gyral
+gives agents four things, and they work together:
+
+- **The MCP server**, `@gyral/mcp`: searches these docs, returns exact API signatures and
+  working examples, scaffolds components, and typechecks code against your project. It runs
+  locally or at `https://mcp.gyral.dev/mcp`.
+- **The agent skill**: the rules and the API in a form agents load on demand.
+- **[llms-small.txt](https://gyral.dev/llms-small.txt)**: the rules, one complete component and tested recipes
+  in one small file.
+- **An `AGENTS.md`** in every app `create-gyral` makes.
+
+## The hosted MCP server
+
+`https://mcp.gyral.dev/mcp` is a public MCP server over Streamable HTTP. It needs no token and
+no install, and it only reads: it answers from Gyral's docs, API and examples.
+
+In Claude Code:
+
+```sh
+claude mcp add --transport http gyral https://mcp.gyral.dev/mcp
+```
+
+In VS Code, add it to `.vscode/mcp.json`:
+
+```json
+{ "servers": { "gyral": { "type": "http", "url": "https://mcp.gyral.dev/mcp" } } }
+```
+
+Any other client that speaks Streamable HTTP: add a server with the URL
+`https://mcp.gyral.dev/mcp` and no authentication.
+
+The hosted server has every tool except `check_snippet`, which needs your project's
+TypeScript and packages. `https://mcp.gyral.dev/healthz` reports the `@gyral/mcp` version it
+serves; the tools marked 0.3.2 below appear there once it runs 0.3.2.
+
+## The local MCP server
+
+Run the server on your machine when the agent writes code. It adds `check_snippet`, which
+typechecks against the TypeScript and `@gyral/*` versions installed in your project, and
+`scaffold_component` reads your `package.json`. Start it from the project directory:
+
+```sh
+claude mcp add gyral -- npx -y @gyral/mcp
+```
+
+That's Claude Code. Other clients:
+
+- **Codex**: `codex mcp add gyral -- npx -y @gyral/mcp`
+- **Cursor**, in `.cursor/mcp.json`:
+
+  ```json
+  { "mcpServers": { "gyral": { "command": "npx", "args": ["-y", "@gyral/mcp"] } } }
+  ```
+
+- **VS Code**, in `.vscode/mcp.json`:
+
+  ```json
+  { "servers": { "gyral": { "type": "stdio", "command": "npx", "args": ["-y", "@gyral/mcp"] } } }
+  ```
+
+- **Any other client**: run `npx -y @gyral/mcp` as a stdio server.
+
+The local server answers from the docs bundled with its own version, so it works offline and
+matches the Gyral you install. Set `GYRAL_DOCS_URL=https://gyral.dev/llms-full.txt` to load
+the latest docs at startup instead; it falls back to the bundled copy after 3 seconds.
+`GYRAL_PROJECT_DIR` points `check_snippet` at another directory than the working one.
+
+## The tools
+
+| Tool                 | What it returns                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `start_here`         | The mental model, the rules, the workflow, and which example or guide covers which task (0.3.2)   |
+| `search_docs`        | Ranked doc sections for a query: title, URL and snippet                                           |
+| `get_doc`            | One docs page, or one section with `#anchor`, such as `forms#the-server-half`                     |
+| `get_api`            | The declaration, doc comment and import line of an export; on a miss, the nearest names (0.3.2)   |
+| `list_examples`      | Every example and what it shows                                                                   |
+| `get_example`        | One example's component source                                                                    |
+| `scaffold_component` | Starting code: `basic`, `form`, `form-native` (0.3.2) or `ssr-page`, importing only what you have |
+| `check_snippet`      | Type errors for a module against your project, with a suggested fix for each (local only)         |
+
+The workflow the server teaches, in every tool description: call `start_here` once, start
+from `get_example` or `scaffold_component`, write a small implementation, then run
+`check_snippet` and apply its suggested fixes until it passes. Use `get_api` for one symbol
+you're about to use, not to read the whole API.
+
+Since 0.3.2, `scaffold_component` imports only packages your project has installed, and
+writes a model test only when `@gyral/testing` and `vitest` are there. `form-native` needs no
+dependencies: it turns the browser's own constraint checks into your messages. `check_snippet`
+also flags Gyral mistakes TypeScript can't see, such as a one-call `define` or side effects in
+`update`.
+
+The server also offers the resources `gyral://llms.txt`, `gyral://skill` and
+`gyral://skill/references/{name}`, and a `build-gyral-component` prompt.
+
+### Host your own
+
+`@gyral/mcp` 0.3.2 includes `gyral-mcp-http`, the binary behind the hosted server: read-only,
+anonymous Streamable HTTP at `/mcp`, without `check_snippet`. It listens on `127.0.0.1:3000`
+by default, and needs `GYRAL_MCP_PUBLIC_ORIGIN` set to the origin it's served from. Put it
+behind TLS, and pin the package version you deploy. The
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.2/packages/mcp/README.md#public-hosting)
+has the details.
+
+## The agent skill
+
+The skill teaches an agent the rules and the API, with a reference per topic that it loads
+when the task needs it. Every code block in it typechecks against the packages.
+
+In Claude Code, add Gyral's repository as a plugin marketplace and install the plugin:
+
+```text
+/plugin marketplace add gyraljs/gyral
+/plugin install gyral@gyral
+```
+
+From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
+
+Other agents: copy
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.2/skills/gyral) into the agent's
+skills or rules folder, or point it at `SKILL.md`.
+
+## Docs for agents
+
+- **[llms-small.txt](https://gyral.dev/llms-small.txt)**: read first. The mental model, MUST and DO NOT rules, a
+  complete component with tests, the recipes, and where each export comes from, in under
+  40 KB. Every code block in it compiles against the released packages.
+- **[llms.txt](https://gyral.dev/llms.txt)**: the index of every page, each with a line on when to read it.
+- **[llms-full.txt](https://gyral.dev/llms-full.txt)**: all the docs, the API reference and the examples in one
+  file.
+- Every docs page has a Markdown copy: add `index.md` to its URL, as in
+  `/docs/testing/index.md`.
+
+## New apps
+
+`npm create gyral@latest` writes an `AGENTS.md` into every project, and a `CLAUDE.md` that
+imports it, so an agent that opens the project learns the rules and the commands before it
+writes anything. See [Getting started](https://gyral.dev/docs/getting-started/#create-a-project).
 
 ---
 
@@ -1665,6 +1815,10 @@ export const parseSearch = ({
 `_tag: 'Search' as const` in the returned object works too. The same holds for the mappers of
 `child()`, `form()` and `field()`. To type a parser that reads the context, use
 `IntentParser<Variant, Props>`, or `IntentParser<Variant, Props, State>` when it reads `state`.
+Since 0.3.2, `Variant<Msg, 'Search'>` from `@gyral/core` names the variant without `Extract`,
+and `ParseResult<M>` is what a parser may return: a message, `IntentRejected` or `undefined`.
+`StandardSchemaV1` is exported too, for helpers that take a schema the way `field()` and
+`defineForm()` do.
 
 ## Buttons carry their own data
 
@@ -2120,6 +2274,35 @@ A reducer receives the state, the message (narrowed to its variant, so `m.id` is
 context, `{ props, read }`: the component's [props](https://gyral.dev/docs/components/#props) and a reader for
 [shared stores](https://gyral.dev/docs/stores/). Reducers are pure: no `fetch`, no `Date.now()`, no
 `Math.random()`, no DOM.
+
+A reducer written outside the spec, to share it or test it alone, is typed with `Reducer` and
+`Variant` from `@gyral/core` (type-only exports, new in 0.3.2). `Variant<Msg, 'Add'>` is the
+member of `Msg` tagged `'Add'`:
+
+```ts
+// src/shelf.ts
+import { define, html, type Reducer, type Variant } from '@gyral/core';
+
+interface State {
+  readonly books: readonly string[];
+}
+type Msg = { readonly _tag: 'Add'; readonly title: string } | { readonly _tag: 'Clear' };
+
+export const add: Reducer<State, Msg, Variant<Msg, 'Add'>> = (s, m) => ({
+  books: [...s.books, m.title],
+});
+
+export const Shelf = define<State, Msg>()('my-shelf', {
+  init: () => ({ books: [] }),
+  intent: { Add: ({ value }) => ({ _tag: 'Add', title: value ?? '' }), Clear: true },
+  update: { Add: add, Clear: () => ({ books: [] }) },
+  view: (s, i) => html`
+    <button type="button" value="Middlemarch" data-intent=${i.Add}>Add Middlemarch</button>
+    <button type="button" data-intent=${i.Clear}>Clear</button>
+    <output>${s.books.join(', ')}</output>
+  `,
+});
+```
 
 ## Returning commands
 
@@ -5945,7 +6128,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.1/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.2/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -6360,8 +6543,11 @@ still never takes user input.
 `contentSecurityPolicy({ directives, styles? })` builds the same value ahead of time, for the
 components imported before the call. Use it where no page renders per request: a static site
 writes it into the host's headers file at build time (see
-[Static sites](https://gyral.dev/docs/static-sites/#headers-and-csp)), as this site does. In development,
-`renderPage` warns when a header string it is given lacks a registered component's hash.
+[Static sites](https://gyral.dev/docs/static-sites/#headers-and-csp)), as this site does. A server that
+shouldn't import every component can read the hashes from a file the build writes, with
+`writeComponentStyleManifest` and `componentStyleHashes` (0.3.2; see
+[Security](https://gyral.dev/docs/security/#style-hashes-from-the-build)). In development, `renderPage` warns
+when a header string it is given lacks a registered component's hash.
 
 ## Static generation
 
@@ -6747,6 +6933,29 @@ server-rendered components fetch. Preload it with the entry: `clientAssetsFromMa
 `@gyral/ssr/static` lists it, and `renderPage({ modulepreload })` writes the hints (see
 [Static sites](https://gyral.dev/docs/static-sites/#a-static-build)).
 
+## Which chunk holds a module
+
+With `gyralVitePreset({ components: true })`, the client build writes
+`.vite/gyral-components.json` next to Vite's manifest. Its `chunks` maps each tag to the chunk
+that defines it. Since 0.3.2, `chunkModules` maps every emitted JavaScript chunk to the source
+modules in it, as paths relative to the project root:
+
+```json
+{
+  "chunks": { "my-gallery": "assets/widgets-CQ3fA1x2.js" },
+  "chunkModules": {
+    "assets/widgets-CQ3fA1x2.js": ["src/gallery-photo.ts", "src/widgets.ts"]
+  }
+}
+```
+
+Vite's manifest only lists modules that start a chunk. When the bundler merges a module into a
+shared chunk, `chunkModules` is where to find it. A service worker or offline cache can use it
+to decide which chunks a feature needs: walk the static imports for shared code and CSS, and
+keep chunks that two features share for both. Paths outside the project root start with
+`../`; treat them as names, not as files to open. Worker builds are separate graphs and
+aren't listed.
+
 ## Measure
 
 Check what each page actually loads, in the browser's network panel, and the chunk sizes
@@ -6992,7 +7201,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -7225,6 +7434,32 @@ Passing the class types the result by its outputs, so a test that expects an out
 component can't send doesn't compile. Without a class, `outputsIn<TagEditorOutput>(commands)`
 names the union itself. Read outputs and focus requests through these helpers, not by
 filtering on driver names: those are Gyral's internals and may change.
+
+## Views in Node
+
+A view is a pure function of state, so its markup can be tested in Node too. `viewOf(Component,
+state, { props, stores })` calls the component's view with the named intents and context it
+would get on the page, without mounting it or a DOM shim. Render the result with
+`renderToString` from `@gyral/ssr`, passing `{ dev: false }` so the HTML carries no
+development markers:
+
+```ts
+// src/lookup.view.test.ts
+import { expect, it } from 'vitest';
+import { renderToString } from '@gyral/ssr';
+import { viewOf } from '@gyral/testing';
+import { Lookup } from './lookup.js';
+
+it('shows the name it found', async () => {
+  const markup = await renderToString(viewOf(Lookup, { query: 'ada', found: 'Ada Lovelace' }), {
+    dev: false,
+  });
+  expect(markup).toContain('<output for="q">Ada Lovelace</output>');
+});
+```
+
+This tests what the view renders for a state, nothing more. Hooks, focus, native validity and
+hydration need the browser tests below. `viewOf` is new in 0.3.2.
 
 ## Browser tests
 
@@ -7615,6 +7850,17 @@ it('hydrates the server page in place', async () => {
 own instance (`mount(Cart, { stores: { cart: instance } })`), and `inputsFor(commands, store)`
 lists the messages a reducer sent to a store.
 
+## Coverage
+
+Keep `gyralVitePreset()` in the tested project and name your sources in Vitest's coverage
+settings: `test: { coverage: { provider: 'v8', include: ['src/**/*.ts'] } }`. Install
+`@vitest/coverage-v8` at the same version as Vitest.
+
+In development and tests, the preset records where each `html` and `svg` template was written,
+so errors can name the file and line. Since 0.3.2 that adds no branches to your coverage
+report: the counts are your own code's. On 0.3.1 each template call site added branches of its
+own, so keep any workaround (a lower branch threshold, say) until you upgrade.
+
 ## Accessibility checks for your app
 
 Use a browser accessibility scanner alongside component behavior tests. An app-level helper
@@ -7919,7 +8165,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 recorded results are from a build shortly before the 0.3.1 release. They install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/platform-spikes-2026-10-11.md)
 records the fixtures and limits.
 
 ## Server rendering in another framework
@@ -8190,6 +8436,51 @@ policy accepts trusted author markup; it is not a sanitizer. Allow its name in y
 the page refuses the policy, development warns; an enforced HTML sink still rejects the
 operation. Support varies by browser; keep CSP's other protections in place.
 
+### Style hashes from the build
+
+`renderPage({ csp })` hashes the styles of the components imported by the server. A server or
+proxy that only builds the header, without importing your components, can take the hashes
+from the build instead. After the client build (`gyralVitePreset({ components: true })`), and
+before `.vite` is deleted, `writeComponentStyleManifest` from `@gyral/ssr/static` imports the
+app's component modules in a separate Node process and writes their real `<style>` hashes to a
+JSON file:
+
+```ts
+// scripts/style-manifest.ts
+import { writeComponentStyleManifest } from '@gyral/ssr/static';
+
+await writeComponentStyleManifest({
+  root: '.',
+  clientDir: 'dist/client',
+  outFile: 'dist/server/component-styles.json',
+});
+```
+
+The file is `{ "schema": 1, "hashes": ["'sha256-…'"] }`. The server passes the hashes as
+`componentStyleHashes`, to `contentSecurityPolicy()` or `renderPage({ csp })`:
+
+```ts
+// server/csp.ts
+import { readFileSync } from 'node:fs';
+import { contentSecurityPolicy } from '@gyral/ssr';
+
+const manifest = JSON.parse(readFileSync('dist/server/component-styles.json', 'utf8')) as {
+  readonly schema: 1;
+  readonly hashes: readonly string[];
+};
+
+export const csp = await contentSecurityPolicy({
+  componentStyleHashes: manifest.hashes,
+  directives: { 'default-src': "'self'", 'script-src': "'self'", 'object-src': "'none'" },
+});
+```
+
+The build runs your component modules, so they must be safe to import in Node; split a
+browser-only module from its component definition first. Pass `vite` with aliases or plugins
+the modules need. Ship the JSON with the HTML and assets of the same build, and regenerate it
+with every release: an old hash blocks new styles. On 0.3.1, which lacks both, import the
+components at build time and call `styleHashes()`. Both are new in 0.3.2.
+
 On a static host, deliver CSP as an HTTP response header where the host allows it. A
 `<meta http-equiv>` policy is the fallback for hosts that can't set headers, and it can't set
 `frame-ancestors` ([Deploying](https://gyral.dev/docs/deploying/#content-security-policy)). Review the
@@ -8232,7 +8523,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.1/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.2/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page. The former `labelledBy` export was removed
 in 0.3.1; the recipe is application code.
 
@@ -8390,7 +8681,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All nine
-packages are released together with the same version number (0.3.1), are ES modules with
+packages are released together with the same version number (0.3.2), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -8410,15 +8701,15 @@ Apps that do not import them carry no storage driver code.
 
 ## Optional packages
 
-| Package           | What it gives you                                                                                                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@gyral/http`     | The `http` driver: `get`, `request`, `submitForm`, typed errors, schema decoding. `@gyral/http/testing` has `fakeHttp`.                                                                                                                              |
-| `@gyral/router`   | Typed route tables, `listen`, `navigate`, `setHead`, browser and memory history.                                                                                                                                                                     |
-| `@gyral/time`     | `delay`, `debounce` and `every` as commands; a delay-only app stays as small as before.                                                                                                                                                              |
-| `@gyral/ssr`      | Server rendering: `renderPage`, `renderToString`, `contentSecurityPolicy`, `styleHashes`, `formAction`. `@gyral/ssr/static` prerenders and serves builds, `@gyral/ssr/node` mounts a fetch handler on Node's `http` and runs the development server. |
-| `@gyral/testing`  | `step`, `run`, `subscriptionsFor`, `outputsIn`, `mount`, `parse`, fake drivers, virtual time, `mountSsr` and `hydrated`. `@gyral/testing/vitest` renders server markup for browser tests.                                                            |
-| `@gyral/devtools` | The in-page devtools panel, for development builds.                                                                                                                                                                                                  |
-| `@gyral/mcp`      | An MCP server for coding agents: it searches these docs, looks up exact API signatures, reads the examples, scaffolds components and typechecks snippets against your project.                                                                       |
+| Package           | What it gives you                                                                                                                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@gyral/http`     | The `http` driver: `get`, `request`, `submitForm`, typed errors, schema decoding. `@gyral/http/testing` has `fakeHttp`.                                                                                                                                                                |
+| `@gyral/router`   | Typed route tables, `listen`, `navigate`, `setHead`, browser and memory history.                                                                                                                                                                                                       |
+| `@gyral/time`     | `delay`, `debounce` and `every` as commands; a delay-only app stays as small as before.                                                                                                                                                                                                |
+| `@gyral/ssr`      | Server rendering: `renderPage`, `renderToString`, `contentSecurityPolicy`, `styleHashes`, `formAction`. `@gyral/ssr/static` prerenders and serves builds and writes component style hashes, `@gyral/ssr/node` mounts a fetch handler on Node's `http` and runs the development server. |
+| `@gyral/testing`  | `step`, `run`, `viewOf`, `subscriptionsFor`, `outputsIn`, `mount`, `parse`, fake drivers, virtual time, `mountSsr` and `hydrated`. `@gyral/testing/vitest` renders server markup for browser tests.                                                                                    |
+| `@gyral/devtools` | The in-page devtools panel, for development builds.                                                                                                                                                                                                                                    |
+| `@gyral/mcp`      | An MCP server for coding agents: it searches these docs, looks up exact API signatures, reads the examples, scaffolds components and typechecks snippets against your project. Hosted at `https://mcp.gyral.dev/mcp`.                                                                  |
 
 ```sh
 npm install @gyral/http @gyral/router @gyral/time
@@ -8432,9 +8723,10 @@ The fetch entry does not include those transports.
 
 `@gyral/mcp` is a stdio server your agent starts with `npx -y @gyral/mcp`, from your project
 directory. It answers from the docs, API and examples of its own version, bundled at build time,
-so it works offline. Its
-[README](https://github.com/gyraljs/gyral/blob/v0.3.1/packages/mcp/README.md) has the setup for
-Claude Code, Cursor, VS Code and Codex.
+so it works offline. Since 0.3.2 it also has `gyral-mcp-http`, a read-only Streamable HTTP
+server; Gyral hosts one at `https://mcp.gyral.dev/mcp`, with no token. Setup for Claude Code,
+VS Code, Cursor, Codex and other clients is in
+[Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 
 ## create-gyral
 
@@ -8460,8 +8752,9 @@ Validation in `@gyral/core`, `@gyral/http` and `@gyral/ssr` accepts any
 Gyral 0.2 rendered with Lit and asked your app to install it. 0.3 has its own view layer, so
 Lit is gone from the dependency tree. Any custom element still works next to Gyral components,
 including ones built with Lit; install that library yourself if you use it. Upgrading? See
-[Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/) and
-[from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
+[Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
+[from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/) and
+[from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes).
 
 ## The Vite preset
 
@@ -8602,6 +8895,10 @@ in this reference; [Packages](https://gyral.dev/docs/packages/) describes them.
 
 - **Types are the contract.** A component is `define<State, Msg, Props, Output>()(tag, spec)`;
   `ComponentSpec` in `@gyral/core` describes every field of `spec`.
+- **Helper types are exported.** `Reducer`, `Variant`, `ParseResult` and `StandardSchemaV1`
+  (type-only, since 0.3.2) are the types `Update`, `IntentParser` and the form helpers are
+  built from, so a reducer or parser written outside a spec can be typed without copying
+  Gyral's definitions.
 - **Functions return data.** Command helpers such as `get`, `delay` and `navigate` return a
   `Command`, which does nothing until a reducer returns it.
 - **The view layer is Gyral's own.** `html`, `css`, `each`, `keyed`, `raw`, `defineHook` and
@@ -8609,6 +8906,63 @@ in this reference; [Packages](https://gyral.dev/docs/packages/) describes them.
   `@gyral/core/eslint` the template rules. Server rendering is `@gyral/ssr`.
 
 The guides explain how the pieces fit together: start with [Components](https://gyral.dev/docs/components/).
+
+---
+
+# Upgrading from 0.3.1 to 0.3.2
+
+> Gyral 0.3.2 needs no code changes. New: viewOf for view tests, build-time CSP style hashes, chunkModules, helper types and a hosted MCP server.
+
+Source: https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/
+
+Gyral 0.3.2 adds to 0.3.1 and changes or removes nothing 0.3.1 exports, so an app on 0.3.1
+upgrades without code changes. Move every `@gyral/*` package to 0.3.2 together (they share one
+version), install, and run your tests and build:
+
+```sh
+npm install @gyral/core@0.3.2 @gyral/testing@0.3.2
+```
+
+Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
+made with `create-gyral` 0.3.2 start on `^0.3.2`.
+
+## What's new in 0.3.2
+
+- **`viewOf` in `@gyral/testing`**: call a component's view in Node, without mounting it or a
+  DOM shim, and render it with `renderToString(…, { dev: false })` to check its HTML. See
+  [Views in Node](https://gyral.dev/docs/testing/#views-in-node).
+- **Style hashes from the build**: `writeComponentStyleManifest` in `@gyral/ssr/static` writes
+  the real `<style>` hashes of your components to a JSON file after the client build, and
+  `componentStyleHashes` in the CSP options takes them, so a server that only builds the
+  `Content-Security-Policy` header keeps a strict policy without importing every component.
+  See [Security](https://gyral.dev/docs/security/#style-hashes-from-the-build).
+- **`chunkModules`** in the components build metadata (`.vite/gyral-components.json`) maps each
+  emitted chunk to the source modules in it, including modules Vite merged into a shared chunk,
+  for offline caches and service workers. See
+  [Code-splitting](https://gyral.dev/docs/code-splitting/#which-chunk-holds-a-module).
+- **Helper types** in `@gyral/core`, type-only: `Reducer`, `Variant`, `ParseResult` and
+  `StandardSchemaV1`, for reducers and parsers written outside a component spec. See
+  [Model and update](https://gyral.dev/docs/update/#one-reducer-per-message) and the
+  [API reference](https://gyral.dev/docs/api/core/).
+- **Coverage**: the development template locator no longer adds branches to coverage reports,
+  so the counts are your own code's. See [Testing](https://gyral.dev/docs/testing/#coverage).
+- **The MCP server**: `@gyral/mcp` gains `gyral-mcp-http`, a read-only Streamable HTTP server,
+  and Gyral hosts one at `https://mcp.gyral.dev/mcp`, with no token. A new `start_here` tool
+  gives an agent the rules and the workflow; `scaffold_component` imports only installed
+  packages and has a dependency-free `form-native` kind; `check_snippet` suggests fixes;
+  `get_doc` takes `path`; and `get_api` suggests the nearest names. See
+  [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
+- **A new example**, [Workload lab](https://gyral.dev/examples/#workload-lab): a module worker behind a driver,
+  timed sequences, a booking form with retries and a canvas grid with pointer capture, built
+  with APIs 0.3.1 already has.
+
+0.3.2 doesn't change the code that runs in the browser, so bundle sizes stay as
+[Packages](https://gyral.dev/docs/packages/#whats-inside) lists them for 0.3.1. This site's client chunks built
+byte for byte the same on both versions.
+
+The full lists are in each package's changelog, such as
+[`@gyral/core`](https://github.com/gyraljs/gyral/blob/v0.3.2/packages/core/CHANGELOG.md), and
+in the [export inventory](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/public-api-0.3.1.md#added-in-032).
 
 ---
 
@@ -8649,7 +9003,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -8667,7 +9021,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9207,7 +9561,7 @@ props, styles, server rendering and hydration.
 Most apps migrate in this order: dependencies, imports, the build checks (the compiler and the
 ESLint rules list every template that needs a change), props, lists, tests, server. This page
 follows that order and describes 0.3.0. The 0.2 snippets are plain text; every snippet with a
-file name compiles against the current release, 0.3.1, so it uses 0.3.1's spelling where 0.3.1
+file name compiles against the current release, 0.3.2, so it uses 0.3.1's spelling where 0.3.1
 changed one (the two-call `define<…>()(…)`, `intentsOf`, `extraHead`). Once your app runs on
 0.3.0, go on to [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
 
@@ -9616,8 +9970,8 @@ dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[0.3.1 export inventory](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/references/public-api-0.3.1.md)
-records the public boundary.
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/public-api-0.3.1.md)
+records the public boundary: what 0.3.1 exports, and what 0.3.2 added.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version. Keep core, router,
 HTTP, time, testing, devtools, SSR and MCP aligned; verify your lockfile when a package manager
@@ -9625,7 +9979,7 @@ resolves multiple versions. The [package guide](https://gyral.dev/docs/packages/
 
 ## Releases
 
-These guides describe **0.3.1**, the `latest` version on npm. Every package is published
+These guides describe **0.3.2**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -9633,10 +9987,15 @@ For a released application, pin the registry version you verified and retain the
 Deploy server output and client assets from the same build: stale HTML with new component
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
+Since 0.3.1, breaking changes wait for a new minor version, with a migration guide. 0.3.2
+changed or removed nothing that 0.3.1 exports, so moving from 0.3.1 to 0.3.2 needs no code
+changes.
+
 ## Upgrade with evidence
 
-1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/) or
-   [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
+1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
+   [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/) or
+   [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes).
 2. Update packages together and install from the lockfile.
 3. Run typechecking, component/browser tests and the production build.
 4. Test server/client hydration, edited forms, routing and the production CSP if your app
@@ -9667,7 +10026,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.1, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.2, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -10214,13 +10573,13 @@ Generated from the package's type declarations. Entry points: [`@gyral/core`](#g
 | [`defineForm`](#core-defineform) |  |
 | [`defineHook`](#core-definehook) | Defines an element hook: a small behaviour attached to the element it sits on. |
 | [`defineStore`](#core-definestore) | Defines a store. |
-| [`each`](#core-each) | A keyed list (view/03-lists.md). |
+| [`each`](#core-each) | A keyed list. |
 | [`field`](#core-field) | Intent parser for one control (pair with `data-intent-on="input"` for live checks). |
 | [`fieldErrors`](#core-fielderrors) | Groups issues by field name. |
 | [`focus`](#core-focus) | A command that focuses the first element matching `selector` inside this component (its shadow root, or its own children in light-DOM mode) once the current update has rendered: |
 | [`form`](#core-form) | Intent parser for a `<form data-intent>` submission, validated by a schema. |
 | [`html`](#core-html) | The template tag: `` html`<p>${s.text}</p>` ``. |
-| [`intentsOf`](#core-intentsof) | A component's intent names as a module-level constant, so pure list rows can name intents without passing them through `pick` (view/03-lists.md "Rows must be pure"). |
+| [`intentsOf`](#core-intentsof) | A component's intent names as a module-level constant, so pure list rows can name intents without passing them through `pick` (rows must be pure). |
 | [`invalid`](#core-invalid) | Mirrors model errors to native validity: `setCustomValidity` and `aria-invalid`. |
 | [`keyed`](#core-keyed) | Renders `value`, and replaces it with a fresh copy whenever `key` changes: a form cleared after sending, a CSS animation restarted, a child component reset. |
 | [`outputs`](#core-outputs) | `emit`, typed by a component's output union (the 4th `define` type parameter), so an output of the wrong shape fails to compile. |
@@ -10329,8 +10688,7 @@ define<State, Msg>()('x-counter', { init, intent: { Increment: … }, update, vi
 ```
 
 With no type arguments, `define()('x-badge', spec)` infers the state, messages, props and
-intent names from the spec. See [0001-mvi-parsed-intent.md](https://github.com/gyraljs/gyral/blob/v0.3.1/docs/design-docs/0001-mvi-parsed-intent.md),
-0006-effects-and-drivers.md, 0007-props.md, 0008-forms.md and view/05-element.md.
+intent names from the spec. Guide: https://gyral.dev/docs/components/
 
 #### `defineDriver`
 
@@ -10372,7 +10730,7 @@ Defines a store. `name` keys it in registries, seeds and overrides, so keep it u
 function each<T>(items: readonly T[], key: (item: T) => string | number, row: (item: T) => ChildValue): ListResult;
 ```
 
-A keyed list (view/03-lists.md). `key` must give each item a unique string or number; `row`
+A keyed list. `key` must give each item a unique string or number; `row`
 must depend only on its arguments: a row re-renders only when its item object or its `pick`
 result changes.
 
@@ -10437,7 +10795,7 @@ function intentsOf<C extends {
 ```
 
 A component's intent names as a module-level constant, so pure list rows can name intents
-without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
+without passing them through `pick` (rows must be pure). The same object
 the view gets as `i`, typed by the component's class (ADR 0023). A row that names intents
 this way needs an explicit return type, or the row, the view and the class infer each other
 in a circle:
@@ -10581,7 +10939,7 @@ const cart = subscription<CartState>('cart', (emit) => {
   emit(reduxStore.getState());
   return reduxStore.subscribe(() => emit(reduxStore.getState()));
 });
-// init: [state, [command(cart, undefined, { onSuccess: (c) => ({ _tag: 'Cart', c }) })]]
+// subscriptions: () => [command(cart, undefined, { onSuccess: (c) => ({ _tag: 'Cart', c }) })]
 ```
 
 
@@ -10592,8 +10950,7 @@ const svg: (strings: TemplateStringsArray, ...values: unknown[]) => TemplateResu
 ```
 
 The SVG fragment tag: `` svg`<path d=${s.d} />` ``. Its top level is SVG content, so it
-renders only inside an `<svg>` (or another SVG element) of an html template
-(view/01-templates.md "svg templates"). A whole `<svg>` graphic is written with html.
+renders only inside an `<svg>` (or another SVG element) of an html template. A whole `<svg>` graphic is written with html.
 
 ### Classes
 
@@ -10656,7 +11013,7 @@ The prop builders.
 | [`AnyStoreInstance`](#core-anystoreinstance) | Any store instance, with its types erased. |
 | [`CallInput`](#core-callinput) | The input of a `call()` command. |
 | [`ChildSource`](#core-childsource) | A child class, or a function returning it (for recursive or later-defined components). |
-| [`ChildValue`](#core-childvalue) | Everything a child hole accepts (view/02-bindings.md "Child values"). |
+| [`ChildValue`](#core-childvalue) | Everything a child hole accepts. |
 | [`Command`](#core-command) | A side effect described as data, plus pure mappers from its outcome to messages. |
 | [`CommandHandlers`](#core-commandhandlers) | How a command's outcome becomes a message. |
 | [`CommandInfo`](#core-commandinfo) |  |
@@ -10686,7 +11043,7 @@ The prop builders.
 | [`FormStateRestore`](#core-formstaterestore) | Framework message: native session restoration or autofill supplied control state. |
 | [`FormValue`](#core-formvalue) |  |
 | [`FormValues`](#core-formvalues) | A form's submitted text values, keyed by the definition's fields, for re-rendering the form with what was typed (sticky fields). |
-| [`GyralElement`](#core-gyralelement) | The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public instance API"). |
+| [`GyralElement`](#core-gyralelement) | The custom element `define()` produces: a plain `HTMLElement`. |
 | [`GyralElementClass`](#core-gyralelementclass) |  |
 | [`Head`](#core-head) | A page's head: what `renderPage()` writes on the server and `setHead()` applies on the client. |
 | [`HeadLink`](#core-headlink) | A metadata `<link>`: `alternate` (with `hreflang`), `icon` (with `sizes`, `type`), `manifest` (with `crossorigin`), `prev`/`next`, … Any other attribute is written as given. |
@@ -10698,7 +11055,7 @@ The prop builders.
 | [`HydrateStrategy`](#core-hydratestrategy) | When a server-rendered component hydrates. |
 | [`IntentInput`](#core-intentinput) | What the intent layer sees when an element's intent fires. |
 | [`IntentNames`](#core-intentnames) | A component's intent names, the keys of its `intent` object, as the view's `i` and as `intentsOf<typeof C>()`, so `data-intent=${i.Increment}` is checked (ADR 0023). |
-| [`IntentParser`](#core-intentparser) | Parses a platform event into one message variant, `IntentRejected`, or `undefined` to decline it: a synchronous `undefined` passes the event to the next intent outward for the same event (view/05-element.md "Declining"). |
+| [`IntentParser`](#core-intentparser) | Parses a platform event into one message variant, `IntentRejected`, or `undefined` to decline it: a synchronous `undefined` passes the event to the next intent outward for the same event. |
 | [`IntentRejected`](#core-intentrejected) | Framework message: an intent's input failed schema validation (ADR 0008). |
 | [`Intents`](#core-intents) | Intent parsers keyed by intent name (ADR 0001, ADR 0023). |
 | [`JsonValue`](#core-jsonvalue) | A JSON value: what a JSON-LD block holds. |
@@ -10708,17 +11065,20 @@ The prop builders.
 | [`OutputsOf`](#core-outputsof) | The output union of a `define()` class: `OutputsOf<typeof Item>`. |
 | [`OutputSource`](#core-outputsource) | Anything `child()` can read an output type from: a `define()` class. |
 | [`ParserCtx`](#core-parserctx) | What an intent parser gets besides the input: the reducers' context plus the component's current state, read-only. |
+| [`ParseResult`](#core-parseresult) | What an intent parser returns: a message, `IntentRejected` (invalid input), or `undefined` to decline the event. |
 | [`ParserFor`](#core-parserfor) | The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that variant; any other name is an intent of its own whose parser may produce any message. |
 | [`Prop`](#core-prop) | One declared prop: what a builder returns. |
-| [`PropDeclarations`](#core-propdeclarations) | The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per key. |
+| [`PropDeclarations`](#core-propdeclarations) | The prop builders for props type `P`: one `prop.*` builder per key. |
 | [`PropGuard`](#core-propguard) | A plain type guard, accepted by `prop.value` and `prop.json` in place of a schema. |
 | [`PropKind`](#core-propkind) |  |
 | [`PropsChanged`](#core-propschanged) | Framework message: declared props changed after the first render (ADR 0007). |
 | [`PropsOf`](#core-propsof) | The props type of a table of builders: `PropsOf<typeof props>`. |
 | [`RawResult`](#core-rawresult) | Trusted markup for a child hole: what `raw(html)` returns. |
+| [`Reducer`](#core-reducer) | One entry of `update`: takes the state, one message (`Msg`, a variant of `M` or a framework message) and the read-only context, and returns the next state, optionally with commands that produce more `M` messages. |
 | [`RetryPolicy`](#core-retrypolicy) | How `retry(driver, policy)` retries a rejected run (retry.ts). |
 | [`SeedCheck`](#core-seedcheck) | The result of checking a seed against a store's schema. |
 | [`ShadowOption`](#core-shadowoption) | `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM. |
+| [`StandardSchemaV1`](#core-standardschemav1) | The Standard Schema interface. |
 | [`Stateless`](#core-stateless) | State of a component that keeps none (a pure view of its props). |
 | [`Store`](#core-store) |  |
 | [`StoreChanged`](#core-storechanged) | Framework message: a store this component reads changed (ADR 0013). |
@@ -10737,6 +11097,7 @@ The prop builders.
 | [`TemplateResult`](#core-templateresult) | What `html` returns: a template plus this render's values. |
 | [`Unsubscribe`](#core-unsubscribe) | How to stop listening: a function, or an object with `unsubscribe()` (RxJS, XState). |
 | [`Update`](#core-update) | One pure reducer per message tag (exhaustive by construction), plus optional reducers for framework messages. |
+| [`Variant`](#core-variant) | The member of message union `M` whose tag is `K`: `Variant<Msg, 'Add'>`. |
 
 #### `AnyDriver`
 
@@ -10770,7 +11131,7 @@ interface AnyStoreInstance {
     dispose(): void;
     /**
      * Called by the registry that holds this instance, so the store's `send(other, msg)`
-     * commands reach `other`'s instance in the same scope (gyral-czi.20).
+     * commands reach `other`'s instance in the same scope.
      */
     bindScope?(resolve: StoreResolver): void;
 }
@@ -10804,7 +11165,7 @@ A child class, or a function returning it (for recursive or later-defined compon
 type ChildValue = string | number | boolean | null | undefined | typeof nothing | TemplateResult | ListResult | RawResult | readonly ChildValue[];
 ```
 
-Everything a child hole accepts (view/02-bindings.md "Child values").
+Everything a child hole accepts.
 
 #### `Command`
 
@@ -11177,8 +11538,7 @@ interface GyralElement<S, M extends Tagged> extends HTMLElement {
 }
 ```
 
-The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public
-instance API"). Tests wait for rendering with `settled()`.
+The custom element `define()` produces: a plain `HTMLElement`. Tests wait for rendering with `settled()`.
 
 #### `GyralElementClass`
 
@@ -11279,7 +11639,7 @@ What a hook returns in a template: `<input ${invalid(errors)}>`.
 
 ```ts
 interface HookSpec<A extends readonly unknown[]> {
-    /** Attributes for the server-rendered start tag (view/06-server.md). */
+    /** Attributes for the server-rendered start tag. */
     server?(args: A): HookAttributes;
     /** Runs after the commit when `args` changed; `prev` is undefined the first time. */
     client(el: Element, args: A, prev: A | undefined): void;
@@ -11289,7 +11649,7 @@ interface HookSpec<A extends readonly unknown[]> {
      */
     readonly update?: 'args' | 'always';
     /**
-     * Teardown, with the last arguments `client` got (view/02 "Widgets with a lifecycle"): runs
+     * Teardown, with the last arguments `client` got: runs
      * when Gyral removes the element, when the position stops holding this hook, or when the host
      * disconnects (not on moves). After a host reconnects, `client` runs again with `prev`
      * undefined.
@@ -11346,7 +11706,7 @@ interface IntentInput {
     readonly key: string | undefined;
     /** For `toggle` intents (popover, `<details>`): the state it changed to. */
     readonly newState: 'open' | 'closed' | undefined;
-    /** For `command` intents: the invoker's command (e.g. `--clear`) and source (gyral-czi.6). */
+    /** For `command` intents: the invoker's command (e.g. `--clear`) and source. */
     readonly command: CommandInfo | undefined;
 }
 ```
@@ -11372,7 +11732,7 @@ type IntentParser<M, P = unknown, S = unknown> = (input: IntentInput, ctx: Parse
 
 Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
 decline it: a synchronous `undefined` passes the event to the next intent outward for the
-same event (view/05-element.md "Declining"). May be async because schema validation may be;
+same event. May be async because schema validation may be;
 an async parser keeps the event. `ctx` is the read-only context reducers get (props as
 they are when the event fires, `read(store)`) plus `state`, the component's state at that
 moment; parsers that don't need it take one parameter.
@@ -11488,6 +11848,15 @@ What an intent parser gets besides the input: the reducers' context plus the com
 current state, read-only. Parsers decide synchronously (`preventDefault()`), and where the
 user is often decides it: Tab leaves a grid only from its last cell.
 
+#### `ParseResult`
+
+```ts
+type ParseResult<M> = M | IntentRejected | undefined;
+```
+
+What an intent parser returns: a message, `IntentRejected` (invalid input), or `undefined` to
+decline the event.
+
 #### `ParserFor`
 
 ```ts
@@ -11534,7 +11903,7 @@ type PropDeclarations<P> = {
 };
 ```
 
-The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per
+The prop builders for props type `P`: one `prop.*` builder per
 key. A builder's output type must fit the prop's type, so a prop whose type excludes
 `undefined` needs `required: true` or a `default` (the honesty rule, ADR 0007 addendum).
 Without explicit type arguments, `define()` infers `P` from the builders.
@@ -11587,6 +11956,22 @@ interface RawResult {
 
 Trusted markup for a child hole: what `raw(html)` returns.
 
+#### `Reducer`
+
+```ts
+type Reducer<S, M, Msg, P = object> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
+```
+
+One entry of `update`: takes the state, one message (`Msg`, a variant of `M` or a framework
+message) and the read-only context, and returns the next state, optionally with commands
+that produce more `M` messages. To type a reducer written outside the spec:
+
+
+```ts
+const add: Reducer<State, Msg, Variant<Msg, 'Add'>, object> = (s, m) => …
+```
+
+
 #### `RetryPolicy`
 
 ```ts
@@ -11633,7 +12018,18 @@ type ShadowOption = boolean | {
 `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
 `delegatesFocus: true`: focusing the host, or clicking a non-focusable part of it, focuses its
 first focusable element, and `:focus` matches the host while focus is inside; the server
-writes `shadowrootdelegatesfocus` on the declarative shadow root (view/05-element.md "Focus").
+writes `shadowrootdelegatesfocus` on the declarative shadow root.
+
+#### `StandardSchemaV1`
+
+```ts
+interface StandardSchemaV1<Input = unknown, Output = Input> {
+    /** The Standard Schema properties. */
+    readonly "~standard": StandardSchemaV1.Props<Input, Output>;
+}
+```
+
+The Standard Schema interface.
 
 #### `Stateless`
 
@@ -11859,6 +12255,16 @@ type Update<S, M extends Tagged, P = object> = {
 
 One pure reducer per message tag (exhaustive by construction), plus optional reducers
 for framework messages. Reducers may return commands.
+
+#### `Variant`
+
+```ts
+type Variant<M extends Tagged, K> = Extract<M, {
+    readonly _tag: K;
+}>;
+```
+
+The member of message union `M` whose tag is `K`: `Variant<Msg, 'Add'>`.
 
 ## `@gyral/core/storage`
 
@@ -12203,7 +12609,7 @@ With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
 | Name | Summary |
 | --- | --- |
 | [`ComponentsOptions`](#core-vite-componentsoptions) |  |
-| [`ElementTypesOptions`](#core-vite-elementtypesoptions) | Where the preset looks for components and writes their typings (gyral-1zd.25). |
+| [`ElementTypesOptions`](#core-vite-elementtypesoptions) | Where the preset looks for components and writes their typings. |
 | [`GyralViteConfig`](#core-vite-gyralviteconfig) |  |
 | [`GyralViteOptions`](#core-vite-gyralviteoptions) |  |
 | [`TemplateCompilerOptions`](#core-vite-templatecompileroptions) |  |
@@ -12235,7 +12641,7 @@ interface ElementTypesOptions {
 }
 ```
 
-Where the preset looks for components and writes their typings (gyral-1zd.25).
+Where the preset looks for components and writes their typings.
 
 #### `GyralViteConfig`
 
@@ -12264,7 +12670,7 @@ interface GyralViteOptions {
     readonly compiler?: TemplateCompilerOptions;
     /**
      * The app is never server-rendered: leave the hydration code out of the browser bundle
-     * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
+     * (`gyralClientOnly()`). Default false.
      */
     readonly clientOnly?: boolean;
     /**
@@ -13439,7 +13845,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/ssr`](#gy
 | [`renderPage`](#ssr-renderpage) | An HTML `Response` for a full page, its body pulled in chunks from a synchronous render (one component boundary per pull): load data first, since nothing is awaited and there is no async or suspense streaming. |
 | [`renderToString`](#ssr-rendertostring) | Renders to a complete string (tests, caching, static generation), with this request's stores in scope (ADR 0013). |
 | [`seeOther`](#ssr-seeother) | 303 See Other: the redirect that turns a POST into a GET (no resubmit on reload). |
-| [`styleHashes`](#ssr-stylehashes) | `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`, for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server"). |
+| [`styleHashes`](#ssr-stylehashes) | `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`, for a `Content-Security-Policy` `style-src`. |
 | [`wantsJson`](#ssr-wantsjson) | Whether the request asks for JSON rather than a page (`Accept: application/json` without `text/html`): `submitForm` and other fetch calls do, a browser's form post doesn't. |
 
 #### `contentSecurityPolicy`
@@ -13518,7 +13924,7 @@ function styleHashes(): Promise<readonly string[]>;
 ```
 
 `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`,
-for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server").
+for a `Content-Security-Policy` `style-src`.
 
 #### `wantsJson`
 
@@ -13587,6 +13993,12 @@ CSP directives by name: a source list, as one string or a list of sources.
 
 ```ts
 interface CspOptions {
+    /**
+     * Precomputed component `<style>` hashes from `styleHashes()` at build time. Append them
+     * to registered component hashes, allowing a policy-only server to read JSON metadata
+     * without executing every component module. Regenerate with each release's actual CSS.
+     */
+    readonly componentStyleHashes?: readonly string[];
     /**
      * Your other directives (`default-src`, `script-src`, …). A `style-src` given here is kept
      * and the hashes are appended; without one it is `'self'` plus the hashes.
@@ -13723,7 +14135,7 @@ interface RenderOptions {
      */
     readonly stores?: readonly AnyStoreInstance[];
     /**
-     * Development markers and checks (view/06-server.md "Development markers"). Default: on when
+     * Development markers and checks. Default: on when
      * `@gyral/core` resolves with the `development` condition (Vite's dev server, Vitest).
      */
     readonly dev?: boolean;
@@ -13752,10 +14164,11 @@ interface RenderOptions {
 | Name | Summary |
 | --- | --- |
 | [`assetHandler`](#ssr-static-assethandler) | Serves content-hashed files from `dir` at `prefix` (`/assets/` by default) for GET and HEAD, with `cache-control: public, max-age=31536000, immutable`, `content-type` by extension, `content-length` and `x-content-type-options: nosniff`. |
-| [`clientAssetsFromManifest`](#ssr-static-clientassetsfrommanifest) | `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also` as for `clientAssets`. |
+| [`clientAssetsFromManifest`](#ssr-static-clientassetsfrommanifest) | `ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). |
 | [`componentsFromManifest`](#ssr-static-componentsfrommanifest) | `componentAssets` read from a client build directory (`dist/client`): its `.vite/manifest.json` and the preset's `.vite/gyral-components.json`. |
 | [`prerender`](#ssr-static-prerender) | Renders each path through the app (exactly what a request would get) and writes the HTML. |
 | [`productionServer`](#ssr-static-productionserver) | A production request handler (framework-neutral: mount its `fetch` in Hono, Node, …): - `GET`/`HEAD /assets/*`: content-hashed client build output, cached immutable (`assetHandler`); - `GET`/`HEAD` of a prerendered path: the `static/` file, revalidated on every use; - everything else (other GETs, POSTs): the request-time app, `no-cache` unless it set one. |
+| [`writeComponentStyleManifest`](#ssr-static-writecomponentstylemanifest) | After the client build, automatically import its discovered/listed component modules in a temporary SSR bundle and fresh Node process, then write their real `styleHashes()` as JSON. |
 
 #### `assetHandler`
 
@@ -13778,8 +14191,10 @@ it); several ranges get the whole file. Hashed files never change, so `If-Range`
 function clientAssetsFromManifest(manifestPath: string, entry: string, also?: readonly string[], options?: ManifestOptions): Promise<ClientAssets>;
 ```
 
-`ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`); `also`
-as for `clientAssets`.
+`ClientAssets` for `entry`, read from a Vite build manifest (`build.manifest: true`). `also`:
+manifest keys of modules the page will import lazily (a route's module, by source path such
+as `src/routes/product.ts`), preloaded too, each with its static imports and CSS.
+`options.base`: Vite's `base`, which every URL starts with.
 
 #### `componentsFromManifest`
 
@@ -13815,6 +14230,18 @@ A production request handler (framework-neutral: mount its `fetch` in Hono, Node
 Its `fetch` passes the server's `env` (`toNodeListener`'s `{ incoming, remoteAddress }`) on to
 the app, so the app can read the client's address.
 
+#### `writeComponentStyleManifest`
+
+```ts
+function writeComponentStyleManifest(options: ComponentStyleManifestOptions): Promise<ComponentStyleManifest>;
+```
+
+After the client build, automatically import its discovered/listed component modules in a
+temporary SSR bundle and fresh Node process, then write their real `styleHashes()` as JSON.
+This executes trusted application module initialization at BUILD time: modules must be
+SSR-safe. It is not AST guessing and must not run against untrusted source. Vite is loaded
+only when invoked; production reads the resulting JSON into `CspOptions.componentStyleHashes`.
+
 ### Types and interfaces
 
 | Name | Summary |
@@ -13823,6 +14250,8 @@ the app, so the app can read the client's address.
 | [`AssetHandler`](#ssr-static-assethandler) | Answers a request under the prefix, `undefined` for any other path. |
 | [`AssetHandlerOptions`](#ssr-static-assethandleroptions) |  |
 | [`ClientAssets`](#ssr-static-clientassets) | What a server-rendered page loads: the client entry, the modules to preload, the CSS. |
+| [`ComponentStyleManifest`](#ssr-static-componentstylemanifest) |  |
+| [`ComponentStyleManifestOptions`](#ssr-static-componentstylemanifestoptions) |  |
 | [`FetchApp`](#ssr-static-fetchapp) | Anything with a fetch handler: a Hono app, or a plain function. |
 | [`ManifestChunk`](#ssr-static-manifestchunk) | One chunk of Vite's `.vite/manifest.json` (the fields serving uses). |
 | [`ManifestOptions`](#ssr-static-manifestoptions) | Where the build is served: Vite's `base` (default `/`), which the manifest's paths omit. |
@@ -13905,6 +14334,33 @@ interface ClientAssets {
 ```
 
 What a server-rendered page loads: the client entry, the modules to preload, the CSS.
+
+#### `ComponentStyleManifest`
+
+```ts
+interface ComponentStyleManifest {
+    readonly schema: 1;
+    /** Sorted, deduplicated, quoted CSP SHA-256 sources for actual serialized shadow styles. */
+    readonly hashes: readonly string[];
+}
+```
+
+
+#### `ComponentStyleManifestOptions`
+
+```ts
+interface ComponentStyleManifestOptions {
+    /** Application root used by its client build. Its component modules must be SSR-safe. */
+    readonly root: string;
+    /** Client output from `gyralVitePreset({ components: true })`, including `.vite` metadata. */
+    readonly clientDir: string;
+    /** Standalone JSON deployment artifact; no component module is needed to read it later. */
+    readonly outFile: string;
+    /** Build-time aliases/plugins used by application modules. No config file is loaded. */
+    readonly vite?: InlineConfig;
+}
+```
+
 
 #### `FetchApp`
 
@@ -14015,7 +14471,7 @@ interface ProductionOptions<Env = unknown> {
      * `modulepreload` and `stylesheets` on to `renderPage` so pages preload what the entry needs
      * and link its hashed CSS. A page that imports modules lazily (a route's chunk) spreads
      * `assets(modules)` instead: both lists plus those modules, their imports and their CSS
-     * (`clientAssets`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
+     * (`clientAssetsFromManifest`' `also`). `preload(modules)` is `assets(modules).modulepreload`.
      */
     readonly createApp: (options: AppAssets) => FetchApp<Env>;
     /**
@@ -14095,7 +14551,7 @@ A `node:http` request listener that runs `fetch` for each request:
 | [`DevServerContext`](#ssr-node-devservercontext) | What `gyralDevServer` hands the app factory with each freshly loaded module. |
 | [`DevServerOptions`](#ssr-node-devserveroptions) |  |
 | [`FetchHandler`](#ssr-node-fetchhandler) | A fetch handler: `productionServer(…).fetch`, a Hono app's `fetch`, or a plain function. |
-| [`NodeEnv`](#ssr-node-nodeenv) | What `toNodeListener` passes as the handler's second argument (gyral-dyn.29): the Node request and the client's address. |
+| [`NodeEnv`](#ssr-node-nodeenv) | What `toNodeListener` passes as the handler's second argument: the Node request and the client's address. |
 | [`NodeListener`](#ssr-node-nodelistener) | A Node `request` listener: `createServer(toNodeListener(app.fetch))`. |
 | [`NodeListenerOptions`](#ssr-node-nodelisteneroptions) |  |
 
@@ -14189,7 +14645,7 @@ interface NodeEnv {
 }
 ```
 
-What `toNodeListener` passes as the handler's second argument (gyral-dyn.29): the Node request
+What `toNodeListener` passes as the handler's second argument: the Node request
 and the client's address. `{ incoming }` is the shape Hono's Node adapter uses, so
 `getConnInfo` from `@hono/node-server/conninfo` works unchanged.
 
@@ -14246,7 +14702,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/testing`]
 | [`commandsFor`](#testing-commandsfor) | The commands addressed to `driver` (matched by name, so fakes and real drivers agree). |
 | [`fakeDriver`](#testing-fakedriver) | A recording driver for DOM-level tests: `el.drivers = { http: fakeDriver(http) }`. |
 | [`focusTargetsIn`](#testing-focustargetsin) | The focus requests among the commands (`focus(selector, options)`), in order: |
-| [`hydrated`](#testing-hydrated) | Waits until the page's Gyral components have rendered (docs/design-docs/view/04-scheduler.md "`settled()`"): releases lazy islands if asked, then `await settled()`. |
+| [`hydrated`](#testing-hydrated) | Waits until the page's Gyral components have rendered (see `settled()`): releases lazy islands if asked, then `await settled()`. |
 | [`initial`](#testing-initial) | Runs `init` without a DOM. |
 | [`inputsFor`](#testing-inputsfor) | The inputs of the commands addressed to `driver`; given a store, the messages the commands `send()` to it, in order (ADR 0013). |
 | [`mount`](#testing-mount) | Creates `component` (a class from `define()` or a registered tag name), sets `props`, `attrs`, `drivers` and `stores`, appends it, and waits for its first render. |
@@ -14260,6 +14716,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/testing`]
 | [`step`](#testing-step) | Feeds one message through `update` without a DOM. |
 | [`stepStore`](#testing-stepstore) | Feeds one message through a store's `update` without an instance. |
 | [`subscriptionsFor`](#testing-subscriptionsfor) | The commands `spec.subscriptions` asks to keep running for `state` and `props` (ADR 0025), without a DOM: `subscriptionsFor(Clock.spec, { live: true })`. |
+| [`viewOf`](#testing-viewof) | Calls a component's pure view without mounting, a DOM shim or consumer casts. |
 | [`virtualTime`](#testing-virtualtime) | Replaces timers and `Date` with a virtual clock (ADR 0006, "Testing"). |
 
 #### `callsIn`
@@ -14333,8 +14790,7 @@ expect(focusTargetsIn(next.commands)).toEqual([{ selector: '#results' }]);
 function hydrated(page: MountedSsr | ParentNode, options?: HydratedOptions): Promise<void>;
 ```
 
-Waits until the page's Gyral components have rendered (docs/design-docs/view/04-scheduler.md
-"`settled()`"): releases lazy islands if asked, then `await settled()`. Islands still
+Waits until the page's Gyral components have rendered (see `settled()`): releases lazy islands if asked, then `await settled()`. Islands still
 deferred are left alone. It throws when a server-rendered custom element never upgraded
 (import its module, or list it in `allowUndefined`). Given a `MountedSsr`, it also throws
 when console errors/warnings or uncaught errors were recorded since mounting.
@@ -14465,6 +14921,16 @@ The commands `spec.subscriptions` asks to keep running for `state` and `props` (
 without a DOM: `subscriptionsFor(Clock.spec, { live: true })`. A spec without the field gives
 none. Assert their inputs with `inputsFor`, as for any commands.
 
+#### `viewOf`
+
+```ts
+function viewOf<S, M extends Tagged, P, N extends string>(component: ComponentSpec<S, M, P, N> | GyralElementClass<S, M, P, Tagged, N>, state: NoInfer<S>, options?: ViewOptions<NoInfer<P>>): ChildValue;
+```
+
+Calls a component's pure view without mounting, a DOM shim or consumer casts. Use
+`renderToString(viewOf(Component, state, { props, stores }), { dev: false })` for stable
+HTML assertions. Hooks, native validity, focus and hydration need real-browser tests.
+
 #### `virtualTime`
 
 ```ts
@@ -14497,6 +14963,7 @@ so model and driver tests can use it in a Node project.
 | [`RunOptions`](#testing-runoptions) |  |
 | [`StepMessage`](#testing-stepmessage) | Any message `update` accepts: the component's own, or a framework message. |
 | [`Stepped`](#testing-stepped) | A reducer result, normalised: the new state plus the commands it asked for. |
+| [`ViewOptions`](#testing-viewoptions) |  |
 | [`VirtualTime`](#testing-virtualtime) | Controls time in a test. |
 | [`WithOutputs`](#testing-withoutputs) | Anything carrying a component's output union: a `define()` class. |
 
@@ -14721,6 +15188,16 @@ interface Stepped<S, M> {
 ```
 
 A reducer result, normalised: the new state plus the commands it asked for.
+
+#### `ViewOptions`
+
+```ts
+interface ViewOptions<P> {
+    readonly props?: P;
+    readonly stores?: readonly AnyStoreInstance[];
+}
+```
+
 
 #### `VirtualTime`
 
@@ -15019,7 +15496,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.1/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.2/docs/design-docs).
 
 ## The platform is the framework
 
@@ -15898,6 +16375,75 @@ export function chartClicks<M>(toMsg: (bar: number) => M | undefined): Command<M
     },
   );
 }
+```
+
+### Workload lab
+
+Heavier work under the same rules: a module worker behind a driver that a subscription starts and cancels, timed steps, a booking form with retries, and a canvas grid with pointer capture.
+
+- Source: https://github.com/gyraljs/gyral/tree/main/examples/workload-lab
+- Explained in: [Subscriptions](https://gyral.dev/docs/update/#subscriptions), [Writing a driver](https://gyral.dev/docs/effects/#writing-a-driver)
+
+`src/solver.ts`:
+
+```ts
+import { command, define, html } from '@gyral/core';
+import { solver } from './solver-driver.js';
+import { controls } from './styles.js';
+
+interface State {
+  readonly job: number;
+  readonly status: 'idle' | 'running' | 'done' | 'failed';
+  readonly report: string;
+}
+type Msg =
+  | { readonly _tag: 'Generate' }
+  | { readonly _tag: 'Cancel' }
+  | { readonly _tag: 'Solved'; readonly job: number; readonly checksum: number }
+  | { readonly _tag: 'Failed'; readonly job: number; readonly error: string };
+export const Solver = define<State, Msg>()('gy-solver', {
+  init: () => ({ job: 0, status: 'idle', report: 'Worker idle' }),
+  intent: { Generate: true, Cancel: true },
+  subscriptions: (s) =>
+    s.status === 'running'
+      ? [
+          command(
+            solver,
+            { id: s.job, iterations: 300_000 },
+            {
+              key: 'solver:job',
+              concurrency: 'switch',
+              onSuccess: (result) => ({
+                _tag: 'Solved',
+                job: result.id,
+                checksum: result.checksum,
+              }),
+              onFailure: (error) => ({ _tag: 'Failed', job: s.job, error }),
+            },
+          ),
+        ]
+      : [],
+  update: {
+    Generate: (s) => ({ ...s, job: s.job + 1, status: 'running', report: 'Worker running' }),
+    Cancel: (s) => ({ ...s, status: 'idle', report: 'Worker cancelled' }),
+    Solved: (s, m) =>
+      s.status === 'running' && m.job === s.job
+        ? { ...s, status: 'done', report: `Worker result: ${String(m.checksum)}` }
+        : s,
+    Failed: (s, m) =>
+      s.status === 'running' && m.job === s.job ? { ...s, status: 'failed', report: m.error } : s,
+  },
+  view: (s, i) => html`
+    <div class="actions">
+      <button type="button" data-intent=${i.Generate}>Generate in worker</button>
+      <button type="button" data-intent=${i.Cancel} ?disabled=${s.status !== 'running'}>
+        Cancel worker
+      </button>
+    </div>
+    <output aria-live="polite">${s.report}</output>
+  `,
+  styles: controls,
+});
 ```
 
 ## Components and shared state
