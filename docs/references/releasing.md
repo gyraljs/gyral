@@ -148,6 +148,25 @@ tests; SSR: three server tests and a prerendered page), and both generated manif
 `^0.3.2`. Client builds are unchanged from 0.3.1: basic 21.9 KiB JS (8.3 KiB gzip), SSR
 34.4 KiB JS (14.1 KiB gzip). As for 0.3.1, these do not replace step 6's registry-only checks.
 
+Recorded 0.3.2 registry checks (2026-10-12, step 6): all nine packages serve 0.3.2 as
+`latest` with SLSA v1 provenance. `npm create gyral@0.3.2` generated both templates in fresh
+directories, and npm installed them. Each app's `typecheck`, `build` and `test` pass (basic:
+two Chromium tests; SSR: three server tests and a prerendered page), and client builds match
+the candidate checks (basic 21.9 KiB JS, SSR 34.4 KiB JS). Both manifests depend on `^0.3.2`,
+with no overrides. Every lockfile entry resolves from `registry.npmjs.org` with SHA-512
+integrity; no entry uses `file:`, `link:` or a vendor tarball, and no Lit package is installed.
+`node scripts/verify-ssr-production.mjs` (exact 0.3.2) and the Rust compatibility fixture
+(gyral-rs `1131fef`) also pass.
+
+The MCP check **fails as documented**: `npx -y @gyral/mcp@0.3.2` (and unversioned
+`npx -y @gyral/mcp`) exits with "could not determine executable to run". 0.3.2 added a second
+bin, `gyral-mcp-http`, and npx runs a package without naming a command only when it has one
+bin or a bin named after the package (`mcp`). 0.3.1 has a single bin and still starts. The
+published server itself works: `npx -y -p @gyral/mcp@0.3.2 gyral-mcp` starts over stdio,
+answers `initialize` as `gyral 0.3.2` and lists eight tools, including `start_here`, which
+returns its guide. `verify:install` missed this because it starts the installed `gyral-mcp`
+bin directly. Fixing the documented command needs a patch release.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
