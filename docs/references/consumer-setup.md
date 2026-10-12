@@ -67,7 +67,7 @@ export default defineConfig({
   runtime where each `html` and `svg` template was written, so template rule errors and
   hydration mismatches name your file, line and column (view/01-templates.md "Source
   locations"). It rewrites each call site through an imported virtual location helper (`svg`
-  the same way) and moves no authored line. Since the next release (unreleased), the helper's
+  the same way) and moves no authored line. Since 0.3.2, the helper's
   fallbacks live outside your sources, so application V8 coverage counts only your own branches.
 - **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
   (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
@@ -94,8 +94,8 @@ Keep `gyralVitePreset()` in the tested project and include your application sour
 in Vitest coverage, for example `coverage: { provider: 'v8', include: ['src/**/*.ts'] }`.
 Install `@vitest/coverage-v8` at the same version as Vitest. The development locator preserves
 source maps and authored branch counts; you do not need to remove diagnostics or lower a
-coverage threshold. This correction is unreleased (on `main`, next release): on npm 0.3.1 the
-locator's fallbacks still count as branches, so keep an existing workaround until you upgrade. The regression uses Vitest 5.0.3 and an aliased template tag.
+coverage threshold. This correction ships since 0.3.2: on 0.3.1 the locator's fallbacks still
+count as branches, so keep an existing workaround until you upgrade. The regression uses Vitest 5.0.3 and an aliased template tag.
 Istanbul instrumentation is not covered by that comparison.
 
 ### Element typings

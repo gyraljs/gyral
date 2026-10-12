@@ -1,5 +1,20 @@
 # @gyral/core
 
+## 0.3.2
+
+### Patch Changes
+
+- Export the helper types `Reducer`, `Variant`, `ParseResult` and `StandardSchemaV1` (type-only),
+  so reducers and parsers written outside a component spec can be typed without copying
+  Gyral's internal definitions.
+- The development template locator no longer adds branches to your coverage reports: call
+  sites now go through a virtual helper module instead of an inline `.at?.() ?? html` fallback.
+- The components build metadata (`.vite/gyral-components.json`) gains `chunkModules`, which maps
+  each emitted chunk to the root-relative source modules it contains, including workspace
+  modules Vite merged into a shared chunk. Offline caches and service workers can use it to
+  know which chunk serves which module.
+- Public doc comments no longer point at repository paths or tracker IDs.
+
 ## 0.3.1
 
 ### Patch Changes

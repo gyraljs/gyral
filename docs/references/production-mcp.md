@@ -1,8 +1,13 @@
 # Hosting the public Gyral MCP
 
-The owner chose public access for coding agents. Proposed URL: `https://mcp.gyral.dev/mcp`.
-This is a deployment recipe, not a claim that the endpoint or new HTTP binary is live.
-Current registry 0.3.1 supports stdio. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).
+The public Gyral MCP server is live at `https://mcp.gyral.dev/mcp` (Streamable HTTP,
+anonymous, read-only; no token). Point any MCP client that supports Streamable HTTP at that
+URL; see [Client review](#client-review) for what to check. The deployed container serves the
+0.3.1 corpus (`/healthz` reports `"version":"0.3.1"`, and `initialize` answers as `gyral 0.3.1`
+with six tools) until it is rebuilt and redeployed with the 0.3.2 corpus, which adds
+`start_here`. The `gyral-mcp-http` binary ships in `@gyral/mcp` since 0.3.2; earlier npm
+versions have only the stdio binary. This page is the recipe for building, deploying and
+updating that service. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).
 
 ## Artifact and local review
 
@@ -33,8 +38,8 @@ unused private subnet; the review never prunes other projects' networks.
 
 The artifact contains docs/API/examples/skill at build time. Before production, stage a new
 release's matching gyral.dev snapshot with `pnpm mcp:refresh --from <site dist>` and follow
-[releasing.md](releasing.md). During development the package still says 0.3.1; do not mistake
-that rebuilt corpus for the already published npm artifact. Keep the prior artifact/image
+[releasing.md](releasing.md). Between releases the package still carries the last released
+version; do not mistake a corpus rebuilt from `main` for the published npm artifact. Keep the prior artifact/image
 digest for rollback. Do not enable `GYRAL_DOCS_URL` for public hosting; the HTTP binary ignores it.
 
 An HTTP server built from current source can instead serve the complete corpus from an
@@ -146,8 +151,8 @@ an inspected unused subnet if Docker's default address pools are exhausted.
 
 ## Client review
 
-Configure a remote client for **Streamable HTTP** with URL `https://mcp.gyral.dev/mcp` after
-rollout, or `http://127.0.0.1:5950/mcp` during the local container review. No token is needed.
+Configure a remote client for **Streamable HTTP** with URL `https://mcp.gyral.dev/mcp` (live),
+or `http://127.0.0.1:5950/mcp` during the local container review. No token is needed.
 It must process the server's initialization instructions and support tools/resources/prompts.
 Read `gyral://skill`, then request task-specific docs/API/example sections instead of every
 export. Validate generated code in the consumer's own installed package version. The public
@@ -170,12 +175,12 @@ The app starts no timers, refresh jobs or persistent storage, and has no databas
 
 ## Hosting decisions
 
-The owner chose manual deployment on an existing server using Traefik; agent server access
-is excluded. Confirm the existing network/entrypoint/resolver names and arrange
-`mcp.gyral.dev` DNS/TLS during that rollout. Public access is settled. A source-built HTTP
-image with the published 0.3.1 corpus can serve current users; future corpus updates follow
-the matching npm/site release gate.
-Client-specific connection instructions should be verified against installed client versions
-when rollout is authorized; a client that only supports legacy HTTP+SSE should use stdio.
+The owner deploys manually on an existing server using Traefik; agent server access is
+excluded. `mcp.gyral.dev` is live behind that Traefik instance with a source-built HTTP image
+serving the published 0.3.1 corpus. After each npm release, rebuild the image with that
+release's corpus (`--released-corpus X.Y.Z`), redeploy it by digest and check `/healthz`
+reports the new version and digest. Verify client-specific connection instructions against
+installed client versions before announcing support; a client that only supports legacy
+HTTP+SSE should use stdio.
 
 Protocol reference: [Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).

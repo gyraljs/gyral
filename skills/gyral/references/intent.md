@@ -286,7 +286,7 @@ it, and TypeScript reports a long error ending in "`IntentParser<Msg, …>` is n
 `IntentParser<{ _tag: 'Qty'; … }, …>`". Inside the spec, leave the return type off: the key types
 it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
 type (`Extract<Msg, { _tag: 'Qty' }> | undefined`, or `ParseResult<Variant<Msg, 'Qty'>>`, which
-also allows `IntentRejected`; both type exports are **unreleased**: next release). The same holds
+also allows `IntentRejected`; both type exports are available since 0.3.2). The same holds
 for `child()`, `form()` and `field()` mappers.
 
 ## Props, state and stores in a parser: `(input, ctx)`

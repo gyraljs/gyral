@@ -138,6 +138,16 @@ tests; SSR: three server tests and a prerendered page). Client builds: basic 21.
 (8.3 KiB gzip), SSR 34.4 KiB JS (14.1 KiB gzip). These are pre-publication tarball checks;
 they do not replace step 6's registry-only checks after npm approval.
 
+Recorded 0.3.2 candidate checks (2026-10-12): `pnpm check` passes (312 test files, 2016
+tests). `verify:install` passes with nine tarballs, all 18 Node-loadable entries, native SSR
+output and the installed MCP stdio binary's eight tools (`start_here` is new). The verifier
+adds no extra peers, and no Lit package is installed.
+
+Both `verify:create` templates typecheck, build and pass their tests (basic: two Chromium
+tests; SSR: three server tests and a prerendered page), and both generated manifests depend on
+`^0.3.2`. Client builds are unchanged from 0.3.1: basic 21.9 KiB JS (8.3 KiB gzip), SSR
+34.4 KiB JS (14.1 KiB gzip). As for 0.3.1, these do not replace step 6's registry-only checks.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

@@ -1,5 +1,15 @@
 # @gyral/testing
 
+## 0.3.2
+
+### Patch Changes
+
+- Add `viewOf(Component, state, { props, stores })`, which calls a component's pure view without
+  mounting it or a DOM shim. Pass the result to `renderToString(..., { dev: false })` for
+  stable HTML assertions in Node. Hooks, native validity, focus and hydration still need
+  browser tests.
+- Update the `@gyral/core` dependency to 0.3.2.
+
 ## 0.3.1
 
 ### Patch Changes
