@@ -154,7 +154,8 @@ export function handle(request: Request): Response {
 // Client
 type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
-  init: () => [{ path: '/' }, [listen((location) => ({ _tag: 'Routed', location }))]],
+  init: () => ({ path: '/' }),
+  subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))],
   update: {
     Routed: (_s, { location }) => [
       { path: location.pathname },
@@ -181,7 +182,7 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 
 ## Content-Security-Policy
 
-The staged next release adds build-only `writeComponentStyleManifest` in `@gyral/ssr/static`
+The next release (unreleased) adds build-only `writeComponentStyleManifest` in `@gyral/ssr/static`
 and `CspOptions.componentStyleHashes` for policy-only servers. These APIs are not in npm 0.3.1;
 on 0.3.1 import components and call `styleHashes()` during the build. Keep the resulting
 policy/HTML/assets in one release. Document CSS links use `style-src 'self'`; inline attributes

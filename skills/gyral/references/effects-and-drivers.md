@@ -264,7 +264,8 @@ type Msg = { readonly _tag: 'Routed'; readonly location: RouteLocation };
 
 export const App = define<State, Msg>()('my-app', {
   shadow: false, // a page-level component: fragment targets are in the document
-  init: () => [{ route: undefined }, [listen((location): Msg => ({ _tag: 'Routed', location }))]],
+  init: () => ({ route: undefined }),
+  subscriptions: () => [listen((location): Msg => ({ _tag: 'Routed', location }))],
   update: {
     // Not on the page load (seq 0); h1 needs tabindex="-1".
     Routed: (_s, m) => [
@@ -306,8 +307,9 @@ const toSearch = (s: State): string =>
   `?${new URLSearchParams({ q: s.q, sort: s.sort }).toString()}`;
 
 export const Filters = define<State, Msg>()('search-filters', {
+  init: () => fromSearch(''),
   // listen() delivers the current location first, so the query is read in one place.
-  init: () => [fromSearch(''), [listen((location): Msg => ({ _tag: 'Routed', location }))]],
+  subscriptions: () => [listen((location): Msg => ({ _tag: 'Routed', location }))],
   intent: {
     Filter: (input) => ({
       _tag: 'Filter',

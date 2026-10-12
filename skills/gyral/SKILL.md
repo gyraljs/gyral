@@ -122,9 +122,6 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 
 ## References (read on demand)
 
-- `references/workloads.md` — state-owned sequences, workers, authoritative drafts, held input, readiness and lifetime boundaries
-- `references/production.md` — strict CSP, Node composition, offline workspace assets and Rust rendering contracts
-
 - `references/components.md` — `define()` spec fields, `prop.*` builders, `css` styles, light DOM, custom states, view transitions
 - `references/intent.md` — `data-intent`, triggers, `IntentInput`, parsers, outputs from children
 - `references/update-and-commands.md` — `Next`, commands, `init` commands, framework messages, `subscriptions` for long-lived work
@@ -140,3 +137,5 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/errors.md` — what happens when init, a reducer, the view, a parser, a command or a hook throws; `spec.error`, `Errored`, parent boundaries (`data-intent-on="error"`), `reportError` and monitoring, server isolation
 - `references/devtools.md` — the dev-only timeline panel
 - `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes
+- `references/workloads.md` — state-owned sequences, workers, authoritative drafts, held input, readiness and lifetime boundaries
+- `references/production.md` — strict CSP, Node composition, offline workspace assets and Rust rendering contracts
