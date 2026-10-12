@@ -1,5 +1,17 @@
 # @gyral/mcp
 
+## 0.3.3
+
+### Patch Changes
+
+- Fix `npx -y @gyral/mcp`, the documented way to run the server, which 0.3.2 broke: it failed
+  with "npm error could not determine executable to run", because 0.3.2 added a second bin,
+  `gyral-mcp-http`, and npx only picks a bin when there is one (or one named `mcp`). The
+  package has one bin again, `gyral-mcp`. With no arguments it is the stdio server, as before;
+  `gyral-mcp http` replaces `gyral-mcp-http`, with the same environment variables.
+  `gyral-mcp --help` describes both modes, and an unknown command or option is an error
+  instead of silently starting stdio. On 0.3.2, `npx -y -p @gyral/mcp@0.3.2 gyral-mcp` works.
+
 ## 0.3.2
 
 ### Patch Changes

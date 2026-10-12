@@ -1,5 +1,12 @@
 # @gyral/core
 
+## 0.3.3
+
+### Patch Changes
+
+- No changes to `@gyral/core`; it is released at 0.3.3 with the other packages, for the
+  `@gyral/mcp` fix.
+
 ## 0.3.2
 
 ### Patch Changes
