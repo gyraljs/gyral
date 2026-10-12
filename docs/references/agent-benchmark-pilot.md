@@ -11,6 +11,9 @@ corpus imbalance, omitted MCP workflow instructions and a latent generated-cache
 restriction. It includes separately retained continuation diagnostics; the original
 36-run results and frozen artifacts below remain unchanged.
 
+[Protocol v3](agent-benchmark-pilot-v3.md) fixes those harness issues for new, separately
+frozen runs. It does not rescore or replace the results below.
+
 ## Conditions and versions
 
 | Condition        | Framework              | Additional assistance                                |
