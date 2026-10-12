@@ -25,7 +25,9 @@ intent-name type changes get explicit review items. They are not guessed. Run fo
 typecheck, model and browser tests after applying edits; a zero-warning dry run is not a
 behavioral compatibility guarantee.
 
-`periodic` is never mechanically renamed. `every` immediately emits an epoch time, then
+## `periodic` to `every` (`@gyral/time`)
+
+This applies to every 0.3.1 upgrade, with or without the script. `periodic` is never mechanically renamed. `every` immediately emits an epoch time, then
 continues at the interval; old tick-count arithmetic can compile while giving the wrong
 answer. Choose a count (`count + 1` per message) or elapsed time (`now - startedAt`), and
 decide whether pause/resume starts a new interval, keeps elapsed time or excludes paused
