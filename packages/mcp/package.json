@@ -27,8 +27,7 @@
     "node": ">=22.12"
   },
   "bin": {
-    "gyral-mcp": "./dist/cli.js",
-    "gyral-mcp-http": "./dist/http-cli.js"
+    "gyral-mcp": "./dist/cli.js"
   },
   "exports": {
     ".": "./src/index.ts"

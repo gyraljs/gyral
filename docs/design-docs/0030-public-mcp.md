@@ -2,8 +2,8 @@
 
 Status: **accepted** (2026-10-11, gyral-49t.17); **deployed** at `https://mcp.gyral.dev/mcp`
 (2026-10-12). The owner chose public coding-agent access and deployed it manually behind
-Traefik. The `gyral-mcp-http` binary ships in `@gyral/mcp` since 0.3.2; the deployed image
-serves the 0.3.1 corpus until it is redeployed with the 0.3.2 corpus.
+Traefik. The HTTP server ships in `@gyral/mcp` since 0.3.2, as `gyral-mcp http` since 0.3.3
+(see the addendum); the deployed image serves the 0.3.1 corpus until it is redeployed.
 
 The existing stdio server keeps project-local `check_snippet`. A public process serves the
 read-only docs/API/example/scaffold tools (six; since 0.3.2 a seventh,
@@ -38,3 +38,24 @@ The concrete container and TLS proxy setup are in
 [the production runbook](../references/production-mcp.md). Official protocol basis:
 [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports),
 [SDK v1 server guide](https://github.com/modelcontextprotocol/typescript-sdk/blob/v1.x/docs/server.md).
+
+## Addendum (2026-10-12): one executable
+
+0.3.2 shipped the HTTP server as a second bin, `gyral-mcp-http`, beside the stdio `gyral-mcp`.
+npx runs a package without a named command only when it has exactly one bin or a bin named
+after the unscoped package (`mcp`), so the documented `npx -y @gyral/mcp`, which every local
+MCP client config uses, failed with "could not determine executable to run". The server itself
+worked (`npx -y -p @gyral/mcp@0.3.2 gyral-mcp`), and `verify:install` missed it because it
+started the installed bin directly.
+
+Decision (owner, 0.3.3): `gyral-mcp` is the package's only bin. With no arguments it is the
+stdio server, unchanged. `gyral-mcp http` starts this public HTTP server with the same
+environment variables `gyral-mcp-http` read; `gyral-mcp --help` documents both modes, and any
+other argument is an error rather than a silent stdio start. The `gyral-mcp-http` bin is
+removed rather than kept as an alias, because a second bin is exactly what breaks npx. A bin
+named `mcp` would also satisfy npx, but would put a generic `mcp` command on users' PATH.
+
+The container image's default command and `deploy/mcp/compose.yaml` run `gyral-mcp http`, so a
+redeploy needs an image built from 0.3.3 or later. `pack:check` now asserts the bin rule for
+`@gyral/mcp` and `create-gyral`, and `verify:install` starts the packed server through
+`npx --no-install @gyral/mcp`.

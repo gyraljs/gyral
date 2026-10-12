@@ -63,6 +63,9 @@ try {
     '-e',
     'GYRAL_MCP_PUBLIC_ORIGIN=https://mcp.gyral.dev',
     process.env['GYRAL_MCP_IMAGE'] ?? 'gyral-mcp:review',
+    // As compose.yaml runs it: the single bin's HTTP mode (0.3.2's `gyral-mcp-http` is gone).
+    'gyral-mcp',
+    'http',
   );
   await docker(
     'run',

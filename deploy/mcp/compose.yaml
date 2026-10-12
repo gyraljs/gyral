@@ -2,6 +2,9 @@
 services:
   gyral-mcp:
     image: ${GYRAL_MCP_IMAGE:?Set the published image digest in .env}
+    # Needs an image built from @gyral/mcp 0.3.3 or later. Older images only have the
+    # 0.3.2 `gyral-mcp-http` bin; their `gyral-mcp` ignores `http`, starts stdio and fails health.
+    command: [gyral-mcp, http]
     restart: unless-stopped
     init: true
     read_only: true

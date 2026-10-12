@@ -91,6 +91,7 @@ try {
   const [info] = JSON.parse(await docker('inspect', backend));
   assert.equal(info.State.Health.Status, 'healthy');
   assert.equal(info.Config.User, 'node');
+  assert.deepEqual(info.Config.Cmd, ['gyral-mcp', 'http']);
   assert.equal(info.HostConfig.ReadonlyRootfs, true);
   assert.equal(info.HostConfig.Memory, 268_435_456);
   assert.deepEqual(info.HostConfig.PortBindings ?? {}, {});
