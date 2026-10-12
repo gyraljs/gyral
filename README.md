@@ -40,7 +40,7 @@ define<{ count: number }, Msg>()('gy-counter', {
 
 Start an app with `npm create gyral@latest my-app` (guides at [gyral.dev](https://gyral.dev)).
 
-> Status: 0.x; 0.3.1 is on npm. `main` can be ahead of the release: unreleased changes are in
+> Status: 0.x; 0.3.2 is on npm. `main` can be ahead of the release: unreleased changes are in
 > [.changeset/](.changeset/) and marked "unreleased" in the docs. The work plan lives in
 > [beads](https://github.com/gastownhall/beads)
 > (`bd ready`); architecture is in [ARCHITECTURE.md](ARCHITECTURE.md), decisions in

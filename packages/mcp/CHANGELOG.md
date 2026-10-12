@@ -1,5 +1,24 @@
 # @gyral/mcp
 
+## 0.3.2
+
+### Patch Changes
+
+- Add the `gyral-mcp-http` binary: a read-only, anonymous Streamable HTTP server with request
+  size and rate bounds, for hosting the docs and API tools publicly. It leaves out
+  `check_snippet`, which stays in the local stdio binary, `gyral-mcp`.
+- Add a `start_here` tool that returns the mental model, rules, workflow and an index of use
+  cases. Every tool description now carries the workflow too, so clients that drop server
+  instructions still get it.
+- `scaffold_component` reads the project's `package.json` (or an `installed` list) and imports
+  only packages that are installed. It adds a dependency-free `form-native` kind and writes a
+  model test only when `@gyral/testing` and `vitest` are installed.
+- `check_snippet` suggests fixes for recognized TypeScript errors and common Gyral mistakes.
+- `get_doc` accepts a `path`, and `get_api` suggests the nearest exports for a name it does not
+  know and explains unexported helper types.
+- Refresh the bundled documentation from gyral.dev, including the Recipes page, native-first
+  forms and the lifecycle, workload, Node, PWA and Rust guidance.
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # @gyral/ssr
 
+## 0.3.2
+
+### Patch Changes
+
+- Add `writeComponentStyleManifest({ root, clientDir, outFile, vite? })` to `@gyral/ssr/static`.
+  It runs after the client build, imports the app's component modules in a separate build-time
+  Node process, and writes their real `<style>` hashes to a JSON file.
+- Add `componentStyleHashes` to `CspOptions`. A server that only builds the
+  `Content-Security-Policy` header can pass the hashes from that JSON file instead of importing
+  every component module, and keep a strict CSP.
+- Update the `@gyral/core` dependency to 0.3.2.
+
 ## 0.3.1
 
 ### Patch Changes
