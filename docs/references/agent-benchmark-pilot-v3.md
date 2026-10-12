@@ -252,3 +252,50 @@ not more than v2. The practical ceiling, if every run used all 24 requests at ab
 tokens each, is about 26 million. Expected duration: about 50 minutes for the 36 runs (v2 took
 47), plus a minute for `prepare` and about 5 minutes for `validate`. There is no monetary cap
 in the harness; the request, tool, token and time limits above bound each run.
+
+## Results, 2026-10-12
+
+Both runs used the same model, settings, tasks, oracle and harness (main 985e5da for Run A,
+c566d1b for Run B; the harness code is identical between them). Evidence is under
+`~/.local/share/gyral-agent-pilot/runs/2026-10-12-protocol-v3-run-a/` and `…-run-b/`
+(`report.md`, `summary.json`, every request, response, patch, grade and screenshot).
+
+| Condition      | v2 (2026-10-11) | Run A: fair harness | Run B: + docs, MCP, types |
+| -------------- | --------------: | ------------------: | ------------------------: |
+| Gyral docs     |             0/9 |                 1/9 |                   **7/9** |
+| Gyral assisted |             2/9 |                 3/9 |                       4/9 |
+| React docs     |             8/9 |                 8/9 |                       8/9 |
+| Svelte docs    |             9/9 |                 7/9 |                       7/9 |
+
+| Gyral docs, process         |  Run A | Run B |
+| --------------------------- | -----: | ----: |
+| Runs without a source write |      6 |     1 |
+| Median first write          |     24 |   8.5 |
+| Repeat reads / doc calls    | 86/198 |  7/90 |
+| Median tokens per run       |   194K |  122K |
+
+**Run A** (docs frozen at 09:05, before the recipes and `llms-small.txt` were deployed; MCP
+before PR #13) shows the harness fixes explain little: the docs-only agent still cycled
+through the same five sections (Getting started, Intent, Views › Lists) and wrote at request 24
+or never; the assisted agent walked generic types (`ComponentSpec`, `IntentField`,
+`SpecBody`, `ParserFor`) and never used `scaffold_component` or `check_snippet`.
+
+**Run B** adds the recipes page, the native-first Forms page, `llms-small.txt` (first in
+`llms.txt`), "Use when" index entries, and the MCP/type changes of PR #13. The docs-only
+condition reaches 7/9 (Svelte's score in the same run): feature 3/3, bug 3/3, form 1/3. Of the
+gyral-7se.31 criteria, "docs ≥ 7/9" is met; "median first write ≤ 10" is reported as not met
+because one run never wrote (the criterion requires every run to write); repeat reads are
+26/259 across both Gyral conditions (10.04%, limit 10%).
+
+Remaining failures:
+
+- **Assisted form runs (0/3)** open the skill's `forms.md`, which teaches the schema path,
+  then query `get_api` for `form`, `FormDefinition`, `Errors` and other types until the budget
+  runs out (`gyral-assisted-form-1` asked for `Errors` seven times in a row). None called
+  `start_here`, `scaffold_component` or `check_snippet`, though every tool description now names
+  them.
+- **One docs form run** split the component into `src/signup-form.ts` without importing it
+  from `main.ts`, so the element was never defined and every browser case timed out.
+- **One assisted feature run** ended with a syntax error after two repairs.
+
+Follow-ups are tracked under gyral-7se.
