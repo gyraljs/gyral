@@ -26,7 +26,31 @@ and the separate browser diagnostics are analyzed in [agent findings](agents.md)
 Gymtime and the shop still need stable registry adoption. A manifest alone cannot
 certify an install: the shop's next.9 declaration and next.8 installed core disagree.
 The historical blog checkout is not evidence that the live documentation site is stale.
-No installs, test runs, source edits or tracker mutations were performed in consumer repos.
+No installs, test runs, source edits or tracker mutations were performed in that initial audit.
+
+## Follow-up registry acceptance
+
+The `gyral-49t.3` implementation subsequently verified exact public npm **0.3.1** in Gymtime,
+shop, Containment and Greed, with frozen lockfile installs and one shared core. Gymtime's
+owner had already completed its upgrade; its component typecheck, 20 browser tests, pinned
+skills and production build were rerun. Its Rust/API/build-time rendering path remains unchanged.
+
+Shop now declares six exact registry packages without overrides: its full gate passed
+746 tests in 129 files and production hydration/cart/filter checks. Containment's core/testing
+and optional runtime peer now use 0.3.1: 28 tests, production build, packed bridge declaration/
+Chromium checks, WebGL recovery and nine phone layouts each in Chromium/Firefox/WebKit passed.
+Greed now uses exact core/testing without overrides: 72 tests, production build, four UI
+scenarios and a two-browser real-physics online match/rematch passed. Continuous consumer
+watches moved from `init` to `subscriptions`, including real detach/reattach regression checks.
+Published npm MCP 0.3.1 supplied Containment/Greed's refreshed skill with recorded integrity.
+Historical archive checksums remain intact and no active dependency uses those archives.
+
+These consumer edits are local and reviewable; no Containment/Greed commit, push or deployment
+is claimed. The inactive blog checkout remains historical. The reviewed Rust integration
+revision is now `85dc860808bfe597699ccb3d542d6d56a9d410a2`; its pinned
+[compatibility fixture](../rust-rendering.md) independently passed embedded runtime budget/
+isolation checks, artifact tampering and Chromium/WebKit SSR and Askama/browser acceptance.
+The original snapshot table and its source hashes above/below remain historical audit evidence.
 
 ## Stable workload evidence
 

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { registerTools, type ToolOptions } from './tools.js';
 import type { Corpus } from './types.js';
 
-const INSTRUCTIONS = `Gyral builds web components as Model-View-Intent loops with their own view layer (html, css, each, prop from @gyral/core): intent parses DOM events into typed messages, update is one pure reducer per message, view is a pure function of state that names intents with data-intent (no event handlers), and side effects are commands performed by drivers. Read the gyral://skill resource first. Use search_docs / get_doc for guides, get_api for exact signatures, get_example for working code, scaffold_component for a starting point, and check_snippet before presenting code.`;
+const INSTRUCTIONS = `Gyral builds web components as Model-View-Intent loops with their own view layer (html, css, each, prop from @gyral/core): intent parses DOM events into typed messages, update is one pure reducer per message, view is a pure function of state that names intents with data-intent (no event handlers), and side effects are commands performed by drivers. Read the gyral://skill resource first. Use search_docs / get_doc for guides, get_api for exact signatures, get_example for working code, and scaffold_component for a starting point.`;
 
 function registerResources(server: McpServer, corpus: Corpus): void {
   server.registerResource(
@@ -68,7 +68,7 @@ function registerResources(server: McpServer, corpus: Corpus): void {
   );
 }
 
-function registerPrompts(server: McpServer, corpus: Corpus): void {
+function registerPrompts(server: McpServer, corpus: Corpus, verification: string): void {
   const skill = corpus.skill.find((f) => f.path === 'SKILL.md')?.content ?? '';
   server.registerPrompt(
     'build-gyral-component',
@@ -93,7 +93,7 @@ Follow the Gyral skill below. Work in this order:
 2. Call scaffold_component with the closest kind, then adapt it: an intent for every user-triggered message, one pure reducer per message, a view that only names intents.
 3. Put side effects in commands (get_api "command", or @gyral/http / @gyral/time / @gyral/router).
 4. Write model tests with step/run from @gyral/testing (no DOM).
-5. Run check_snippet on every file and fix all errors before answering.
+5. ${verification}
 
 ${skill}`,
           },
@@ -105,12 +105,16 @@ ${skill}`,
 
 /** A configured server; connect it to a transport (stdio in cli.ts). */
 export function createServer(corpus: Corpus, options: ToolOptions): McpServer {
+  const verification =
+    options.snippetChecks === false
+      ? 'Run your project typecheck, model tests and browser tests; fix all errors before answering. This public server cannot inspect your installed packages. The local stdio server offers check_snippet.'
+      : 'Run check_snippet on every file and fix all errors before answering.';
   const server = new McpServer(
     { name: 'gyral', title: 'Gyral', version: corpus.version },
-    { instructions: INSTRUCTIONS },
+    { instructions: `${INSTRUCTIONS} ${verification}` },
   );
   registerTools(server, corpus, options);
   registerResources(server, corpus);
-  registerPrompts(server, corpus);
+  registerPrompts(server, corpus, verification);
   return server;
 }

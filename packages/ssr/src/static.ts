@@ -15,6 +15,11 @@ import {
   staticFileFor,
 } from './assets.js';
 import type { ComponentAssets } from './components.js';
+export {
+  writeComponentStyleManifest,
+  type ComponentStyleManifest,
+  type ComponentStyleManifestOptions,
+} from './style-manifest.js';
 import {
   basePath,
   clientAssets,

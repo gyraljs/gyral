@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "sourceCommit": "85dc860808bfe597699ccb3d542d6d56a9d410a2",
+  "npm": { "@gyral/core": "0.3.1", "@gyral/ssr": "0.3.1" },
+  "abi": 1,
+  "target": "x86_64-unknown-linux-gnu",
+  "rust": "1.99.0",
+  "denoCore": "0.412.0",
+  "v8": "150.4.0",
+  "limits": { "propsBytes": 262144, "htmlBytes": 2097152, "bundleBytes": 8388608 },
+  "browserFormat": "single-esm-entry",
+  "serverFormat": "single-iife",
+  "rustCratesPublished": false
+}

@@ -19,7 +19,8 @@
     "seconds-elapsed": 9.5,
     "shared-cart": 12.3,
     "typeahead-race": 11.9,
-    "undo-replay": 11.5
+    "undo-replay": 11.5,
+    "workload-lab": 18.5
   },
   "view": 7.4,
   "initial": {
@@ -41,6 +42,7 @@
     "seconds-elapsed": 9.5,
     "shared-cart": 12.3,
     "typeahead-race": 11.9,
-    "undo-replay": 11.5
+    "undo-replay": 11.5,
+    "workload-lab": 18.5
   }
 }

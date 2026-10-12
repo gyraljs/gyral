@@ -181,6 +181,13 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 
 ## Content-Security-Policy
 
+The staged next release adds build-only `writeComponentStyleManifest` in `@gyral/ssr/static`
+and `CspOptions.componentStyleHashes` for policy-only servers. These APIs are not in npm 0.3.1;
+on 0.3.1 import components and call `styleHashes()` during the build. Keep the resulting
+policy/HTML/assets in one release. Document CSS links use `style-src 'self'`; inline attributes
+need their separate bounded first-paint policy below. Follow Vite's CSP nonce placeholder
+replacement and exact HMR `connect-src` origin for development.
+
 Pass `csp: { directives }` to `renderPage`: it sets a `Content-Security-Policy` header whose
 `style-src` lists the SHA-256 hash of every shadow component's `<style>` and of the page's
 `styles`, built when the page renders (so every component the page uses is registered).
