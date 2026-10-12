@@ -8,7 +8,7 @@ packages through `ssr.noExternal`. Keep Node builtins external. If another bundl
 the development import, measure its emitted graph before adding dependencies or changing
 the public entrypoints.
 
-`node scripts/verify-ssr-production.mjs` installs exact public npm 0.3.2 packages in a fresh
+`node scripts/verify-ssr-production.mjs` installs exact public npm 0.3.3 packages in a fresh
 directory, builds a one-file server, removes its node_modules and client `.vite` directory,
 then verifies a rendered component and its deployment metadata. It also tests HTTP request
 context, WebSocket upgrade origin/path routing, request cancellation and server cleanup.

@@ -191,6 +191,20 @@ tests, with client builds unchanged (basic 21.9 KiB JS, SSR 34.4 KiB JS). An ima
 this source with the released 0.3.2 corpus passes `verify-mcp-traefik.mjs` (Compose running
 `gyral-mcp http`) and `verify-mcp-proxy.mjs`.
 
+Recorded 0.3.3 registry checks (2026-10-12, step 6): all nine packages serve 0.3.3 as
+`latest` with SLSA v1 provenance. `@gyral/mcp@0.3.3` has a single bin, `gyral-mcp`, and the
+MCP check passes again: `npx -y @gyral/mcp@0.3.3` and unversioned `npx -y @gyral/mcp` both
+start over stdio, answer `initialize` as `gyral 0.3.3` and list eight tools (`start_here`,
+`search_docs`, `get_doc`, `get_api`, `list_examples`, `get_example`, `scaffold_component`,
+`check_snippet`). `npm create gyral@0.3.3` generated both templates in fresh directories, and
+npm installed them. Each app's `typecheck`, `build` and `test` pass (basic: two Chromium
+tests; SSR: three server tests and a prerendered page with the hydration chunk preloaded
+once), and client builds are unchanged from 0.3.2 (basic 21.9 KiB JS, SSR 34.4 KiB JS). Both
+manifests depend on `^0.3.3`, with no overrides. Every lockfile entry resolves from
+`registry.npmjs.org` with SHA-512 integrity, and no Lit package is installed.
+`node scripts/verify-ssr-production.mjs` (exact 0.3.3; a 58,738-byte one-file server) and
+the Rust compatibility fixture (gyral-rs `eb074c6`, which pins core and SSR 0.3.3) also pass.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

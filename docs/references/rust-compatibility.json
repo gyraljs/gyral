@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "sourceCommit": "1131fef71dd1143acf073f0d66bd71e8c29feadd",
-  "npm": { "@gyral/core": "0.3.2", "@gyral/ssr": "0.3.2" },
+  "sourceCommit": "eb074c6e37253bda2ff1741f45cb45dce0acb8b8",
+  "npm": { "@gyral/core": "0.3.3", "@gyral/ssr": "0.3.3" },
   "abi": 1,
   "target": "x86_64-unknown-linux-gnu",
   "rust": "1.99.0",

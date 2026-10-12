@@ -4,9 +4,9 @@ The public Gyral MCP server is live at `https://mcp.gyral.dev/mcp` (Streamable H
 anonymous, read-only; no token). Point any MCP client that supports Streamable HTTP at that
 URL; see [Client review](#client-review) for what to check. The deployed container serves the
 0.3.1 corpus (`/healthz` reports `"version":"0.3.1"`, and `initialize` answers as `gyral 0.3.1`
-with six tools) until it is rebuilt and redeployed with the 0.3.2 corpus, which adds
-`start_here`. The server is `gyral-mcp http`, the HTTP mode of the package's only bin, since
-0.3.3. 0.3.2 shipped it as a second bin, `gyral-mcp-http`, which broke `npx -y @gyral/mcp`;
+with six tools) until it is rebuilt and redeployed with the 0.3.3 corpus, which adds
+`start_here` (new in 0.3.2). The server is `gyral-mcp http`, the HTTP mode of the package's
+only bin, since 0.3.3. 0.3.2 shipped it as a second bin, `gyral-mcp-http`, which broke `npx -y @gyral/mcp`;
 0.3.1 has only the stdio server. This page is the recipe for building, deploying and
 updating that service. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).
 
@@ -47,11 +47,11 @@ An HTTP server built from current source can instead serve the complete corpus f
 already published npm release:
 
 ```sh
-node scripts/stage-mcp-container.mjs --released-corpus 0.3.2
+node scripts/stage-mcp-container.mjs --released-corpus 0.3.3
 ```
 
-This downloads `@gyral/mcp@0.3.2` from the public npm registry and replaces the packed
-`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.2;
+This downloads `@gyral/mcp@0.3.3` from the public npm registry and replaces the packed
+`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.3;
 new framework APIs stay out until their release. It does not publish npm or use a vendored
 framework dependency. The ignored `deploy/mcp/artifact.json` records source revision,
 registry integrity, corpus source/version/digests and packed artifact digest. Build from a
