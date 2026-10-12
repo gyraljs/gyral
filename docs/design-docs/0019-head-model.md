@@ -193,6 +193,19 @@ applier and `scriptSafeJson` are new code with little to share with the rest of 
 
 ## Baseline and compatibility
 
+### Static-only pages (consumer evaluation, 2026-10-11)
+
+The production fixture in `packages/ssr/test/static-head.node.test.ts` compares identical
+description, robots, canonical, Open Graph and theme-color entries. Five ownership markers
+add **164 raw bytes and 37 gzip bytes** with Node 24's default gzip. This measures that page,
+not a universal compression ratio. No extra opt-out API is justified by this cost.
+
+A page whose metadata never changes through `setHead` can put those entries in `extraHead`
+using ordinary `html` markup. They have no ownership markers. Keep its `title` in the normal
+page option. Never supply the same entry in both `extraHead` and a managed `Head`: the client
+preserves unmarked content, so duplicate descriptions/canonicals would survive navigation.
+Routed metadata continues to use the shared `Head` model and adopts SSR entries in place.
+
 - Everything the client half uses is widely available: `document.title`,
   `querySelectorAll`, `setAttribute`, `Element.after()`, `textContent`. No fallback tier.
 - Data-block scripts are handled the same way by every engine.

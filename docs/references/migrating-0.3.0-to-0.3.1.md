@@ -8,6 +8,31 @@ should read this list too, because some items changed between those builds.
 The package changelogs summarize the final release surface; the tables below collect the
 behavior changes and their migration steps.
 
+## Import-aware dry run
+
+From the Gyral checkout, run `node scripts/migrate-gyral.mjs path/to/component.ts` (multiple
+files accepted). It prints proposed source and file/line review items without writing.
+After review, `--write` applies the mechanical edits. The tool resolves lexical import
+bindings, including aliases and namespace imports: native `customElements.define`, local
+functions, comments and strings stay unchanged. Generics are preserved.
+
+It converts one-call `define` and a local `intents<Msg>()` when exactly one named component
+owns that message type. Simple `each` row helpers gain a `TemplateResult` return annotation;
+the component view uses its own second parameter to avoid cyclic inference. Ambiguous
+components, indirect specs, complex row returns, removed `IntentName`/`Messages` types and
+intent-name type changes get explicit review items. They are not guessed. Run format,
+typecheck, model and browser tests after applying edits; a zero-warning dry run is not a
+behavioral compatibility guarantee.
+
+`periodic` is never mechanically renamed. `every` immediately emits an epoch time, then
+continues at the interval; old tick-count arithmetic can compile while giving the wrong
+answer. Choose a count (`count + 1` per message) or elapsed time (`now - startedAt`), and
+decide whether pause/resume starts a new interval, keeps elapsed time or excludes paused
+time. Use `virtualTime()` to assert the immediate emission, a complete interval, pause
+with no ticks and the immediate new emission on resume. Declarative subscriptions own the
+running clock; `settled()` does not advance it. The executable pause/resume regression
+lives beside the `@gyral/time` tests.
+
 ## Router (`@gyral/router`)
 
 `href()` now rejects unknown route names, missing required parameters, empty/dot-segment

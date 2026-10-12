@@ -19,6 +19,12 @@ export type CspDirectives = Readonly<Record<string, string | readonly string[]>>
 
 export interface CspOptions {
   /**
+   * Precomputed component `<style>` hashes from `styleHashes()` at build time. Append them
+   * to registered component hashes, allowing a policy-only server to read JSON metadata
+   * without executing every component module. Regenerate with each release's actual CSS.
+   */
+  readonly componentStyleHashes?: readonly string[];
+  /**
    * Your other directives (`default-src`, `script-src`, …). A `style-src` given here is kept
    * and the hashes are appended; without one it is `'self'` plus the hashes.
    */
@@ -70,9 +76,12 @@ function build(
   components: ReadonlyMap<string, string>,
   attributes: readonly string[] = [],
   scripts?: PageScripts,
+  componentStyleHashes: readonly string[] = [],
 ): string {
   const page = styleList(styles).map((css) => styleHashSync(styleSafe(css)));
-  const hashes = [...new Set([...[...components.values()].map(styleHashSync), ...page])];
+  const hashes = [
+    ...new Set([...[...components.values()].map(styleHashSync), ...componentStyleHashes, ...page]),
+  ];
   const style = [...sources(directives['style-src'] ?? "'self'"), ...hashes];
   const inline = [...new Set(scriptList(scripts).map((js) => styleHashSync(scriptSafe(js))))];
   const policy: [name: string, sources: readonly string[]][] = Object.entries(directives)
@@ -104,7 +113,14 @@ function build(
  */
 export function contentSecurityPolicy(options: CspOptions = {}): Promise<string> {
   return Promise.resolve(
-    build(options.directives ?? {}, options.styles, componentStyles(), [], options.scripts),
+    build(
+      options.directives ?? {},
+      options.styles,
+      componentStyles(),
+      [],
+      options.scripts,
+      options.componentStyleHashes,
+    ),
   );
 }
 
@@ -131,7 +147,14 @@ export function policyAtRender(
   if (known?.version === version && known.styles === styles && known.scripts === scripts) {
     return known.header;
   }
-  const header = build(options.directives ?? {}, styles, componentStyles(), [], scripts);
+  const header = build(
+    options.directives ?? {},
+    styles,
+    componentStyles(),
+    [],
+    scripts,
+    options.componentStyleHashes,
+  );
   cache.set(options, { version, styles, scripts, header });
   return header;
 }
@@ -189,7 +212,14 @@ export function policyWithAttributes(
   }
   const styles = options.styles ?? pageStyles;
   const scripts = options.scripts ?? pageScripts;
-  return build(directives, styles, componentStyles(), list.map(styleHashSync), scripts);
+  return build(
+    directives,
+    styles,
+    componentStyles(),
+    list.map(styleHashSync),
+    scripts,
+    options.componentStyleHashes,
+  );
 }
 
 const warned = new Set<string>();

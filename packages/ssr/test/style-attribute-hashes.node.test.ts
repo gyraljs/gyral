@@ -112,4 +112,21 @@ describe("renderPage({ csp: { styleAttributes: 'hash' } }) (ADR 0020)", () => {
     expect(new TextDecoder().decode(first.value)).not.toContain('</html>');
     await reader.cancel();
   });
+
+  it('bounds the default attribute header at 128 hashes and about seven KiB', () => {
+    const policy = header(
+      renderPage({
+        title: 't',
+        body: bars(Array.from({ length: 129 }, (_, i) => i)),
+        csp: { styleAttributes: 'hash' },
+        dev: false,
+      }),
+    );
+    const listed = directive(policy, 'style-src-attr') ?? [];
+    expect(listed).toHaveLength(129);
+    expect(listed).toContain(sha('--pct: 127%'));
+    expect(listed).not.toContain(sha('--pct: 128%'));
+    expect(Buffer.byteLength(policy)).toBeLessThan(7200);
+    expect(Buffer.byteLength(policy)).toBeGreaterThan(6900);
+  });
 });

@@ -87,8 +87,10 @@ fixtures: npm versions, ABI, component HTML/hydration, serialized props, CSS/CSP
 manifest integrity and error/cancellation behavior. Rust crate packaging and supported
 targets need their own roadmap before presenting embedded SSR as broadly available.
 
-Gymtime should first adopt stable registry packages and verify booking, auth, forms,
-race handling and cleanup. Its current build-time/client path is adequate evidence for
+Gymtime now uses exact stable registry 0.3.1 packages; its browser and type checks were
+rerun during gyral-49t.3. Its current build-time/client path is adequate evidence for
 that integration; embedded runtime SSR should be evaluated only against an actual
 initial-HTML, deployment or performance requirement. A shared booking/auth example
 can teach drivers and ownership while keeping backend domain policy outside core.
+The maintained [rendering guide](../rust-rendering.md) and pinned compatibility fixture
+describe the integration boundary and release verification command.

@@ -264,11 +264,13 @@ know their call site in development, so a `TemplateError` (`at src/cart.ts:12:5`
 - **Under Vite** (the dev server and Vitest, i.e. `vite serve`): the preset's
   `gyral:template-locations` plugin (serve only, `enforce: 'pre'`, loaded lazily like the
   compiler, `compiler/locate.ts`) rewrites each `html` call site of the template sources into
-  `(html.at?.("src/cart.ts:12:5") ?? html)`…``: the author's own file (relative to the Vite
+  `__gyralLocate(html, "src/cart.ts:12:5")`…``: the author's own file (relative to the Vite
   root), line and column, which Vite's transformed modules no longer have (TypeScript stripping
-  reprints the code). No line moves; `html.at` exists only in development, so the `??` keeps the
-  rewrite harmless anywhere else. Templates in `node_modules` and uses it can't follow (an
-  aliased `html`) are left alone. `svg` call sites get the same rewrite with `svg.at`.
+  reprints the code). No authored line moves. The imported virtual helper implements
+  `tag.at?.(loc) ?? tag`; its generated branches do not count as consumer source coverage.
+  `html.at` exists only in development, so the fallback works with production tags too.
+  Imported aliases and namespace members are followed; templates in `node_modules` and local
+  value aliases it cannot follow are left alone. `svg` gets the same rewrite.
 - **Elsewhere** (no build step, other bundlers' dev servers, Node): the first `html` (or `svg`)
   call of a call site reads it from `new Error().stack` (V8, SpiderMonkey and JavaScriptCore frame
   formats; scheme, host, query and Vite's `/@fs` dropped). Exact for code the browser runs as
@@ -281,6 +283,8 @@ know their call site in development, so a `TemplateError` (`at src/cart.ts:12:5`
   compiler could add it, but no workflow needs it: the dev server uses the runtime path).
 - Tested in `core/test/view/source-location.test.ts` (both messages name this test file's
   line and column), `source-location.prod.test.ts` and `loc.node.test.ts` (stack formats).
+  `compiler/coverage.node.test.ts` compares real V8 coverage with and without the locator:
+  authored branches and hit counts stay identical (gyral-49t.2).
 
 Both paths produce identical ids, so a precompiled server and a runtime client (or the reverse)
 hydrate each other. A production client build carries no ids and hydrates any server's output

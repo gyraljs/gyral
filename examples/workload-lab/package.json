@@ -1,0 +1,17 @@
+{
+  "name": "@gyral-examples/workload-lab",
+  "private": true,
+  "type": "module",
+  "description": "Owned delays, cancellable workers, authoritative drafts and accessible native interactions.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@gyral/core": "workspace:*",
+    "@gyral/time": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/testing": "workspace:*"
+  }
+}

@@ -8,10 +8,9 @@ import { findExample, formatExample, listExamples } from './examples.js';
 import { scaffold, validTag } from './scaffold.js';
 import type { Corpus } from './types.js';
 
-export interface ToolOptions {
-  /** Where check_snippet resolves TypeScript and `@gyral/*` (the agent's project). */
-  readonly projectDir: string;
-}
+export type ToolOptions =
+  | { readonly projectDir: string; readonly snippetChecks?: true }
+  | { readonly snippetChecks: false; readonly projectDir?: never };
 
 const text = (body: string, isError = false) => ({
   content: [{ type: 'text' as const, text: body }],
@@ -136,7 +135,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
     {
       title: 'Scaffold a Gyral component',
       description:
-        'Idiomatic starting code: "basic" (state, intents, pure update, view, model test), "form" (schema-validated form that also works without JavaScript), "ssr-page" (light-DOM page, server route, client entry). Adapt it, then run check_snippet.',
+        'Idiomatic starting code: "basic" (state, intents, pure update, view, model test), "form" (schema-validated form that also works without JavaScript), "ssr-page" (light-DOM page, server route, client entry). Adapt it, then typecheck in your project.',
       inputSchema: {
         tag: z.string().min(1).describe('Custom element name with a hyphen, e.g. "todo-list".'),
         kind: z.enum(['basic', 'form', 'ssr-page']).describe('Which starting point.'),
@@ -158,6 +157,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
     },
   );
 
+  if (options.snippetChecks === false) return;
   server.registerTool(
     'check_snippet',
     {

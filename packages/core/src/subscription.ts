@@ -52,7 +52,7 @@ const asError = (reason: unknown): Error =>
  *     emit(reduxStore.getState());
  *     return reduxStore.subscribe(() => emit(reduxStore.getState()));
  *   });
- *   // init: [state, [command(cart, undefined, { onSuccess: (c) => ({ _tag: 'Cart', c }) })]]
+ *   // subscriptions: () => [command(cart, undefined, { onSuccess: (c) => ({ _tag: 'Cart', c }) })]
  */
 export function subscription<O, I = undefined, E = unknown>(
   name: string,

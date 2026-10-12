@@ -9,7 +9,8 @@ Next<S, M> = S | readonly [S, ReadonlyArray<Command<M | IntentRejected>>]
 Return the next state alone, or a tuple of state and commands. State is never an array (that
 is how Gyral tells the two apart), so wrap list state in an object: `{ items: [...] }`.
 
-`init(props)` returns a `Next` too: start loading data or listening to the router from `init`.
+`init(props)` returns a `Next` too: start a one-shot load there. Put the router's `listen`
+and other continuous watches in `subscriptions`, so they recover after a true detach.
 
 ## Commands are data
 

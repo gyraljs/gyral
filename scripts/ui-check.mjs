@@ -222,6 +222,9 @@ async function checkExample(browser, ex, runDir) {
         const primary = viewport.name === PRIMARY.viewport && scheme === PRIMARY.scheme;
         if (primary || !ex.scenario.once)
           for (const step of ex.scenario.steps) await runStep(page, base, step);
+        // Font metrics must be final before overflow, axe and capture. Each app's scenario
+        // still supplies its own worker/scene readiness condition; fonts are document-owned.
+        await page.evaluate(() => document.fonts.ready);
         await page.waitForTimeout(250);
         shot.overflow = overflowFinding(await page.evaluate(measureOverflow));
         shot.axe = await runAxe(page);

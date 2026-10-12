@@ -3,7 +3,7 @@
 // imports a tag's module once the tag is in the page, and writes the manifest
 // `@gyral/ssr/static`'s `componentsFromManifest` reads. ../vite.ts loads it on the plugin's
 // first hook, as it loads the compiler.
-import { relative, resolve, sep } from 'node:path';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 import { staticallyReachable } from './component-entries.js';
 import type { ComponentsOptions } from '../vite.js';
@@ -164,9 +164,16 @@ export function createComponents(options: ComponentsOptions): Plugin {
       // that chunk (often the entry), so Vite's manifest has no key for it; the server finds
       // the chunk by file instead (`componentAssets`).
       const chunkOf = new Map<string, string>();
+      const chunkModules: Record<string, string[]> = {};
       for (const chunk of Object.values(bundle)) {
         if (chunk.type !== 'chunk') continue;
         for (const id of chunk.moduleIds) chunkOf.set(id, chunk.fileName);
+        // Actual emitted ownership includes merged workspace modules which have no
+        // separate src/isDynamicEntry record in Vite's manifest. Keep paths portable.
+        chunkModules[chunk.fileName] = chunk.moduleIds
+          .filter((id) => !id.startsWith('\0') && isAbsolute(id))
+          .map((id) => relative(root, id).split(sep).join('/'))
+          .sort();
       }
       const chunks: Record<string, string> = {};
       for (const [tag, url] of tags) {
@@ -178,6 +185,7 @@ export function createComponents(options: ComponentsOptions): Plugin {
         loaderImports: loader.imports,
         modules,
         chunks,
+        chunkModules,
         entryTags,
       };
       this.emitFile({

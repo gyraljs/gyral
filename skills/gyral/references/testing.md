@@ -84,6 +84,11 @@ describe('search model', () => {
   pass in `stores`; `inputsFor(commands, store)` lists the messages a reducer `send()`s to it.
 - Calling a parser directly: `parse(Component, 'Intent', input, { props, state, stores })`
   builds the `ctx` for you (no casts).
+- Calling a pure view in Node: `viewOf(Component, state, { props, stores })` supplies its
+  named intents and context. Render it with `renderToString` from `@gyral/ssr`, passing
+  `{ dev: false }` for stable HTML rather than stripping development markers with a regex.
+  This tests the pure projection; use the browser for hooks, focus, validity and hydration.
+  This helper is staged after 0.3.1.
 - Pure update functions make property tests easy with fast-check: generate messages, run
   `step`, assert invariants on the state.
 

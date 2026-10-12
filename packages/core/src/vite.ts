@@ -172,6 +172,14 @@ function gyralTemplateLocations(options: TemplateCompilerOptions = {}): Plugin {
     name: 'gyral:template-locations',
     enforce: 'pre',
     apply: 'serve',
+    resolveId(source) {
+      return source === 'virtual:gyral/template-locations' ? '\0gyral:template-locations' : null;
+    },
+    load(id) {
+      return id === '\0gyral:template-locations'
+        ? 'export const locate = (tag, loc) => tag.at?.(loc) ?? tag;'
+        : null;
+    },
     async configResolved(config) {
       const locate = await loadCompiler<typeof import('./compiler/locate.js')>('locate');
       hooks = locate.createLocator(settingsOf(options).sources);

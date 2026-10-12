@@ -3,10 +3,11 @@
 // traces point into Vite's transformed modules, whose lines aren't the author's. So the preset's
 // `gyral:template-locations` plugin (serve only, enforce: 'pre', loaded lazily like the
 // compiler) rewrites each html`…` call site of the configured sources into
-//   (html.at?.("src/app.ts:12:5") ?? html)`…`
-// (svg`…` call sites the same way, with svg.at) and the development runtime records that
+//   __gyralLocate(html, "src/app.ts:12:5")`…`
+// The optional .at fallback lives in a virtual helper, so consumer coverage counts no
+// generated branches. svg call sites work the same way, and the development runtime records that
 // position for the template (view/loc.ts). Nothing else changes and no line moves. Uses the
-// compiler can't follow (an aliased html) stay as they are: the runtime falls back to the stack
+// compiler can't follow (a runtime-derived tag) stay as they are: the runtime falls back to the stack
 // trace there.
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,15 +75,25 @@ export function createLocator(sources: readonly string[]): LocatorHooks {
       const lines = new Lines(code);
       const file = relative(root, id);
       const edits: Edit[] = [];
+      let helper = '__gyralLocate';
+      while (code.includes(helper)) helper += '_';
       for (const { node } of sites) {
         const tag = nodeAt(node, 'tag');
         if (tag === undefined) continue;
         const { line, column } = lines.position(node.start);
         const loc = JSON.stringify(`${file}:${String(line)}:${String(column + 1)}`);
         const name = code.slice(tag.start, tag.end);
-        edits.push({ start: tag.start, end: tag.start, text: '(' });
-        edits.push({ start: tag.end, end: tag.end, text: `.at?.(${loc}) ?? ${name})` });
+        edits.push({
+          start: tag.start,
+          end: tag.end,
+          text: `${helper}(${name}, ${loc})`,
+        });
       }
+      edits.push({
+        start: code.length,
+        end: code.length,
+        text: `\nimport { locate as ${helper} } from 'virtual:gyral/template-locations';\n`,
+      });
       return splice(lines, edits, id);
     },
   };

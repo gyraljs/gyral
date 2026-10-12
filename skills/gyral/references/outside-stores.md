@@ -43,7 +43,8 @@ const add = (by: number): Command<Msg> =>
   command(addToCounter, by, { onSuccess: (): Msg | undefined => undefined });
 
 export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter', {
-  init: () => [{ n: 0 }, [watchCounter()]],
+  init: () => ({ n: 0 }),
+  subscriptions: () => [watchCounter()],
   intent: { Add: true },
   update: {
     Counted: (_s, m) => ({ n: m.n }),
@@ -66,6 +67,9 @@ export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter
   `subscribe` that throws fails the same way.
 - Writes are plain commands (`addToCounter` above); the change comes back through the
   subscription, not through the write's `onSuccess`.
+- Continuous watches belong in `subscriptions`, not `init`. A true removal aborts them
+  after the disconnect microtask; reattachment derives them again and reads the current
+  source. A synchronous move preserves the running watch. `init` is not replayed.
 - `await settled()` doesn't wait for subscriptions to end (they don't), but it waits for values
   already on their way: a store that notifies in a microtask, a watcher that re-arms in one.
   No `await Promise.resolve()` loops in tests.
@@ -74,11 +78,11 @@ export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter
 
 ## A store per page, provided by name
 
-When each page (or test) creates its own store, build commands with a default that explains
-what's missing, and provide the real driver above the components:
+When each page (or test) creates its own store, build commands with a typed driver token
+and provide the real driver above the components:
 
 ```ts
-import { provideDrivers, subscription } from '@gyral/core';
+import { defineDriver, provideDrivers, subscription } from '@gyral/core';
 
 interface Draft {
   readonly revision: number;
@@ -88,10 +92,8 @@ interface DraftStore {
   subscribe(listener: () => void): () => void;
 }
 
-/** Commands are built with this one; it fails with a clear error until a page provides one. */
-export const unboundDraft = subscription<Draft>('draft', () => {
-  throw new Error('No draft: call provideDraft(element, store) on an ancestor.');
-});
+/** A typed token: G0043 names the missing provider; no throwing placeholder driver. */
+export const draft = defineDriver<void, Draft>('draft');
 
 export const provideDraft = (element: Element, store: DraftStore): (() => void) =>
   provideDrivers(element, {
@@ -137,13 +139,15 @@ const watchMailbox = (): Command<Msg> =>
   command(mailbox, undefined, { onSuccess: (m): Msg => ({ _tag: 'Updated', mailbox: m }) });
 
 export const UnreadBadge = define<Mailbox, Msg>()('my-unread-badge', {
-  init: () => [feed.getState(), [watchMailbox()]],
+  init: () => ({ unread: 0, folders: [] }),
+  subscriptions: () => [watchMailbox()],
   update: { Updated: (_s, m) => m.mailbox },
   view: (s) => html`<span class="badge" aria-label="Unread messages">${s.unread}</span>`,
 });
 
 export const Sidebar = define<Mailbox, Msg>()('my-sidebar', {
-  init: () => [feed.getState(), [watchMailbox()]],
+  init: () => ({ unread: 0, folders: [] }),
+  subscriptions: () => [watchMailbox()],
   update: { Updated: (_s, m) => m.mailbox },
   view: (s) =>
     html`<nav aria-label="Folders">

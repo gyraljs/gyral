@@ -1,0 +1,18 @@
+@layer component {
+  #grid-help-opener {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: 0.4rem;
+  }
+  #grid-help {
+    max-inline-size: min(30rem, calc(100vw - 2rem));
+    color: inherit;
+    background: var(--surface);
+    padding: 1rem;
+  }
+}

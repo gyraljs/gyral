@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Workload lab — Gyral examples</title>
+    <meta
+      name="description"
+      content="Real application lifetimes expressed as pure models and owned commands."
+    />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Workload lab</h1>
+      <p>Small models with explicit ownership, cancellation and recovery.</p>
+      <section aria-labelledby="sequence-heading">
+        <h2 id="sequence-heading">State-owned playback</h2>
+        <gy-sequence></gy-sequence>
+      </section>
+      <section aria-labelledby="worker-heading">
+        <h2 id="worker-heading">Owned worker</h2>
+        <gy-solver></gy-solver>
+      </section>
+      <section aria-labelledby="booking-heading">
+        <h2 id="booking-heading">Snapshots and local drafts</h2>
+        <gy-booking></gy-booking>
+      </section>
+      <section aria-labelledby="grid-heading">
+        <h2 id="grid-heading">Held input and native widgets</h2>
+        <button id="grid-help-opener" type="button" hidden>Show grid help</button>
+        <aside id="grid-help" aria-label="Grid help">
+          <p id="grid-description">
+            Use arrow keys or drag to choose cells; Tab moves to the next control.
+          </p>
+          <gy-grid-help></gy-grid-help>
+        </aside>
+        <gy-workload-grid></gy-workload-grid>
+      </section>
+    </main>
+  </body>
+</html>

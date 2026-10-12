@@ -6,6 +6,9 @@ element base, the scheduler, server rendering and hydration all live in `@gyral/
 has no runtime dependencies. Upgrading from 0.2:
 [migrating-0.2-to-0.3.md](migrating-0.2-to-0.3.md).
 
+Production recipes: [strict CSP](strict-csp.md), [Node composition](node-production.md),
+[lazy workspaces and offline assets](offline-assets.md), and [Rust rendering paths](rust-rendering.md).
+
 ## Install
 
 ```sh
@@ -63,8 +66,9 @@ export default defineConfig({
 - **`gyral:template-locations`** (dev server and Vitest only, 0.3.1): tells the development
   runtime where each `html` and `svg` template was written, so template rule errors and
   hydration mismatches name your file, line and column (view/01-templates.md "Source
-  locations"). It rewrites each call site to `(html.at?.("src/x.ts:12:5") ?? html)`…`` (`svg`
-  the same way) and moves no line.
+  locations"). It rewrites each call site through an imported virtual location helper (`svg`
+  the same way) and moves no authored line. The helper's fallbacks live outside your sources,
+  so application V8 coverage counts your own branches.
 - **`gyral:dev-server`** (dev server only): server-side rendering through Vite's dev server
   (`ssrLoadModule`) runs `@gyral/*`, and your direct dependencies that depend on them, through
   Vite instead of Node, so it renders development output and they all share one `@gyral/core`.
@@ -83,6 +87,16 @@ export default defineConfig({
   dependencies never keep it. Server-rendered markup met anyway renders fresh, replacing the
   server's (development warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
   tests match the build (view/07-hydration.md "Client-only builds").
+
+### Coverage
+
+Keep `gyralVitePreset()` in the tested project and include your application source explicitly
+in Vitest coverage, for example `coverage: { provider: 'v8', include: ['src/**/*.ts'] }`.
+Install `@vitest/coverage-v8` at the same version as Vitest. The development locator preserves
+source maps and authored branch counts; you do not need to remove diagnostics or lower a
+coverage threshold. This correction is staged after 0.3.1; use the tested next release before
+removing an existing workaround. The regression uses Vitest 5.0.3 and an aliased template tag.
+Istanbul instrumentation is not covered by that comparison.
 
 ### Element typings
 
