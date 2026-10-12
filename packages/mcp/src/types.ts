@@ -34,6 +34,18 @@ export interface ApiEntry {
   readonly doc: string;
 }
 
+/**
+ * A type that public declarations use but no entry point exports (a helper of `ComponentSpec`,
+ * Vite's `Plugin`). get_api explains how to name it instead of failing.
+ */
+export interface InternalType {
+  readonly name: string;
+  /** The exports whose declarations use it: `ComponentSpec (type, @gyral/core)`. */
+  readonly usedBy: readonly string[];
+  /** The package it comes from when it is a dependency's type: `vite`, `node:http`. */
+  readonly from?: string;
+}
+
 export interface ExampleFile {
   /** Relative to the example, e.g. `src/counter.ts`. */
   readonly path: string;
@@ -63,6 +75,8 @@ export interface Corpus {
   readonly version: string;
   readonly docs: readonly DocPage[];
   readonly api: readonly ApiEntry[];
+  /** Types the public API uses without exporting them (corpora built by 0.3.1 lack it). */
+  readonly internalTypes?: readonly InternalType[];
   readonly examples: readonly Example[];
   readonly skill: readonly SkillFile[];
   readonly llmsTxt: string;

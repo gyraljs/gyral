@@ -6,7 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 
 /**
- * What `toNodeListener` passes as the handler's second argument (gyral-dyn.29): the Node request
+ * What `toNodeListener` passes as the handler's second argument: the Node request
  * and the client's address. `{ incoming }` is the shape Hono's Node adapter uses, so
  * `getConnInfo` from `@hono/node-server/conninfo` works unchanged.
  */

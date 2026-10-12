@@ -1,16 +1,13 @@
-// Every tool's logic against the committed docs snapshot and this repo's sources.
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// Every tool's logic against the committed docs snapshot and this repo's sources
+// (scaffold_component and check_snippet have their own files).
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCorpus } from '../scripts/build-corpus.mjs';
-import { findApi, formatApi, listApi } from '../src/api.js';
-import { checkSnippet } from '../src/check.js';
+import { bareName, explainInternal, findApi, formatApi, listApi } from '../src/api.js';
 import { anchorFor, getDoc, parseLlmsFull, searchDocs } from '../src/docs.js';
 import { findExample, formatExample, listExamples } from '../src/examples.js';
-import { scaffold, validTag } from '../src/scaffold.js';
+import { orientation, USE_CASES, workflow } from '../src/orientation.js';
 import type { Corpus } from '../src/types.js';
 
-const pkgDir = fileURLToPath(new URL('..', import.meta.url));
 let corpus: Corpus;
 
 // Building the corpus is CPU-bound (several seconds when the suite runs in parallel).
@@ -127,7 +124,50 @@ describe('api', () => {
 
   it('suggests close names and lists exports', () => {
     expect(findApi(corpus.api, 'renderPge').suggestions).toContain('renderPage');
+    expect(findApi(corpus.api, 'renderP').suggestions[0]).toMatch(/^renderP/);
+    expect(findApi(corpus.api, 'Reducr').suggestions).toContain('Reducer');
+    // Nothing close: still the three nearest names.
+    expect(findApi(corpus.api, 'qqqqqqqqqqqq').suggestions).toHaveLength(3);
     expect(listApi(corpus.api, 'time')).toMatch(/## @gyral\/time\n- function: .*delay/);
+  });
+
+  it('accepts names as agents write them', () => {
+    expect(bareName('define()')).toBe('define');
+    expect(bareName('Update<S, M>')).toBe('Update');
+    expect(bareName('typeof form')).toBe('form');
+    expect(bareName('`each`')).toBe('each');
+    expect(findApi(corpus.api, 'Update<State, Msg>').matches[0]?.name).toBe('Update');
+  });
+
+  it.each(['Reducer', 'Variant', 'ParseResult', 'StandardSchemaV1'])(
+    'finds %s, which public types are built from',
+    (name) => {
+      const [entry] = findApi(corpus.api, name).matches;
+      expect(entry?.specifier).toBe('@gyral/core');
+      expect(entry?.kind).toBe('type');
+    },
+  );
+
+  it('explains internal helper types instead of failing', () => {
+    const names = new Set(corpus.internalTypes?.map((t) => t.name));
+    for (const exported of ['Reducer', 'Variant', 'ParseResult', 'StandardSchemaV1'])
+      expect(names.has(exported), exported).toBe(false);
+    expect(names).toContain('SpecBody');
+    const spec = explainInternal(corpus.internalTypes, 'SpecBody') ?? '';
+    expect(spec).toContain('is not exported');
+    expect(spec).toContain('ComponentSpec');
+    const plugin = explainInternal(corpus.internalTypes, 'InlineConfig') ?? '';
+    expect(plugin).toContain("import type { InlineConfig } from 'vite';");
+    expect(explainInternal(corpus.internalTypes, 'define')).toBeUndefined();
+  });
+
+  it('keeps repo paths and tracker ids out of public doc comments', () => {
+    const leaks = corpus.api.filter((e) =>
+      /docs\/design-docs|\bview\/\d\d|\b0\d{3}-[\w-]+\.md\b|\bgyral-[a-z0-9]{3}\.\d+/.test(
+        `${e.doc}\n${e.declaration}`,
+      ),
+    );
+    expect(leaks.map((e) => `${e.specifier} ${e.name}`)).toEqual([]);
   });
 });
 
@@ -146,43 +186,27 @@ describe('examples', () => {
   });
 });
 
-describe('scaffold and check_snippet', () => {
-  it('rejects invalid custom element names', () => {
-    expect(validTag('Counter')).toMatch(/not a valid custom element name/);
-    expect(validTag('my-counter')).toBeUndefined();
+describe('start_here', () => {
+  it('maps every use case to an example and a guide that exist', () => {
+    const examples = new Set(corpus.examples.map((e) => e.name));
+    for (const useCase of USE_CASES) {
+      for (const example of useCase.examples) expect(examples, useCase.task).toContain(example);
+      expect(getDoc(corpus.docs, useCase.doc), useCase.doc).toBeDefined();
+    }
   });
 
-  // Every template must typecheck against the real packages (this package's devDependencies).
-  // Files are checked one at a time, so imports of sibling files are dropped; the basic test
-  // imports its component, so it is checked appended to the component.
-  const withoutLocalImports = (code: string): string =>
-    code.replace(/^import [^\n]*'\.\/[^\n]*\n/gm, '');
-
-  for (const kind of ['basic', 'form', 'ssr-page'] as const) {
-    it(`"${kind}" typechecks`, () => {
-      const files = scaffold('demo-widget', kind, 'A demo.').files;
-      const component = files[0]?.code ?? '';
-      for (const file of files) {
-        const code = file.path.endsWith('.test.ts')
-          ? `${component}\n${withoutLocalImports(file.code)}`
-          : withoutLocalImports(file.code);
-        expect(checkSnippet(code, pkgDir).report, `${kind}: ${file.path}`).toMatch(
-          /^No type errors/,
-        );
-      }
-    }, 60_000);
-  }
-
-  it('reports type errors with positions', () => {
-    const result = checkSnippet("import { define } from '@gyral/core';\ndefine(42);\n", pkgDir);
-    expect(result.ran).toBe(true);
-    expect(result.ok).toBe(false);
-    expect(result.report).toMatch(/2:\d+ TS\d+/);
-  }, 30_000);
-
-  it('explains when it cannot run', () => {
-    const result = checkSnippet('const x = 1;', join(pkgDir, 'no-such-dir'));
-    expect(result).toMatchObject({ ran: false, ok: false });
-    expect(result.report).toContain('No package.json');
+  it('gives the model, rules, workflow and tool table', () => {
+    const text = orientation(corpus, true);
+    for (const part of ['## Rules', '## Workflow', '## Which tool when', '## Use cases'])
+      expect(text).toContain(part);
+    expect(text).toContain("define<State, Msg>()('my-tag'");
+    expect(text).toContain('every(ms');
+    expect(text).toContain('TemplateResult');
+    expect(text).toContain('get_example "register" / "no-js-first"');
+    expect(orientation(corpus, false)).not.toContain('`check_snippet` (type errors');
+    expect(workflow(true)).toMatch(
+      /start from get_example or scaffold_component.*check_snippet.*get_api only/,
+    );
+    expect(workflow(false)).not.toContain('check_snippet');
   });
 });

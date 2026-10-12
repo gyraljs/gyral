@@ -95,6 +95,24 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
 `strict`, `moduleResolution: "bundler"`.
 
+## With the Gyral MCP server
+
+When the `gyral` MCP tools are available (`npx -y @gyral/mcp`), work in this loop rather than
+reading the docs end to end:
+
+1. `start_here` once: the rules, the workflow and an index from use case to example and guide.
+2. Start from code: `get_example` (the closest example) or `scaffold_component` (`basic`,
+   `form`, `form-native`, `ssr-page`; it reads `package.json` and imports only installed
+   packages).
+3. Write a minimal implementation of the task right away.
+4. `check_snippet` the whole module: type errors plus a suggested fix for each, and common
+   Gyral mistakes TypeScript can't see. Apply the fixes and check again until it passes.
+5. `get_api` only for one specific symbol you are about to use; `search_docs` and `get_doc`
+   for one concept you need.
+
+`start_here`, `form-native`, the installed-package checks and the suggested fixes are
+**unreleased** (next release); `@gyral/mcp` 0.3.1 has the other tools and the same loop.
+
 ## Decision tables
 
 **Where does this state live?**

@@ -44,10 +44,35 @@ describe('gyral MCP server over stdio', () => {
       'list_examples',
       'scaffold_component',
       'search_docs',
+      'start_here',
     ]);
     const search = tools.find((t) => t.name === 'search_docs');
     expect(search?.inputSchema.required).toEqual(['query']);
     expect(client.getInstructions()).toContain('Model-View-Intent');
+    expect(client.getInstructions()).toContain('start_here');
+  });
+
+  it('puts the workflow in every tool description, for clients that drop instructions', async () => {
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      expect(tool.description, tool.name).toContain('start_here');
+      expect(tool.description, tool.name).toMatch(/get_example or scaffold_component/);
+      expect(tool.description, tool.name).toContain('check_snippet');
+      expect(tool.description, tool.name).toMatch(/get_api only/);
+    }
+    const scaffold = tools.find((t) => t.name === 'scaffold_component');
+    expect(Object.keys(scaffold?.inputSchema.properties ?? {})).toEqual(
+      expect.arrayContaining(['project_dir', 'installed']),
+    );
+    const getDoc = tools.find((t) => t.name === 'get_doc');
+    expect(Object.keys(getDoc?.inputSchema.properties ?? {})).toEqual(['path_or_url', 'path']);
+  });
+
+  it('orients an agent with start_here', async () => {
+    const { text } = await call('start_here');
+    expect(text).toContain('## Workflow');
+    expect(text).toContain('get_example "register"');
+    expect(text).toContain('check_snippet');
   });
 
   it('answers every tool', async () => {
@@ -56,6 +81,15 @@ describe('gyral MCP server over stdio', () => {
     );
     expect((await call('get_doc', { path_or_url: 'forms#the-server-half' })).text).toContain(
       'formAction',
+    );
+    // `path` is accepted too: agents guess it.
+    expect(await call('get_doc', { path: 'forms#the-server-half' })).toMatchObject({
+      isError: false,
+      text: expect.stringContaining('formAction') as unknown,
+    });
+    expect((await call('get_doc', {})).isError).toBe(true);
+    expect((await call('get_api', { symbol: 'Reducer' })).text).toContain(
+      "import { type Reducer } from '@gyral/core';",
     );
     expect((await call('get_api', { symbol: 'renderPage' })).text).toContain(
       "import { renderPage } from '@gyral/ssr';",
@@ -72,7 +106,39 @@ describe('gyral MCP server over stdio', () => {
       text: expect.stringMatching(/^No type errors/) as unknown,
       isError: false,
     });
+    const fixes = await call('check_snippet', {
+      code: "import { define, html } from '@gyral/core';\nexport const X = define<{ readonly n: number }, never>('x-y', { init: () => ({ n: 0 }), view: (s) => html`${s.n}` });\n",
+    });
+    expect(fixes.isError).toBe(false);
+    expect(fixes.text).toContain('Suggested fixes:');
+    expect(fixes.text).toContain("define<State, Msg>()('my-tag'");
   }, 60_000);
+
+  it('scaffolds for what the project has installed', async () => {
+    // GYRAL_PROJECT_DIR is this package: @gyral/core, http, ssr, testing and zod, no vitest.
+    const plain = await call('scaffold_component', { tag: 'my-count', kind: 'basic' });
+    expect(plain.text).not.toContain('my-count.test.ts');
+    expect(plain.text).toContain('lacks @gyral/testing or vitest');
+    const tested = await call('scaffold_component', {
+      tag: 'my-count',
+      kind: 'basic',
+      installed: ['vitest'],
+    });
+    expect(tested.text).toContain('src/my-count.test.ts');
+    const form = await call('scaffold_component', { tag: 'my-form', kind: 'form' });
+    expect(form.text).toContain("import { z } from 'zod';");
+    expect(form.text).toContain("import { submitForm } from '@gyral/http';");
+    const native = await call('scaffold_component', { tag: 'my-form', kind: 'form-native' });
+    expect(native.text).toContain('novalidate');
+    expect(native.text).not.toMatch(/from '(?:zod|valibot|@gyral\/http)'/);
+    const missing = await call('scaffold_component', {
+      tag: 'my-form',
+      kind: 'form',
+      project_dir: 'no-such-dir',
+    });
+    // No package.json there: the nearest one above it is this package's.
+    expect(missing.isError).toBe(false);
+  });
 
   it('reports bad input as tool errors, not crashes', async () => {
     expect(await call('get_api', { symbol: 'renderPge' })).toMatchObject({

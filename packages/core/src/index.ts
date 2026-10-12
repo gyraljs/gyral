@@ -72,6 +72,7 @@ export type {
   IntentParser,
   IntentRejected,
   Intents,
+  ParseResult,
   ParserCtx,
   ParserFor,
   PropDeclarations,
@@ -81,9 +82,14 @@ export type {
   ShadowOption,
   Stateless,
   StoreReader,
+  Reducer,
   Tagged,
   Update,
+  Variant,
 } from './types.js';
+// Standard Schema (https://standardschema.dev), the schema interface `form()`, `field()`,
+// `defineForm()`, `prop.*` and store seeds accept.
+export type { StandardSchemaV1 } from '@standard-schema/spec';
 
 // The view layer (ADR 0018, docs/design-docs/view/): templates, lists, hooks and styles.
 export { css, defineHook, each, html, keyed, nothing, raw, svg } from './view/index.js';

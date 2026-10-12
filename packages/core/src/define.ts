@@ -44,8 +44,7 @@ export type Definer<S, M extends Tagged, P extends object, O extends Tagged> = <
  *   define<State, Msg>()('x-counter', { init, intent: { Increment: … }, update, view })
  *
  * With no type arguments, `define()('x-badge', spec)` infers the state, messages, props and
- * intent names from the spec. See docs/design-docs/0001-mvi-parsed-intent.md,
- * 0006-effects-and-drivers.md, 0007-props.md, 0008-forms.md and view/05-element.md.
+ * intent names from the spec. Guide: https://gyral.dev/docs/components/
  */
 export function define(): <
   S,

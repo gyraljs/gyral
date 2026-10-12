@@ -19,7 +19,11 @@ The inventory tracks `main`, so it can list exports added after the 0.3.1 releas
 **unreleased** (next release) and absent from npm 0.3.1: `viewOf` and `ViewOptions`
 (`@gyral/testing`), `writeComponentStyleManifest`, `ComponentStyleManifest` and
 `ComponentStyleManifestOptions` (`@gyral/ssr/static`), plus the `componentStyleHashes` field of
-`CspOptions` (`@gyral/ssr`).
+`CspOptions` (`@gyral/ssr`); the type-only exports `Reducer`, `Variant`, `ParseResult` and
+`StandardSchemaV1` (`@gyral/core`: the types `Update`, `IntentParser`, `StoreUpdate` and the form
+helpers are built from, re-exported unchanged from `@standard-schema/spec` for the last), and
+`InternalType` with the optional `internalTypes` field of `Corpus` (`@gyral/mcp`), none of which is a
+runtime value.
 
 ## Removed from the public API in 0.3.1
 
@@ -149,6 +153,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `OutputsOf`           | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `OutputSource`        | type  | supporting type |                                                                                                        |
 | `ParserCtx`           | type  | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
+| `ParseResult`         | type  | documented      | [skills/gyral/references/intent.md](../../skills/gyral/references/intent.md)                           |
 | `ParserFor`           | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `prop`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Prop`                | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
@@ -160,12 +165,14 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `provideDrivers`      | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `raw`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `RawResult`           | type  | supporting type |                                                                                                        |
+| `Reducer`             | type  | documented      | [skills/gyral/references/update-and-commands.md](../../skills/gyral/references/update-and-commands.md) |
 | `retry`               | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `RetryPolicy`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `SeedCheck`           | type  | supporting type |                                                                                                        |
 | `send`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `settled`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ShadowOption`        | type  | supporting type |                                                                                                        |
+| `StandardSchemaV1`    | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `Stateless`           | type  | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
 | `Store`               | type  | documented      | [skills/gyral/references/outside-stores.md](../../skills/gyral/references/outside-stores.md)           |
 | `StoreChanged`        | type  | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
@@ -185,7 +192,8 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `Tagged`              | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `TemplateResult`      | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Unsubscribe`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
-| `Update`              | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
+| `Update`              | type  | documented      | [skills/gyral/references/update-and-commands.md](../../skills/gyral/references/update-and-commands.md) |
+| `Variant`             | type  | documented      | [skills/gyral/references/intent.md](../../skills/gyral/references/intent.md)                           |
 
 ### `@gyral/core/internal/server`
 
@@ -378,6 +386,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `DocSection`   | type  | supporting type |                                                        |
 | `Example`      | type  | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `ExampleFile`  | type  | supporting type |                                                        |
+| `InternalType` | type  | supporting type |                                                        |
 | `loadCorpus`   | value | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `refreshDocs`  | value | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `SkillFile`    | type  | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
@@ -410,65 +419,65 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 ### `@gyral/ssr`
 
-| Export                  | Kind  | Status          | Documented in                                                              |
-| ----------------------- | ----- | --------------- | -------------------------------------------------------------------------- |
-| `ComponentAssets`       | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
-| `ComponentModule`       | type  | supporting type |                                                                            |
-| `contentSecurityPolicy` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
-| `CspDirectives`         | type  | supporting type |                                                                            |
-| `CspOptions`            | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
-| `formAction`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                       |
-| `FormActionHandlers`    | type  | supporting type |                                                                            |
-| `FormReject`            | type  | supporting type |                                                                            |
-| `PageOptions`           | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                 |
-| `rejectWith`            | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md) |
-| `RenderOptions`         | type  | supporting type |                                                                            |
-| `renderPage`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                       |
-| `renderToString`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
-| `seeOther`              | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md) |
-| `styleHashes`           | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
-| `wantsJson`             | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)     |
+| Export                  | Kind  | Status          | Documented in                                                                        |
+| ----------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
+| `ComponentAssets`       | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `ComponentModule`       | type  | supporting type |                                                                                      |
+| `contentSecurityPolicy` | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `CspDirectives`         | type  | supporting type |                                                                                      |
+| `CspOptions`            | type  | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `formAction`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                 |
+| `FormActionHandlers`    | type  | supporting type |                                                                                      |
+| `FormReject`            | type  | supporting type |                                                                                      |
+| `PageOptions`           | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                           |
+| `rejectWith`            | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)           |
+| `RenderOptions`         | type  | supporting type |                                                                                      |
+| `renderPage`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                 |
+| `renderToString`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `seeOther`              | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)           |
+| `styleHashes`           | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `wantsJson`             | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
 
 ### `@gyral/ssr/static`
 
-| Export                          | Kind  | Status          | Documented in                                                                     |
-| ------------------------------- | ----- | --------------- | --------------------------------------------------------------------------------- |
-| `AppAssets`                     | type  | supporting type |                                                                                   |
-| `assetHandler`                  | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
-| `AssetHandler`                  | type  | supporting type |                                                                                   |
-| `AssetHandlerOptions`           | type  | supporting type |                                                                                   |
-| `ClientAssets`                  | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
-| `clientAssetsFromManifest`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
-| `componentsFromManifest`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
-| `ComponentStyleManifest`        | type  | supporting type |                                                                                   |
-| `ComponentStyleManifestOptions` | type  | supporting type |                                                                                   |
-| `FetchApp`                      | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                        |
-| `ManifestChunk`                 | type  | documented      | [design-docs/0016-production-builds.md](../design-docs/0016-production-builds.md) |
-| `ManifestOptions`               | type  | supporting type |                                                                                   |
-| `PageAssets`                    | type  | supporting type |                                                                                   |
-| `prerender`                     | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
-| `PrerenderedPage`               | type  | supporting type |                                                                                   |
-| `PrerenderOptions`              | type  | supporting type |                                                                                   |
-| `ProductionOptions`             | type  | supporting type |                                                                                   |
-| `productionServer`              | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
-| `RenderMode`                    | type  | supporting type |                                                                                   |
-| `ViteManifest`                  | type  | supporting type |                                                                                   |
-| `writeComponentStyleManifest`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)            |
+| Export                          | Kind  | Status          | Documented in                                                                        |
+| ------------------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
+| `AppAssets`                     | type  | supporting type |                                                                                      |
+| `assetHandler`                  | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `AssetHandler`                  | type  | supporting type |                                                                                      |
+| `AssetHandlerOptions`           | type  | supporting type |                                                                                      |
+| `ClientAssets`                  | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                           |
+| `clientAssetsFromManifest`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `componentsFromManifest`        | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `ComponentStyleManifest`        | type  | supporting type |                                                                                      |
+| `ComponentStyleManifestOptions` | type  | supporting type |                                                                                      |
+| `FetchApp`                      | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                           |
+| `ManifestChunk`                 | type  | documented      | [design-docs/0016-production-builds.md](../design-docs/0016-production-builds.md)    |
+| `ManifestOptions`               | type  | supporting type |                                                                                      |
+| `PageAssets`                    | type  | supporting type |                                                                                      |
+| `prerender`                     | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `PrerenderedPage`               | type  | supporting type |                                                                                      |
+| `PrerenderOptions`              | type  | supporting type |                                                                                      |
+| `ProductionOptions`             | type  | supporting type |                                                                                      |
+| `productionServer`              | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `RenderMode`                    | type  | supporting type |                                                                                      |
+| `ViteManifest`                  | type  | supporting type |                                                                                      |
+| `writeComponentStyleManifest`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
 
 ### `@gyral/ssr/node`
 
-| Export                | Kind  | Status          | Documented in                                                          |
-| --------------------- | ----- | --------------- | ---------------------------------------------------------------------- |
-| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
-| `DevServer`           | type  | supporting type |                                                                        |
-| `DevServerContext`    | type  | supporting type |                                                                        |
-| `DevServerOptions`    | type  | supporting type |                                                                        |
-| `FetchHandler`        | type  | supporting type |                                                                        |
-| `gyralDevServer`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
-| `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
-| `NodeListener`        | type  | supporting type |                                                                        |
-| `NodeListenerOptions` | type  | supporting type |                                                                        |
-| `toNodeListener`      | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md) |
+| Export                | Kind  | Status          | Documented in                                                                        |
+| --------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
+| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `DevServer`           | type  | supporting type |                                                                                      |
+| `DevServerContext`    | type  | supporting type |                                                                                      |
+| `DevServerOptions`    | type  | supporting type |                                                                                      |
+| `FetchHandler`        | type  | supporting type |                                                                                      |
+| `gyralDevServer`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `NodeListener`        | type  | supporting type |                                                                                      |
+| `NodeListenerOptions` | type  | supporting type |                                                                                      |
+| `toNodeListener`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
 
 ### `@gyral/testing`
 

@@ -200,7 +200,7 @@ export const intentNames: unknown = new Proxy(
 
 /**
  * A component's intent names as a module-level constant, so pure list rows can name intents
- * without passing them through `pick` (view/03-lists.md "Rows must be pure"). The same object
+ * without passing them through `pick` (rows must be pure). The same object
  * the view gets as `i`, typed by the component's class (ADR 0023). A row that names intents
  * this way needs an explicit return type, or the row, the view and the class infer each other
  * in a circle:

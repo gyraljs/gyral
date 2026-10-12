@@ -185,7 +185,7 @@ try {
       }),
     );
     const tools = await client.listTools();
-    assert.equal(tools.tools.length, 6);
+    assert.equal(tools.tools.length, 7);
     assert(!tools.tools.some((tool) => tool.name === 'check_snippet'));
     assert((await client.readResource({ uri: 'gyral://skill' })).contents.length > 0);
     assert(

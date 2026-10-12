@@ -65,8 +65,7 @@ export const html: (strings: TemplateStringsArray, ...values: unknown[]) => Temp
 
 /**
  * The SVG fragment tag: `` svg`<path d=${s.d} />` ``. Its top level is SVG content, so it
- * renders only inside an `<svg>` (or another SVG element) of an html template
- * (view/01-templates.md "svg templates"). A whole `<svg>` graphic is written with html.
+ * renders only inside an `<svg>` (or another SVG element) of an html template. A whole `<svg>` graphic is written with html.
  */
 export const svg: (strings: TemplateStringsArray, ...values: unknown[]) => TemplateResult = DEV
   ? withAt(svgTag)

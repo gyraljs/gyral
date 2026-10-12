@@ -166,8 +166,7 @@ export function undefinedElementsIn(
 }
 
 /**
- * Waits until the page's Gyral components have rendered (docs/design-docs/view/04-scheduler.md
- * "`settled()`"): releases lazy islands if asked, then `await settled()`. Islands still
+ * Waits until the page's Gyral components have rendered (see `settled()`): releases lazy islands if asked, then `await settled()`. Islands still
  * deferred are left alone. It throws when a server-rendered custom element never upgraded
  * (import its module, or list it in `allowUndefined`). Given a `MountedSsr`, it also throws
  * when console errors/warnings or uncaught errors were recorded since mounting.

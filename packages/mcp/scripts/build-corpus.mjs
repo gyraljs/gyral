@@ -79,6 +79,76 @@ function kindOf(node, checker) {
   return 'type';
 }
 
+/** `node_modules/vite/dist/node/index.d.ts` → `vite`; `@types/node/http.d.ts` → `node:http`. */
+function moduleOf(file) {
+  const at = file.lastIndexOf('node_modules/');
+  if (at === -1) return undefined;
+  const rest = file.slice(at + 'node_modules/'.length).split('/');
+  if (rest[0] === '@types' && rest[1] === 'node') return `node:${rest[2]?.replace(/\.d\.ts$/, '')}`;
+  if (rest[0] === '@types') return rest[1];
+  return rest[0]?.startsWith('@') ? `${rest[0]}/${rest[1]}` : rest[0];
+}
+
+/**
+ * Types that public declarations reference but no entry point exports (a spec field's type, a
+ * helper of `ComponentSpec`, Vite's `Plugin`), with the exports that use them: get_api tells an
+ * agent how to name one instead of failing on it.
+ */
+function internalTypes(roots, checker) {
+  const exportedNames = new Set(roots.map((r) => r.name));
+  const exportedSymbols = new Set(roots.map((r) => r.symbol));
+  const found = new Map();
+  const note = (symbol, user) => {
+    const file = symbol.declarations?.[0]?.getSourceFile().fileName ?? '';
+    if (/\/typescript\/lib\//.test(file) || exportedNames.has(symbol.name)) return;
+    const from = moduleOf(file);
+    const entry = found.get(symbol.name) ?? {
+      name: symbol.name,
+      usedBy: [],
+      ...(from ? { from } : {}),
+    };
+    if (!entry.usedBy.includes(user)) entry.usedBy.push(user);
+    found.set(symbol.name, entry);
+  };
+  for (const { name, specifier, kind, symbol } of roots) {
+    const user = `${name} (${kind}, ${specifier})`;
+    const visit = (node) => {
+      if (ts.isFunctionLike(node) && 'body' in node && node.body !== undefined) {
+        node.typeParameters?.forEach(visit);
+        node.parameters.forEach(visit);
+        if (node.type) visit(node.type);
+        return;
+      }
+      if (ts.isTypeReferenceNode(node) || ts.isExpressionWithTypeArguments(node)) {
+        const id = ts.isTypeReferenceNode(node) ? node.typeName : node.expression;
+        let target = checker.getSymbolAtLocation(ts.isQualifiedName(id) ? id.left : id);
+        if (target && target.flags & ts.SymbolFlags.Alias)
+          target = checker.getAliasedSymbol(target);
+        if (
+          target &&
+          !exportedSymbols.has(target) &&
+          !(target.flags & ts.SymbolFlags.TypeParameter)
+        )
+          note(target, user);
+      }
+      ts.forEachChild(node, visit);
+    };
+    for (const declaration of symbol.declarations ?? []) {
+      if (ts.isVariableDeclaration(declaration)) {
+        if (declaration.type) visit(declaration.type);
+      } else if (ts.isClassDeclaration(declaration)) {
+        declaration.heritageClauses?.forEach(visit);
+        const hidden = ts.ModifierFlags.Private | ts.ModifierFlags.Protected;
+        for (const member of declaration.members) {
+          if (member.name !== undefined && ts.isPrivateIdentifier(member.name)) continue;
+          if ((ts.getCombinedModifierFlags(member) & hidden) === 0) visit(member);
+        }
+      } else visit(declaration);
+    }
+  }
+  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name, 'en'));
+}
+
 function buildApi() {
   const entries = ENTRIES.flatMap(([name, subpaths]) => {
     const dir = join(repo, 'packages', name);
@@ -102,7 +172,8 @@ function buildApi() {
     },
   });
   const checker = program.getTypeChecker();
-  return entries.flatMap(({ specifier, file }) => {
+  const roots = [];
+  const api = entries.flatMap(({ specifier, file }) => {
     const source = program.getSourceFile(file);
     const module = source && checker.getSymbolAtLocation(source);
     if (module === undefined) throw new Error(`build-corpus: cannot read ${file}`);
@@ -112,10 +183,12 @@ function buildApi() {
       const node = symbol.declarations?.[0];
       if (node === undefined) throw new Error(`build-corpus: ${exported.name} has no declaration`);
       const doc = ts.displayPartsToString(symbol.getDocumentationComment(checker));
+      const kind = kindOf(node, checker);
+      roots.push({ name: exported.name, specifier, kind, symbol });
       return {
         name: exported.name,
         specifier,
-        kind: kindOf(node, checker),
+        kind,
         declaration: overloadsOf(symbol)
           .map((n) => declarationText(n, exported.name, checker))
           .join('\n'),
@@ -123,6 +196,7 @@ function buildApi() {
       };
     });
   });
+  return { api, internalTypes: internalTypes(roots, checker) };
 }
 
 function sourceFiles(dir) {
@@ -194,10 +268,12 @@ function buildSkill() {
 export function buildCorpus(parseLlmsFull) {
   const docs = parseLlmsFull(read(join(pkgDir, 'data', 'llms-full.txt')));
   if (docs.length < 10) throw new Error(`build-corpus: only ${docs.length} docs pages parsed`);
+  const { api, internalTypes } = buildApi();
   return {
     version: JSON.parse(read(join(pkgDir, 'package.json'))).version,
     docs,
-    api: buildApi(),
+    api,
+    internalTypes,
     examples: buildExamples(docs),
     skill: buildSkill(),
     llmsTxt: read(join(pkgDir, 'data', 'llms.txt')),

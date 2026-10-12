@@ -3,8 +3,7 @@ import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, Tagged } from './types.js';
 
 /**
- * The custom element `define()` produces: a plain `HTMLElement` (view/05-element.md "Public
- * instance API"). Tests wait for rendering with `settled()`.
+ * The custom element `define()` produces: a plain `HTMLElement`. Tests wait for rendering with `settled()`.
  */
 export interface GyralElement<S, M extends Tagged> extends HTMLElement {
   /** Current model state. */

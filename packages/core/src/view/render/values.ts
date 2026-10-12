@@ -32,7 +32,7 @@ export interface ListResult {
   readonly pick: ((item: unknown) => unknown) | undefined;
 }
 
-/** Everything a child hole accepts (view/02-bindings.md "Child values"). */
+/** Everything a child hole accepts. */
 export type ChildValue =
   | string
   | number

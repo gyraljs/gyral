@@ -54,7 +54,7 @@ export function renderToString(value: ChildValue, options?: ServerRenderOptions)
 
 /**
  * `'sha256-…'` hashes of every registered shadow component's declarative-shadow-root `<style>`,
- * for a `Content-Security-Policy` `style-src` (view/08-styles.md "Server").
+ * for a `Content-Security-Policy` `style-src`.
  */
 export function styleHashes(): Promise<readonly string[]> {
   prepare();
