@@ -62,7 +62,7 @@ try {
     '64',
     '-e',
     'GYRAL_MCP_PUBLIC_ORIGIN=https://mcp.gyral.dev',
-    'gyral-mcp:review',
+    process.env['GYRAL_MCP_IMAGE'] ?? 'gyral-mcp:review',
   );
   await docker(
     'run',

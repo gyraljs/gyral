@@ -1,0 +1,67 @@
+# Attach to the existing Traefik network; Traefik owns public ports and TLS.
+services:
+  gyral-mcp:
+    image: ${GYRAL_MCP_IMAGE:?Set the published image digest in .env}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1
+    pids_limit: 64
+    stop_grace_period: 10s
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: ${TRAEFIK_NETWORK:?Set the existing Traefik network name}
+      traefik.http.routers.gyral-mcp.rule: Host(`mcp.gyral.dev`)
+      traefik.http.routers.gyral-mcp.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.gyral-mcp.tls: 'true'
+      traefik.http.routers.gyral-mcp.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:?Set the existing certificate resolver name}
+      traefik.http.routers.gyral-mcp.service: gyral-mcp
+      traefik.http.routers.gyral-mcp.middlewares: gyral-mcp-rate,gyral-mcp-inflight,gyral-mcp-body
+      traefik.http.services.gyral-mcp.loadbalancer.server.port: '3000'
+      traefik.http.services.gyral-mcp.loadbalancer.server.scheme: http
+      traefik.http.services.gyral-mcp.loadbalancer.passhostheader: 'true'
+      traefik.http.middlewares.gyral-mcp-rate.ratelimit.average: '5'
+      traefik.http.middlewares.gyral-mcp-rate.ratelimit.period: 1s
+      traefik.http.middlewares.gyral-mcp-rate.ratelimit.burst: '20'
+      traefik.http.middlewares.gyral-mcp-rate.ratelimit.sourcecriterion.ipstrategy.depth: '0'
+      traefik.http.middlewares.gyral-mcp-inflight.inflightreq.amount: '8'
+      traefik.http.middlewares.gyral-mcp-inflight.inflightreq.sourcecriterion.ipstrategy.depth: '0'
+      traefik.http.middlewares.gyral-mcp-body.buffering.maxrequestbodybytes: '16384'
+    environment:
+      NODE_ENV: production
+      GYRAL_MCP_BIND: 0.0.0.0
+      PORT: 3000
+      GYRAL_MCP_PUBLIC_ORIGIN: ${GYRAL_MCP_PUBLIC_ORIGIN:?Set the public HTTPS origin}
+      GYRAL_MCP_ALLOWED_ORIGINS: ${GYRAL_MCP_ALLOWED_ORIGINS:-}
+      GYRAL_MCP_MAX_CONCURRENT: ${GYRAL_MCP_MAX_CONCURRENT:-32}
+      GYRAL_MCP_REQUESTS_PER_MINUTE: ${GYRAL_MCP_REQUESTS_PER_MINUTE:-600}
+      GYRAL_MCP_EXPECTED_CORPUS_SHA256: ${GYRAL_MCP_EXPECTED_CORPUS_SHA256:?Set the expected corpus digest}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const req = require('node:http').get({ host: '127.0.0.1', port: 3000, path: '/healthz',
+          headers: { Host: new URL(process.env.GYRAL_MCP_PUBLIC_ORIGIN).host } }, r => {
+          let body = ''; r.on('data', p => body += p); r.on('end', () => {
+          try { if (r.statusCode !== 200 || JSON.parse(body).corpusSha256 !==
+          process.env.GYRAL_MCP_EXPECTED_CORPUS_SHA256) process.exit(1); }
+          catch { process.exit(1); } }); });
+          req.setTimeout(3000, () => req.destroy()); req.on('error', () => process.exit(1));
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+networks:
+  default:
+    external: true
+    name: ${TRAEFIK_NETWORK:?Set the existing Traefik network name}
