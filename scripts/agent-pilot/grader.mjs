@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { extname, join, resolve, sep } from 'node:path';
 import { chromium } from 'playwright';
 import { hashes, save } from './corpus.mjs';
-import { IMAGE, sandbox } from './sandbox.mjs';
+import { IMAGE, SANDBOX_FAILURE, sandbox } from './sandbox.mjs';
 import { browserCases } from './browser.mjs';
 
 export function command(args, timeout = 90_000) {
@@ -72,14 +72,25 @@ async function staticServer(dir) {
   };
 }
 
+/** Permission/cache failures are the sandbox's fault: infrastructure, not an app failure. */
+export function classify(step) {
+  if (step.code !== 0 && SANDBOX_FAILURE.test(step.log ?? '')) {
+    step.infrastructure = true;
+    step.infrastructureReason = 'sandbox_permission';
+  }
+  return step;
+}
+
 export async function grade(corpus, workspace, framework, task, output, maxMs = 240000) {
   const deadline = Date.now() + maxMs;
   const remaining = () => Math.max(1, Math.min(90000, deadline - Date.now()));
   mkdirSync(output, { recursive: true });
   mkdirSync(join(output, 'dist'));
+  // A fresh generated-output directory per grade: nothing carries over between checks.
+  mkdirSync(join(output, 'generated'));
   const name = `gyral-pilot-${process.pid}-${Date.now()}`;
   const common = [
-    ...sandbox(corpus, workspace, framework),
+    ...sandbox(corpus, workspace, framework, join(output, 'generated')),
     '--name',
     name,
     '--mount',
@@ -109,8 +120,10 @@ export async function grade(corpus, workspace, framework, task, output, maxMs = 
   );
   writeFileSync(join(output, 'build.log'), build.log);
   if (build.timedOut) await command(['rm', '-f', name], 5000);
+  for (const step of [type, build]) classify(step);
   const result = {
     sourceHashes: hashes(workspace),
+    generated: Object.keys(hashes(join(output, 'generated'))),
     type: { ...type, log: 'type.log' },
     build: { ...build, log: 'build.log' },
     browser: null,
@@ -146,6 +159,12 @@ export function feedback(result) {
   return {
     passed: result.passed,
     infrastructure: result.infrastructure,
+    ...(result.infrastructure
+      ? {
+          infrastructureNote:
+            'The check could not run because of the harness sandbox, not your code. It is recorded as an infrastructure failure.',
+        }
+      : {}),
     type: result.type.code,
     build: result.build.code,
     cases: result.browser?.cases?.map(({ name, passed, error }) => ({ name, passed, error })) ?? [],

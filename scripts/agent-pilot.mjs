@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { execFileSync } from 'node:child_process';
-import { hashes, prepare, save, sourceSnapshot } from './agent-pilot/corpus.mjs';
+import { GYRAL_VERSION, hashes, prepare, save, sourceSnapshot } from './agent-pilot/corpus.mjs';
 import { validate } from './agent-pilot/validate.mjs';
 import { runPilot } from './agent-pilot/run.mjs';
 import { report } from './agent-pilot/report.mjs';
@@ -18,6 +18,8 @@ const { positionals, values } = parseArgs({
     validation: { type: 'string' },
     prior: { type: 'string' },
     resume: { type: 'boolean', default: false },
+    mock: { type: 'boolean', default: false },
+    'gyral-version': { type: 'string' },
   },
 });
 const command = positionals[0];
@@ -25,7 +27,8 @@ const required = (key) => {
   if (!values[key]) throw new Error(`--${key} is required`);
   return resolve(values[key]);
 };
-if (command === 'prepare') await prepare(required('out'));
+if (command === 'prepare')
+  await prepare(required('out'), { gyral: values['gyral-version'] ?? GYRAL_VERSION });
 else if (command === 'validate') await validate(required('corpus'), required('out'));
 else if (command === 'freeze') {
   const corpus = required('corpus');
@@ -51,9 +54,10 @@ else if (command === 'freeze') {
     await runPilot(
       required('corpus'),
       required('out'),
-      required('credentials'),
+      values.mock ? undefined : required('credentials'),
       values.resume,
       values.prior ? resolve(values.prior) : undefined,
+      { mock: values.mock },
     ),
   );
 else if (command === 'report') {
@@ -61,5 +65,5 @@ else if (command === 'report') {
   console.log(report(out, JSON.parse(readFileSync(join(out, 'plan.json')))));
 } else
   throw new Error(
-    'Use prepare, validate, freeze, run or report. See docs/references/agent-benchmark-pilot.md.',
+    'Use prepare, validate, freeze, run or report. See docs/references/agent-benchmark-pilot-v3.md.',
   );
