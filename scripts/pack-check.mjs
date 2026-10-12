@@ -7,6 +7,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { npxBinProblem, RUN_BY_NAME } from './lib/npx-bin.mjs';
 
 const run = promisify(execFile);
 const PUBLINT_TIMEOUT_MS = 120_000;
@@ -86,6 +87,11 @@ async function check(dir) {
     if (!file.startsWith('dist/')) problems.push(`bin outside dist: ${bin}`);
     else if (!files.includes(file)) problems.push(`bin not in tarball: ${bin}`);
   }
+  if (RUN_BY_NAME.includes(packed.name)) {
+    const problem = npxBinProblem(packed.name, packed.bin);
+    if (problem !== undefined)
+      problems.push(`\`npx ${packed.name}\` cannot pick a bin (${problem})`);
+  }
   for (const target of [...targets(packed.exports), ...targets(packed.imports)]) {
     if (!target.startsWith('./dist/')) problems.push(`entry outside dist: ${target}`);
     else if (!files.includes(target.slice(2))) problems.push(`entry not in tarball: ${target}`);
@@ -131,6 +137,10 @@ const results = await Promise.all(dirs.map(check));
 rmSync(out, { recursive: true, force: true });
 
 let failed = false;
+for (const name of RUN_BY_NAME.filter((n) => !results.some((r) => r.name === n))) {
+  failed = true;
+  console.error(`FAIL ${name}: listed in RUN_BY_NAME but not packed`);
+}
 for (const { name, problems, summary } of results) {
   if (problems.length === 0) console.log(`ok   ${name}: ${summary}`);
   else {

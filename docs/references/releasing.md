@@ -103,7 +103,9 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    Generate both templates in fresh directories using `npm create gyral@X.Y.Z app-basic --
 --template basic --yes` and the equivalent `ssr` command. Install with npm, then run each
    app's `typecheck`, `build` and `test`. Check manifests and lockfiles contain registry
-   dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral.
+   dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral. Run
+   `npx -y @gyral/mcp@X.Y.Z --help` (the documented command, which picks the package's only
+   bin) and start it as an MCP stdio server.
 7. Move gyral.dev to the verified npm release (registry dependencies only, no overrides or
    vendored packages), run its gate and deploy matching docs and llms files.
    Only after the stable registry installs and deployed docs pass may Context7 be submitted
@@ -117,16 +119,20 @@ The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the
 
 - `pnpm pack:check` (part of `pnpm check`): packs each package as `pnpm publish` will and
   runs publint, @arethetypeswrong/cli (esm-only profile), tarball content assertions and an
-  `npm pack --dry-run` file-list comparison.
+  `npm pack --dry-run` file-list comparison. Packages run by name (`@gyral/mcp` through
+  `npx`, `create-gyral` through `npm create gyral`) must have exactly one bin or one named
+  after the unscoped package, or npx cannot pick a command (`scripts/lib/npx-bin.mjs`).
 - `pnpm verify:install` (network, not in the gate): installs the tarballs with npm in a fresh
-  temp project, imports every Node-loadable entry, server-renders a component, and starts the
-  installed `gyral-mcp` bin over stdio and calls a tool. It fails if the tarballs install any
-  Lit package (ADR 0018). The browser-only entry `@gyral/devtools` is covered by the browser
-  tests instead.
-- `pnpm verify:create` (network, not in the gate): runs `create-gyral` from its packed tarball
-  for each template (`basic`, `ssr`), points the app's `@gyral/*` at the tarballs, installs
-  with npm and runs the generated app's `typecheck`, `build` and `test`. Run it after changing
-  create-gyral or its templates, and before every release.
+  temp project, imports every Node-loadable entry, server-renders a component, runs
+  `npx --no-install @gyral/mcp --help`, then starts the server through
+  `npx --no-install @gyral/mcp` over stdio and calls tools, so npx's bin selection is
+  exercised as users run it. It fails if the tarballs install any Lit package (ADR 0018).
+  The browser-only entry `@gyral/devtools` is covered by the browser tests instead.
+- `pnpm verify:create` (network, not in the gate): installs `create-gyral` from its packed
+  tarball and runs it as `npm create gyral` for each template (`basic`, `ssr`), points the
+  app's `@gyral/*` at the tarballs, installs with npm and runs the generated app's
+  `typecheck`, `build` and `test`. Run it after changing create-gyral or its templates, and
+  before every release.
 
 Recorded 0.3.1 candidate checks (2026-10-11): `verify:install` passes with nine tarballs,
 all Node-loadable entries (including storage and network subpaths), native SSR output and
