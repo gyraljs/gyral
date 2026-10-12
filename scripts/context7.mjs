@@ -83,7 +83,7 @@ try {
         reviewRequired: true,
       });
       console.log(
-        'All three retrieval smoke checks passed. Review saved snippets against 0.3.1 before closing the bead.',
+        `All three retrieval smoke checks passed. Review saved snippets against ${release.version} before closing the bead.`,
       );
     }
   }

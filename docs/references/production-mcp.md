@@ -46,11 +46,11 @@ An HTTP server built from current source can instead serve the complete corpus f
 already published npm release:
 
 ```sh
-node scripts/stage-mcp-container.mjs --released-corpus 0.3.1
+node scripts/stage-mcp-container.mjs --released-corpus 0.3.2
 ```
 
-This downloads `@gyral/mcp@0.3.1` from the public npm registry and replaces the packed
-`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.1;
+This downloads `@gyral/mcp@0.3.2` from the public npm registry and replaces the packed
+`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.2;
 new framework APIs stay out until their release. It does not publish npm or use a vendored
 framework dependency. The ignored `deploy/mcp/artifact.json` records source revision,
 registry integrity, corpus source/version/digests and packed artifact digest. Build from a

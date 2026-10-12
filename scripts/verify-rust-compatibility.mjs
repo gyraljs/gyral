@@ -46,5 +46,5 @@ await run(process.execPath, ['tools/artifact-smoke.mjs']);
 await run('pnpm', ['test:browser']);
 await run('pnpm', ['test:client-browser']);
 console.log(
-  `Rust compatibility: ABI ${fixture.abi}, exact npm 0.3.1 and ${revision} passed the reviewed fixture.`,
+  `Rust compatibility: ABI ${fixture.abi}, exact npm ${fixture.npm['@gyral/core']} and ${revision} passed the reviewed fixture.`,
 );
