@@ -38,18 +38,44 @@ Any other client: run `npx -y @gyral/mcp` as a stdio server, from your project d
 
 ## Tools
 
-| Tool                 | What it returns                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------------- |
-| `search_docs`        | Ranked doc sections (title, URL, snippet) for a query                                          |
-| `get_doc`            | One docs page, or one section with `#anchor` (`forms#the-server-half`)                         |
-| `get_api`            | Declaration, doc comment and import line of a public export; `"*"` lists them all              |
-| `list_examples`      | Every example and what it demonstrates                                                         |
-| `get_example`        | One example's component source                                                                 |
-| `scaffold_component` | Starting code: `basic`, `form` (works without JavaScript) or `ssr-page`                        |
-| `check_snippet`      | Type errors for a TypeScript module, against your project's TypeScript and `@gyral/*` versions |
+| Tool                 | What it returns                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `start_here`         | Orientation: the mental model, rules, workflow, which tool to use when, and a use case → example/guide index         |
+| `search_docs`        | Ranked doc sections (title, URL, snippet) for a query                                                                |
+| `get_doc`            | One docs page, or one section with `#anchor` (`forms#the-server-half`); takes `path_or_url` (or `path`)              |
+| `get_api`            | Declaration, doc comment and import line of a public export; `"*"` lists them all; a miss suggests the nearest names |
+| `list_examples`      | Every example and what it demonstrates                                                                               |
+| `get_example`        | One example's component source                                                                                       |
+| `scaffold_component` | Starting code: `basic`, `form`, `form-native` (no dependencies) or `ssr-page`, importing only installed packages     |
+| `check_snippet`      | Type errors for a TypeScript module, against your project's TypeScript and `@gyral/*` versions, with suggested fixes |
+
+Every tool description carries the recommended workflow, because many clients drop server
+instructions: `start_here` once; start from `get_example` or `scaffold_component`; write a
+minimal implementation; `check_snippet` it and apply the suggested fixes until it passes; use
+`get_api` only to look up one specific symbol.
 
 Resources: `gyral://llms.txt`, `gyral://skill` and `gyral://skill/references/{name}`.
 Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component).
+
+### Next release (unreleased)
+
+These are on `main` and not in npm 0.3.1:
+
+- `start_here`, and the workflow in every tool description.
+- `scaffold_component` reads the project's `package.json` (the server's project directory, or
+  `project_dir`), or takes an `installed` list of package names, and imports only packages the
+  project has: with nothing known, only `@gyral/core`. It writes a model test only when
+  `@gyral/testing` and `vitest` are installed. `form` uses valibot or zod 4 (and
+  `@gyral/http` to submit) when installed, else the dependency-free `form-native`: `novalidate`,
+  the browser's constraint checks turned into your messages all at once, and focus on the first
+  invalid field.
+- `check_snippet` returns a suggested fix for each TypeScript error it recognizes, plus common
+  Gyral mistakes TypeScript can't see (one-call `define`, `listen` in `init`, `periodic`, side
+  effects in `update`, handlers in views, list rows without a `TemplateResult` return type),
+  with the runtime's G-code where there is one. Apply them and check again until it passes.
+- `get_doc` accepts `path` as an alias of `path_or_url`. `get_api` suggests the nearest
+  export names on a miss, and for a type the public API uses without exporting it, says how
+  to name it.
 
 ## Configuration
 
@@ -63,8 +89,8 @@ so `npx` doesn't download a second compiler.
 
 ## Public hosting (unreleased: next release)
 
-The new `gyral-mcp-http` binary provides stateless Streamable HTTP at `/mcp` with six docs
-tools. It excludes `check_snippet`, project paths and live refresh. Set
+The new `gyral-mcp-http` binary provides stateless Streamable HTTP at `/mcp` with seven docs
+tools (`scaffold_component` takes `installed` but no `project_dir`). It excludes `check_snippet`, project paths and live refresh. Set
 `GYRAL_MCP_PUBLIC_ORIGIN` explicitly; the default bind address is `127.0.0.1`, port 3000.
 Deploy a pinned, reviewed package behind TLS following
 [the production runbook](https://github.com/gyraljs/gyral/blob/main/docs/references/production-mcp.md).
@@ -84,7 +110,8 @@ corpus = (await refreshDocs(corpus, 'https://gyral.dev/llms-full.txt')).corpus; 
 await createServer(corpus, { projectDir: process.cwd() }).connect(new StdioServerTransport());
 ```
 
-`Corpus` and its parts (`DocPage`, `ApiEntry`, `Example`, `SkillFile`, …) are exported as types.
+`Corpus` and its parts (`DocPage`, `ApiEntry`, `Example`, `SkillFile`, `InternalType`, …) are
+exported as types.
 The tools' building blocks are internal.
 
 ## License

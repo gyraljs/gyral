@@ -14,13 +14,11 @@ import { features, type LocalHost } from './features.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
 import { noteActivity } from './scheduler.js';
 import { bindStores } from './store-binding.js';
-import type { IntentRejected, Tagged } from './types.js';
+import type { IntentRejected, Tagged, Variant } from './types.js';
 import { message } from './view/index.js';
 
 /** No DOM means a server render: store commands never run there (ADR 0012). */
 const onServer = typeof document === 'undefined';
-
-type Variant<M extends Tagged, K extends M['_tag']> = Extract<M, { readonly _tag: K }>;
 
 /** One pure reducer per message tag, like a component's `update` but without context. */
 export type StoreUpdate<S, M extends Tagged> = {
@@ -97,7 +95,7 @@ export interface AnyStoreInstance {
   dispose(): void;
   /**
    * Called by the registry that holds this instance, so the store's `send(other, msg)`
-   * commands reach `other`'s instance in the same scope (gyral-czi.20).
+   * commands reach `other`'s instance in the same scope.
    */
   bindScope?(resolve: StoreResolver): void;
 }

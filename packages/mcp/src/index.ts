@@ -11,5 +11,6 @@ export type {
   DocSection,
   Example,
   ExampleFile,
+  InternalType,
   SkillFile,
 } from './types.js';

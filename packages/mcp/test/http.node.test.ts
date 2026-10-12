@@ -67,7 +67,12 @@ describe('public MCP', () => {
       'list_examples',
       'scaffold_component',
       'search_docs',
+      'start_here',
     ]);
+    const scaffold = tools.find((t) => t.name === 'scaffold_component');
+    // A public server never reads paths on its own disk.
+    expect(Object.keys(scaffold?.inputSchema.properties ?? {})).not.toContain('project_dir');
+    expect(scaffold?.description).toContain('typecheck it in the project');
     expect((await client.listResources()).resources.map((r) => r.uri)).toContain('gyral://skill');
     expect(JSON.stringify(await client.readResource({ uri: 'gyral://skill' }))).toContain(
       'Golden rules',
@@ -79,7 +84,15 @@ describe('public MCP', () => {
     expect(JSON.stringify(prompt)).toContain('project typecheck');
   });
 
-  it('answers all six tools and refuses server-side snippet checks', async () => {
+  it('answers all seven tools and refuses server-side snippet checks', async () => {
+    expect(await call('start_here')).toContain('npx -y @gyral/mcp');
+    expect(await call('get_doc', { path: 'forms' })).toContain('formAction');
+    const tested = await call('scaffold_component', {
+      tag: 'test-probe',
+      kind: 'basic',
+      installed: ['@gyral/core', '@gyral/testing', 'vitest'],
+    });
+    expect(tested).toContain('test-probe.test.ts');
     expect(await call('get_api', { symbol: 'define' })).toContain('@gyral/core');
     expect(await call('get_doc', { path_or_url: 'forms' })).toContain('formAction');
     expect(await call('search_docs', { query: 'subscriptions' })).toContain('gyral.dev');
@@ -101,7 +114,7 @@ describe('public MCP', () => {
       corpusSha256: expect.stringMatching(/^[a-f0-9]{64}$/) as unknown,
     });
     const responses = await Promise.all(Array.from({ length: 8 }, () => client.listTools()));
-    expect(responses.every((r) => r.tools.length === 6)).toBe(true);
+    expect(responses.every((r) => r.tools.length === 7)).toBe(true);
   });
 
   it('rejects hostile Host/Origin, oversized and malformed bodies', async () => {

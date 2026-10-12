@@ -285,8 +285,9 @@ its own listener (once). To skip events by where they started rather than by key
 it, and TypeScript reports a long error ending in "`IntentParser<Msg, …>` is not assignable to
 `IntentParser<{ _tag: 'Qty'; … }, …>`". Inside the spec, leave the return type off: the key types
 it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
-type (`Extract<Msg, { _tag: 'Qty' }> | undefined`). The same holds for `child()`, `form()` and
-`field()` mappers.
+type (`Extract<Msg, { _tag: 'Qty' }> | undefined`, or `ParseResult<Variant<Msg, 'Qty'>>`, which
+also allows `IntentRejected`; both type exports are **unreleased**: next release). The same holds
+for `child()`, `form()` and `field()` mappers.
 
 ## Props, state and stores in a parser: `(input, ctx)`
 

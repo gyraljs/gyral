@@ -310,7 +310,7 @@ function gyralClientOnly(): Plugin {
   };
 }
 
-/** Where the preset looks for components and writes their typings (gyral-1zd.25). */
+/** Where the preset looks for components and writes their typings. */
 export interface ElementTypesOptions {
   /** Source directories to scan, relative to the Vite root. Default `['src']`. */
   readonly dirs?: readonly string[];
@@ -345,7 +345,7 @@ export interface GyralViteOptions {
   readonly compiler?: TemplateCompilerOptions;
   /**
    * The app is never server-rendered: leave the hydration code out of the browser bundle
-   * (`gyralClientOnly()`, view/07-hydration.md "Client-only builds"). Default false.
+   * (`gyralClientOnly()`). Default false.
    */
   readonly clientOnly?: boolean;
   /**

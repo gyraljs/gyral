@@ -29,7 +29,7 @@ export interface RenderOptions {
    */
   readonly stores?: readonly AnyStoreInstance[];
   /**
-   * Development markers and checks (view/06-server.md "Development markers"). Default: on when
+   * Development markers and checks. Default: on when
    * `@gyral/core` resolves with the `development` condition (Vite's dev server, Vitest).
    */
   readonly dev?: boolean;

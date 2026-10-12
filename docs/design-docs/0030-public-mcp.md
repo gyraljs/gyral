@@ -4,8 +4,9 @@ Status: **accepted** for the local implementation (2026-10-11, gyral-49t.17).
 Hosting and publication remain an owner decision. The owner chose public coding-agent access.
 
 The existing stdio server keeps project-local `check_snippet`. A public process serves the
-six read-only docs/API/example/scaffold tools, resources and the component prompt. It never
-accepts project paths or executes submitted code. Its instructions require verification in
+read-only docs/API/example/scaffold tools (six; the unreleased next release adds a seventh,
+`start_here`), resources and the component prompt. It never accepts project paths (its
+`scaffold_component` takes an `installed` package list instead) or executes submitted code. Its instructions require verification in
 the agent's project. Scaffolding returns source text; it writes no files.
 
 Use stateless Streamable HTTP at `/mcp`, JSON responses, one SDK server/transport per request,

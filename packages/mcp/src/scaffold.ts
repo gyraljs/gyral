@@ -1,18 +1,14 @@
 // Starting code for a new component, following the skill's golden rules: tagged messages, pure
-// update, views that name intents, effects as commands, tests without a DOM. The test suite
-// typechecks every template against the real packages.
+// update, views that name intents, effects as commands, tests without a DOM. A scaffold imports
+// only packages the target project has installed (project.ts): with none known, only
+// @gyral/core. The test suite typechecks every variant against the real packages.
+import { has, UNKNOWN, type Installed } from './project.js';
+import { canTest, comment, testNote, type Scaffold } from './scaffold-common.js';
+import { nativeForm, schemaForm, schemaLibrary } from './scaffold-forms.js';
 
-export type ScaffoldKind = 'basic' | 'form' | 'ssr-page';
+export type { Scaffold, ScaffoldFile } from './scaffold-common.js';
 
-export interface ScaffoldFile {
-  readonly path: string;
-  readonly code: string;
-}
-
-export interface Scaffold {
-  readonly files: readonly ScaffoldFile[];
-  readonly notes: readonly string[];
-}
+export type ScaffoldKind = 'basic' | 'form' | 'form-native' | 'ssr-page';
 
 /** Custom element names: lowercase, start with a letter, contain a hyphen. */
 export function validTag(tag: string): string | undefined {
@@ -29,16 +25,7 @@ const pascal = (tag: string): string =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-const comment = (description: string | undefined): string =>
-  description === undefined || description.trim() === ''
-    ? ''
-    : `${description
-        .trim()
-        .split('\n')
-        .map((line) => `// ${line}`)
-        .join('\n')}\n`;
-
-function basic(tag: string, name: string, description: string | undefined): Scaffold {
+function basic(tag: string, name: string, description: string | undefined, installed: Installed) {
   const component = `${comment(description)}import { css, define, html } from '@gyral/core';
 
 export interface State {
@@ -88,110 +75,21 @@ describe('${tag} model', () => {
   });
 });
 `;
+  const tested = canTest(installed);
   return {
     files: [
       { path: `src/${tag}.ts`, code: component },
-      { path: `src/${tag}.test.ts`, code: test },
+      ...(tested ? [{ path: `src/${tag}.test.ts`, code: test }] : []),
     ],
     notes: [
       `Import it once for its side effect (it registers <${tag}>), then use <${tag}></${tag}> in markup.`,
       'Add messages to Msg first; TypeScript then requires an intent (if user-triggered) and a reducer for each.',
+      ...(tested ? [] : [testNote(installed)]),
     ],
   };
 }
 
-function form(tag: string, name: string, description: string | undefined): Scaffold {
-  const component = `${comment(description)}import { define, defineForm, fieldErrors, form, html, invalid, type FormFields } from '@gyral/core';
-import { submitForm } from '@gyral/http';
-import * as v from 'valibot';
-
-// One schema for both sides: the browser validates on submit, the server (formAction) again.
-export const ${name}Form = defineForm(
-  v.object({
-    name: v.pipe(v.string(), v.trim(), v.nonEmpty('Enter your name.')),
-    email: v.pipe(v.string(), v.trim(), v.email('Enter a valid email address.')),
-  }),
-);
-
-export interface State {
-  readonly values: FormFields;
-  readonly errors: Readonly<Record<string, readonly string[]>>;
-  readonly done: boolean;
-}
-
-export type Msg =
-  | { readonly _tag: 'Submit'; readonly form: FormData }
-  | { readonly _tag: 'Done' }
-  | { readonly _tag: 'Failed' };
-
-const text = (values: FormFields, key: string): string => {
-  const value = values[key];
-  return typeof value === 'string' ? value : '';
-};
-
-const FIELDS = [
-  { name: 'name', label: 'Name', type: 'text', autocomplete: 'name' },
-  { name: 'email', label: 'Email', type: 'email', autocomplete: 'email' },
-] as const;
-
-export const ${name} = define<State, Msg>()('${tag}', {
-  init: () => ({ values: {}, errors: {}, done: false }),
-  intent: {
-    // Invalid submissions never become Submit: they arrive as IntentRejected.
-    Submit: form(${name}Form, (_data, raw) => ({ _tag: 'Submit', form: raw })),
-  },
-  update: {
-    Submit: (s, m) => [
-      { ...s, errors: {} },
-      [
-        submitForm<Msg>('/${tag}', m.form, {
-          onSuccess: () => ({ _tag: 'Done' }),
-          onFailure: () => ({ _tag: 'Failed' }),
-        }),
-      ],
-    ],
-    Done: (s) => ({ ...s, done: true }),
-    Failed: (s) => ({ ...s, errors: { '': ['Something went wrong. Try again.'] } }),
-    // Client-side and server-side (422) rejections arrive the same way.
-    IntentRejected: (s, m) => ({ ...s, values: m.values ?? s.values, errors: fieldErrors(m.issues) }),
-  },
-  view: (s, i) =>
-    s.done
-      ? html\`<p role="status">Thanks, we got it.</p>\`
-      : html\`<form data-intent=\${i.Submit} action="/${tag}" method="post">
-          \${FIELDS.map((f) => {
-            const errors = s.errors[f.name];
-            return html\`<p>
-              <label for=\${f.name}>\${f.label}</label>
-              <input
-                id=\${f.name}
-                name=\${f.name}
-                type=\${f.type}
-                autocomplete=\${f.autocomplete}
-                required
-                value=\${text(s.values, f.name)}
-                aria-describedby=\${\`\${f.name}-error\`}
-                \${invalid(errors)}
-              />
-              <span id=\${\`\${f.name}-error\`}>\${errors?.join(' ') ?? ''}</span>
-            </p>\`;
-          })}
-          <p role="alert">\${s.errors['']?.join(' ') ?? ''}</p>
-          <button>Send</button>
-        </form>\`,
-});
-`;
-  return {
-    files: [{ path: `src/${tag}.ts`, code: component }],
-    notes: [
-      'Needs: npm i @gyral/core @gyral/http valibot (any Standard Schema library works).',
-      `The form posts to /${tag}: handle it on the server with formAction(${name}Form, …) from @gyral/ssr so it also works without JavaScript (get_doc "forms#the-server-half").`,
-      'Never keep passwords in state or re-fill them from values: state is serialized into the page.',
-    ],
-  };
-}
-
-function ssrPage(tag: string, name: string, description: string | undefined): Scaffold {
+function ssrPage(tag: string, name: string, description: string | undefined, installed: Installed) {
   const page = `${comment(description)}import { define, html, type Stateless } from '@gyral/core';
 
 // Page-level content uses light DOM: crawlers and document CSS see plain children.
@@ -221,14 +119,22 @@ export function ${name.charAt(0).toLowerCase()}${name.slice(1)}Route(_request: R
   const entry = `// Client entry: import the components. Hydration is built into @gyral/core.
 import './${tag}.js';
 `;
+  const ssr = has(installed, '@gyral/ssr');
   return {
     files: [
       { path: `src/${tag}.ts`, code: page },
-      { path: `server/${tag}-route.ts`, code: route },
+      ...(ssr ? [{ path: `server/${tag}-route.ts`, code: route }] : []),
       { path: 'src/entry-client.ts', code: entry },
     ],
     notes: [
-      'Needs: npm i @gyral/core @gyral/ssr. Hydration is built into @gyral/core: the client entry only imports the components.',
+      ...(ssr
+        ? []
+        : [
+            installed.known
+              ? 'No server route: the project lacks @gyral/ssr. npm i @gyral/ssr, then scaffold again for a renderPage() route.'
+              : 'No server route: no package.json was found, so only @gyral/core is assumed. Pass project_dir (or installed with "@gyral/ssr") for a renderPage() route.',
+          ]),
+      'Hydration is built into @gyral/core: the client entry only imports the components.',
       'Mount the route in any server that speaks Request/Response (Hono, Node via productionServer, Workers), or prerender it with @gyral/ssr/static.',
       'In production, pass clientAssetsFromManifest() results as renderPage({ scripts: [entry], modulepreload }) so the page preloads the hydration chunk.',
       'Or start from a working app: npm create gyral@latest my-app -- --template ssr.',
@@ -236,14 +142,46 @@ import './${tag}.js';
   };
 }
 
-export function scaffold(tag: string, kind: ScaffoldKind, description?: string): Scaffold {
+/**
+ * Starting code of `kind` for `<tag>`. `form` uses a schema library and @gyral/http when the
+ * project has them, else the dependency-free form (`form-native`).
+ */
+export function scaffold(
+  tag: string,
+  kind: ScaffoldKind,
+  description?: string,
+  installed: Installed = UNKNOWN,
+): Scaffold {
   const name = pascal(tag);
-  switch (kind) {
-    case 'basic':
-      return basic(tag, name, description);
-    case 'form':
-      return form(tag, name, description);
-    case 'ssr-page':
-      return ssrPage(tag, name, description);
-  }
+  const result = ((): Scaffold => {
+    switch (kind) {
+      case 'basic':
+        return basic(tag, name, description, installed);
+      case 'form': {
+        const library = schemaLibrary(installed);
+        if (library !== undefined)
+          return schemaForm(tag, name, description, library, has(installed, '@gyral/http'));
+        const native = nativeForm(tag, name, description, installed);
+        return {
+          ...native,
+          notes: [
+            installed.known
+              ? 'No schema library (valibot, zod 4) in the project, so this is the dependency-free form. With one installed, kind "form" shares a schema with the server (formAction).'
+              : 'No package.json was found, so this is the dependency-free form. Pass project_dir (or installed) for the schema form when valibot or zod is installed.',
+            ...native.notes,
+          ],
+        };
+      }
+      case 'form-native':
+        return nativeForm(tag, name, description, installed);
+      case 'ssr-page':
+        return ssrPage(tag, name, description, installed);
+    }
+  })();
+  const core =
+    installed.known && !has(installed, '@gyral/core')
+      ? ['The project has no @gyral/core yet: npm i @gyral/core.']
+      : [];
+  const source = installed.known ? [`Installed packages read from ${installed.source}.`] : [];
+  return { files: result.files, notes: [...core, ...result.notes, ...source] };
 }

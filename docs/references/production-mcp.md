@@ -19,7 +19,7 @@ docker run --rm --name gyral-mcp-review --read-only --cap-drop ALL \
 
 Read `http://127.0.0.1:5950/healthz` from another terminal. Review the version and
 `corpusSha256` alongside the artifact hash printed by staging. Connect any Streamable HTTP
-client to `http://127.0.0.1:5950/mcp`; list six tools, read `gyral://skill`, look up `define`,
+client to `http://127.0.0.1:5950/mcp`; list seven tools (six for a 0.3.1 artifact), read `gyral://skill`, look up `define`,
 and scaffold a component. `check_snippet` is absent. The official-client HTTP integration
 test exercises these operations, concurrent calls and invalid requests. A SIGTERM must drain
 and exit without killing the container manually.
@@ -157,7 +157,7 @@ The official SDK 1.32.1 client used by `packages/mcp/test/http.node.test.ts` con
 `Client.connect(new StreamableHTTPClientTransport(new URL(url)))`. `listTools()`,
 `readResource({ uri: 'gyral://skill' })`, `callTool({ name: 'get_api', arguments: { name: 'define' } })`
 and the component prompt are tested against the actual listener. Call `client.close()` when
-finished. A connection should report six tools and the same version/corpus as `/healthz`.
+finished. A connection should report seven tools (six for a 0.3.1 artifact) and the same version/corpus as `/healthz`.
 Test a selected coding client's installed version with these operations before announcing
 support for it; the SDK acceptance does not certify every client implementation.
 

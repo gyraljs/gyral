@@ -74,7 +74,7 @@ await client.connect(new StdioClientTransport({ command: 'node_modules/.bin/gyra
 const { tools } = await client.listTools();
 const result = await client.callTool({ name: 'get_api', arguments: { symbol: 'define' } });
 const text = result.content.map((c) => c.text).join('');
-if (tools.length !== 7 || !text.includes("import { define } from '@gyral/core'")) {
+if (tools.length !== 8 || !text.includes("import { define } from '@gyral/core'")) {
   throw new Error('unexpected MCP answer: ' + tools.length + ' tools, ' + text.slice(0, 200));
 }
 for (const [symbol, entry] of [

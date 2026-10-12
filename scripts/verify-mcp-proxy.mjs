@@ -143,7 +143,7 @@ try {
   assert.equal(JSON.parse(init.text).result.protocolVersion, '2025-11-25');
   const listed = await call('/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/list' });
   const tools = JSON.parse(listed.text).result.tools;
-  assert.equal(tools.length, 6);
+  assert.equal(tools.length, 7);
   assert(!tools.some((tool) => tool.name === 'check_snippet'));
   assert.equal(
     (
@@ -167,7 +167,7 @@ try {
   assert.equal(stopped.ExitCode, 0);
   assert.equal(stopped.OOMKilled, false);
   console.log(
-    `Local TLS proxy: six public tools, Host/Origin rejection, edge 429 and graceful stop passed; version ${identity.version}, corpus ${identity.corpusSha256}.`,
+    `Local TLS proxy: seven public tools, Host/Origin rejection, edge 429 and graceful stop passed; version ${identity.version}, corpus ${identity.corpusSha256}.`,
   );
 } finally {
   await docker('rm', '-f', proxy, backend).catch(() => undefined);

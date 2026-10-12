@@ -12,6 +12,22 @@ is how Gyral tells the two apart), so wrap list state in an object: `{ items: [.
 `init(props)` returns a `Next` too: start a one-shot load there. Put the router's `listen`
 and other continuous watches in `subscriptions`, so they recover after a true detach.
 
+To type a reducer written outside the spec, name its entry: `Reducer<State, Msg, Variant<Msg,
+'Add'>>`, where `Variant<Msg, 'Add'>` is the member of `Msg` tagged `Add` (both are type exports
+of `@gyral/core`, **unreleased**: next release; on 0.3.1 use `Update<State, Msg>['Add']`):
+
+```ts
+import type { Reducer, Update, Variant } from '@gyral/core';
+
+interface State {
+  readonly items: readonly string[];
+}
+type Msg = { readonly _tag: 'Add'; readonly item: string } | { readonly _tag: 'Clear' };
+
+const add: Reducer<State, Msg, Variant<Msg, 'Add'>> = (s, m) => ({ items: [...s.items, m.item] });
+export const update: Update<State, Msg> = { Add: add, Clear: () => ({ items: [] }) };
+```
+
 ## Commands are data
 
 A command describes a side effect and maps its outcome back to messages. Gyral runs it after

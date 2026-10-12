@@ -39,7 +39,7 @@ export interface IntentInput {
   readonly key: string | undefined;
   /** For `toggle` intents (popover, `<details>`): the state it changed to. */
   readonly newState: 'open' | 'closed' | undefined;
-  /** For `command` intents: the invoker's command (e.g. `--clear`) and source (gyral-czi.6). */
+  /** For `command` intents: the invoker's command (e.g. `--clear`) and source. */
   readonly command: CommandInfo | undefined;
 }
 
@@ -118,12 +118,16 @@ export interface IntentRejected {
   readonly values?: FormFields | undefined;
 }
 
-type ParseResult<M> = M | IntentRejected | undefined;
+/**
+ * What an intent parser returns: a message, `IntentRejected` (invalid input), or `undefined` to
+ * decline the event.
+ */
+export type ParseResult<M> = M | IntentRejected | undefined;
 
 /**
  * Parses a platform event into one message variant, `IntentRejected`, or `undefined` to
  * decline it: a synchronous `undefined` passes the event to the next intent outward for the
- * same event (view/05-element.md "Declining"). May be async because schema validation may be;
+ * same event. May be async because schema validation may be;
  * an async parser keeps the event. `ctx` is the read-only context reducers get (props as
  * they are when the event fires, `read(store)`) plus `state`, the component's state at that
  * moment; parsers that don't need it take one parameter.
@@ -133,7 +137,8 @@ export type IntentParser<M, P = unknown, S = unknown> = (
   ctx: ParserCtx<P, S>,
 ) => ParseResult<M> | Promise<ParseResult<M>>;
 
-type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
+/** The member of message union `M` whose tag is `K`: `Variant<Msg, 'Add'>`. */
+export type Variant<M extends Tagged, K> = Extract<M, { readonly _tag: K }>;
 
 /**
  * The parser for intent name `K` (ADR 0023): a name that is a message tag parses into that
@@ -168,7 +173,14 @@ export type Intents<M extends Tagged, P = unknown, N extends string = string, S 
   readonly [K in N]: ParserFor<M, P, K, S>;
 };
 
-type Reducer<S, M, Msg, P> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
+/**
+ * One entry of `update`: takes the state, one message (`Msg`, a variant of `M` or a framework
+ * message) and the read-only context, and returns the next state, optionally with commands
+ * that produce more `M` messages. To type a reducer written outside the spec:
+ *
+ *   const add: Reducer<State, Msg, Variant<Msg, 'Add'>, object> = (s, m) => …
+ */
+export type Reducer<S, M, Msg, P = object> = (state: S, msg: Msg, ctx: Ctx<P>) => Next<S, M>;
 
 /**
  * One pure reducer per message tag (exhaustive by construction), plus optional reducers
@@ -194,7 +206,7 @@ export type Update<S, M extends Tagged, P = object> = {
 export type IntentNames<N extends string> = { readonly [K in N]: K };
 
 /**
- * The prop builders for props type `P` (view/05-element.md "Props"): one `prop.*` builder per
+ * The prop builders for props type `P`: one `prop.*` builder per
  * key. A builder's output type must fit the prop's type, so a prop whose type excludes
  * `undefined` needs `required: true` or a `default` (the honesty rule, ADR 0007 addendum).
  * Without explicit type arguments, `define()` infers `P` from the builders.
@@ -248,7 +260,7 @@ type UpdateField<S, M extends Tagged, P> = [M] extends [never]
  * `spec.shadow`: `true` (the default) or an object for a shadow root, `false` for light DOM.
  * `delegatesFocus: true`: focusing the host, or clicking a non-focusable part of it, focuses its
  * first focusable element, and `:focus` matches the host while focus is inside; the server
- * writes `shadowrootdelegatesfocus` on the declarative shadow root (view/05-element.md "Focus").
+ * writes `shadowrootdelegatesfocus` on the declarative shadow root.
  */
 export type ShadowOption = boolean | { readonly delegatesFocus?: boolean };
 
@@ -302,7 +314,7 @@ interface SpecBody<S, M extends Tagged, P, N extends string> {
    * animation frame, so many messages in one frame cost one render: `renderOnFrame: ['Ticked']`.
    * Reducers still run at once. Any other change to the component renders in the usual
    * microtask flush, taking pending frame work with it. `'StoreChanged'` covers store changes.
-   * Pages that get no frames (hidden) render from a 100 ms timer. view/04-scheduler.md.
+   * Pages that get no frames (hidden) render from a 100 ms timer.
    */
   readonly renderOnFrame?: readonly (M['_tag'] | 'StoreChanged')[];
   /**

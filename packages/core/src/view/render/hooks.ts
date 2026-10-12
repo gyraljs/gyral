@@ -22,7 +22,7 @@ export const COMMIT_HOOK: unique symbol = Symbol('gyral.hook.commit');
 export type HookAttributes = Readonly<Record<string, string | true>>;
 
 export interface HookSpec<A extends readonly unknown[]> {
-  /** Attributes for the server-rendered start tag (view/06-server.md). */
+  /** Attributes for the server-rendered start tag. */
   server?(args: A): HookAttributes;
   /** Runs after the commit when `args` changed; `prev` is undefined the first time. */
   client(el: Element, args: A, prev: A | undefined): void;
@@ -32,7 +32,7 @@ export interface HookSpec<A extends readonly unknown[]> {
    */
   readonly update?: 'args' | 'always';
   /**
-   * Teardown, with the last arguments `client` got (view/02 "Widgets with a lifecycle"): runs
+   * Teardown, with the last arguments `client` got: runs
    * when Gyral removes the element, when the position stops holding this hook, or when the host
    * disconnects (not on moves). After a host reconnects, `client` runs again with `prev`
    * undefined.

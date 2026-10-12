@@ -59,7 +59,7 @@ export function createRows(
 }
 
 /**
- * A keyed list (view/03-lists.md). `key` must give each item a unique string or number; `row`
+ * A keyed list. `key` must give each item a unique string or number; `row`
  * must depend only on its arguments: a row re-renders only when its item object or its `pick`
  * result changes.
  */
