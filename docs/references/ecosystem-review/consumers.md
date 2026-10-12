@@ -47,7 +47,8 @@ Historical archive checksums remain intact and no active dependency uses those a
 
 These consumer edits are local and reviewable; no Containment/Greed commit, push or deployment
 is claimed. The inactive blog checkout remains historical. The reviewed Rust integration
-revision is now `85dc860808bfe597699ccb3d542d6d56a9d410a2`; its pinned
+revision was `85dc860808bfe597699ccb3d542d6d56a9d410a2`, re-pinned on 2026-10-12 to the
+docs-only follow-up `4757fb647744959f9396c32aab3fd10bbacbd2f0`; its pinned
 [compatibility fixture](../rust-rendering.md) independently passed embedded runtime budget/
 isolation checks, artifact tampering and Chromium/WebKit SSR and Askama/browser acceptance.
 The original snapshot table and its source hashes above/below remain historical audit evidence.

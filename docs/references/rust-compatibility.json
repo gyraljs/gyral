@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sourceCommit": "85dc860808bfe597699ccb3d542d6d56a9d410a2",
+  "sourceCommit": "4757fb647744959f9396c32aab3fd10bbacbd2f0",
   "npm": { "@gyral/core": "0.3.1", "@gyral/ssr": "0.3.1" },
   "abi": 1,
   "target": "x86_64-unknown-linux-gnu",
