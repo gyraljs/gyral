@@ -25,6 +25,7 @@ __lint_fixture_*
 .demos/
 .skill-check/
 deploy/mcp/gyral-mcp.tgz
+deploy/mcp/artifact.json
 
 # Agent worktrees
 .claude/worktrees/

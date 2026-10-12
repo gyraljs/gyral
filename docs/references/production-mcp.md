@@ -37,6 +37,23 @@ release's matching gyral.dev snapshot with `pnpm mcp:refresh --from <site dist>`
 that rebuilt corpus for the already published npm artifact. Keep the prior artifact/image
 digest for rollback. Do not enable `GYRAL_DOCS_URL` for public hosting; the HTTP binary ignores it.
 
+An HTTP server built from current source can instead serve the complete corpus from an
+already published npm release:
+
+```sh
+node scripts/stage-mcp-container.mjs --released-corpus 0.3.1
+```
+
+This downloads `@gyral/mcp@0.3.1` from the public npm registry and replaces the packed
+`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.1;
+new framework APIs stay out until their release. It does not publish npm or use a vendored
+framework dependency. The ignored `deploy/mcp/artifact.json` records source revision,
+registry integrity, corpus source/version/digests and packed artifact digest. Build from a
+clean committed checkout, pin `NODE_IMAGE`, and pass `SOURCE_REVISION`, `CORPUS_VERSION` and
+`CORPUS_SHA256` as build arguments. The OCI source label links the image to `gyraljs/gyral`.
+Publish `ghcr.io/gyraljs/gyral-mcp:sha-<source revision>` and `:latest`; pin the registry image
+digest in deployment. These image tags are independent of npm versions.
+
 ## Production shape
 
 One small Node 24 container behind the existing TLS proxy is sufficient to start. Keep its
@@ -66,6 +83,67 @@ at 10 seconds, and draining at five seconds. GET/DELETE return 405 because this 
 service has no server-initiated stream or sessions. Anonymous public reads need no OAuth.
 Local stdio continues to typecheck against the consumer's installed packages.
 
+## Docker Compose and environment
+
+Copy [compose.yaml](../../deploy/mcp/compose.yaml) and
+[.env.example](../../deploy/mcp/.env.example) into the server's deployment directory, rename
+the latter to `.env`, and fill in the published image and corpus digests. The example is
+deliberately incomplete until those immutable values are supplied. `.env` supplies Compose
+interpolation; the service's explicit `environment` map passes only its runtime settings.
+There are no application API keys, database URLs, volumes or build-time dependencies.
+
+The owner will deploy manually behind an existing Traefik instance. The Compose file joins
+its external network and publishes no host port. Labels route `mcp.gyral.dev` to internal
+port 3000, preserve Host, enable HTTPS using the existing certificate resolver, and attach
+request rate/concurrency/body limits. Traefik's Docker provider must already be enabled.
+
+Set `TRAEFIK_NETWORK` to the exact existing Docker network name, `TRAEFIK_ENTRYPOINT` to
+its HTTPS entrypoint (often `websecure`), and `TRAEFIK_CERT_RESOLVER` to its configured ACME
+resolver (often `letsencrypt`). These are names, not credentials; the Compose file does not
+create a proxy, network or resolver. If Traefik already uses a static/default certificate,
+remove the `tls.certresolver` label instead of naming a nonexistent resolver.
+
+```sh
+docker network inspect proxy
+docker compose --env-file .env config --quiet
+docker compose --env-file .env pull
+docker compose --env-file .env up -d --wait
+curl https://mcp.gyral.dev/healthz
+```
+
+Replace `proxy` in the inspection command with your network name. DNS must point to the
+server and Traefik must already receive ports 80/443 for its configured certificate challenge.
+The endpoint is `https://mcp.gyral.dev/mcp`; do not append `/mcp` to the public origin variable.
+The middleware initially allows five requests/second with a burst of 20, eight concurrent
+requests per peer, and 16 KiB bodies. It uses the immediate peer, without trusting arbitrary
+forwarded IPs. If DNS is proxied through Cloudflare, configure Traefik's trusted proxy IPs
+and a reviewed client-IP strategy before treating these as per-user limits.
+Traefik entrypoint read/write timeouts belong to its existing static configuration; align
+those with the application's ten-second bounds. Keep access logs free of bodies/prompts.
+Official references: [Docker labels](https://doc.traefik.io/traefik/reference/routing-configuration/other-providers/docker/),
+[RateLimit](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/ratelimit/),
+[InFlightReq](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/inflightreq/) and
+[Buffering](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/buffering/).
+
+Keep `GYRAL_MCP_PUBLIC_ORIGIN=https://mcp.gyral.dev`, allowed browser origins empty for machine
+agents, concurrency 32 and the global rate ceiling 600/minute initially. The health check
+sends the required Host and checks `GYRAL_MCP_EXPECTED_CORPUS_SHA256`; a wrong artifact is
+unhealthy even if the process answers. Run as the image's unprivileged user, read-only with
+no capabilities, 256 MiB memory, one CPU, 64 PIDs, ten-second stop grace and bounded logs.
+`restart: unless-stopped` handles process exits; unhealthy status needs monitoring, not an
+assumed automatic restart. Roll back by restoring the previous image and corpus digests
+together, pulling and repeating `up -d --wait`.
+
+`node scripts/verify-mcp-traefik.mjs` runs this actual Compose service behind a temporary
+Traefik 3.6.25 Docker provider with its real labels. It verifies corpus-aware health, no host
+port, TLS routing, official SDK tools/resources/prompts, Host/Origin rejection, body/rate
+limits and graceful shutdown. The local test substitutes a self-signed certificate for ACME
+and discovers only its own labeled container. It reads the local Docker socket, uses an
+isolated network, and removes its resources; it never contacts the production server or
+changes DNS. Set `GYRAL_MCP_IMAGE` to the pulled published digest to review that artifact,
+`GYRAL_MCP_REVIEW_PLATFORM` to test another architecture, and `GYRAL_MCP_REVIEW_SUBNET` to
+an inspected unused subnet if Docker's default address pools are exhausted.
+
 ## Client review
 
 Configure a remote client for **Streamable HTTP** with URL `https://mcp.gyral.dev/mcp` after
@@ -92,9 +170,11 @@ The app starts no timers, refresh jobs or persistent storage, and has no databas
 
 ## Hosting decisions
 
-We still need to select the host/account, confirm control of `mcp.gyral.dev` DNS and TLS,
-and choose the release artifact after the normal npm release gate. Public-access policy is
-already settled. Review can happen entirely locally before any infrastructure write.
+The owner chose manual deployment on an existing server using Traefik; agent server access
+is excluded. Confirm the existing network/entrypoint/resolver names and arrange
+`mcp.gyral.dev` DNS/TLS during that rollout. Public access is settled. A source-built HTTP
+image with the published 0.3.1 corpus can serve current users; future corpus updates follow
+the matching npm/site release gate.
 Client-specific connection instructions should be verified against installed client versions
 when rollout is authorized; a client that only supports legacy HTTP+SSE should use stdio.
 
