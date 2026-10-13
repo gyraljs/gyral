@@ -73,24 +73,43 @@ it('retains emitted workspace ownership, shared CSS/workers and old lazy assets 
       await cold.getByText('Feature release-one', { exact: true }).waitFor();
       await context.setOffline(false);
       current = second;
+      // `update()` settles once release-two's script is fetched and its install has begun, not
+      // once it has replaced release-one. Wait until it has installed, activated and claimed
+      // this tab before navigating: a navigation the old worker is still answering when
+      // activation terminates it never completes, and the old worker's in-flight fetches hold
+      // the new one in `waiting` for as long as they last.
       await oldTab.evaluate(async () => {
-        await (await navigator.serviceWorker.getRegistration())?.update();
+        const container = navigator.serviceWorker;
+        const claimed = new Promise((resolve) => {
+          container.addEventListener('controllerchange', resolve, { once: true });
+        });
+        const registration = await container.getRegistration();
+        if (registration === undefined) throw new Error('Missing registration');
+        await registration.update();
+        await claimed;
+        const worker = container.controller;
+        if (worker === null) throw new Error('Missing controller after claim');
+        await new Promise<void>((resolve, reject) => {
+          const settle = (): void => {
+            if (worker.state === 'activated') resolve();
+            else if (worker.state === 'redundant') reject(new Error('Release two went redundant'));
+          };
+          worker.addEventListener('statechange', settle);
+          settle();
+        });
       });
       const fresh = await context.newPage();
       await fresh.goto(origin);
       await fresh.locator('html[data-ready="true"]').waitFor();
-      await expect
-        .poll(() =>
-          fresh.evaluate(async () => (await caches.keys()).includes('offline-release-two')),
-        )
-        .toBe(true);
-      await expect
-        .poll(() =>
-          fresh.evaluate(
-            async () => (await navigator.serviceWorker.getRegistration())?.waiting === null,
-          ),
-        )
-        .toBe(true);
+      expect(
+        await fresh.evaluate(async () => (await caches.keys()).includes('offline-release-two')),
+      ).toBe(true);
+      expect(
+        await fresh.evaluate(async () => {
+          const registration = await navigator.serviceWorker.getRegistration();
+          return registration?.waiting === null && registration.active?.state === 'activated';
+        }),
+      ).toBe(true);
       await context.setOffline(true);
       // Current worker finds old hashed imports in the retained release-one cache.
       await oldTab.getByRole('button', { name: 'Load feature' }).click();
