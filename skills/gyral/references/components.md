@@ -236,8 +236,8 @@ export const Hello = define<Stateless, never>()('my-hello', {
 ```
 
 Options: `gyralVitePreset({ types: { dirs: ['src', 'lib'], out: 'types/elements.d.ts' } })`,
-or `types: false` to write nothing. Limits: only `export const X = define…()('tag', …)` is
-recognised (a component built some other way keeps a hand-written entry); a component's
+or `types: false` to write nothing. Limits: only `export const X = define…()('tag', …)` in code
+is recognised, not one in a comment or a string (a component built some other way keeps a hand-written entry); a component's
 outputs aren't turned into typed events, because an intent parser can't know which element or
 event fired it; use `child(Component, …)` for typed outputs instead.
 
