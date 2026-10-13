@@ -227,6 +227,23 @@ fixtures, prompts or corpus afterwards makes `run` refuse to start. Run `prepare
 the measured run so "today's docs" are what get frozen. `report --out <dir>` rebuilds the
 reports from saved results.
 
+`run --only gyral-docs` (a comma-separated list of conditions) runs a subset of the ordering;
+`--resume` must name the same subset. An agent the harness does not drive, such as a Claude Code
+subagent, takes trials through a local bridge with the same prompt, tools, budget, checkpoint
+and grader:
+
+```sh
+node scripts/agent-pilot.mjs serve --corpus $P/corpus-<date> --out $P/runs/<date>-<agent> \
+  --model <agent model> --only gyral-docs --port 47311
+node scripts/agent-pilot.mjs call --port 47311 --trial <run id> start pilot   # prints the prompt
+# the agent's one shell command: call --port 47311 --trial <run id> <tool> | write | batch
+node scripts/agent-pilot.mjs call --port 47311 --trial <run id> finish [total tokens]
+```
+
+Each `call` is one request and may carry several tool calls (`batch`). The bridge cannot see
+the agent's own context or token use; a source change made other than through `write_file`
+fails the trial (`outOfBand`). There is no MCP condition through the bridge.
+
 ### Run A
 
 Run A (`gyral-7se.21`) is started by the owner. On the day, from a checkout of `main` that
@@ -372,3 +389,58 @@ evidence is kept under `provider-failures/`. Four trials still ended as infrastr
   form-1 found the complete example but spent its last requests on a syntax error, and
   feature-3 read the API reference type by type until the budget ran out. With two provider
   failures in the denominator the criterion "≥ 7/9" is not met in this run.
+
+## Run E, 2026-10-13: Run D repeated
+
+Run E repeats Run D unchanged: harness `9b741e5`, the same frozen corpus (`d92f290fd203`) and
+plan. No trial failed at the provider.
+
+| Condition      | Feature | Bug | Form | Total | Runs using scaffold/check_snippet |
+| -------------- | ------: | --: | ---: | ----: | --------------------------------: |
+| gyral-docs     |     1/3 | 3/3 |  1/3 |   5/9 |                                 — |
+| gyral-assisted |     2/3 | 3/3 |  2/3 |   7/9 |                               8/9 |
+| react-docs     |     2/3 | 3/3 |  2/3 |   7/9 |                                 — |
+| svelte-docs    |     3/3 | 3/3 |  2/3 |   8/9 |                                 — |
+
+- **Docs-only stays at 5/9, and part of the cause is the harness.** Gyral's `llms.txt` links
+  the condensed `llms-small.txt`, but the corpus parser kept only `.md` links, so docs-only
+  agents could not open it. The React and Svelte indexes link no `.txt` pages, so only Gyral
+  lost a page. The median first write was request 13, the checkpoint; six of the nine runs
+  opened the API reference, and the two failing feature runs read it 21 and 8 times.
+- form-1 dropped a bracket copying the Forms example's `[state, commands]` return, as in
+  Run D (gyral-7se.39); form-3 wrote `<SignupForm>` for a custom element tag (gyral-7se.35).
+
+## Run F, 2026-10-13: index parser and API reference fixes, docs-only
+
+Run F runs only the Gyral docs-only condition (`--only gyral-docs`) at harness `294cbba`,
+whose parser keeps `.txt` index links, so `llms-small.txt` is reachable. Two corpora are Run
+D's frozen corpus with the Gyral docs rebuilt from local builds of gyral.dev: **A** from
+`main` (as live) and **B** from `7de56c6`, whose API reference pages open by sending readers
+to Recipes and Forms and say most types are inferred (gyral-7se.38). Provider failures (HTTP
+502/503 from upstream) were re-run; their evidence is kept in `provider-failures/`.
+
+The same nine trials on corpus B were also taken by Claude Sonnet 5.5 (Claude Code
+subagents, harness `700022c`, which only makes the bridge prompt's example page id neutral)
+through the bridge. Every subagent transcript was checked: each ran only the bridge command.
+
+| Run              | Feature | Bug | Form | Total | Median first write | Runs opening the API reference |
+| ---------------- | ------: | --: | ---: | ----: | -----------------: | -----------------------------: |
+| Run E (Qwen)     |     1/3 | 3/3 |  1/3 |   5/9 |                 13 |                            6/9 |
+| F-A (Qwen)       |     2/3 | 3/3 |  2/3 |   7/9 |                  5 |                            1/9 |
+| F-B (Qwen)       |     3/3 | 3/3 |  2/3 |   8/9 |                  6 |                            0/9 |
+| F-B (Sonnet 5.5) |     3/3 | 3/3 |  3/3 |   9/9 |                  3 |                            0/9 |
+
+- **Most of the gain is the parser fix.** With `llms-small.txt` reachable, every Qwen run read
+  it within its first four requests, and the median first write moved from request 13 to 5–6,
+  with or without the docs change.
+- **The API reference change did what it was for.** No B run opened the API reference; in A,
+  form-1 read it 11 times and ran out of requests. One trial apart, A and B are not
+  distinguishable at three trials per cell.
+- **The remaining Qwen failures are known patterns.** A feature-3 wrote `<TaskApp></TaskApp>`
+  for `<task-app>`, so nothing rendered (gyral-7se.35); B form-1 dropped a bracket in the
+  Forms example's `[state, commands]` return, the third time (gyral-7se.39). B form-3 passed
+  with its write on the last request.
+- **Sonnet 5.5 passed every trial in 3–4 requests** (35–51K tokens as reported by Claude Code),
+  after reading Forms (form runs), `llms-small.txt` and Recipes (five runs), or nothing (one
+  bug run). Its results are not comparable with Qwen's: it manages its own context, and its
+  usage is reported by its host.
