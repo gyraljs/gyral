@@ -283,7 +283,8 @@ export const createApp = (components?: ComponentAssets) => ({
 ```
 
 Keep component modules under `src/` (the `include` option changes that). The scan finds
-`export const X = define<…>()('my-tag', …)`; a component defined through a wrapper (a helper
+`export const X = define<…>()('my-tag', …)` in code, not in comments, strings or template text
+(code inside `${…}` counts), so a code sample in a string registers nothing; a component defined through a wrapper (a helper
 that calls `define()` with a tag it was given) is invisible to it, so list it:
 `gyralVitePreset({ components: { modules: { 'member-form': 'src/forms/member.ts' } } })`. A
 component module that another chunk imports statically (the entry, or another component) is

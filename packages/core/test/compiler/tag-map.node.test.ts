@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { componentsIn, tagMapSource, writeTagMap } from '../../src/compiler/tag-map.js';
+import { blankInert, componentsIn, tagMapSource, writeTagMap } from '../../src/compiler/tag-map.js';
 
 describe('componentsIn', () => {
   it('finds two-call define() components, exported or not, with or without type arguments', () => {
@@ -23,6 +23,75 @@ describe('componentsIn', () => {
       // Not exported: discovered (component loading needs it) but without a name (no typing).
       { tag: 'not-exported', name: undefined, file: '/app/src/a.ts' },
     ]);
+  });
+});
+
+describe('componentsIn: comments and literals (gyral-lbg)', () => {
+  const tags = (code: string): (string | undefined)[][] =>
+    componentsIn(code, '/app/src/a.ts').map((c) => [c.tag, c.name]);
+
+  it('skips define() in line and block comments, next to real calls', () => {
+    const code = [
+      "// export const Fake = define()('line-fake', {});",
+      "export const A = define()('real-a', {}); // define()('trailing-fake')",
+      "/* export const Block = define<S, M>()('block-fake', {});",
+      "   define()('block-fake-2') */ export const B = define()('real-b', {});",
+      '/** @example define<S, M>()("doc-fake", { view }) */',
+    ].join('\n');
+    expect(tags(code)).toEqual([
+      ['real-a', 'A'],
+      ['real-b', 'B'],
+    ]);
+  });
+
+  it('skips define() in single- and double-quoted strings, escapes included', () => {
+    const code = [
+      "const one = 'define()(\\'single-fake\\', {})';",
+      'const two = "export const X = define()(\\"double-fake\\", {})";',
+      "const both = 'it\\'s \"define()(\\'mixed-fake\\')\"'; export const C = define()('real-c', {});",
+    ].join('\n');
+    expect(tags(code)).toEqual([['real-c', 'C']]);
+  });
+
+  it('skips template text but counts code inside ${…}, nested templates included', () => {
+    const code = [
+      'const sample = `',
+      "  export const Sample = define<S, M>()('template-fake', {",
+      '    view: () => html`<p>${"define()(\'nested-fake\')"}</p>`,',
+      '  });',
+      '`;',
+      "const live = `${define()('in-expression', {})} and ${`${{ a: define()('deep-expr', {}) }.a}`}`;",
+      "export const D = define()('real-d', { view: () => html`<p>${'}'}</p>` });",
+    ].join('\n');
+    expect(tags(code)).toEqual([
+      ['in-expression', undefined],
+      ['deep-expr', undefined],
+      ['real-d', 'D'],
+    ]);
+  });
+
+  it('reads regular expression literals, so their quotes start no string', () => {
+    const code = [
+      "const quote = /['\"`]/g; const slash = /[/]define()('regex-fake')/;",
+      "const ratio = a / b / (c) / 2; export const E = define()('real-e', {});",
+      "const f = (x) => /'/.test(x); export const F = define()('real-f', {});",
+    ].join('\n');
+    expect(tags(code)).toEqual([
+      ['real-e', 'E'],
+      ['real-f', 'F'],
+    ]);
+  });
+
+  it('keeps the tag of a template-literal define, and skips one with ${…} in it', () => {
+    const code = 'export const G = define()(`real-g`, {});\nconst H = define()(`x-${n}`, {});';
+    expect(tags(code)).toEqual([['real-g', 'G']]);
+  });
+
+  it('blanks only inert text, keeping offsets and line breaks', () => {
+    const code = "a = 'x y'; // c\nb = `t${c}u` /* d */ / 2;";
+    const text = blankInert(code);
+    expect(text).toHaveLength(code.length);
+    expect(text).toBe("a = '   ';     \nb = ` ${c} `         / 2;");
   });
 });
 

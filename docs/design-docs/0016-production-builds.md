@@ -182,7 +182,9 @@ the page loads exactly the components it rendered.
 
 - **Build.** `gyralVitePreset({ components: true })` (include: `['src']` by default) finds every
   two-call `define<…>()('tag', …)` in the app's source files (test files and
-  `customElements.define` excluded) and adds a loader, `virtual:gyral/components`, to the client
+  `customElements.define` excluded; since gyral-lbg, so are calls in comments and in string,
+  template or regular expression text, while code inside a template's `${…}` still counts)
+  and adds a loader, `virtual:gyral/components`, to the client
   build's input. The loader holds a `tag → () => import(module)` table; statically retained
   app-entry components stay in the entry (gyral-1zd.31). Other targets become dynamic chunks.
   The build writes `.vite/gyral-components.json` next to Vite's manifest:

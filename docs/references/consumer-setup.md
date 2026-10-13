@@ -101,9 +101,9 @@ Istanbul instrumentation is not covered by that comparison.
 ### Element typings
 
 The preset writes `.gyral/elements.d.ts`, `HTMLElementTagNameMap` entries for every exported
-`define()` component under `src` (option `types: { dirs, out }`, or `types: false`). Gitignore
-`.gyral/`, add `".gyral/elements.d.ts"` to tsconfig `include`, and run `gyral-types` (a bin of
-`@gyral/core`) before a `tsc` that runs without Vite: `"typecheck": "gyral-types && tsc --noEmit"`
+`define()` component under `src` (option `types: { dirs, out }`, or `types: false`); calls in
+comments and strings are skipped. Gitignore `.gyral/`, add `".gyral/elements.d.ts"` to tsconfig
+`include`, and run `gyral-types` (a bin of `@gyral/core`) before a `tsc` that runs without Vite: `"typecheck": "gyral-types && tsc --noEmit"`
 (skills/gyral/references/components.md "Typing the tag").
 
 ### Template compiler
