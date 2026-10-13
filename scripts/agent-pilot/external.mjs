@@ -23,7 +23,7 @@ export const ENDPOINT = 'external-agent-bridge';
 /** How an external agent calls the tools; appended to the protocol prompt. */
 export const bridgeUsage = (command) =>
   `\n\nThe tools are reached with one shell command, ${command}. Each invocation is one model request and returns JSON with the budget line and each tool's result:\n` +
-  `- ${command} <tool> ['<JSON arguments>']   e.g. ${command} get_doc '{"page":"docs/recipes"}'\n` +
+  `- ${command} <tool> ['<JSON arguments>']   e.g. ${command} get_doc '{"page":"<page id>"}'\n` +
   `- ${command} write <path>   with the file content on stdin, e.g. ${command} write src/main.ts <<'EOF' ... EOF\n` +
   `- ${command} batch   with a JSON array of {"name","arguments"} calls on stdin, to make several calls in one request\n` +
   `Tools: ${BASE_TOOLS.map((tool) => tool.function.name).join(', ')}.`;
