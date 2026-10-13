@@ -84,7 +84,9 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    for step 7: `@gyral/mcp` ships the docs snapshot taken here, and npm never replaces a
    published version, so a page written after the release reaches the package only with the
    next one (0.3.3 shipped without its own upgrade page; gyral-ttk). Build that branch and take
-   the snapshot from its output, on a gyral branch: `pnpm mcp:refresh --from ../gyral.dev/dist`
+   the snapshot from its output, on a gyral branch. Build it with `GYRAL_DOCS_VERSION=X.Y.Z pnpm build`
+   so the llms files name the new release rather than the installed one, then run
+   `pnpm mcp:refresh --from ../gyral.dev/dist`
    (a relative path is resolved from where you run pnpm; the directory must hold `llms.txt` and
    `llms-full.txt`). Review and commit the diff, then run `pnpm changeset version`. Plain
    `pnpm mcp:refresh` reads the live site, which is right only when the site already describes
