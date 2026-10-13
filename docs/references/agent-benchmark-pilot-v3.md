@@ -344,3 +344,31 @@ were re-run once with `run --resume` against the same frozen corpus and plan.
   more and the Forms page 4–6 times without writing (28 and 26 tool calls). The page they need
   for a form's submit intent is not where they look first.
 - Docs-only feature and bug stay 6/6; no run left a component module unimported.
+
+## Run D, 2026-10-13: published 0.3.4
+
+Run D repeats the protocol unchanged with `--gyral-version 0.3.4` (harness at gyral `9b741e5`):
+the MCP server and skill of PR #18 (`get_api` usage and next call, the nudge, the task-grouped
+index, native-first skill forms) and gyral.dev on 0.3.4, including the Forms page's complete
+example (gyral-7se.36). The model provider was unstable during the run. Trials that failed with
+provider errors were re-run twice against the same frozen corpus and plan; every attempt's
+evidence is kept under `provider-failures/`. Four trials still ended as infrastructure failures
+(two Gyral docs, one React, one Svelte) and count in the denominators below.
+
+| Condition      | Feature | Bug | Form | Total | Runs using scaffold/check_snippet |
+| -------------- | ------: | --: | ---: | ----: | --------------------------------: |
+| gyral-docs     |     2/3 | 2/3 |  1/3 |   5/9 |                                 — |
+| gyral-assisted |     2/3 | 3/3 |  3/3 |   8/9 |                               8/9 |
+| react-docs     |     2/3 | 2/3 |  3/3 |   7/9 |                                 — |
+| svelte-docs    |     3/3 | 3/3 |  2/3 |   8/9 |                                 — |
+
+- **Assisted meets both gyral-7se.31 criteria** (≥ 8/9 passes; scaffold or `check_snippet` in
+  ≥ half the runs), against 3/9 and 2/9 in Run C. Bug runs take 7 tool calls (`start_here`,
+  `check_snippet`, write, check); form runs pass in 12–13 calls from the `register` example or
+  the `form-native` scaffold; median first write moves from request 8 to 5. No run walked types
+  with `get_api`. The one failure (feature-3) read ten or more examples in a row with
+  `get_example`, which the nudge does not count (gyral-7se.37).
+- **Docs-only: 5 passes of the 7 trials that reached the end.** Feature and bug pass 4 of 5;
+  form-1 found the complete example but spent its last requests on a syntax error, and
+  feature-3 read the API reference type by type until the budget ran out. With two provider
+  failures in the denominator the criterion "≥ 7/9" is not met in this run.
