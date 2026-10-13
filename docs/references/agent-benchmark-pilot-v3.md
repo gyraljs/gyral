@@ -444,3 +444,24 @@ through the bridge. Every subagent transcript was checked: each ran only the bri
   after reading Forms (form runs), `llms-small.txt` and Recipes (five runs), or nothing (one
   bug run). Its results are not comparable with Qwen's: it manages its own context, and its
   usage is reported by its host.
+
+### Run F-C: the Forms example's return split
+
+F-C repeats F-B's nine Qwen trials at harness `f92d90c` (PR #25 merged; the agent pilot
+scripts are unchanged) with the Gyral docs rebuilt from gyral.dev `98864bd`, whose Forms and
+Recipes example binds the focus command before returning
+(`const focusFirst = …; return [{ …s, errors, summary }, focusFirst]`, gyral-7se.39). No trial
+failed at the provider.
+
+| Run      | Feature | Bug | Form | Total | Median first write | Form runs with TS1005 |
+| -------- | ------: | --: | ---: | ----: | -----------------: | --------------------: |
+| F-B Qwen |     3/3 | 3/3 |  2/3 |   8/9 |                  6 |                   2/3 |
+| F-C Qwen |     3/3 | 3/3 |  2/3 |   8/9 |                  5 |                   0/3 |
+
+- **The syntax error is gone.** Every earlier run (D, E, F-A, F-B) had a form run end on or
+  pass through TS1005 from the dropped bracket; in F-C all three form runs copied the new
+  line, and form-1 passed in 8 requests.
+- **The one failure is the JSX-style tag again.** form-2 rendered `<SignupForm></SignupForm>`
+  for `my-signup-form`; types and build passed and the page showed only its heading. It is the
+  third time (Run E form-3, F-A feature-3), and template rule 15 (0.3.5) makes it a build
+  error that names the tag to write.
