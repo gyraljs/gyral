@@ -8,6 +8,7 @@ import { GYRAL_VERSION, hashes, prepare, save, sourceSnapshot } from './agent-pi
 import { validate } from './agent-pilot/validate.mjs';
 import { runPilot } from './agent-pilot/run.mjs';
 import { report } from './agent-pilot/report.mjs';
+import { callExternal, serveExternal } from './agent-pilot/external.mjs';
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -20,6 +21,10 @@ const { positionals, values } = parseArgs({
     resume: { type: 'boolean', default: false },
     mock: { type: 'boolean', default: false },
     'gyral-version': { type: 'string' },
+    only: { type: 'string' },
+    model: { type: 'string' },
+    port: { type: 'string' },
+    trial: { type: 'string' },
   },
 });
 const command = positionals[0];
@@ -57,13 +62,21 @@ else if (command === 'freeze') {
       values.mock ? undefined : required('credentials'),
       values.resume,
       values.prior ? resolve(values.prior) : undefined,
-      { mock: values.mock },
+      { mock: values.mock, only: values.only?.split(',') },
     ),
   );
+else if (command === 'serve')
+  await serveExternal(required('corpus'), required('out'), {
+    model: values.model,
+    port: Number(values.port ?? 47_311),
+    only: values.only?.split(','),
+  });
+else if (command === 'call')
+  await callExternal(Number(values.port ?? 47_311), values.trial, positionals.slice(1));
 else if (command === 'report') {
   const out = required('out');
   console.log(report(out, JSON.parse(readFileSync(join(out, 'plan.json')))));
 } else
   throw new Error(
-    'Use prepare, validate, freeze, run or report. See docs/references/agent-benchmark-pilot-v3.md.',
+    'Use prepare, validate, freeze, run, serve, call or report. See docs/references/agent-benchmark-pilot-v3.md.',
   );

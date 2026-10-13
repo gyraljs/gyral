@@ -45,7 +45,7 @@ export function pageId(url) {
   const id = decodeURIComponent(pathname)
     .replace(/\/index\.md$/, '')
     .replace(/\/llms\.txt$/, '')
-    .replace(/\.md$/, '')
+    .replace(/\.(md|txt)$/, '')
     .replace(/^\/+|\/+$/g, '');
   if (!id) throw new Error(`No page id for ${url}`);
   return id;
@@ -80,7 +80,8 @@ export function parseIndex(text) {
     const entry = /^\s*[-*]\s+\[([^\]]+)\]\(([^)\s]+)\)\s*(?::\s*(.*))?$/.exec(line);
     if (!entry) continue;
     const url = entry[2];
-    if (!/^https:\/\//.test(url) || !/(\.md|\/llms\.txt)$/.test(url)) continue;
+    // Markdown and plain-text pages (llms.txt allows both; gyral.dev lists llms-small.txt).
+    if (!/^https:\/\//.test(url) || !/\.(md|txt)$/.test(url)) continue;
     entries.push({
       title: entry[1].trim(),
       url,

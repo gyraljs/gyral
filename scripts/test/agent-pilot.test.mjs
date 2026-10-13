@@ -273,12 +273,18 @@ const CONFIG = {
 };
 
 describe('protocol v3 documentation tools (H1/H2)', () => {
-  it('parses an llms.txt index with groups, descriptions and Markdown-only links', () => {
+  it('parses an llms.txt index with groups, descriptions and Markdown or text links', () => {
     const index = parseIndex(
-      '# Lib\n\n> Summary line.\n\n## Docs\n\n- [Intro](https://x.dev/docs/intro/index.md): Start here.\n- [Brand](https://x.dev/brand/): HTML only\n\n### API\n\n- [core](https://x.dev/api/core.md)\n',
+      '# Lib\n\n> Summary line.\n\n## Docs\n\n- [Agents](https://x.dev/llms-small.txt): Read first.\n- [Intro](https://x.dev/docs/intro/index.md): Start here.\n- [Brand](https://x.dev/brand/): HTML only\n\n### API\n\n- [core](https://x.dev/api/core.md)\n',
     );
     expect(index.summary).toBe('Summary line.');
     expect(index.entries).toEqual([
+      {
+        title: 'Agents',
+        url: 'https://x.dev/llms-small.txt',
+        description: 'Read first.',
+        group: 'Docs',
+      },
       {
         title: 'Intro',
         url: 'https://x.dev/docs/intro/index.md',
