@@ -1,4 +1,4 @@
-# Gyral 0.3.2: complete documentation
+# Gyral 0.3.3: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -245,7 +245,8 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
   [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 - Coming from Gyral 0.2? Read [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/). From
   0.3.0? Read [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/). From 0.3.1,
-  [upgrading to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) needs no code changes.
+  upgrading [to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) and
+  [to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) needs no code changes.
 
 ---
 
@@ -258,7 +259,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.2, and the site tests each one in a browser when it builds.
+0.3.3, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -809,8 +810,9 @@ Any other client that speaks Streamable HTTP: add a server with the URL
 `https://mcp.gyral.dev/mcp` and no authentication.
 
 The hosted server has every tool except `check_snippet`, which needs your project's
-TypeScript and packages. `https://mcp.gyral.dev/healthz` reports the `@gyral/mcp` version it
-serves; the tools marked 0.3.2 below appear there once it runs 0.3.2.
+TypeScript and packages. It can run an older `@gyral/mcp` than the latest release; its
+`initialize` response and `https://mcp.gyral.dev/healthz` report the version it serves. The
+tools marked 0.3.2 below need that version to be 0.3.2 or later.
 
 ## The local MCP server
 
@@ -838,6 +840,10 @@ That's Claude Code. Other clients:
   ```
 
 - **Any other client**: run `npx -y @gyral/mcp` as a stdio server.
+
+`npx -y @gyral/mcp` needs `@gyral/mcp` 0.3.3 or later; npx fetches the latest release unless
+your project has an older copy installed. On 0.3.2 it fails with "could not determine
+executable to run"; run `npx -y -p @gyral/mcp@0.3.2 gyral-mcp` there instead.
 
 The local server answers from the docs bundled with its own version, so it works offline and
 matches the Gyral you install. Set `GYRAL_DOCS_URL=https://gyral.dev/llms-full.txt` to load
@@ -873,11 +879,18 @@ The server also offers the resources `gyral://llms.txt`, `gyral://skill` and
 
 ### Host your own
 
-`@gyral/mcp` 0.3.2 includes `gyral-mcp-http`, the binary behind the hosted server: read-only,
-anonymous Streamable HTTP at `/mcp`, without `check_snippet`. It listens on `127.0.0.1:3000`
-by default, and needs `GYRAL_MCP_PUBLIC_ORIGIN` set to the origin it's served from. Put it
-behind TLS, and pin the package version you deploy. The
-[package README](https://github.com/gyraljs/gyral/blob/v0.3.2/packages/mcp/README.md#public-hosting)
+`gyral-mcp http` runs the server behind the hosted one: read-only, anonymous Streamable HTTP
+at `/mcp`, without `check_snippet`. It listens on `127.0.0.1:3000` by default, and needs
+`GYRAL_MCP_PUBLIC_ORIGIN` set to the origin it's served from:
+
+```sh
+GYRAL_MCP_PUBLIC_ORIGIN=http://127.0.0.1:3000 npx -y @gyral/mcp http
+```
+
+It is configured by environment variables only; `gyral-mcp http --help` lists them. Put it
+behind TLS, and pin the package version you deploy. 0.3.2 shipped this server as a second
+binary, `gyral-mcp-http`; since 0.3.3 it is `gyral-mcp http`. The
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.3/packages/mcp/README.md#public-hosting)
 has the details.
 
 ## The agent skill
@@ -895,7 +908,7 @@ In Claude Code, add Gyral's repository as a plugin marketplace and install the p
 From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
 
 Other agents: copy
-[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.2/skills/gyral) into the agent's
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.3/skills/gyral) into the agent's
 skills or rules folder, or point it at `SKILL.md`.
 
 ## Docs for agents
@@ -6128,7 +6141,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.2/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.3/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -7201,7 +7214,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -8165,7 +8178,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 recorded results are from a build shortly before the 0.3.1 release. They install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/platform-spikes-2026-10-11.md)
 records the fixtures and limits.
 
 ## Server rendering in another framework
@@ -8523,7 +8536,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.2/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.3/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page. The former `labelledBy` export was removed
 in 0.3.1; the recipe is application code.
 
@@ -8681,7 +8694,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All nine
-packages are released together with the same version number (0.3.2), are ES modules with
+packages are released together with the same version number (0.3.3), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -8723,8 +8736,9 @@ The fetch entry does not include those transports.
 
 `@gyral/mcp` is a stdio server your agent starts with `npx -y @gyral/mcp`, from your project
 directory. It answers from the docs, API and examples of its own version, bundled at build time,
-so it works offline. Since 0.3.2 it also has `gyral-mcp-http`, a read-only Streamable HTTP
-server; Gyral hosts one at `https://mcp.gyral.dev/mcp`, with no token. Setup for Claude Code,
+so it works offline. `gyral-mcp http` runs a read-only Streamable HTTP server instead (since
+0.3.3; 0.3.2 had it as a second binary, `gyral-mcp-http`); Gyral hosts one at
+`https://mcp.gyral.dev/mcp`, with no token. Setup for Claude Code,
 VS Code, Cursor, Codex and other clients is in
 [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 
@@ -8753,8 +8767,9 @@ Gyral 0.2 rendered with Lit and asked your app to install it. 0.3 has its own vi
 Lit is gone from the dependency tree. Any custom element still works next to Gyral components,
 including ones built with Lit; install that library yourself if you use it. Upgrading? See
 [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
-[from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/) and
-[from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes).
+[from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
+[from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) and
+[from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) (no code changes in either).
 
 ## The Vite preset
 
@@ -8909,6 +8924,56 @@ The guides explain how the pieces fit together: start with [Components](https://
 
 ---
 
+# Upgrading from 0.3.2 to 0.3.3
+
+> Gyral 0.3.3 needs no code changes. It fixes npx -y @gyral/mcp, and the MCP HTTP server is now gyral-mcp http.
+
+Source: https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/
+
+Gyral 0.3.3 changes only `@gyral/mcp`. The other packages are released at 0.3.3 with no
+changes, so the code that runs in the browser and on your server is the same as in 0.3.2, and
+an app on 0.3.2 upgrades without code changes. Move every `@gyral/*` package to 0.3.3 together
+(they share one version), install, and run your tests and build:
+
+```sh
+npm install @gyral/core@0.3.3 @gyral/testing@0.3.3
+```
+
+Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
+made with `create-gyral` 0.3.3 start on `^0.3.3`. From 0.3.1, the same command works; see
+[Upgrading from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) for what 0.3.2 added.
+
+## `npx -y @gyral/mcp` works again
+
+0.3.2 gave `@gyral/mcp` a second executable, `gyral-mcp-http`. With two to choose from, npx
+couldn't pick one, so the documented way to start the server, `npx -y @gyral/mcp`, failed with
+"could not determine executable to run". 0.3.3 has one executable again, `gyral-mcp`:
+
+| Command            | Runs                                                            |
+| ------------------ | --------------------------------------------------------------- |
+| `gyral-mcp`        | The stdio server, what `npx -y @gyral/mcp` starts               |
+| `gyral-mcp http`   | The read-only Streamable HTTP server, configured by environment |
+| `gyral-mcp --help` | Usage for both modes (`gyral-mcp http --help` for HTTP)         |
+
+If your agent's MCP config runs `npx -y @gyral/mcp`, it needs no change: npx fetches the latest
+release. If your project has `@gyral/mcp` 0.3.2 installed, npx runs that copy, so update it with
+the other packages. A config that must stay on 0.3.2 can run
+`npx -y -p @gyral/mcp@0.3.2 gyral-mcp`. Unknown commands and options are now errors, where 0.3.2
+ignored them and started the stdio server.
+
+## Self-hosting: `gyral-mcp-http` is now `gyral-mcp http`
+
+If you host your own HTTP server, replace `gyral-mcp-http` with `gyral-mcp http`, or
+`npx -y @gyral/mcp http`. It reads the same environment variables
+(`GYRAL_MCP_PUBLIC_ORIGIN`, `GYRAL_MCP_BIND`, `PORT` and the limits) and serves the same tools.
+In a container, the command becomes `[gyral-mcp, http]`. See
+[Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/#host-your-own).
+
+The full list is in the
+[`@gyral/mcp` changelog](https://github.com/gyraljs/gyral/blob/v0.3.3/packages/mcp/CHANGELOG.md).
+
+---
+
 # Upgrading from 0.3.1 to 0.3.2
 
 > Gyral 0.3.2 needs no code changes. New: viewOf for view tests, build-time CSP style hashes, chunkModules, helper types and a hosted MCP server.
@@ -8925,6 +8990,10 @@ npm install @gyral/core@0.3.2 @gyral/testing@0.3.2
 
 Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
 made with `create-gyral` 0.3.2 start on `^0.3.2`.
+
+0.3.3 followed with one fix: `npx -y @gyral/mcp` fails on 0.3.2 and needs 0.3.3, which also
+replaced the second binary, `gyral-mcp-http`, with `gyral-mcp http`. Install 0.3.3 instead;
+see [Upgrading from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/).
 
 ## What's new in 0.3.2
 
@@ -8946,7 +9015,8 @@ made with `create-gyral` 0.3.2 start on `^0.3.2`.
   [API reference](https://gyral.dev/docs/api/core/).
 - **Coverage**: the development template locator no longer adds branches to coverage reports,
   so the counts are your own code's. See [Testing](https://gyral.dev/docs/testing/#coverage).
-- **The MCP server**: `@gyral/mcp` gains `gyral-mcp-http`, a read-only Streamable HTTP server,
+- **The MCP server**: `@gyral/mcp` gains `gyral-mcp-http` (`gyral-mcp http` since 0.3.3), a
+  read-only Streamable HTTP server,
   and Gyral hosts one at `https://mcp.gyral.dev/mcp`, with no token. A new `start_here` tool
   gives an agent the rules and the workflow; `scaffold_component` imports only installed
   packages and has a dependency-free `form-native` kind; `check_snippet` suggests fixes;
@@ -9003,7 +9073,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -9021,7 +9091,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9561,7 +9631,7 @@ props, styles, server rendering and hydration.
 Most apps migrate in this order: dependencies, imports, the build checks (the compiler and the
 ESLint rules list every template that needs a change), props, lists, tests, server. This page
 follows that order and describes 0.3.0. The 0.2 snippets are plain text; every snippet with a
-file name compiles against the current release, 0.3.2, so it uses 0.3.1's spelling where 0.3.1
+file name compiles against the current release, 0.3.3, so it uses 0.3.1's spelling where 0.3.1
 changed one (the two-call `define<…>()(…)`, `intentsOf`, `extraHead`). Once your app runs on
 0.3.0, go on to [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
 
@@ -9970,8 +10040,9 @@ dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.2/docs/references/public-api-0.3.1.md)
-records the public boundary: what 0.3.1 exports, and what 0.3.2 added.
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/public-api-0.3.1.md)
+records the public boundary: what 0.3.1 exports, and what 0.3.2 added. 0.3.3 exports the same
+as 0.3.2.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version. Keep core, router,
 HTTP, time, testing, devtools, SSR and MCP aligned; verify your lockfile when a package manager
@@ -9979,7 +10050,7 @@ resolves multiple versions. The [package guide](https://gyral.dev/docs/packages/
 
 ## Releases
 
-These guides describe **0.3.2**, the `latest` version on npm. Every package is published
+These guides describe **0.3.3**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -9988,14 +10059,15 @@ Deploy server output and client assets from the same build: stale HTML with new 
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
 Since 0.3.1, breaking changes wait for a new minor version, with a migration guide. 0.3.2
-changed or removed nothing that 0.3.1 exports, so moving from 0.3.1 to 0.3.2 needs no code
-changes.
+changed or removed nothing that 0.3.1 exports, and 0.3.3 only fixes how `@gyral/mcp` starts,
+so moving from 0.3.1 or 0.3.2 to 0.3.3 needs no code changes.
 
 ## Upgrade with evidence
 
 1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
-   [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/) or
-   [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes).
+   [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
+   [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes) or
+   [0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) (no code changes).
 2. Update packages together and install from the lockfile.
 3. Run typechecking, component/browser tests and the production build.
 4. Test server/client hydration, edited forms, routing and the production CSP if your app
@@ -10026,7 +10098,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.2, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.3, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -15496,7 +15568,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.2/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.3/docs/design-docs).
 
 ## The platform is the framework
 
