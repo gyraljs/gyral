@@ -2,7 +2,8 @@
 // (scaffold_component and check_snippet have their own files).
 import { beforeAll, describe, expect, it } from 'vitest';
 import { buildCorpus } from '../scripts/build-corpus.mjs';
-import { bareName, explainInternal, findApi, formatApi, listApi } from '../src/api.js';
+import { bareName, explainInternal, findApi, formatApi } from '../src/api.js';
+import { indexApi } from '../src/api-index.js';
 import { anchorFor, getDoc, parseLlmsFull, searchDocs } from '../src/docs.js';
 import { findExample, formatExample, listExamples } from '../src/examples.js';
 import { orientation, USE_CASES, workflow } from '../src/orientation.js';
@@ -128,7 +129,7 @@ describe('api', () => {
     expect(findApi(corpus.api, 'Reducr').suggestions).toContain('Reducer');
     // Nothing close: still the three nearest names.
     expect(findApi(corpus.api, 'qqqqqqqqqqqq').suggestions).toHaveLength(3);
-    expect(listApi(corpus.api, 'time')).toMatch(/## @gyral\/time\n- function: .*delay/);
+    expect(indexApi(corpus.api, 'time')).toMatch(/- `delay` \(@gyral\/time\): delay\(ms, msg\)/);
   });
 
   it('accepts names as agents write them', () => {
@@ -205,7 +206,7 @@ describe('start_here', () => {
     expect(text).toContain('get_example "register" / "no-js-first"');
     expect(orientation(corpus, false)).not.toContain('`check_snippet` (type errors');
     expect(workflow(true)).toMatch(
-      /start from get_example or scaffold_component.*check_snippet.*get_api only/,
+      /start from get_example or scaffold_component.*check_snippet.*get_api only for a name you already saw/,
     );
     expect(workflow(false)).not.toContain('check_snippet');
   });

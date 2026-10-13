@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { registerTools, type ToolOptions } from './tools.js';
 import type { Corpus } from './types.js';
 
-const INSTRUCTIONS = `Gyral builds web components as Model-View-Intent loops with their own view layer (html, css, each, prop from @gyral/core): intent parses DOM events into typed messages, update is one pure reducer per message, view is a pure function of state that names intents with data-intent (no event handlers), and side effects are commands performed by drivers. Call start_here first (the orientation, also in the gyral://skill resource). Then start from get_example or scaffold_component, write a minimal implementation right away, and verify it; use get_api only to look up one specific symbol, and search_docs / get_doc for one concept you need.`;
+/** The initialize instructions: the workflow first, then the model in one sentence. */
+const instructions = (verify: string): string =>
+  `Gyral workflow: 1. start_here once, or go straight to scaffold_component (basic, form-native, form, ssr-page) or get_example for working code. 2. Write the module right away. 3. ${verify} Call get_api only for a name you already saw in an example or an error: TypeScript infers Gyral's types from define(), so don't look them up one by one. Gyral components are Model-View-Intent custom elements with their own view layer (html, css, each from @gyral/core): intent parses DOM events into typed messages, update is one pure reducer per message, view names intents with data-intent (no event handlers), and side effects are commands. A component in its own module must be imported by the entry module (import './my-widget.js'), or its tag is never defined. The rules and decision tables: the gyral://skill resource.`;
 
 function registerResources(server: McpServer, corpus: Corpus): void {
   server.registerResource(
@@ -111,7 +113,7 @@ export function createServer(corpus: Corpus, options: ToolOptions): McpServer {
       : 'Run check_snippet on every file, apply its suggested fixes and check again until it passes before answering.';
   const server = new McpServer(
     { name: 'gyral', title: 'Gyral', version: corpus.version },
-    { instructions: `${INSTRUCTIONS} ${verification}` },
+    { instructions: instructions(verification) },
   );
   registerTools(server, corpus, options);
   registerResources(server, corpus);

@@ -94,6 +94,12 @@ describe('public MCP', () => {
     });
     expect(tested).toContain('test-probe.test.ts');
     expect(await call('get_api', { symbol: 'define' })).toContain('@gyral/core');
+    // Stateless: each request is a new server, so lookups never add up to a nudge.
+    for (let n = 0; n < 4; n++) {
+      const form = await call('get_api', { symbol: 'form' });
+      expect(form).toContain('kind: \\"form-native\\"');
+      expect(form).not.toContain('in a row');
+    }
     expect(await call('get_doc', { path_or_url: 'forms' })).toContain('formAction');
     expect(await call('search_docs', { query: 'subscriptions' })).toContain('gyral.dev');
     expect(await call('list_examples')).toContain('hello-world');

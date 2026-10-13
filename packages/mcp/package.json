@@ -68,6 +68,7 @@
     "@gyral/core": "workspace:*",
     "@gyral/http": "workspace:*",
     "@gyral/ssr": "workspace:*",
-    "@gyral/testing": "workspace:*"
+    "@gyral/testing": "workspace:*",
+    "@gyral/time": "workspace:*"
   }
 }
