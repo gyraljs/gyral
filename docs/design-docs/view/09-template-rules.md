@@ -41,8 +41,18 @@ fix it, and the next one shows.
 | 12  | A hole in `<textarea>`/`<title>` that isn't the whole content                                                                                                                                                                                                                             | The content is one value (02)                                         | `<textarea>${v}</textarea>`                                      |
 | 13  | A named character reference other than `&amp;` `&lt;` `&gt;` `&quot;` `&apos;` `&nbsp;` in the static text of a bound or custom-element attribute                                                                                                                                         | The full entity table is too large to ship                            | the character itself, or a numeric reference                     |
 | 14  | A boolean attribute (`selected`, `checked`, `disabled`, `open`, `required`, `multiple`, `muted`, … ) bound as `name=${…}` on an HTML element (0.3.1)                                                                                                                                      | Any string turns it on, `"false"` included                            | `?name=${…}`                                                     |
+| 15  | A tag name that starts with a capital letter, has no hyphen and is no HTML element: `<SignupForm>`, `<TaskApp />` (0.3.5)                                                                                                                                                                 | HTML lowercases it to an unknown element that renders nothing         | the defined tag name, `<signup-form></signup-form>`              |
 
 Allowed: `<textarea>${v}</textarea>` (live value, 02) and `<title>${t}</title>` (text).
+
+**Rule 15 since 0.3.5** (gyral-7se.35): in the agent pilot, coding agents wrote JSX-style
+component references, `<SignupForm></SignupForm>` for a component defined as
+`my-signup-form`. Types and build passed, and the page rendered nothing in its place. A start
+tag spelled with a capital first letter, without a hyphen, whose lower-case name is not an HTML
+element is now an error that says to write the defined tag name and import its module. HTML
+names in any case (`<DIV>`, `<IFrame>`), hyphenated names (`<Signup-Form>` is
+`<signup-form>`), SVG and MathML content (`<LinearGradient>` parses as `linearGradient`), and
+lower-case unknown elements are not checked; markup the rule rejects never rendered a component.
 
 **Rule 14 since 0.3.1** (gyral-1zd.25): `<option selected=${on}>` renders `selected="false"` when
 `on` is false, and the browser selects the option anyway; an app shipped exactly that. A known
@@ -86,7 +96,7 @@ A flat-config plugin with three rules, all in `gyral.configs.recommended` (setup
 [consumer-setup.md](../../references/consumer-setup.md) "ESLint"). ESLint (9 or 10) is an
 optional peer dependency.
 
-- **`gyral/template`** (rules 1–7, 10, 12, 13, and a function expression written directly in
+- **`gyral/template`** (rules 1–7, 10, 12–15, and a function expression written directly in
   a hole, `${() => …}`: views attach no closures, 02 "Properties"): every `html` or `svg` tagged
   template whose tag is imported from a template source (`import { html } from '@gyral/core'`
   under any local name, or `ns.html` for `import * as ns`; the same for `svg`, checked as SVG
@@ -95,7 +105,7 @@ optional peer dependency.
   TemplateError's first line, identical to the runtime's and the compiler's; the editor's
   location replaces the `near:`/`at` context. The location is mapped back from the minified
   cooked strings through whitespace minification, escapes, line continuations and CRLF line
-  ends, and covers the tag or end tag (rules 4, 6, 7, 10, 12, 13), the text run (rule 7), the
+  ends, and covers the tag or end tag (rules 4, 6, 7, 10, 12–15), the text run (rule 7), the
   `${…}` (rules 1, 2, 3, 5 at a hole), or else the character the tokenizer stopped at.
 - **`gyral/each-row-purity`** (rules 8, 9; 03 "Rows must be pure"): `each`'s row (inline, or a
   name bound to a function: `function Row`, `const Row = …`) may read only its parameters and
