@@ -154,6 +154,20 @@ Read it from the bottom up:
 Run `npm run dev` and open the address it prints. The counter is a standard custom element with
 its own Shadow DOM, so it works in any page and alongside any framework.
 
+When the page loads an entry module instead (the `basic` template's `src/main.ts`), that module
+must import every component module, for its side effect. Each new component in its own file
+gets a line here, such as the stepper below:
+
+```ts
+// src/main.ts
+import './counter.js';
+import './stepper.js';
+```
+
+A module that nothing imports never runs, so its tag is never defined: `<my-stepper>` stays an
+empty unknown element, with no error in the console. A component that renders another
+component in its view imports that module too.
+
 ## Read input
 
 Intents get more than the event. Here's a step size the user can type, read from the input's
@@ -998,6 +1012,12 @@ animation frame), and `formAssociated` (a component that takes part in a native 
 The type parameters are the contract. `State` is a plain data record (JSON, when the component
 is [server-rendered](https://gyral.dev/docs/server-rendering/#loading-components-in-the-browser)), `Msg` a union of tagged objects, and TypeScript checks that `update` has a reducer for every tag and that the view
 only names intents that exist.
+
+`define()` registers the tag when its module runs, so the page's entry module (or a module it
+imports) must import every component module: `import './greeter.js';` in `src/main.ts`. A
+component module that nothing imports never runs, and its tag stays an empty unknown element,
+with no error. A parent that renders a child imports it too, as `Total` imports `Stepper`
+[below](#child-components-and-outputs).
 
 `define()` returns the element class. Its `spec` property is the object you passed in, which is
 how [tests](https://gyral.dev/docs/testing/) run `update` without a DOM. Export it as
