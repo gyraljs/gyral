@@ -28,8 +28,57 @@ export interface ComponentAssets {
   readonly scripts?: readonly string[];
 }
 
+/**
+ * What the page's head already loads, so the tail leaves it out: the browser would fetch each
+ * URL once either way, but the markup would repeat it (the loader imports the client entry, so
+ * its preloads repeat the entry's graph, gyral-9b0).
+ */
+export interface HeadAssets {
+  /** `modulepreload` hrefs. */
+  readonly modulepreload?: readonly string[];
+  /** `<link rel="stylesheet">` hrefs. */
+  readonly stylesheets?: readonly string[];
+  /** Module script `src`s. */
+  readonly scripts?: readonly string[];
+}
+
 /** Where `page()` puts the tail; replaced once the body is written. */
-export const COMPONENTS_MARK = '<!--gyral:components-->';
+const COMPONENTS_MARK = '<!--gyral:components-->';
+
+/** The mark with the head's URLs in it (encoded, so no `-->` can end the comment early). */
+const MARK = /<!--gyral:components(?::([^>]*))?-->/;
+
+/**
+ * The mark `page()` writes after the body, carrying what its head loads, so every render of
+ * the page (`renderPage`, `renderToString`) leaves those URLs out of the tail.
+ */
+export function componentsMark(head: HeadAssets): string {
+  const { modulepreload = [], stylesheets = [], scripts = [] } = head;
+  if (modulepreload.length + stylesheets.length + scripts.length === 0) return COMPONENTS_MARK;
+  const json = JSON.stringify({ modulepreload, stylesheets, scripts });
+  return `<!--gyral:components:${encodeURIComponent(json)}-->`;
+}
+
+/** The head's URLs written into a mark by `componentsMark`. */
+function headOf(encoded: string | undefined): HeadAssets {
+  if (encoded === undefined) return {};
+  return JSON.parse(decodeURIComponent(encoded)) as HeadAssets;
+}
+
+/**
+ * Replaces the page's mark in `chunk` (when it's there) with the tail for the tags rendered so
+ * far: after the body, every tag is known.
+ */
+export function fillMark(
+  chunk: string,
+  assets: ComponentAssets,
+  tags: ReadonlySet<string>,
+  dev: boolean,
+): string {
+  return chunk.replace(MARK, (_, encoded: string | undefined) =>
+    componentTail(assets, tags, dev, headOf(encoded)),
+  );
+}
 
 /** An attribute value, escaped. */
 export const attr = (value: string): string =>
@@ -40,12 +89,15 @@ const warned = new Set<string>();
 /**
  * The markup that loads the rendered components: their preload links and stylesheets, the
  * extra scripts and the loader. Empty when no rendered tag has a client module, so a page of
- * plain HTML ships no JavaScript.
+ * plain HTML ships no JavaScript. Each URL appears once, and none the head already loads
+ * (`head`): a module the head preloads or runs (or the tail runs) gets no preload link, and a
+ * stylesheet or script the head links isn't linked again. Order is otherwise unchanged.
  */
 export function componentTail(
   assets: ComponentAssets,
   tags: ReadonlySet<string>,
   dev: boolean,
+  head: HeadAssets = {},
 ): string {
   const preload = new Set<string>(assets.preload);
   const sheets = new Set<string>();
@@ -68,11 +120,20 @@ export function componentTail(
     for (const href of module.stylesheets) sheets.add(href);
   }
   if (!found) return '';
+  const headScripts = new Set(head.scripts);
+  const headSheets = new Set(head.stylesheets);
+  const scripts = new Set([...(assets.scripts ?? []), assets.loader]);
+  // A module the head preloads or runs, or the tail runs, needs no preload link here.
+  const loaded = new Set([...(head.modulepreload ?? []), ...headScripts, ...scripts]);
   return [
-    ...[...sheets].map((href) => `<link rel="stylesheet" href="${attr(href)}">`),
-    ...[...preload].map((href) => `<link rel="modulepreload" href="${attr(href)}">`),
-    ...[...(assets.scripts ?? []), assets.loader].map(
-      (src) => `<script type="module" src="${attr(src)}"></script>`,
-    ),
+    ...[...sheets]
+      .filter((href) => !headSheets.has(href))
+      .map((href) => `<link rel="stylesheet" href="${attr(href)}">`),
+    ...[...preload]
+      .filter((href) => !loaded.has(href))
+      .map((href) => `<link rel="modulepreload" href="${attr(href)}">`),
+    ...[...scripts]
+      .filter((src) => !headScripts.has(src))
+      .map((src) => `<script type="module" src="${attr(src)}"></script>`),
   ].join('');
 }

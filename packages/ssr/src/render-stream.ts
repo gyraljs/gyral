@@ -2,7 +2,7 @@
 // `renderPage` (index.ts). Not exported from the package: `renderPage` is the streaming API.
 import { type ChildValue } from '@gyral/core';
 import { development, render, StoreRegistry, withStoreScope } from '@gyral/core/internal/server';
-import { COMPONENTS_MARK, componentTail } from './components.js';
+import { fillMark } from './components.js';
 import type { RenderOptions } from './page.js';
 
 const rethrow = (error: unknown): never => {
@@ -29,10 +29,7 @@ export function componentsOf(options: RenderOptions) {
   const dev = options.dev ?? development;
   return {
     tags,
-    fill: (chunk: string): string =>
-      chunk.includes(COMPONENTS_MARK)
-        ? chunk.replace(COMPONENTS_MARK, () => componentTail(components, tags, dev))
-        : chunk,
+    fill: (chunk: string): string => fillMark(chunk, components, tags, dev),
   };
 }
 

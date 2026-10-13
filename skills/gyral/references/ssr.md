@@ -293,7 +293,10 @@ import its shadow children (it still may). In browser tests and page scripts, `a
 componentsReady()` from `@gyral/core` waits until every rendered tag the loader knows is defined
 and the page has settled (in a test, import `virtual:gyral/components` first). For app-wide
 setup (`provideDrivers` at the page), keep a small client entry and pass it in `scripts`
-alongside `components`. A rendered tag no client module defines is a development warning.
+alongside `components` (with its `modulepreload` and `stylesheets` in production): the tail
+after the body leaves out every module, stylesheet and script the head already links, so pass
+both lists as they come, without filtering one against the other. A rendered tag no client
+module defines is a development warning.
 
 **With a client entry.** Without `components`, the page loads one entry you write, which
 imports the components (no hydration import: core hydrates each component on its own), and you
