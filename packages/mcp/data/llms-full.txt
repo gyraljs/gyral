@@ -1,4 +1,4 @@
-# Gyral 0.3.3: complete documentation
+# Gyral 0.3.4: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -259,8 +259,9 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
   [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 - Coming from Gyral 0.2? Read [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/). From
   0.3.0? Read [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/). From 0.3.1,
-  upgrading [to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) and
-  [to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) needs no code changes.
+  upgrading [to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
+  [to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) and
+  [to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) needs no code changes.
 
 ---
 
@@ -273,7 +274,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.3, and the site tests each one in a browser when it builds.
+0.3.4, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -492,25 +493,28 @@ it('reads ids and filters from the markup, and ignores anything else', () => {
 ## A signup form with native validation
 
 No extra packages. The browser's constraint checks find what is wrong, and your own messages
-say it:
+say it. The [Forms](https://gyral.dev/docs/forms/#complete-example-a-validated-form) page starts with this same
+component and explains each part; here it comes with its tests:
 
 ```ts
 // src/account-form.ts
 import { define, focus, html } from '@gyral/core';
 
 /** The fields, in the order they appear: the first one with an error gets focus. */
-export const FIELDS = ['name', 'email', 'password'] as const;
+export const FIELDS = ['name', 'email', 'password', 'consent'] as const;
 export type Field = (typeof FIELDS)[number];
 
 /** One message per field; `''` means no error. */
 export type Errors = Readonly<Record<Field, string>>;
 
-export const NO_ERRORS: Errors = { name: '', email: '', password: '' };
+export const NO_ERRORS: Errors = { name: '', email: '', password: '', consent: '' };
 
 export interface State {
   readonly errors: Errors;
-  /** The trimmed name after a successful signup. */
-  readonly welcome: string | undefined;
+  /** What the live region announces after a rejected submit; `''` otherwise. */
+  readonly summary: string;
+  /** The clean values after a successful signup. */
+  readonly account: { readonly name: string; readonly email: string } | undefined;
 }
 
 export type Msg =
@@ -528,8 +532,9 @@ const isField = (name: string): name is Field => FIELDS.some((f) => f === name);
  */
 export function problemWith(input: HTMLInputElement): string {
   const { validity } = input;
-  // `required` accepts "   ", so a blank value counts as missing too.
-  const missing = validity.valueMissing || input.value.trim() === '';
+  // A checkbox is missing when unchecked. `required` accepts "   ", so blank text is missing too.
+  const missing =
+    input.type === 'checkbox' ? !input.checked : validity.valueMissing || input.value.trim() === '';
   switch (input.name) {
     case 'name':
       return missing ? 'Enter your name.' : '';
@@ -542,10 +547,16 @@ export function problemWith(input: HTMLInputElement): string {
       return validity.tooShort || input.value.length < input.minLength
         ? 'Use at least 8 characters.'
         : '';
+    case 'consent':
+      return missing ? 'Accept the privacy policy to continue.' : '';
     default:
       return '';
   }
 }
+
+/** What the status region announces after a successful signup. */
+const welcome = (account: State['account']): string =>
+  account === undefined ? '' : `Welcome, ${account.name}! We’ll write to ${account.email}.`;
 
 /** Reads a submitted form: every field's error, or the clean values. */
 function submission(form: Element, data: FormData | undefined): Msg | undefined {
@@ -565,30 +576,40 @@ function submission(form: Element, data: FormData | undefined): Msg | undefined 
 }
 
 export const AccountForm = define<State, Msg>()('my-account-form', {
-  init: () => ({ errors: NO_ERRORS, welcome: undefined }),
+  init: () => ({ errors: NO_ERRORS, summary: '', account: undefined }),
   intent: {
     // Not a message tag, so it may return either message.
     Submit: ({ target, formData }) => submission(target, formData),
+    // Text fields send it on `input`, the checkbox on `change`.
     Checked: ({ target }) =>
       target instanceof HTMLInputElement && isField(target.name)
         ? { _tag: 'Checked', field: target.name, error: problemWith(target) }
         : undefined,
   },
   update: {
-    // Show every error at once, and move focus to the first field that has one.
+    // Show every error at once, announce how many, and focus the first field that has one.
     Rejected: (s, m) => {
+      const count = FIELDS.filter((f) => m.errors[f] !== '').length;
       const first = FIELDS.find((f) => m.errors[f] !== '');
-      return [{ ...s, errors: m.errors }, first === undefined ? [] : [focus(`#${first}`)]];
+      const summary = `Fix ${String(count)} ${count === 1 ? 'field' : 'fields'} to continue.`;
+      return [{ ...s, errors: m.errors, summary }, first === undefined ? [] : [focus(`#${first}`)]];
     },
     // In an app, this also returns the command that posts the form.
-    SignedUp: (_s, m) => ({ errors: NO_ERRORS, welcome: m.name }),
+    SignedUp: (_s, m) => ({
+      errors: NO_ERRORS,
+      summary: '',
+      account: { name: m.name, email: m.email },
+    }),
     // While the user types, only a field that already shows an error is checked again,
     // so a message changes or disappears as soon as the value is fixed.
     Checked: (s, m) =>
       s.errors[m.field] === '' ? s : { ...s, errors: { ...s.errors, [m.field]: m.error } },
   },
+  // No `value` bindings: what the user typed stays in the fields after a rejected submit.
   view: (s, i) => html`
     <form novalidate data-intent=${i.Submit}>
+      <p role="alert">${s.summary}</p>
+
       <label for="name">Name</label>
       <input
         id="name"
@@ -628,9 +649,21 @@ export const AccountForm = define<State, Msg>()('my-account-form', {
       />
       <p id="password-error">${s.errors.password}</p>
 
+      <input
+        id="consent"
+        name="consent"
+        type="checkbox"
+        required
+        aria-invalid=${s.errors.consent !== ''}
+        aria-describedby="consent-error"
+        data-intent=${i.Checked}
+      />
+      <label for="consent">I accept the privacy policy</label>
+      <p id="consent-error">${s.errors.consent}</p>
+
       <button>Create account</button>
     </form>
-    <p role="status">${s.welcome === undefined ? '' : `Welcome, ${s.welcome}!`}</p>
+    <p role="status">${welcome(s.account)}</p>
   `,
 });
 ```
@@ -642,18 +675,19 @@ How it works:
   the submit. Without it, a failing constraint shows the browser's bubble and no `submit` event
   fires, so your messages never appear.
 - **The submit parser reads `validity`.** `problemWith(input)` turns `valueMissing`,
-  `typeMismatch` and `tooShort` into your words. `Submit` checks every field and returns
-  `Rejected` with all the errors, or `SignedUp` with clean values. Reading the form is input
-  parsing, the intent layer's job; reducers see only the result.
+  `typeMismatch`, `tooShort` and an unchecked checkbox into your words. `Submit` checks every
+  field and returns `Rejected` with all the errors, or `SignedUp` with clean values. Reading the
+  form is input parsing, the intent layer's job; reducers see only the result.
 - **Check what the browser doesn't.** `required` accepts a name made of spaces, so the parser
   trims first. `tooShort` is set only after the user types, not for a value set by script or
   rendered by a server, so the parser checks the length too.
 - **Errors are state**: one string per field, `''` for none. The view writes `aria-invalid` and
   the message, and `aria-describedby` links the message to its field.
-- **Focus goes to the first invalid field**, through a `focus()` command from `Rejected`.
-- **An error clears as soon as the field is fixed.** Each field sends `Checked` on input. The
-  reducer updates only a field that already shows an error, so nothing turns red while someone
-  is still typing.
+- **Focus goes to the first invalid field**, through a `focus()` command from `Rejected`,
+  and the `role="alert"` paragraph announces how many fields to fix.
+- **An error clears as soon as the field is fixed.** Each field sends `Checked` on input (the
+  checkbox on change). The reducer updates only a field that already shows an error, so nothing
+  turns red while someone is still typing.
 - **Enter submits.** The form has a submit button, so Enter in any field submits it, like a
   click.
 - **No password in state.** `SignedUp` carries the name and the email. To send the form to a
@@ -672,15 +706,17 @@ const rejected = {
   name: '',
   email: 'Enter an email address like ada@example.com.',
   password: 'Use at least 8 characters.',
+  consent: '',
 };
 
-it('shows every error and focuses the first invalid field', () => {
+it('shows every error, announces how many and focuses the first invalid field', () => {
   const { state, commands } = step(
     AccountForm.spec,
-    { errors: NO_ERRORS, welcome: undefined },
+    { errors: NO_ERRORS, summary: '', account: undefined },
     { _tag: 'Rejected', errors: rejected },
   );
   expect(state.errors).toEqual(rejected);
+  expect(state.summary).toBe('Fix 2 fields to continue.');
   expect(focusTargetsIn(commands)).toEqual([{ selector: '#email' }]);
 });
 
@@ -698,7 +734,11 @@ it('welcomes the new user and forgets old errors', () => {
     { _tag: 'Rejected', errors: rejected },
     { _tag: 'SignedUp', name: 'Ada', email: 'ada@example.com' },
   ]);
-  expect(state).toEqual({ errors: NO_ERRORS, welcome: 'Ada' });
+  expect(state).toEqual({
+    errors: NO_ERRORS,
+    summary: '',
+    account: { name: 'Ada', email: 'ada@example.com' },
+  });
 });
 ```
 
@@ -718,17 +758,23 @@ it('reads the browser’s checks on submit and focuses the first invalid field',
   await form.type('#password', 'short');
   await form.click('button');
 
+  expect(form.$('[role="alert"]')?.textContent).toBe('Fix 4 fields to continue.');
   expect(form.$('#name-error')?.textContent).toBe('Enter your name.');
   expect(form.$('#email-error')?.textContent).toBe('Enter an email address like ada@example.com.');
   expect(form.$('#password-error')?.textContent).toBe('Use at least 8 characters.');
+  expect(form.$('#consent-error')?.textContent).toBe('Accept the privacy policy to continue.');
   expect(form.el.shadowRoot?.activeElement?.id).toBe('name');
 
   await form.type('#name', '  Ada  ');
   expect(form.$('#name-error')?.textContent).toBe('');
   await form.type('#email', 'ada@example.com');
   await form.type('#password', 'correct horse');
+  await form.click('#consent');
+  expect(form.$('#consent-error')?.textContent).toBe('');
   await form.click('button');
-  expect(form.$('[role="status"]')?.textContent).toBe('Welcome, Ada!');
+  expect(form.$('[role="status"]')?.textContent).toBe(
+    'Welcome, Ada! We’ll write to ada@example.com.',
+  );
   form.dispose();
 });
 ```
@@ -826,7 +872,8 @@ Any other client that speaks Streamable HTTP: add a server with the URL
 The hosted server has every tool except `check_snippet`, which needs your project's
 TypeScript and packages. It can run an older `@gyral/mcp` than the latest release; its
 `initialize` response and `https://mcp.gyral.dev/healthz` report the version it serves. The
-tools marked 0.3.2 below need that version to be 0.3.2 or later.
+tools marked 0.3.2 below need that version to be 0.3.2 or later, and the `get_api` guidance
+below needs 0.3.4.
 
 ## The local MCP server
 
@@ -866,21 +913,31 @@ the latest docs at startup instead; it falls back to the bundled copy after 3 se
 
 ## The tools
 
-| Tool                 | What it returns                                                                                   |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| `start_here`         | The mental model, the rules, the workflow, and which example or guide covers which task (0.3.2)   |
-| `search_docs`        | Ranked doc sections for a query: title, URL and snippet                                           |
-| `get_doc`            | One docs page, or one section with `#anchor`, such as `forms#the-server-half`                     |
-| `get_api`            | The declaration, doc comment and import line of an export; on a miss, the nearest names (0.3.2)   |
-| `list_examples`      | Every example and what it shows                                                                   |
-| `get_example`        | One example's component source                                                                    |
-| `scaffold_component` | Starting code: `basic`, `form`, `form-native` (0.3.2) or `ssr-page`, importing only what you have |
-| `check_snippet`      | Type errors for a module against your project, with a suggested fix for each (local only)         |
+| Tool                 | What it returns                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `start_here`         | The mental model, the rules, the workflow, and which example or guide covers which task (0.3.2)                                            |
+| `search_docs`        | Ranked doc sections for a query: title, URL and snippet                                                                                    |
+| `get_doc`            | One docs page, or one section with `#anchor`, such as `forms#the-server-half`                                                              |
+| `get_api`            | The declaration, doc comment and import line of an export, with usage code and the next call (0.3.4); on a miss, the nearest names (0.3.2) |
+| `list_examples`      | Every example and what it shows                                                                                                            |
+| `get_example`        | One example's component source                                                                                                             |
+| `scaffold_component` | Starting code: `basic`, `form`, `form-native` (0.3.2) or `ssr-page`, importing only what you have                                          |
+| `check_snippet`      | Type errors for a module against your project, with a suggested fix for each (local only)                                                  |
 
-The workflow the server teaches, in every tool description: call `start_here` once, start
-from `get_example` or `scaffold_component`, write a small implementation, then run
-`check_snippet` and apply its suggested fixes until it passes. Use `get_api` for one symbol
-you're about to use, not to read the whole API.
+The workflow the server teaches, first in its instructions and in every tool description: call
+`start_here` once, start from `get_example` or `scaffold_component`, write the module right
+away, then run `check_snippet` and apply its suggested fixes until it passes. Use `get_api` only
+for a name you already saw in an example or an error, not to read the API type by type.
+
+Since 0.3.4, `get_api` steers back to that loop. On a function with a matching example, such as
+`define`, `each`, `fieldErrors` or `every`, it adds a short usage module and the call that gives
+working code for the task, such as `scaffold_component({ tag: "signup-form", kind: "form-native" })`.
+On a type, it adds a note that TypeScript infers it and that `check_snippet` names the real type
+errors. `get_api("*")` groups the functions by task, with the example or scaffold to start from,
+and collapses the types into one line. The local stdio server also counts lookups: from the
+fourth `get_api` call since the last `get_example`, `scaffold_component` or `check_snippet`, its
+answers end with a nudge naming the next call. The HTTP server, hosted or your own, keeps no
+state between requests, so it never nudges.
 
 Since 0.3.2, `scaffold_component` imports only packages your project has installed, and
 writes a model test only when `@gyral/testing` and `vitest` are there. `form-native` needs no
@@ -910,7 +967,10 @@ has the details.
 ## The agent skill
 
 The skill teaches an agent the rules and the API, with a reference per topic that it loads
-when the task needs it. Every code block in it typechecks against the packages.
+when the task needs it. Every code block in it typechecks against the packages. Since 0.3.4,
+`SKILL.md` opens with where to start from working code (the recipes, llms-small.txt and the MCP
+loop) and the rule that the entry must import every component module, and its forms reference
+starts with native validation, as the [Forms guide](https://gyral.dev/docs/forms/) does.
 
 In Claude Code, add Gyral's repository as a plugin marketplace and install the plugin:
 
@@ -1023,8 +1083,9 @@ with no error. A parent that renders a child imports it too, as `Total` imports 
 how [tests](https://gyral.dev/docs/testing/) run `update` without a DOM. Export it as
 `export const Greeter = define…`, and the Vite preset writes `HTMLElementTagNameMap` entries for
 every such component into `.gyral/elements.d.ts` (list that file in your tsconfig's `include`),
-so `document.querySelector('my-greeter')` is typed with no declaration of your own. For `tsc`
-outside Vite, the `gyral-types` command writes the same file.
+so `document.querySelector('my-greeter')` is typed with no declaration of your own. It reads
+calls in code, not in comments or strings (since 0.3.4). For `tsc` outside Vite, the
+`gyral-types` command writes the same file.
 
 ## Props
 
@@ -1389,6 +1450,10 @@ Source: https://gyral.dev/docs/intent/
 messages, and it is the only place where raw input is read. Everything after it, the model and
 the view, works with typed, already-parsed data.
 
+Building a form with validation? The [Forms](https://gyral.dev/docs/forms/#complete-example-a-validated-form)
+page starts with a complete, copyable component: the submit intent, the messages, the reducers,
+focus and the error markup in one file. [Form submissions](#form-submissions) below sums it up.
+
 ```ts
 // src/search-box.ts
 import { define, html } from '@gyral/core';
@@ -1640,6 +1705,28 @@ A parser returns one of three things:
 Parsers may return a promise, because schema validation can be async. They must not do side
 effects. The one exception is `event.preventDefault()`, for example to stop arrow keys moving
 the caret.
+
+## Form submissions
+
+A `<form>` with `data-intent` runs its parser on `submit`, and Gyral prevents the page load. The
+parser gets the form as `target` and the submitted values as `formData`. To validate, read each
+field's `validity` from `target.elements` and return one message with every error, or one with
+the clean values:
+
+- **Name the submit intent something that isn't a message tag**, such as `Submit`, so it can
+  return either message (`Rejected` or `SignedUp`). See
+  [Intent names that aren't messages](#intent-names-that-arent-messages).
+- **Put `novalidate` on the form** and keep `required`, `type="email"` and `minlength` on the
+  fields. Without it, a failing constraint stops the `submit` event and the parser never runs.
+- **Keep errors in state** and render them next to their fields with `aria-invalid` and
+  `aria-describedby`. Focus the first invalid field with a `focus()` command from the reducer:
+  the parser may not move focus, because that is a side effect.
+- **With a schema**, `form(definition, toMsg)` parses the `FormData` for you and returns
+  `IntentRejected` with field issues; `fieldErrors(issues)` groups them by field.
+
+The whole component, ready to copy, is
+[Forms: Complete example](https://gyral.dev/docs/forms/#complete-example-a-validated-form). The schema path is
+[Forms: form() and invalid()](https://gyral.dev/docs/forms/#form-and-invalid).
 
 ## Declining: passing an event outward
 
@@ -3690,49 +3777,40 @@ without changing any markup. See them on the [home page](https://gyral.dev/#show
 
 # Forms
 
-> Validate with the browser's own checks and your messages, or with one Standard Schema for client and server. Forms work with or without JavaScript.
+> A complete validated form to copy, then the browser's own checks or one Standard Schema for client and server. Works with or without JavaScript.
 
 Source: https://gyral.dev/docs/forms/
 
-Gyral forms are real `<form>` elements, and a submit is an intent like any other. There are two
-ways to validate one. Start with the first; add the second when a server needs the same rules.
+Gyral forms are real `<form>` elements, and a submit is an intent like any other. Start from
+the complete example below: one component with everything a validated form needs, built on the
+browser's own checks, with no extra packages. Copy it and change the fields; you don't need
+another page to make it work.
 
-- **[Native validation](#native-validation)**, with no extra packages. The browser's
-  constraints (`required`, `type="email"`, `minlength`) find what is wrong, and the submit
-  parser reads each field's `validity` and returns your messages. It works in any app,
-  including a new `basic` one.
-- **[One schema for both sides](#one-schema-for-both-sides).** A
-  [Standard Schema](https://standardschema.dev) library validates in the browser and on the
-  server, the form posts with `@gyral/http`, and the same errors render without JavaScript.
+## Complete example: a validated form
 
-## Native validation
-
-**`required` without `novalidate` hides your errors.** The browser checks constraints before
-it fires `submit`. When one fails, it shows its own bubble and fires no `submit` event, so your
-parser never runs and your messages never appear. Put `novalidate` on any form that shows its
-own errors, and keep the constraints on the fields: they still set `validity`, which the parser
-reads.
-
-Here is a whole signup form built that way. The submit parser turns each field's `validity`
-into a message in state:
+A signup form with a name, an email, a password and a checkbox the user must tick. On submit it
+shows every error next to its field, announces how many fields to fix, and moves focus to the
+first invalid one. Fixing a field clears its error; a valid submit announces a welcome.
 
 ```ts
 // src/account-form.ts
 import { define, focus, html } from '@gyral/core';
 
 /** The fields, in the order they appear: the first one with an error gets focus. */
-export const FIELDS = ['name', 'email', 'password'] as const;
+export const FIELDS = ['name', 'email', 'password', 'consent'] as const;
 export type Field = (typeof FIELDS)[number];
 
 /** One message per field; `''` means no error. */
 export type Errors = Readonly<Record<Field, string>>;
 
-export const NO_ERRORS: Errors = { name: '', email: '', password: '' };
+export const NO_ERRORS: Errors = { name: '', email: '', password: '', consent: '' };
 
 export interface State {
   readonly errors: Errors;
-  /** The trimmed name after a successful signup. */
-  readonly welcome: string | undefined;
+  /** What the live region announces after a rejected submit; `''` otherwise. */
+  readonly summary: string;
+  /** The clean values after a successful signup. */
+  readonly account: { readonly name: string; readonly email: string } | undefined;
 }
 
 export type Msg =
@@ -3750,8 +3828,9 @@ const isField = (name: string): name is Field => FIELDS.some((f) => f === name);
  */
 export function problemWith(input: HTMLInputElement): string {
   const { validity } = input;
-  // `required` accepts "   ", so a blank value counts as missing too.
-  const missing = validity.valueMissing || input.value.trim() === '';
+  // A checkbox is missing when unchecked. `required` accepts "   ", so blank text is missing too.
+  const missing =
+    input.type === 'checkbox' ? !input.checked : validity.valueMissing || input.value.trim() === '';
   switch (input.name) {
     case 'name':
       return missing ? 'Enter your name.' : '';
@@ -3764,10 +3843,16 @@ export function problemWith(input: HTMLInputElement): string {
       return validity.tooShort || input.value.length < input.minLength
         ? 'Use at least 8 characters.'
         : '';
+    case 'consent':
+      return missing ? 'Accept the privacy policy to continue.' : '';
     default:
       return '';
   }
 }
+
+/** What the status region announces after a successful signup. */
+const welcome = (account: State['account']): string =>
+  account === undefined ? '' : `Welcome, ${account.name}! We’ll write to ${account.email}.`;
 
 /** Reads a submitted form: every field's error, or the clean values. */
 function submission(form: Element, data: FormData | undefined): Msg | undefined {
@@ -3787,30 +3872,40 @@ function submission(form: Element, data: FormData | undefined): Msg | undefined 
 }
 
 export const AccountForm = define<State, Msg>()('my-account-form', {
-  init: () => ({ errors: NO_ERRORS, welcome: undefined }),
+  init: () => ({ errors: NO_ERRORS, summary: '', account: undefined }),
   intent: {
     // Not a message tag, so it may return either message.
     Submit: ({ target, formData }) => submission(target, formData),
+    // Text fields send it on `input`, the checkbox on `change`.
     Checked: ({ target }) =>
       target instanceof HTMLInputElement && isField(target.name)
         ? { _tag: 'Checked', field: target.name, error: problemWith(target) }
         : undefined,
   },
   update: {
-    // Show every error at once, and move focus to the first field that has one.
+    // Show every error at once, announce how many, and focus the first field that has one.
     Rejected: (s, m) => {
+      const count = FIELDS.filter((f) => m.errors[f] !== '').length;
       const first = FIELDS.find((f) => m.errors[f] !== '');
-      return [{ ...s, errors: m.errors }, first === undefined ? [] : [focus(`#${first}`)]];
+      const summary = `Fix ${String(count)} ${count === 1 ? 'field' : 'fields'} to continue.`;
+      return [{ ...s, errors: m.errors, summary }, first === undefined ? [] : [focus(`#${first}`)]];
     },
     // In an app, this also returns the command that posts the form.
-    SignedUp: (_s, m) => ({ errors: NO_ERRORS, welcome: m.name }),
+    SignedUp: (_s, m) => ({
+      errors: NO_ERRORS,
+      summary: '',
+      account: { name: m.name, email: m.email },
+    }),
     // While the user types, only a field that already shows an error is checked again,
     // so a message changes or disappears as soon as the value is fixed.
     Checked: (s, m) =>
       s.errors[m.field] === '' ? s : { ...s, errors: { ...s.errors, [m.field]: m.error } },
   },
+  // No `value` bindings: what the user typed stays in the fields after a rejected submit.
   view: (s, i) => html`
     <form novalidate data-intent=${i.Submit}>
+      <p role="alert">${s.summary}</p>
+
       <label for="name">Name</label>
       <input
         id="name"
@@ -3850,29 +3945,87 @@ export const AccountForm = define<State, Msg>()('my-account-form', {
       />
       <p id="password-error">${s.errors.password}</p>
 
+      <input
+        id="consent"
+        name="consent"
+        type="checkbox"
+        required
+        aria-invalid=${s.errors.consent !== ''}
+        aria-describedby="consent-error"
+        data-intent=${i.Checked}
+      />
+      <label for="consent">I accept the privacy policy</label>
+      <p id="consent-error">${s.errors.consent}</p>
+
       <button>Create account</button>
     </form>
-    <p role="status">${s.welcome === undefined ? '' : `Welcome, ${s.welcome}!`}</p>
+    <p role="status">${welcome(s.account)}</p>
   `,
 });
 ```
 
-- **Reading the fields is parsing.** `target` is the `<form>`, so
-  `target.elements.namedItem('email')` is the email input. The parser returns `Rejected` with
-  every field's error, or `SignedUp` with clean values.
-- **Errors are state.** The view writes each message next to its field, links it with
-  `aria-describedby` and sets `aria-invalid`.
-- **Focus moves to the first invalid field** with a `focus()` command from the `Rejected`
-  reducer.
-- **Fixing a field clears its error.** Each input sends `Checked`, which updates only a field
-  that already shows an error.
-- **Enter submits**, because the form has a submit button.
+What each part does:
+
+- **`novalidate` on the form, constraints on the fields.** `required`, `type="email"` and
+  `minlength` still set each field's `validity`; `novalidate` only stops the browser from
+  blocking the submit with its own bubble. Without it, no `submit` event fires and your
+  messages never appear.
+- **The submit intent is the parser.** `data-intent=${i.Submit}` on the `<form>` runs `Submit`
+  on `submit` (and Gyral prevents the page load). `target` is the `<form>`, so
+  `target.elements.namedItem('email')` is the email input, and `formData` holds the submitted
+  values. `Submit` isn't a message tag, so it may return either message: `Rejected` with every
+  field's error, or `SignedUp` with the trimmed values.
+- **`problemWith(input)` turns `validity` into your words**: `valueMissing`, `typeMismatch`,
+  `tooShort`, and `checked` for the checkbox. It trims first, because `required` accepts a value
+  of spaces.
+- **Errors are state**: one string per field, `''` for none. The view writes each message in a
+  `<p>` next to its field, links it with `aria-describedby` and sets `aria-invalid`.
+- **The `role="alert"` paragraph announces the summary.** It is always rendered, empty until a
+  submit fails, so screen readers announce the text when it appears. `role="status"` announces
+  the welcome the same way, politely.
+- **Focus moves to the first invalid field** with a `focus()` command returned from the
+  `Rejected` reducer. Commands are data; the runtime moves the focus after rendering.
+- **Fixing a field clears its error.** Each control sends `Checked` (text fields on `input`,
+  the checkbox on `change`); the reducer updates only a field that already shows an error, so
+  nothing turns red while someone is still typing.
+- **Values stay in the fields.** The view binds no `value`, so a rejected submit leaves what the
+  user typed. Bind `value=${s.name}` only when state must set the text, such as emptying a
+  field after a submit.
+- **Enter submits**, because the form has a submit button, and a click submits the same way.
+- **No password in state.** `SignedUp` carries the name and the email only.
+
+To adapt it, add the field's name to `FIELDS`, give it a `case` in `problemWith`, and render a
+labelled control with the same `id` and `name` plus its error `<p>`. To send the form to a
+server, keep the raw `FormData` in the message and return a command that posts it, as in
+[Submitting to the server](#submitting-to-the-server). The
+[signup form recipe](https://gyral.dev/docs/recipes/#a-signup-form-with-native-validation) has the same
+component with its tests: the reducers without a browser, and the parser with `mount()`.
+
+There are two ways to validate a form. The example uses the first; add the second when a server
+needs the same rules.
+
+- **[Native validation](#native-validation)**, with no extra packages. The browser's
+  constraints (`required`, `type="email"`, `minlength`) find what is wrong, and the submit
+  parser reads each field's `validity` and returns your messages. It works in any app,
+  including a new `basic` one.
+- **[One schema for both sides](#one-schema-for-both-sides).** A
+  [Standard Schema](https://standardschema.dev) library validates in the browser and on the
+  server, the form posts with `@gyral/http`, and the same errors render without JavaScript.
+
+## Native validation
+
+**`required` without `novalidate` hides your errors.** The browser checks constraints before
+it fires `submit`. When one fails, it shows its own bubble and fires no `submit` event, so your
+parser never runs and your messages never appear. Put `novalidate` on any form that shows its
+own errors, and keep the constraints on the fields: they still set `validity`, which the parser
+reads, as in the [complete example](#complete-example-a-validated-form).
 
 Each constraint sets one `validity` flag, so the parser can say exactly what is wrong:
 
 | Constraint                       | Flag                                              | Notes                               |
 | -------------------------------- | ------------------------------------------------- | ----------------------------------- |
 | `required`                       | `valueMissing`                                    | A value of spaces passes: trim it   |
+| `required` on a checkbox         | `valueMissing`                                    | Set while it is unchecked           |
 | `type="email"`, `type="url"`     | `typeMismatch`                                    | Only for a value that isn't empty   |
 | `minlength`, `maxlength`         | `tooShort`, `tooLong`                             | Only after the user edits the value |
 | `pattern`                        | `patternMismatch`                                 |                                     |
@@ -3882,9 +4035,6 @@ Each constraint sets one `validity` flag, so the parser can say exactly what is 
 `validity.valid` is `true` when no flag is set, and `form.checkValidity()` asks every field at
 once. A message set with `setCustomValidity()`, as the [`invalid()`](#form-and-invalid) hook
 does, sets `customError`, so read the specific flags rather than `valid` when you combine them.
-
-The [signup form recipe](https://gyral.dev/docs/recipes/#a-signup-form-with-native-validation) has the tests:
-the reducers without a browser, and the parser with `mount()`.
 
 `novalidate` in server-rendered markup turns validation off for visitors without JavaScript
 too. If your form also posts to a server, render `?novalidate=${s.live}` and set `live` in the
@@ -6399,9 +6549,11 @@ rendered tag that no client module defines is a development warning, so a missin
 fail silently. For app-wide setup in the browser (providing drivers to the page), keep a small
 client entry and pass it in `scripts` next to `components`.
 
-The preset finds components written as `export const X = define<…>()('my-tag', …)`. A component
-created through a helper of your own (one that calls `define()` with a tag it was given) is
-invisible to that scan, so list it with its module, relative to the project root:
+The preset finds components written as `export const X = define<…>()('my-tag', …)`. It reads
+code only: since 0.3.4, a `define()` inside a comment, a string, template text or a regular
+expression doesn't count, so a code sample in a doc comment or a test fixture defines no tag. A
+component created through a helper of your own (one that calls `define()` with a tag it was
+given) is invisible to that scan, so list it with its module, relative to the project root:
 
 ```ts
 // vite.config.ts
@@ -6417,7 +6569,10 @@ export default defineConfig({
 ```
 
 A component module that the client entry or another component also imports is bundled into that
-chunk; it still loads, and its preload is that chunk. In a large app, measure before you switch
+chunk; it still loads, and its preload is that chunk. The links `renderPage` writes after the body
+leave out what the head already links (`modulepreload`, `stylesheets` and `scripts`), so pass
+`modulepreload` next to `components` as you get them: since 0.3.4, no module is linked twice.
+In a large app, measure before you switch
 from a hand-written loader: each component becomes its own chunk, and the loader carries the
 list of their dependencies.
 
@@ -8714,7 +8869,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All nine
-packages are released together with the same version number (0.3.3), are ES modules with
+packages are released together with the same version number (0.3.4), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -8788,8 +8943,9 @@ Lit is gone from the dependency tree. Any custom element still works next to Gyr
 including ones built with Lit; install that library yourself if you use it. Upgrading? See
 [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
 [from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
-[from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) and
-[from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) (no code changes in either).
+[from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
+[from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) and
+[from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) (no code changes in the last three).
 
 ## The Vite preset
 
@@ -8944,6 +9100,87 @@ The guides explain how the pieces fit together: start with [Components](https://
 
 ---
 
+# Upgrading from 0.3.3 to 0.3.4
+
+> Gyral 0.3.4 needs no code changes. It stops repeated preload links, fixes the component scan and steers MCP agents to working code.
+
+Source: https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/
+
+Gyral 0.3.4 is a patch release with three fixes: in `@gyral/ssr`, `@gyral/core`'s Vite preset
+and `@gyral/mcp`. It removes and renames nothing, so an app on 0.3.3 upgrades without code
+changes. Move every `@gyral/*` package to 0.3.4 together (they share one version), install,
+and run your tests and build:
+
+```sh
+npm install @gyral/core@0.3.4 @gyral/testing@0.3.4
+```
+
+Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
+made with `create-gyral` 0.3.4 start on `^0.3.4`. From 0.3.1 or 0.3.2, the same command works;
+see [Upgrading from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) for what 0.3.3 changed.
+
+## Server-rendered pages link each module once
+
+With [automatic components](https://gyral.dev/docs/server-rendering/#loading-components-in-the-browser)
+(`renderPage({ components })`), the links written after the body could repeat links the head
+already had. The components loader can import the client entry, so a component bundled into the
+entry chunk preloaded the entry's whole graph again, one `<link rel="modulepreload">` for each
+module the head had preloaded from `modulepreload`. The browser fetched each module once either
+way, but the markup carried every link twice.
+
+In 0.3.4 the tail after the body leaves out every module, stylesheet and script the head links
+(`modulepreload`, `stylesheets` and `scripts`), never links one of its own URLs twice, and
+otherwise keeps its order. This holds on every render path: `renderPage`, streamed or rendered to
+a string first, `renderToString` of a `page()`, and so `prerender`, `productionServer` and
+`gyralDevServer` apps. In development, the Vite client script is no longer repeated when the head
+already loads it.
+
+Nothing breaks if you keep a workaround, but you can drop it. If your app took the head's
+`modulepreload` URLs out of the `components` preload lists to avoid the duplicates, pass
+`modulepreload` and `components` to `renderPage` as they come.
+
+## The component scan reads code, not comments or strings
+
+`gyralVitePreset({ components })` and the element typings it writes to `.gyral/elements.d.ts`
+find components by scanning your source for `define()` calls. Before 0.3.4, a `define()` inside
+a doc comment, a string, template text or a test fixture counted too, so it could register a tag
+that doesn't exist or map a tag to the wrong module. 0.3.4 skips comments and the contents of
+string, template and regular expression literals.
+
+Real calls are found as before, including the two-call `define<State, Msg>()('my-tag', …)`
+and calls inside a template's `${…}`. A component made by a helper of your own still needs
+[`components.modules`](https://gyral.dev/docs/server-rendering/#loading-components-in-the-browser). If you renamed
+files or reworded comments to keep a code sample from being picked up, you can undo that.
+
+## The MCP server steers agents to working code
+
+`@gyral/mcp` keeps the same tools and input schemas. What changes is what `get_api` answers,
+so agents spend their requests writing code instead of reading types one at a time:
+
+- On a function with a matching example, such as `define`, `each`, `fieldErrors`, `invalid` or
+  `every`, it adds a short usage module and the call that gives working code for the task,
+  such as `scaffold_component({ tag: "signup-form", kind: "form-native" })`.
+- On a type, it adds a note that TypeScript infers it, and that `check_snippet` names the real
+  type errors.
+- In a stdio session, from the fourth `get_api` call since the last `get_example`,
+  `scaffold_component` or `check_snippet`, the answer ends with a nudge naming the next call for
+  the task. The HTTP server, including the hosted one, keeps no state between requests and
+  never nudges.
+- `get_api("*")` groups the functions by task, each with the example or scaffold to start
+  from, and collapses the types into one line.
+
+The server instructions and every tool description now lead with the workflow. The bundled
+skill's `SKILL.md` opens with where to start from working code and the rule that the entry must
+import each component module, and its forms reference starts with native validation, as the
+[Forms guide](https://gyral.dev/docs/forms/) does. See [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/#the-tools).
+
+The full lists are in the changelogs of
+[`@gyral/ssr`](https://github.com/gyraljs/gyral/blob/v0.3.4/packages/ssr/CHANGELOG.md),
+[`@gyral/core`](https://github.com/gyraljs/gyral/blob/v0.3.4/packages/core/CHANGELOG.md) and
+[`@gyral/mcp`](https://github.com/gyraljs/gyral/blob/v0.3.4/packages/mcp/CHANGELOG.md).
+
+---
+
 # Upgrading from 0.3.2 to 0.3.3
 
 > Gyral 0.3.3 needs no code changes. It fixes npx -y @gyral/mcp, and the MCP HTTP server is now gyral-mcp http.
@@ -8962,6 +9199,9 @@ npm install @gyral/core@0.3.3 @gyral/testing@0.3.3
 Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
 made with `create-gyral` 0.3.3 start on `^0.3.3`. From 0.3.1, the same command works; see
 [Upgrading from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) for what 0.3.2 added.
+
+0.3.4 followed with fixes and no code changes either: install 0.3.4 instead; see
+[Upgrading from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/).
 
 ## `npx -y @gyral/mcp` works again
 
@@ -9651,7 +9891,7 @@ props, styles, server rendering and hydration.
 Most apps migrate in this order: dependencies, imports, the build checks (the compiler and the
 ESLint rules list every template that needs a change), props, lists, tests, server. This page
 follows that order and describes 0.3.0. The 0.2 snippets are plain text; every snippet with a
-file name compiles against the current release, 0.3.3, so it uses 0.3.1's spelling where 0.3.1
+file name compiles against the current release, 0.3.4, so it uses 0.3.1's spelling where 0.3.1
 changed one (the two-call `define<…>()(…)`, `intentsOf`, `extraHead`). Once your app runs on
 0.3.0, go on to [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
 
@@ -10061,8 +10301,8 @@ Use documented public package entries. Entries containing `/internal` are for Gy
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
 [export inventory](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/public-api-0.3.1.md)
-records the public boundary: what 0.3.1 exports, and what 0.3.2 added. 0.3.3 exports the same
-as 0.3.2.
+records the public boundary: what 0.3.1 exports, and what 0.3.2 added. 0.3.3 and 0.3.4 export
+the same as 0.3.2.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version. Keep core, router,
 HTTP, time, testing, devtools, SSR and MCP aligned; verify your lockfile when a package manager
@@ -10070,7 +10310,7 @@ resolves multiple versions. The [package guide](https://gyral.dev/docs/packages/
 
 ## Releases
 
-These guides describe **0.3.3**, the `latest` version on npm. Every package is published
+These guides describe **0.3.4**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -10079,15 +10319,17 @@ Deploy server output and client assets from the same build: stale HTML with new 
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
 Since 0.3.1, breaking changes wait for a new minor version, with a migration guide. 0.3.2
-changed or removed nothing that 0.3.1 exports, and 0.3.3 only fixes how `@gyral/mcp` starts,
-so moving from 0.3.1 or 0.3.2 to 0.3.3 needs no code changes.
+changed or removed nothing that 0.3.1 exports, 0.3.3 only fixes how `@gyral/mcp` starts, and
+0.3.4 fixes duplicate preload links, the component scan and the MCP server's guidance, so moving
+from 0.3.1, 0.3.2 or 0.3.3 to 0.3.4 needs no code changes.
 
 ## Upgrade with evidence
 
 1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
    [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
-   [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) (no code changes) or
-   [0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) (no code changes).
+   [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
+   [0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) or
+   [0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) (no code changes in the last three).
 2. Update packages together and install from the lockfile.
 3. Run typechecking, component/browser tests and the production build.
 4. Test server/client hydration, edited forms, routing and the production CSP if your app
