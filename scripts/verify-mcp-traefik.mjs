@@ -189,9 +189,11 @@ try {
     assert.equal(tools.tools.length, 7);
     assert(!tools.tools.some((tool) => tool.name === 'check_snippet'));
     assert((await client.readResource({ uri: 'gyral://skill' })).contents.length > 0);
+    // A tool error also has content, so check the error flag and the answer itself.
+    const define = await client.callTool({ name: 'get_api', arguments: { symbol: 'define' } });
+    assert(!define.isError, 'get_api define returned a tool error');
     assert(
-      (await client.callTool({ name: 'get_api', arguments: { name: 'define' } })).content.length >
-        0,
+      define.content.some((part) => part.type === 'text' && part.text.includes('@gyral/core')),
     );
     assert((await client.listPrompts()).prompts.length > 0);
   } finally {

@@ -169,7 +169,8 @@ endpoint cannot typecheck a checkout; project-local stdio remains the snippet-ch
 
 The official SDK 1.32.1 client used by `packages/mcp/test/http.node.test.ts` connects through
 `Client.connect(new StreamableHTTPClientTransport(new URL(url)))`. `listTools()`,
-`readResource({ uri: 'gyral://skill' })`, `callTool({ name: 'get_api', arguments: { name: 'define' } })`
+`readResource({ uri: 'gyral://skill' })`, `callTool({ name: 'get_api', arguments: { symbol: 'define' } })` (check that the
+result is not `isError`; a tool error also has content)
 and the component prompt are tested against the actual listener. Call `client.close()` when
 finished. A connection should report seven tools (six for a 0.3.1 artifact) and the same version/corpus as `/healthz`.
 Test a selected coding client's installed version with these operations before announcing
