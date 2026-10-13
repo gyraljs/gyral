@@ -79,11 +79,16 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 
 1. Pull requests that change a package add a changeset: `pnpm changeset` (see
    [.changeset/README.md](../../.changeset/README.md)).
-2. When ready, on a branch: `pnpm mcp:refresh` (updates `@gyral/mcp`'s docs snapshot from
-   gyral.dev; review and commit the diff), then `pnpm changeset version`. When the release's
-   docs aren't deployed yet, build gyral.dev locally and read the snapshot from its output
-   instead: `pnpm mcp:refresh --from ../gyral.dev/dist` (a relative path is resolved from where
-   you run pnpm; the directory must hold `llms.txt` and `llms-full.txt`). It consumes the changesets, bumps every
+2. When ready, first prepare the release's gyral.dev changes on a gyral.dev branch: the
+   upgrade page, the "current version" wording, and every changed command or API. Don't wait
+   for step 7: `@gyral/mcp` ships the docs snapshot taken here, and npm never replaces a
+   published version, so a page written after the release reaches the package only with the
+   next one (0.3.3 shipped without its own upgrade page; gyral-ttk). Build that branch and take
+   the snapshot from its output, on a gyral branch: `pnpm mcp:refresh --from ../gyral.dev/dist`
+   (a relative path is resolved from where you run pnpm; the directory must hold `llms.txt` and
+   `llms-full.txt`). Review and commit the diff, then run `pnpm changeset version`. Plain
+   `pnpm mcp:refresh` reads the live site, which is right only when the site already describes
+   this release. It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
    "unreleased (next release)" markers on features this release ships: they are in package
@@ -107,7 +112,8 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    `npx -y @gyral/mcp@X.Y.Z --help` (the documented command, which picks the package's only
    bin) and start it as an MCP stdio server.
 7. Move gyral.dev to the verified npm release (registry dependencies only, no overrides or
-   vendored packages), run its gate and deploy matching docs and llms files.
+   vendored packages) on the branch from step 2, run its gate and deploy matching docs and llms
+   files. Then rebuild the hosted MCP image (production-mcp.md) with `--released-corpus X.Y.Z`.
    Only after the stable registry installs and deployed docs pass may Context7 be submitted
    or refreshed (gyral-b2g → gyral-7se.5). Use the [Context7 runbook](context7.md) to
    submit the released corpus and record live component, form and driver retrieval.
