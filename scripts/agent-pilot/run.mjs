@@ -25,7 +25,7 @@ export async function runPilot(
   credentialFile,
   resume = false,
   priorOutput,
-  { mock = false } = {},
+  { mock = false, only } = {},
 ) {
   const frozen = verifyFrozen(corpus);
   // Mock mode never reads credentials or contacts a provider; its random key only feeds the
@@ -42,6 +42,7 @@ export async function runPilot(
     assert.deepEqual(plan.limits, LIMITS);
     assert.deepEqual(plan.policy, POLICY);
     assert.equal(Boolean(plan.mock), mock, 'Do not mix mock and measured runs');
+    assert.deepEqual(plan.only ?? null, only ?? null, 'Resume with the same --only');
   } else {
     mkdirSync(output);
     plan = {
@@ -64,7 +65,9 @@ export async function runPilot(
       corpusHash: sha256(JSON.stringify(frozen)),
       frozen,
       orderingSeed: 20261011,
-      runs: ordering(),
+      // --only keeps the frozen order of the listed conditions' runs.
+      ...(only ? { only } : {}),
+      runs: ordering().filter((run) => !only || only.includes(run.condition)),
     };
     save(join(output, 'plan.json'), plan);
     if (priorOutput) {
@@ -102,7 +105,7 @@ export async function runPilot(
       );
     verifyFrozen(corpus);
     await trial(corpus, destination, run, config, mock ? { complete: mockComplete(run) } : {});
-    console.log(`${report(output, plan).attempted}/36 completed`);
+    console.log(`${report(output, plan).attempted}/${plan.runs.length} completed`);
   }
   return report(output, plan);
 }
