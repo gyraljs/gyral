@@ -299,3 +299,15 @@ Remaining failures:
 - **One assisted feature run** ended with a syntax error after two repairs.
 
 Follow-ups are tracked under gyral-7se.
+
+**Correction, 2026-10-13: Run B ran the 0.3.1 packages.** Both corpora were prepared with the
+harness default of the day, `--gyral-version` 0.3.1 (`frozen.json` of each records
+`"gyralVersion": "0.3.1"`; Run B froze at 13:58 UTC, and 0.3.2 reached npm at 16:36 UTC). So
+the assisted condition in Run B used `@gyral/mcp` 0.3.1 and the skill bundled with it: its tool
+list has no `start_here`, `scaffold_component` offers no `form-native`, the tool descriptions
+carry no workflow, and the server instructions say "Read the gyral://skill resource first"
+(`request-1.json` of any assisted run). The seeds used `@gyral/core` 0.3.1 too. Run B therefore
+measured the gyral.dev changes, not PR #13's MCP and type changes, and the sentence above about
+tool descriptions does not hold for it. A later run measures MCP and skill changes only when
+`prepare` gets `--gyral-version` for a published release that contains them: the harness
+installs `@gyral/mcp` from npm and refuses a corpus whose MCP version differs.
