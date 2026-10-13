@@ -281,7 +281,8 @@ module behind a small loader, and `renderPage({ components })` links exactly the
 page rendered (their modules, preloaded, and the loader) after the body; a page that rendered
 none loads no JavaScript. `gyralDevServer` and `productionServer` hand `components` to your app,
 and `componentsFromManifest(join(dist, 'client'))` reads it for a prerender step. Keep a small
-entry, passed in `scripts`, only for app-wide setup such as `provideDrivers`. Details:
+entry, passed in `scripts`, only for app-wide setup such as `provideDrivers`; the tail after
+the body never repeats a module, stylesheet or script the head already links. Details:
 [ADR 0016](../design-docs/0016-production-builds.md) "Automatic component loading".
 
 ### Development server

@@ -191,7 +191,11 @@ the page loads exactly the components it rendered.
   option, server only). `renderPage({ components })` writes the tail after the body, where
   every tag is known: the rendered components' modules with their static imports and Gyral's
   hydration chunk as `modulepreload` links (deduplicated), their hashed CSS, and the loader. A
-  page that rendered no component gets no script at all. A rendered tag the manifest doesn't
+  page that rendered no component gets no script at all. The tail leaves out every URL the
+  page's head already links (its `modulepreload`, `stylesheets` and `scripts`; gyral-9b0): the
+  loader can import the client entry, and a component bundled into the entry preloads the
+  entry's whole graph, which the head preloads already. `page()` writes the head's URLs into
+  the mark the tail replaces, so `renderToString` of a `page()` leaves them out too. A rendered tag the manifest doesn't
   know is a development warning. The CSP header still lists every registered component's
   `<style>` hash: the header goes out before the body is rendered.
 - **Client.** The loader imports a tag's module the first time that tag is in the document, now

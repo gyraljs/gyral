@@ -19,7 +19,7 @@ import {
   warnJsonHazard,
   type HeadEntry,
 } from '@gyral/core/internal';
-import { attr, COMPONENTS_MARK, type ComponentAssets } from './components.js';
+import { attr, componentsMark, type ComponentAssets } from './components.js';
 import type { CspOptions } from './csp.js';
 
 export interface RenderOptions {
@@ -172,7 +172,11 @@ export function page(options: PageOptions): ChildValue {
         ]}
       </head>
       <body>
-        ${body}${options.components === undefined ? nothing : raw(COMPONENTS_MARK)}
+        ${body}${
+          options.components === undefined
+            ? nothing
+            : raw(componentsMark({ modulepreload: preload, stylesheets: sheets, scripts }))
+        }
       </body>
     </html>`;
 }
