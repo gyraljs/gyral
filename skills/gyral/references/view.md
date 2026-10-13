@@ -13,6 +13,7 @@ Compute derived values in plain helper functions of state.
 | Several pieces in one attribute   | `class="btn ${s.kind}"` (quoted)                                     |
 | Presence-only attribute           | `?disabled=${s.busy}`                                                |
 | Data for a child Gyral component  | `.items=${s.items}` (property binding; data, never functions)        |
+| Render a child component          | its defined tag, `<my-signup-form></my-signup-form>` — never JSX     |
 | Text input value                  | `value=${s.text}` — live: written whenever the model's value changes |
 | Checkbox/radio, option, indeterm. | `?checked=${s.on}`, `?selected=${…}`, `?indeterminate=${…}`          |
 | `<details>`/`<dialog>` open       | `?open=${s.open}`                                                    |

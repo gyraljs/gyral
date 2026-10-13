@@ -91,6 +91,26 @@ describe('template errors (view/09)', () => {
     expect(() => normalize(t`<div hidden=${'until-found'}></div>`)).not.toThrow();
   });
 
+  it('rule 15: a PascalCase tag is not a component reference', () => {
+    // Agents write JSX-style tags; HTML reads <SignupForm> as an unknown <signupform>.
+    expectRule(
+      t`<main><SignupForm></SignupForm></main>`,
+      15,
+      '<SignupForm>',
+      'unknown <signupform>',
+      '<signup-form></signup-form>',
+      'import the module',
+    );
+    expectRule(t`<TaskApp></TaskApp>`, 15, '<task-app></task-app>');
+    expectRule(t`<Counter />`, 15, '<my-counter></my-counter>');
+    expectRule(t`<div><Card title=${0}></Card></div>`, 15, '<card>');
+    // Fine: tag names, whatever their case, that HTML knows or that can be custom elements.
+    expect(() => normalize(t`<DIV><IFrame></IFrame><TBody-x></TBody-x></DIV>`)).not.toThrow();
+    expect(() => normalize(t`<Signup-Form></Signup-Form>`)).not.toThrow();
+    expect(() => normalize(t`<svg><LinearGradient></LinearGradient></svg>`)).not.toThrow();
+    expect(() => normalize(t`<signupform></signupform>`)).not.toThrow();
+  });
+
   it('rule 4: dialog and popover state only as ?modal / ?popover-open where they fit', () => {
     expectRule(t`<dialog modal=${0}></dialog>`, 4, '?modal=${…}');
     expectRule(t`<dialog .modal=${0}></dialog>`, 4, '?modal=${…}');

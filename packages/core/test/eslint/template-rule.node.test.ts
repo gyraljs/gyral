@@ -92,6 +92,8 @@ describe('gyral/template', () => {
       bad('<title>${x} | Site</title>', '</title>'),
       // 13: unknown named references in decoded attribute text
       bad('<b class="&copy; ${x}"></b>', '<b class="&copy; ${x}">'),
+      // 15: a PascalCase tag written as a component reference
+      bad('<main>\n  <SignupForm></SignupForm>\n</main>', '<SignupForm>'),
     ],
   });
 
