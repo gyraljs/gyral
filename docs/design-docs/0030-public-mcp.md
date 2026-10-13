@@ -3,7 +3,7 @@
 Status: **accepted** (2026-10-11, gyral-49t.17); **deployed** at `https://mcp.gyral.dev/mcp`
 (2026-10-12). The owner chose public coding-agent access and deployed it manually behind
 Traefik. The HTTP server ships in `@gyral/mcp` since 0.3.2, as `gyral-mcp http` since 0.3.3
-(see the addendum); the deployed image serves the 0.3.1 corpus until it is redeployed.
+(see the addendum); the deployed image serves the 0.3.3 corpus since 2026-10-13.
 
 The existing stdio server keeps project-local `check_snippet`. A public process serves the
 read-only docs/API/example/scaffold tools (six; since 0.3.2 a seventh,

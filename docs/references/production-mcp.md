@@ -2,10 +2,11 @@
 
 The public Gyral MCP server is live at `https://mcp.gyral.dev/mcp` (Streamable HTTP,
 anonymous, read-only; no token). Point any MCP client that supports Streamable HTTP at that
-URL; see [Client review](#client-review) for what to check. The deployed container serves the
-0.3.1 corpus (`/healthz` reports `"version":"0.3.1"`, and `initialize` answers as `gyral 0.3.1`
-with six tools) until it is rebuilt and redeployed with the 0.3.3 corpus, which adds
-`start_here` (new in 0.3.2). The server is `gyral-mcp http`, the HTTP mode of the package's
+URL; see [Client review](#client-review) for what to check. Since 2026-10-13 the deployed container
+serves the released 0.3.3 corpus (`/healthz` reports `"version":"0.3.3"`, and `initialize`
+answers as `gyral 0.3.3` with seven tools, including `start_here`). That corpus is the
+gyral.dev snapshot taken when 0.3.3 was cut, so site pages written after the release, such as
+the 0.3.2 to 0.3.3 upgrade guide, reach it with the next release. The server is `gyral-mcp http`, the HTTP mode of the package's
 only bin, since 0.3.3. 0.3.2 shipped it as a second bin, `gyral-mcp-http`, which broke `npx -y @gyral/mcp`;
 0.3.1 has only the stdio server. This page is the recipe for building, deploying and
 updating that service. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).

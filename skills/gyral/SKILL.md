@@ -99,7 +99,7 @@ Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral
 
 The MCP server runs locally over stdio (`npx -y @gyral/mcp`, which has `check_snippet`), or is
 hosted at `https://mcp.gyral.dev/mcp` (Streamable HTTP, no token; every tool except
-`check_snippet`; it serves the 0.3.1 corpus until it is redeployed with 0.3.3). When the
+`check_snippet`; its `/healthz` reports the release it serves). When the
 `gyral` MCP tools are available, work in this loop rather than
 reading the docs end to end:
 
