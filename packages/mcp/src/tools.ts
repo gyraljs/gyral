@@ -2,10 +2,11 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { explainInternal, findApi, formatApi, listApi } from './api.js';
 import { checkSnippet } from './check.js';
 import { getDoc, searchDocs } from './docs.js';
 import { findExample, formatExample, listExamples } from './examples.js';
+import { Steering } from './guidance.js';
+import { lookupApi } from './lookup.js';
 import { orientation, workflow } from './orientation.js';
 import { readInstalled, UNKNOWN, withListed } from './project.js';
 import { scaffold, validTag } from './scaffold.js';
@@ -25,6 +26,9 @@ const readOnly = { readOnlyHint: true, openWorldHint: false } as const;
 export function registerTools(server: McpServer, corpus: Corpus, options: ToolOptions): void {
   const local = options.snippetChecks !== false;
   const flow = workflow(local);
+  // One per server instance: a stdio session, or a single request on the stateless HTTP
+  // server (where the count never reaches the nudge, and nothing outlives the request).
+  const steering = new Steering();
 
   server.registerTool(
     'start_here',
@@ -95,7 +99,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
     'get_api',
     {
       title: 'Look up a Gyral API symbol',
-      description: `Declaration, doc comment and import path of one public @gyral/* export (e.g. define, form, renderPage, step) you are about to use. A miss suggests the nearest export names, and for an unexported helper type says how to name it. Not for browsing the type graph: start from get_example or scaffold_component instead. Pass "*" to list every export, optionally for one package. ${flow}`,
+      description: `For one name you already saw in an example, a scaffold or a compile error: its declaration, doc comment and import path, plus a usage module and the next call for a function, or a note for a type (TypeScript infers most Gyral types from define()). Not for learning the API or browsing types: scaffold_component and get_example give working code. A miss suggests the nearest export names. "*" lists the functions by task. ${flow}`,
       inputSchema: {
         symbol: z.string().min(1).describe('Exported name, e.g. "define", or "*" for the index.'),
         package: z
@@ -106,29 +110,9 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     ({ symbol, package: pkg }) => {
-      if (symbol.trim() === '*')
-        return text(listApi(corpus.api, pkg) || `No exports for package "${pkg ?? ''}".`);
-      const { matches, suggestions } = findApi(corpus.api, symbol, pkg);
-      if (matches.length > 0) return text(matches.map(formatApi).join('\n\n'));
-      // `StandardSchemaV1.Issue`, `prop.string`: the part before the dot.
-      const head = symbol.trim().split('.')[0] ?? '';
-      if (head !== symbol.trim() && head !== '') {
-        const outer = findApi(corpus.api, head, pkg).matches;
-        if (outer.length > 0)
-          return text(
-            `\`${symbol.trim()}\` is a member of \`${head}\`:\n\n${outer.map(formatApi).join('\n\n')}`,
-          );
-      }
-      const internal = explainInternal(corpus.internalTypes, symbol);
-      if (internal !== undefined) return text(internal);
-      const hint =
-        suggestions.length > 0
-          ? ` Did you mean: ${suggestions.join(', ')}?`
-          : ' Pass "*" to list exports.';
-      return text(
-        `No public export named "${symbol}"${pkg === undefined ? '' : ` in ${pkg}`}.${hint}`,
-        true,
-      );
+      const found = lookupApi(corpus, symbol, pkg, local);
+      const nudge = steering.lookedUp(found.task, local);
+      return text(nudge === '' ? found.body : `${found.body}\n\n${nudge}`, found.isError);
     },
   );
 
@@ -153,6 +137,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     ({ name }) => {
+      steering.startedFromCode();
       const example = findExample(corpus.examples, name);
       if (example !== undefined) return text(formatExample(example));
       return text(
@@ -196,6 +181,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     (args) => {
+      steering.startedFromCode();
       const { tag, kind, description, installed } = args;
       const problem = validTag(tag);
       if (problem !== undefined) return text(problem, true);
@@ -227,6 +213,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     ({ code }) => {
+      steering.startedFromCode();
       const result = checkSnippet(code, options.projectDir);
       return text(result.report, !result.ran);
     },

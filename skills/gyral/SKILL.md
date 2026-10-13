@@ -13,6 +13,20 @@ one pure reducer per message, **view** is a pure function of state. Side effects
 DOM and hydrate in place (see `references/ssr.md`).
 Docs: https://gyral.dev/docs/ · API: https://gyral.dev/docs/api/
 
+## Start from working code
+
+Write code early, from an example close to the task, instead of reading the API type by type:
+
+1. **Recipes** (https://gyral.dev/docs/recipes/): task-sized components with tests, such as a
+   todo list with filters and a signup form with native validation. For a form, start from
+   `references/forms.md`, which leads with the same native path.
+2. **The agent pack** (https://gyral.dev/llms-small.txt): the rules, one complete component,
+   the recipes and an import map in one small file.
+3. **With the Gyral MCP server** (below): `start_here` once → `get_example` or
+   `scaffold_component` (`form-native` for a form) → write the module → `check_snippet` until
+   it passes. Call `get_api` only for a name you already saw in an example or in an error;
+   you rarely write Gyral's types yourself, TypeScript infers them from `define()`.
+
 ## The shape of every component
 
 ```ts
@@ -40,6 +54,12 @@ export const Counter = define<State, Msg>()('my-counter', {
   `,
 });
 ```
+
+**Import every component module from the entry.** `define()` registers the tag when its
+module runs. A component in its own file (`src/signup-form.ts`) needs a side-effect import in
+the entry module, or in a module the entry imports: `import './signup-form.js';` in
+`src/main.ts`. Without it the tag is never defined, and `<signup-form>` stays an empty unknown
+element with no error.
 
 ## Golden rules
 
@@ -110,8 +130,8 @@ reading the docs end to end:
 3. Write a minimal implementation of the task right away.
 4. `check_snippet` the whole module: type errors plus a suggested fix for each, and common
    Gyral mistakes TypeScript can't see. Apply the fixes and check again until it passes.
-5. `get_api` only for one specific symbol you are about to use; `search_docs` and `get_doc`
-   for one concept you need.
+5. `get_api` only for one name you already saw in an example or in an error, not to walk the
+   types; `search_docs` and `get_doc` for one concept you need.
 
 `start_here`, `form-native`, the installed-package checks and the suggested fixes are in
 `@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop. On 0.3.2 exactly,
@@ -154,7 +174,7 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/network-streams.md` — optional native EventSource/WebSocket drivers, typed codecs, connection lifetime and transport limits
 - `references/outside-stores.md` — `subscription()` over signals, Redux-style stores, sockets; stores provided per page; testing them
 - `references/composition.md` — props and `PropsChanged`, child components and outputs, stores
-- `references/forms.md` — `form()`/`field()`, `IntentRejected`, `invalid()`, `formAction` and the no-JS path
+- `references/forms.md` — native validation first (`novalidate`, `validity`, `focus`, one complete signup form), then `IntentRejected`/`fieldErrors`/`invalid()`, and a schema library with `form()`/`field()`, `formAction` and the no-JS path
 - `references/ssr.md` — `renderPage`, hydration, seeds, prerender, islands, light DOM, CSP
 - `references/testing.md` — `step`/`run`, command assertions, `settled()`, fake drivers, `fakeHttp`, virtual time, SSR/hydration tests (`renderOnServer`, golden fixtures)
 - `references/errors.md` — what happens when init, a reducer, the view, a parser, a command or a hook throws; `spec.error`, `Errored`, parent boundaries (`data-intent-on="error"`), `reportError` and monitoring, server isolation

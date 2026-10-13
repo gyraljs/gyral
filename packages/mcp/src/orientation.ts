@@ -7,7 +7,7 @@ export function workflow(snippetChecks: boolean): string {
   const check = snippetChecks
     ? 'check_snippet it and apply the suggested fixes until it passes'
     : 'typecheck it in the project (tsc, vite build) and fix what it reports';
-  return `Gyral workflow: start_here once; start from get_example or scaffold_component; write a minimal implementation; ${check}; use get_api only to look up one specific symbol.`;
+  return `Gyral workflow: start_here once, then start from get_example or scaffold_component (working code); write the module right away; ${check}; get_api only for a name you already saw in an example or an error.`;
 }
 
 interface UseCase {
@@ -110,7 +110,9 @@ const RULES = `1. \`define<State, Msg>()('my-tag', { init, intent, update, view 
    is gone). Router \`listen\` goes in \`subscriptions\` too, never in \`init\`.
 5. List rows (\`each\`) are pure; a row that uses \`intentsOf<typeof C>()\` needs an explicit
    \`TemplateResult\` return type.
-6. Server-rendered state is plain JSON. Import only packages the project has installed.`;
+6. Server-rendered state is plain JSON. Import only packages the project has installed.
+7. A component in its own module must be imported by the entry (\`import './my-widget.js';\`
+   in src/main.ts), or its tag is never defined and stays an empty element.`;
 
 /** The orientation start_here returns: model, rules, workflow, tools and the use-case index. */
 export function orientation(corpus: Corpus, snippetChecks: boolean): string {
@@ -140,8 +142,9 @@ ${RULES}
    (scaffold_component, which reads package.json and imports only installed packages).
 2. Write a minimal implementation of the task right away: State, Msg, intent, update, view.
 3. ${snippetChecks ? 'check_snippet the whole module; apply the suggested fixes and check again until it passes.' : 'Typecheck it in the project and fix every error.'}
-4. Only then refine. Use get_api for one specific symbol you are about to use, not to browse
-   the type graph; search_docs / get_doc for one concept you need.
+4. Only then refine. Use get_api only for a name you saw in an example or an error (TypeScript
+   infers Gyral's types from define(), so don't walk them); search_docs / get_doc for one
+   concept you need.
 
 ## Which tool when
 
@@ -149,7 +152,7 @@ ${RULES}
 | --- | --- |
 | Working code for a use case | \`get_example\` (\`list_examples\` for all) |
 | Starting code that fits the project | \`scaffold_component\` (basic, form, form-native, ssr-page) |
-| The exact signature of one export | \`get_api\` |
+| The signature of a name from an example or an error | \`get_api\` (\`"*"\`: functions by task) |
 | A concept or guide section | \`search_docs\`, then \`get_doc\` |
 ${check}
 

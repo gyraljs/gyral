@@ -20,7 +20,7 @@ function distance(a: string, b: string): number {
   return row[b.length] ?? 0;
 }
 
-const inPackage = (entry: ApiEntry, pkg: string | undefined): boolean =>
+export const inPackage = (entry: ApiEntry, pkg: string | undefined): boolean =>
   pkg === undefined ||
   entry.specifier === pkg ||
   entry.specifier === `@gyral/${pkg}` ||
@@ -155,28 +155,4 @@ export function formatApi(entry: ApiEntry): string {
     '',
     `Import: \`import { ${entry.kind === 'type' ? 'type ' : ''}${entry.name} } from '${entry.specifier}';\``,
   ].join('\n');
-}
-
-function groupBy<T, K>(items: readonly T[], key: (item: T) => K): Map<K, T[]> {
-  const groups = new Map<K, T[]>();
-  for (const item of items) {
-    const k = key(item);
-    groups.set(k, [...(groups.get(k) ?? []), item]);
-  }
-  return groups;
-}
-
-/** The exports of one entry point, grouped by kind: an index for agents. */
-export function listApi(api: readonly ApiEntry[], pkg?: string): string {
-  const scoped = api.filter((e) => inPackage(e, pkg));
-  const bySpecifier = groupBy(scoped, (e) => e.specifier);
-  return [...bySpecifier]
-    .map(([specifier, entries]) => {
-      const kinds = groupBy(entries, (e) => e.kind);
-      const lines = [...kinds].map(
-        ([kind, list]) => `- ${kind}: ${list.map((e) => e.name).join(', ')}`,
-      );
-      return `## ${specifier}\n${lines.join('\n')}`;
-    })
-    .join('\n\n');
 }

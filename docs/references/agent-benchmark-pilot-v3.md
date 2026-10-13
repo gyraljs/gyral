@@ -299,3 +299,48 @@ Remaining failures:
 - **One assisted feature run** ended with a syntax error after two repairs.
 
 Follow-ups are tracked under gyral-7se.
+
+**Correction, 2026-10-13: Run B ran the 0.3.1 packages.** Both corpora were prepared with the
+harness default of the day, `--gyral-version` 0.3.1 (`frozen.json` of each records
+`"gyralVersion": "0.3.1"`; Run B froze at 13:58 UTC, and 0.3.2 reached npm at 16:36 UTC). So
+the assisted condition in Run B used `@gyral/mcp` 0.3.1 and the skill bundled with it: its tool
+list has no `start_here`, `scaffold_component` offers no `form-native`, the tool descriptions
+carry no workflow, and the server instructions say "Read the gyral://skill resource first"
+(`request-1.json` of any assisted run). The seeds used `@gyral/core` 0.3.1 too. Run B therefore
+measured the gyral.dev changes, not PR #13's MCP and type changes, and the sentence above about
+tool descriptions does not hold for it. A later run measures MCP and skill changes only when
+`prepare` gets `--gyral-version` for a published release that contains them: the harness
+installs `@gyral/mcp` from npm and refuses a corpus whose MCP version differs.
+
+## Run C, 2026-10-13: published 0.3.3
+
+Run C repeats the protocol unchanged with `--gyral-version 0.3.3` (harness at gyral `414a3e1`,
+corpus hash `5f06d3f9a8fe`). It is the first run whose assisted condition has the PR #13 and
+0.3.3 MCP server: `start_here`, the `form-native` scaffold and the workflow in the tool
+descriptions. The docs come from gyral.dev as of 07:26 UTC, including the entry-import rule
+(gyral-7se.34). Not included: PR #18. The sandbox image (`sha256:3880cf50…`) had been removed
+from the host and was restored as `node:24.15.0-bookworm-slim`, whose ID matches (gyral-jl5).
+
+Five trials (one in each Gyral condition, two Svelte, one React) failed before the first model
+response with provider HTTP 502/503. Their evidence is kept in `provider-failures/`, and they
+were re-run once with `run --resume` against the same frozen corpus and plan.
+
+| Condition      | Feature | Bug | Form | Total | Runs using scaffold/check_snippet |
+| -------------- | ------: | --: | ---: | ----: | --------------------------------: |
+| gyral-docs     |     3/3 | 3/3 |  1/3 |   7/9 |                                 — |
+| gyral-assisted |     0/3 | 3/3 |  0/3 |   3/9 |                               2/9 |
+| react-docs     |     2/3 | 3/3 |  3/3 |   8/9 |                                 — |
+| svelte-docs    |     3/3 | 3/3 |  2/3 |   8/9 |                                 — |
+
+- **`start_here` is used, and is not enough.** Every assisted run called `start_here` first
+  (none in Run B, where the tool did not exist). The three bug runs passed in 8 to 13 requests,
+  one with `check_snippet`. Every feature and form run then called `get_example` and went on to
+  15–35 `get_api` calls in a row (`ComponentSpec`, `IntentParser`, `ParserFor`, `Reducer`,
+  `Next`; for forms also a detour from `focus` into `defineDriver`, `DriverContext` and
+  `CommandHandlers`), and ran out of requests, mostly before writing a file. This is the
+  behaviour PR #18 addresses: usage and the next call in `get_api` answers, the nudge from the
+  fourth call, and the task-grouped index.
+- **Docs-only forms still fail (1/3).** Both failing runs re-read the Intent page 10 times or
+  more and the Forms page 4–6 times without writing (28 and 26 tool calls). The page they need
+  for a form's submit intent is not where they look first.
+- Docs-only feature and bug stay 6/6; no run left a component module unimported.

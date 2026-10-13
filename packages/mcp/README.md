@@ -50,16 +50,37 @@ when your agent writes code. See [Public hosting](#public-hosting).
 | `start_here`         | Orientation: the mental model, rules, workflow, which tool to use when, and a use case → example/guide index         |
 | `search_docs`        | Ranked doc sections (title, URL, snippet) for a query                                                                |
 | `get_doc`            | One docs page, or one section with `#anchor` (`forms#the-server-half`); takes `path_or_url` (or `path`)              |
-| `get_api`            | Declaration, doc comment and import line of a public export; `"*"` lists them all; a miss suggests the nearest names |
+| `get_api`            | Declaration and import line, plus usage code and the next call (or a note for a type); `"*"`: functions by task      |
 | `list_examples`      | Every example and what it demonstrates                                                                               |
 | `get_example`        | One example's component source                                                                                       |
 | `scaffold_component` | Starting code: `basic`, `form`, `form-native` (no dependencies) or `ssr-page`, importing only installed packages     |
 | `check_snippet`      | Type errors for a TypeScript module, against your project's TypeScript and `@gyral/*` versions, with suggested fixes |
 
 Every tool description carries the recommended workflow, because many clients drop server
-instructions: `start_here` once; start from `get_example` or `scaffold_component`; write a
-minimal implementation; `check_snippet` it and apply the suggested fixes until it passes; use
-`get_api` only to look up one specific symbol.
+instructions: `start_here` once; start from `get_example` or `scaffold_component`; write the
+module right away; `check_snippet` it and apply the suggested fixes until it passes; use
+`get_api` only for a name you already saw in an example or an error.
+
+`get_api` steers back to working code, because agents that browse the types one by one run
+out of budget before they write anything:
+
+- For a function with a matching example (`define`, `html`, `each`, `intentsOf`, `fieldErrors`,
+  `invalid`, `focus`, `form`, `every`, `command`, …) it appends a short, typechecked usage
+  module and the call that gives working code for the task, such as
+  `scaffold_component({ tag: "signup-form", kind: "form-native" })` or
+  `get_doc("recipes#a-todo-list-with-filters")`.
+- For a type it appends one line: TypeScript infers most Gyral types from `define()` and
+  `form()`; start from a scaffold or an example and let `check_snippet` name the types that
+  matter. The few types you do write (`TemplateResult`, `Command`, `Stateless`, `FieldIssue`)
+  say where.
+- From the fourth `get_api` call since the last `get_example`, `scaffold_component` or
+  `check_snippet`, the answer ends with a nudge naming the next call for the task the looked-up
+  names suggest (form names → the `form-native` scaffold). A repeated name still gets its full
+  declaration. The count lives in the server instance: one per stdio session; the stateless
+  HTTP server makes one per request, so it keeps no per-client state and never nudges.
+- `"*"` groups the runtime functions by task, each with a one-line purpose and the example or
+  scaffold to start from, and collapses the types into one line to look up only when a compile
+  error names one.
 
 Resources: `gyral://llms.txt`, `gyral://skill` and `gyral://skill/references/{name}`.
 Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component).
