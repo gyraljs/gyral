@@ -415,7 +415,7 @@ plan. No trial failed at the provider.
 Run F runs only the Gyral docs-only condition (`--only gyral-docs`) at harness `294cbba`,
 whose parser keeps `.txt` index links, so `llms-small.txt` is reachable. Two corpora are Run
 D's frozen corpus with the Gyral docs rebuilt from local builds of gyral.dev: **A** from
-`main` (as live) and **B** from `7de56c6`, whose API reference pages open by sending readers
+`f5f0d9b` (then live) and **B** from `a5f67e7`, whose API reference pages open by sending readers
 to Recipes and Forms and say most types are inferred (gyral-7se.38). Provider failures (HTTP
 502/503 from upstream) were re-run; their evidence is kept in `provider-failures/`.
 
