@@ -221,7 +221,7 @@ node scripts/agent-pilot.mjs run --corpus $P/corpus-<date> --out $P/runs/<date>-
 ```
 
 `prepare` fetches and freezes the docs and installs the seeds and the released MCP; it accepts
-`--gyral-version` (default 0.3.3). `validate` needs Docker and Chromium and runs 26 grades.
+`--gyral-version` (default 0.3.4). `validate` needs Docker and Chromium and runs 26 grades.
 `freeze` records the commit and the hashes of the harness and corpus; changing the harness,
 fixtures, prompts or corpus afterwards makes `run` refuse to start. Run `prepare` on the day of
 the measured run so "today's docs" are what get frozen. `report --out <dir>` rebuilds the

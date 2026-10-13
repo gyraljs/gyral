@@ -213,6 +213,17 @@ manifests depend on `^0.3.3`, with no overrides. Every lockfile entry resolves f
 `node scripts/verify-ssr-production.mjs` (exact 0.3.3; a 58,738-byte one-file server) and
 the Rust compatibility fixture (gyral-rs `eb074c6`, which pins core and SSR 0.3.3) also pass.
 
+Recorded 0.3.4 registry checks (2026-10-13, step 6): all nine packages serve 0.3.4 as
+`latest` with SLSA v1 provenance. `npx -y @gyral/mcp@0.3.4` and unversioned
+`npx -y @gyral/mcp` both start over stdio, answer `initialize` as `gyral 0.3.4` and list eight
+tools. `npm create gyral@0.3.4` generated both templates in fresh directories, and npm
+installed them. Each app's `typecheck`, `build` and `test` pass (basic: two Chromium tests;
+SSR: three server tests and a prerendered page). Both manifests depend on `^0.3.4`, with no
+overrides. Every lockfile entry resolves from `registry.npmjs.org` with SHA-512 integrity,
+and no Lit package is installed. The prerendered SSR page links no `modulepreload` twice.
+`node scripts/verify-ssr-production.mjs` (exact 0.3.4; a 59,333-byte one-file server) and
+the Rust compatibility fixture (gyral-rs `2f56c63`, which pins core and SSR 0.3.4) also pass.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
