@@ -41,9 +41,9 @@ await scaffold({
   targetDir: 'my-app',
   template: 'ssr',
   packageName: 'my-app',
-  gyralVersion: '0.3.4',
+  gyralVersion: '0.3.5',
 });
-const pkg = manifest('basic', 'my-app', '0.3.4'); // the package.json scaffold() writes
+const pkg = manifest('basic', 'my-app', '0.3.5'); // the package.json scaffold() writes
 ```
 
 `scaffold` refuses a non-empty directory. Nothing else is exported.

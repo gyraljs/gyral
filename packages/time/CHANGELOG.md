@@ -1,5 +1,12 @@
 # @gyral/time
 
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [be8f8d1]
+  - @gyral/core@0.3.5
+
 ## 0.3.4
 
 ### Patch Changes

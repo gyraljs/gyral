@@ -224,6 +224,13 @@ and no Lit package is installed. The prerendered SSR page links no `modulepreloa
 `node scripts/verify-ssr-production.mjs` (exact 0.3.4; a 59,333-byte one-file server) and
 the Rust compatibility fixture (gyral-rs `2f56c63`, which pins core and SSR 0.3.4) also pass.
 
+Recorded 0.3.5 candidate checks (2026-10-13): `pnpm check` passes (316 test files, 2054
+tests). `verify:install` passes with nine tarballs, all Node-loadable entries, native SSR output,
+and `npx --no-install @gyral/mcp` (help, then a stdio session with eight tools). Both
+`verify:create` templates typecheck, build and pass their tests, with client builds unchanged
+(basic 21.9 KiB JS, SSR 34.4 KiB JS). The `@gyral/mcp` docs snapshot comes from the gyral.dev
+`release/0.3.5` build with `GYRAL_DOCS_VERSION=0.3.5`.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

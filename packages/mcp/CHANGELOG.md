@@ -1,5 +1,16 @@
 # @gyral/mcp
 
+## 0.3.5
+
+### Patch Changes
+
+- The docs snapshot (`get_doc`, `search_docs`) and the bundled skill describe 0.3.5. The API
+  reference entries now say to start from Recipes or Forms and that most types are inferred;
+  the Forms example names its focus command before returning `[state, commands]`; the agent
+  pack and the skill say to render a component by its defined tag (`<signup-form>`), never a
+  JSX-style `<SignupForm>`, which `@gyral/core` 0.3.5 reports as template rule 15. Tools and
+  input schemas are unchanged.
+
 ## 0.3.4
 
 ### Patch Changes

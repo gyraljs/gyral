@@ -1,6 +1,6 @@
 {
   "name": "@gyral/core",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer.",
   "license": "MIT",
   "author": "Mike Zupper",
