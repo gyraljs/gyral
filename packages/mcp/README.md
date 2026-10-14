@@ -117,8 +117,10 @@ These are new in 0.3.2 (0.3.1 lacks them):
 | `GYRAL_PROJECT_DIR` | the working directory | Where `check_snippet` finds `typescript` and `@gyral/*`                                                                   |
 | `GYRAL_DOCS_URL`    | unset (bundled docs)  | Load a newer `llms-full.txt` at startup, e.g. `https://gyral.dev/llms-full.txt`; falls back to the bundled copy after 3 s |
 
-`check_snippet` uses the TypeScript installed in your project (an optional peer dependency),
-so `npx` doesn't download a second compiler.
+`check_snippet` uses the TypeScript installed in your project (an optional peer dependency,
+`>=5.0 <7`), so `npx` doesn't download a second compiler. It needs the TypeScript compiler API,
+which TypeScript 7 doesn't expose: with TypeScript 7 installed, `check_snippet` says so instead
+of checking, and you run the project's own typecheck (`tsc --noEmit`, `pnpm typecheck`).
 
 ## Public hosting
 
