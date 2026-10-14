@@ -959,7 +959,7 @@ GYRAL_MCP_PUBLIC_ORIGIN=http://127.0.0.1:3000 npx -y @gyral/mcp http
 
 It is configured by environment variables only; `gyral-mcp http --help` lists them. Put it
 behind TLS, and pin the package version you deploy. The
-[package README](https://github.com/gyraljs/gyral/blob/v0.3.5/packages/mcp/README.md#public-hosting)
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.6/packages/mcp/README.md#public-hosting)
 has the details.
 
 ## The agent skill
@@ -980,7 +980,7 @@ In Claude Code, add Gyral's repository as a plugin marketplace and install the p
 From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
 
 Other agents: copy
-[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.5/skills/gyral) into the agent's
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.6/skills/gyral) into the agent's
 skills or rules folder, or point it at `SKILL.md`.
 
 ## Docs for agents
@@ -6312,7 +6312,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.5/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.6/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -7390,7 +7390,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.5/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.6/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -8353,7 +8353,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.5/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.6/docs/references/platform-spikes-2026-10-11.md)
 records the results, fixtures and limits.
 
 ## Server rendering in another framework
@@ -8710,7 +8710,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.5/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.6/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page; the recipe is application code, not a Gyral
 export.
 
@@ -9130,7 +9130,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.5/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.6/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -9148,7 +9148,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.5/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.6/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9182,7 +9182,7 @@ interchangeable dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.5/docs/references/public-api-0.3.1.md)
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.6/docs/references/public-api-0.3.1.md)
 records the public boundary of 0.3.6: every entry and what it exports.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version. Keep core, router,
@@ -10109,8 +10109,8 @@ The same driver (same name, so substitution by name still works), with `run` ret
 rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with
 `backoff: 'exponential'`; a random part of it with `jitter`), and only for failures
 `retryIf` accepts. An abort (the command switched away, the component disconnected) ends it
-at once and is never retried. Wrap where the driver is chosen: app setup, a component's
-`drivers`, or a test fake.
+at once and is never retried. Wrap where the driver is chosen: `provideDrivers` at app
+setup, `el.drivers`, or a test fake.
 
 
 ```ts
@@ -11904,8 +11904,8 @@ interface GyralViteOptions {
     /** Template compiler options (`vite build` only). */
     readonly compiler?: TemplateCompilerOptions;
     /**
-     * The app is never server-rendered: leave the hydration code out of the browser bundle
-     * (`gyralClientOnly()`). Default false.
+     * The app is never server-rendered: leave the hydration code out of the browser bundle.
+     * Default false.
      */
     readonly clientOnly?: boolean;
     /**
@@ -12651,11 +12651,12 @@ function listen<M>(toMsg: (location: RouteLocation) => M | undefined): Command<M
 ```
 
 Streams the current location, then every URL change, as messages until the component
-disconnects (a streaming command, ADR 0006/0009). Start it once, usually from `init`:
+disconnects (a streaming command, ADR 0006/0009). Start it from `subscriptions`, which restarts
+it when a moved or re-attached component connects again (a command from `init` is not):
 
 
 ```ts
-init: () => [initial, [listen((location) => ({ _tag: 'Routed', location }))]]
+subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))]
 ```
 
 
@@ -13943,11 +13944,11 @@ interface NodeListenerOptions {
 
 # @gyral/testing
 
-> Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests, schema arbitraries.
+> Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests.
 
 Source: https://gyral.dev/docs/api/testing/
 
-Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests, schema arbitraries.
+Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests.
 
 ```sh
 npm install @gyral/testing
@@ -14774,7 +14775,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.5/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.6/docs/design-docs).
 
 ## The platform is the framework
 
