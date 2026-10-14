@@ -133,7 +133,7 @@ export const Sortable = define<State, Msg>()('my-sortable', {
 
 | Field             | Value                                                |
 | ----------------- | ---------------------------------------------------- |
-| `name`            | the `data-intent` value                              |
+| `name`            | the `data-intent` (or `data-intent-<event>`) value   |
 | `event`, `target` | the DOM event and the element carrying `data-intent` |
 | `value`           | `value` of the input/select/textarea/button          |
 | `checked`         | for checkbox and radio                               |
@@ -144,8 +144,9 @@ export const Sortable = define<State, Msg>()('my-sortable', {
 | `command`         | invoker command info for `command` intents           |
 
 Read the intent element from `target`, not from the event: Gyral listens on the component's
-root, so `event.currentTarget` is that root (the shadow root), and `event.target` is whatever
-was hit inside the element (the label's `<span>`, an icon).
+root, so `event.currentTarget` is that root (the shadow root, or the host for a `shadow: false`
+component), and `event.target` is whatever was hit inside the element (the label's `<span>`,
+an icon).
 
 ## Parsers
 
@@ -282,8 +283,7 @@ its own listener (once). To skip events by where they started rather than by key
 
 **Typing a parser.** Each key in `intent` must produce its own variant (`Qty` produces
 `{ _tag: 'Qty'; … }`), so don't annotate a parser with the whole union: `(): Msg => …` widens
-it, and TypeScript reports a long error ending in "`IntentParser<Msg, …>` is not assignable to
-`IntentParser<{ _tag: 'Qty'; … }, …>`". Inside the spec, leave the return type off: the key types
+it, and TypeScript reports a long assignability error on that `intent` key. Inside the spec, leave the return type off: the key types
 it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
 type (`Extract<Msg, { _tag: 'Qty' }> | undefined`, or `ParseResult<Variant<Msg, 'Qty'>>`, which
 also allows `IntentRejected`; both type exports are available since 0.3.2). The same holds

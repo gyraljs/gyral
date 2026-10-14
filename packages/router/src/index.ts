@@ -52,9 +52,10 @@ export function setHead(head: Head): Command<never> {
 
 /**
  * Streams the current location, then every URL change, as messages until the component
- * disconnects (a streaming command, ADR 0006/0009). Start it once, usually from `init`:
+ * disconnects (a streaming command, ADR 0006/0009). Start it from `subscriptions`, which restarts
+ * it when a moved or re-attached component connects again (a command from `init` is not):
  *
- *   init: () => [initial, [listen((location) => ({ _tag: 'Routed', location }))]]
+ *   subscriptions: () => [listen((location) => ({ _tag: 'Routed', location }))]
  */
 export function listen<M>(toMsg: (location: RouteLocation) => M | undefined): Command<M> {
   return command(

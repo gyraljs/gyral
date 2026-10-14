@@ -219,10 +219,11 @@ export const Shell = define<State, Msg>()('my-shell', {
 });
 ```
 
-- **`@gyral/http`**: `get(url, handlers)`, `request(req, handlers)` (method, headers, JSON or
-  form `body`, `schema` / `errorSchema` with any Standard Schema library),
-  `submitForm(url, formData, options)` for forms (see forms.md). Errors are a typed union:
-  `HttpStatusError` (with `status`, `body`, `detail`), `HttpNetworkError`, `HttpDecodeError`.
+- **`@gyral/http`**: `get(url, handlers)`, `request(req, handlers)` (`req`: method, headers,
+  JSON or form `body`; `handlers`: `onSuccess`, `onFailure`, and `schema` / `errorSchema` with
+  any Standard Schema library), `submitForm(url, formData, options)` for forms (see forms.md).
+  Errors are a typed union: `HttpStatusError` (with `status`, `body`, `detail`),
+  `HttpNetworkError`, `HttpDecodeError`, `HttpTimeoutError` (with `timeoutMs`).
   App-wide headers, and the one place a CSRF token from a `<meta>` is configured:
   `makeHttpDriver({ headers: csrfFromMeta('csrf-token') })`. Development builds warn once when
   a POST/PUT/PATCH/DELETE goes out without the token while the page has a CSRF `<meta>`.
@@ -236,7 +237,8 @@ export const Shell = define<State, Msg>()('my-shell', {
   for server and client"), typed `routes({...})` tables with
   `match(url)` (`{ name, params, path }`; `path` is the canonical path, which servers redirect
   to: ssr.md "One URL per page") and `href(name, params)` (same table on server and client).
-  Patterns are literal and `:param` segments only; empty segments (`/a//b`) never match. Link clicks are
+  Patterns are literal segments, `:param`, optional `:param?` and a trailing catch-all
+  `:path*` (an array of segments); empty segments (`/a//b`) never match. Link clicks are
   captured only with `makeRouter({ captureLinks: true })` given as the `router` driver of the
   component that owns the page.
 

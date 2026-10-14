@@ -9,7 +9,7 @@ client-rendered with Vite. This file tells coding agents how the project works.
 | ------------------- | --------------------------------------------------------- |
 | `npm run dev`       | Vite dev server                                           |
 | `npm test`          | Vitest in Chromium (browser mode); run after every change |
-| `npm run typecheck` | `tsc --noEmit` (strict)                                   |
+| `npm run typecheck` | `gyral-types && tsc --noEmit`                             |
 | `npm run build`     | Type-check and build to `dist/`                           |
 | first test run      | `npx playwright install chromium` (once per machine)      |
 
@@ -41,6 +41,8 @@ client-rendered with Vite. This file tells coding agents how the project works.
    state: `value=${v}`, `?checked=${v}`, `<textarea>${v}</textarea>`. Props: `prop.*`.
 8. Use semantic HTML (real buttons, labels, forms, `<output aria-live>`) and modern CSS in
    `@layer component` inside `styles`.
+9. Long-running work (`every`, `listen`, sockets, store watches) goes in
+   `subscriptions: (s, props) => [...]`, never in `init`: it restarts when the element reconnects.
 
 ## Testing approach
 
@@ -54,4 +56,6 @@ client-rendered with Vite. This file tells coding agents how the project works.
 
 - Agent skill for Claude Code: `/plugin marketplace add gyraljs/gyral`, then
   `/plugin install gyral@gyral` (other agents: https://github.com/gyraljs/gyral/tree/main/skills/gyral).
-- Docs for agents: https://gyral.dev/llms.txt · Docs: https://gyral.dev/docs/
+- MCP server (examples, API lookup, `check_snippet`): `claude mcp add gyral -- npx -y @gyral/mcp`.
+- Docs for agents: https://gyral.dev/llms-small.txt (read first) and https://gyral.dev/llms.txt
+  (index) · Docs: https://gyral.dev/docs/

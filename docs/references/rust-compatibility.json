@@ -10,5 +10,5 @@
   "limits": { "propsBytes": 262144, "htmlBytes": 2097152, "bundleBytes": 8388608 },
   "browserFormat": "single-esm-entry",
   "serverFormat": "single-iife",
-  "rustCratesPublished": false
+  "rustCratesPublished": true
 }

@@ -89,6 +89,9 @@ can't show a stale user next to an error.
 | `IntentRejected { intent, issues, values? }` | `form()`/`field()` validation failed, or the server answered 422 | showing field errors                                         |
 | `StoreChanged { store, state, prev }`        | a store in `spec.stores` changed                                 | reacting to shared state (narrow with `changed(store, msg)`) |
 | `Hydrated { serverRendered }`                | once, after the first client render                              | progressive enhancement: switch to the JS-only UI            |
+| `Errored { phase, error }`                   | a reducer, intent parser or command failed                       | showing an error state (`references/errors.md`)              |
+| `FormReset` / `FormDisabled { disabled }`    | `formAssociated` only: the owning form reset, or disabled change | resetting the value, disabling controls                      |
+| `FormStateRestore { state, mode }`           | `formAssociated` only: session restore or autofill               | restoring the value (`references/forms.md`)                  |
 
 Without a reducer they leave state unchanged (props and stores are still readable via `ctx`).
 

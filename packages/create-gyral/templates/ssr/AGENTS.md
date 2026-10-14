@@ -10,7 +10,7 @@ This file tells coding agents how the project works.
 | ------------------- | --------------------------------------------------------------- |
 | `npm run dev`       | Dev server: every page server-rendered, Vite for client modules |
 | `npm test`          | Server-rendering tests (Vitest, Node); run after every change   |
-| `npm run typecheck` | `tsc --noEmit` (strict)                                         |
+| `npm run typecheck` | `gyral-types && tsc --noEmit`                                   |
 | `npm run build`     | Type-check, build the client, prerender to `dist/static`        |
 | `npm run preview`   | Serve the production build                                      |
 
@@ -45,6 +45,8 @@ This file tells coding agents how the project works.
 7. Page-level content in light DOM (`shadow: false`, document CSS); widgets in shadow DOM.
 8. Forms: one schema for `form()` (client) and `formAction` (server, works without JS).
 9. Use semantic HTML and modern CSS in `@layer component` inside `styles`.
+10. Long-running work (`every`, `listen`, sockets, store watches) goes in
+    `subscriptions: (s, props) => [...]`, never in `init`: it restarts when the element reconnects.
 
 ## Testing approach
 
@@ -58,4 +60,6 @@ This file tells coding agents how the project works.
 
 - Agent skill for Claude Code: `/plugin marketplace add gyraljs/gyral`, then
   `/plugin install gyral@gyral` (other agents: https://github.com/gyraljs/gyral/tree/main/skills/gyral).
-- Docs for agents: https://gyral.dev/llms.txt · Docs: https://gyral.dev/docs/
+- MCP server (examples, API lookup, `check_snippet`): `claude mcp add gyral -- npx -y @gyral/mcp`.
+- Docs for agents: https://gyral.dev/llms-small.txt (read first) and https://gyral.dev/llms.txt
+  (index) · Docs: https://gyral.dev/docs/

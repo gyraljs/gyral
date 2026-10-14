@@ -13,8 +13,8 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | Field                             | Required                     | Meaning                                                                         |
 | --------------------------------- | ---------------------------- | ------------------------------------------------------------------------------- |
 | `init(props)`                     | yes, unless `S` accepts `{}` | Initial state, optionally `[state, commands]`                                   |
-| `intent`                          | yes (may be `{}`)            | Parsers keyed by message tag: DOM event → message                               |
-| `update`                          | yes                          | One pure reducer per message tag (exhaustive), plus optional framework reducers |
+| `intent`                          | no                           | Parsers keyed by intent name: DOM event → message                               |
+| `update`                          | yes, unless no messages      | One pure reducer per message tag (exhaustive), plus optional framework reducers |
 | `view(state, intents, ctx)`       | yes                          | Pure template; `ctx.props`, `ctx.read(store)`                                   |
 | `props`                           | no                           | `prop.*` builders (Standard Schema), with the `required`/`default` rule         |
 | `styles`                          | no                           | `css` values, CSS strings, or arrays of them (shadow DOM only)                  |
@@ -24,6 +24,9 @@ through one global scheduler: reducers run at once, the DOM updates in a microta
 | `viewTransition(prev, next, msg)` | no                           | `true` renders that change inside a View Transition                             |
 | `states(state)`                   | no                           | Boolean custom states for CSS: `:host(:state(loading))`                         |
 | `renderOnFrame`                   | no                           | Message tags (or `'StoreChanged'`) from bursty sources: render once per frame   |
+| `subscriptions(state, props)`     | no                           | Long-lived commands that should run now (`references/update-and-commands.md`)   |
+| `error(failure, state)`           | no                           | Fallback view when `init` or the view throws (`references/errors.md`)           |
+| `formAssociated`                  | no                           | Native form participation: value, validity, restore (`references/forms.md`)     |
 
 ## Props
 

@@ -35,7 +35,7 @@ Compute derived values in plain helper functions of state.
   so does a refused edit (the reducer kept the state). To put a control back, change the model:
   clamp to a different value, or re-create the form with a key (`references/forms.md`).
 - Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
-  `style="--w: ${s.width}px"`. (`classMap` and `styleMap` may return if a real need appears.)
+  `style="--w: ${s.width}px"`.
   The client writes `style` through the CSSOM, so a strict CSP (`style-src` without
   `'unsafe-inline'`) doesn't block client renders or updates. It does block the `style`
   attributes in server-rendered HTML until hydration re-applies them: prefer classes or data
@@ -45,7 +45,7 @@ Compute derived values in plain helper functions of state.
 - Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
   (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
-  time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
+  time (https://gyral.dev/docs/views/#checked-before-it-runs); dev and tests use the same rules at runtime.
 - `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
   flags `each` rows that read the view's scope (`gyral/each-row-purity`), and warns about
   intent parsers that no template in the module names (`gyral/unused-intent`). Enable it once:
@@ -227,11 +227,11 @@ export const Board = define<State, Msg>()('my-board', {
   and for tasks whose slot changed. Tasks that move because the layout changed around them
   (a resize, a column that grew) aren't animated.
 - `seen` keeps keys of deleted items; clear it when the board is reloaded.
-- The native way is a View Transition: `viewTransition` (components.md) runs a render inside
-  `document.startViewTransition`, and a task whose `view-transition-name` is the same before
-  and after (a style binding on the row, `style="view-transition-name: task-${t.id}"`)
-  morphs from its old place to its new one. Same-document View Transitions are only newly Baseline, so keep the hook as the
-  fallback for now. A built-in for moves between lists is planned for 0.4.
+- A View Transition doesn't replace this hook in a shadow-DOM component (the default): no
+  engine captures a `view-transition-name` set inside a shadow root, so rows named that way
+  don't morph. `viewTransition` (components.md) with a per-row `view-transition-name` works
+  only for `shadow: false` components. FLIP, as above, is the supported way to animate moves
+  between lists; there is no built-in for it.
 
 ## Starting over: `keyed(key, value)`
 

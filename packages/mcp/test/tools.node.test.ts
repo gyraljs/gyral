@@ -59,6 +59,14 @@ describe('docs', () => {
     expect(searchDocs(corpus.docs, 'the and', 5)).toEqual([]);
   });
 
+  it('ranks the current guide above upgrade guides, which still answer old names', () => {
+    const top = (query: string) => searchDocs(corpus.docs, query, 1)[0]?.url ?? '';
+    expect(top('define component')).toBe('https://gyral.dev/docs/components/#anatomy-of-define');
+    expect(top('subscriptions')).toBe('https://gyral.dev/docs/update/#subscriptions');
+    const old = searchDocs(corpus.docs, 'repeat directive', 3).map((hit) => hit.url);
+    expect(old.some((url) => url.includes('/docs/migrating-0-2-to-0-3/'))).toBe(true);
+  });
+
   it('reads a page by name, path or URL, and one section by anchor', () => {
     expect(getDoc(corpus.docs, 'intent')).toMatch(/^# Intent\n/);
     expect(getDoc(corpus.docs, '/docs/intent/')).toBe(getDoc(corpus.docs, 'intent'));

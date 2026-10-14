@@ -16,8 +16,10 @@ authoritative even if a browser request is aborted; a redraw cannot replace auth
 ## Reviewed embedded compatibility
 
 The coordination fixture is [rust-compatibility.json](rust-compatibility.json), pinned to
-the reviewed Rust source, exact npm releases, ABI and target. `gyral-rs` is experimental:
-three 0.1.0 crates have `publish = false`; applications use reviewed Cargo path dependencies.
+the reviewed Rust source, exact npm releases, ABI and target. `gyral-rs` is experimental and
+published on crates.io as `gyral` (front door; the `axum` feature adds `gyral-axum`) with
+`gyral-renderer` and `gyral-renderer-domain`. Each gyral-rs minor accepts one Gyral release:
+0.3.x accepts 0.3.5, 0.2.x accepts 0.3.4.
 The supported embedded target is Linux x86_64 GNU, Rust 1.99.0/edition 2024,
 deno_core 0.412.0 and V8 150.4.0. Other targets have no verified support claim.
 
@@ -47,8 +49,8 @@ Only execute reviewed app bundles.
 The snapshot experiment restores fresh isolates from a prepared bundle. It remains test-only.
 Full application artifact/lifecycle validation is owned by `gyral-rs-xun.5` in the Rust
 repository; fixture throughput is insufficient to claim full-application readiness or framework
-performance superiority. Crate publication requires an explicit distribution decision,
-native archive/build preparation, supported-target evidence and a compatible release policy.
+performance superiority. Crates are published from the gyral-rs release workflow (crates.io
+Trusted Publishing); a new Gyral release needs a gyral-rs minor that accepts it.
 
 ## Reproduce the release fixture
 

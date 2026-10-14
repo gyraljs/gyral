@@ -344,8 +344,8 @@ export interface GyralViteOptions {
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
   /**
-   * The app is never server-rendered: leave the hydration code out of the browser bundle
-   * (`gyralClientOnly()`). Default false.
+   * The app is never server-rendered: leave the hydration code out of the browser bundle.
+   * Default false.
    */
   readonly clientOnly?: boolean;
   /**

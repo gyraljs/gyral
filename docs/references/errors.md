@@ -69,7 +69,7 @@ Arguments: `tag`, `props`.
 
 ### G0023
 
-> \<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named "hidden" hides the element). Rename them (view/05-element.md).
+> \<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named "hidden" hides the element). Rename them.
 
 Arguments: `tag`, `props`.
 
@@ -95,7 +95,7 @@ Arguments: none.
 
 ### G0033
 
-> gyral: rendering did not settle in one flush (a cycle between {tags}). Components are probably feeding each other props or messages; break the cycle with a condition in update (docs/design-docs/view/04-scheduler.md "Loop guard").
+> gyral: rendering did not settle in one flush (a cycle between {tags}). Components are probably feeding each other props or messages; break the cycle with a condition in update.
 
 Arguments: `tags`.
 
@@ -127,7 +127,7 @@ Arguments: `name`.
 
 ### G0043
 
-> {owner}: no driver provides "{driver}". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers (ADR 0006 "Driver tokens").
+> {owner}: no driver provides "{driver}". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers.
 
 Arguments: `owner`, `driver`.
 
@@ -135,7 +135,7 @@ Arguments: `owner`, `driver`.
 
 ### G0050
 
-> \<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}] (ADR 0013), so the component subscribes to its changes.
+> \<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}], so the component subscribes to its changes.
 
 Arguments: `tag`, `store`.
 
@@ -185,7 +185,7 @@ Arguments: none.
 
 ### G0062
 
-> gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's HTML differs from the first client render: a view that isn't deterministic (Date.now(), locale), a third party that changed the DOM before scripts ran, or a stale cached page (docs/design-docs/view/07-hydration.md "Mismatches").
+> gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's HTML differs from the first client render: a view that isn't deterministic (Date.now(), locale), a third party that changed the DOM before scripts ran, or a stale cached page (https://gyral.dev/docs/server-rendering/#mismatches).
 
 Arguments: `host`, `path`, `expected`, `found`.
 
@@ -199,7 +199,7 @@ Arguments: `tag`.
 
 ### G0070
 
-> gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).
+> gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset.
 
 Arguments: `start`.
 
@@ -215,7 +215,7 @@ Arguments: none.
 
 Arguments: none.
 
-## Errors (ADR 0024)
+## Error handling
 
 ### G0073
 
@@ -253,7 +253,7 @@ Arguments: `store`.
 
 Arguments: `tag`.
 
-## Subscriptions (ADR 0025)
+## Subscriptions
 
 ### G0079
 
@@ -267,7 +267,7 @@ Arguments: `tag`, `lane`.
 
 Arguments: `tag`.
 
-## Element calls (gyral-1zd.27)
+## Element calls
 
 ### G0085
 

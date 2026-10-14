@@ -65,7 +65,7 @@
   {
     "code": "G0023",
     "group": "Props",
-    "message": "<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named \"hidden\" hides the element). Rename them (view/05-element.md).",
+    "message": "<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named \"hidden\" hides the element). Rename them.",
     "arguments": ["tag", "props"],
     "url": "https://gyral.dev/errors/#G0023"
   },
@@ -93,7 +93,7 @@
   {
     "code": "G0033",
     "group": "Scheduling",
-    "message": "gyral: rendering did not settle in one flush (a cycle between {tags}). Components are probably feeding each other props or messages; break the cycle with a condition in update (docs/design-docs/view/04-scheduler.md \"Loop guard\").",
+    "message": "gyral: rendering did not settle in one flush (a cycle between {tags}). Components are probably feeding each other props or messages; break the cycle with a condition in update.",
     "arguments": ["tags"],
     "url": "https://gyral.dev/errors/#G0033"
   },
@@ -128,14 +128,14 @@
   {
     "code": "G0043",
     "group": "Commands",
-    "message": "{owner}: no driver provides \"{driver}\". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers (ADR 0006 \"Driver tokens\").",
+    "message": "{owner}: no driver provides \"{driver}\". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers.",
     "arguments": ["owner", "driver"],
     "url": "https://gyral.dev/errors/#G0043"
   },
   {
     "code": "G0050",
     "group": "Stores",
-    "message": "<{tag}> uses store \"{store}\" without declaring it. Add it to the spec: stores: [{store}] (ADR 0013), so the component subscribes to its changes.",
+    "message": "<{tag}> uses store \"{store}\" without declaring it. Add it to the spec: stores: [{store}], so the component subscribes to its changes.",
     "arguments": ["tag", "store"],
     "url": "https://gyral.dev/errors/#G0050"
   },
@@ -191,7 +191,7 @@
   {
     "code": "G0062",
     "group": "Hydration",
-    "message": "gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's HTML differs from the first client render: a view that isn't deterministic (Date.now(), locale), a third party that changed the DOM before scripts ran, or a stale cached page (docs/design-docs/view/07-hydration.md \"Mismatches\").",
+    "message": "gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's HTML differs from the first client render: a view that isn't deterministic (Date.now(), locale), a third party that changed the DOM before scripts ran, or a stale cached page (https://gyral.dev/docs/server-rendering/#mismatches).",
     "arguments": ["host", "path", "expected", "found"],
     "url": "https://gyral.dev/errors/#G0062"
   },
@@ -205,7 +205,7 @@
   {
     "code": "G0070",
     "group": "Templates",
-    "message": "gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).",
+    "message": "gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset.",
     "arguments": ["start"],
     "url": "https://gyral.dev/errors/#G0070"
   },
@@ -225,70 +225,70 @@
   },
   {
     "code": "G0073",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "<{tag}> update for \"{message}\" failed; the state is unchanged.",
     "arguments": ["tag", "message"],
     "url": "https://gyral.dev/errors/#G0073"
   },
   {
     "code": "G0074",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "<{tag}> init failed; it shows its error view, or stays empty.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0074"
   },
   {
     "code": "G0075",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "<{tag}> element hook failed; the other hooks still ran.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0075"
   },
   {
     "code": "G0076",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "store \"{store}\": update for \"{message}\" failed; the state is unchanged.",
     "arguments": ["store", "message"],
     "url": "https://gyral.dev/errors/#G0076"
   },
   {
     "code": "G0077",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "store \"{store}\": a subscriber failed; the other subscribers were still notified.",
     "arguments": ["store"],
     "url": "https://gyral.dev/errors/#G0077"
   },
   {
     "code": "G0078",
-    "group": "Errors (ADR 0024)",
+    "group": "Error handling",
     "message": "<{tag}> failed to render on the server; it renders its error view (or nothing) and starts fresh in the browser.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0078"
   },
   {
     "code": "G0079",
-    "group": "Subscriptions (ADR 0025)",
+    "group": "Subscriptions",
     "message": "<{tag}> subscriptions returned two commands for lane \"{lane}\"; only the first runs. Give each its own `key`.",
     "arguments": ["tag", "lane"],
     "url": "https://gyral.dev/errors/#G0079"
   },
   {
     "code": "G0080",
-    "group": "Subscriptions (ADR 0025)",
+    "group": "Subscriptions",
     "message": "<{tag}> subscriptions kept restarting: a subscription's input data changes with every message it sends (for example a timestamp or a counter in the input). Keep inputs to what should restart it; functions are ignored, so to restart on a new selector, change the key.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0080"
   },
   {
     "code": "G0085",
-    "group": "Element calls (gyral-1zd.27)",
+    "group": "Element calls",
     "message": "<{tag}> call(\"{selector}\", \"{method}\") failed",
     "arguments": ["tag", "selector", "method"],
     "url": "https://gyral.dev/errors/#G0085"
   },
   {
     "code": "G0086",
-    "group": "Element calls (gyral-1zd.27)",
+    "group": "Element calls",
     "message": "call(\"{selector}\", \"{method}\"): arguments must be plain data.",
     "arguments": ["selector", "method"],
     "url": "https://gyral.dev/errors/#G0086"

@@ -21,8 +21,8 @@ const sleep = (ms: number, signal: AbortSignal): Promise<void> =>
  * rejects: up to `policy.times` more attempts, after `delayMs` (doubling from it with
  * `backoff: 'exponential'`; a random part of it with `jitter`), and only for failures
  * `retryIf` accepts. An abort (the command switched away, the component disconnected) ends it
- * at once and is never retried. Wrap where the driver is chosen: app setup, a component's
- * `drivers`, or a test fake.
+ * at once and is never retried. Wrap where the driver is chosen: `provideDrivers` at app
+ * setup, `el.drivers`, or a test fake.
  *
  *   const api = retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
  *     times: 3, delayMs: 300, backoff: 'exponential', jitter: true, retryIf: retryableHttpError,
