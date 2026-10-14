@@ -1,5 +1,5 @@
 // get_api steers to working code: usage modules for runtime exports (each typechecks), notes
-// for types, the task index for "*", and a nudge after several lookups in a row, driven
+// for types, the task index for "*", and a nudge after several reads in a row, driven
 // through a real MCP client against the server, as an agent sees it.
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -136,7 +136,7 @@ describe('repeated lookups', () => {
       expect(await call('get_api', { symbol }), symbol).not.toContain('in a row');
     const fourth = await call('get_api', { symbol: 'ComponentSpec' });
     expect(fourth).toContain('type ComponentSpec');
-    expect(fourth).toContain('This is get_api call 4 in a row without starting from code');
+    expect(fourth).toContain('This is get_api call 4 in a row without writing code');
     expect(fourth).toContain(
       'Next: `scaffold_component({ tag: "signup-form", kind: "form-native" })`',
     );
@@ -149,7 +149,7 @@ describe('repeated lookups', () => {
     expect(await call('get_api', { symbol: 'Errors' })).toContain('get_api call 6 in a row');
   });
 
-  it('start over after a code tool, and default to the basic scaffold', async () => {
+  it('start over after a write-side tool, and default to the basic scaffold', async () => {
     const call = await connect();
     for (const symbol of ['define', 'Update', 'Reducer']) await call('get_api', { symbol });
     await call('scaffold_component', { tag: 'my-widget', kind: 'basic' });
@@ -159,7 +159,70 @@ describe('repeated lookups', () => {
     expect(fourth).toContain('get_api call 4 in a row');
     // Command suggests effects, which outranks a plain component.
     expect(fourth).toContain('get_example("custom-driver")');
-    await call('get_example', { name: 'hello-world' });
+    await call('check_snippet', { code: 'export const n: number = 1;\n' });
     expect(await call('get_api', { symbol: 'Tagged' })).not.toContain('in a row');
+  }, 60_000);
+});
+
+describe('repeated reads', () => {
+  it('nudge from the third get_example to adapt the examples already read', async () => {
+    const call = await connect();
+    for (const name of ['nested-folders', 'typeahead-race'])
+      expect(await call('get_example', { name }), name).not.toContain('in a row');
+    const third = await call('get_example', { name: 'register' });
+    expect(third).toContain('src/');
+    expect(third).toContain('This is get_example call 3 in a row without writing code.');
+    expect(third).toContain(
+      'Next: adapt the closest example you read ("nested-folders", "typeahead-race", "register"; the last was "register") to the task, write the file, then check_snippet it and apply the suggested fixes until it passes.',
+    );
+    // A re-read moves to the end; a miss counts but names nothing.
+    const again = await call('get_example', { name: 'nested-folders' });
+    expect(again).toContain('get_example call 4 in a row');
+    expect(again).toContain(
+      '("typeahead-race", "register", "nested-folders"; the last was "nested-folders")',
+    );
+    const miss = await call('get_example', { name: 'todo-list' });
+    expect(miss).toContain('No example "todo-list"');
+    expect(miss).toContain('get_example call 5 in a row');
+    expect(miss).not.toContain('"todo-list";');
+  });
+
+  it('no longer let get_example reset the get_api count, and point lookups at the example', async () => {
+    const call = await connect();
+    await call('get_example', { name: 'hello-world' });
+    for (const symbol of ['define', 'html', 'Update'])
+      expect(await call('get_api', { symbol }), symbol).not.toContain('in a row');
+    const fourth = await call('get_api', { symbol: 'ComponentSpec' });
+    expect(fourth).toContain('This is get_api call 4 in a row without writing code.');
+    expect(fourth).toContain('Next: adapt the example you read ("hello-world") to the task');
+  });
+
+  it('nudge from the eighth read of any kind, resources included, without changing them', async () => {
+    const call = await connect();
+    const skill = await client?.readResource({ uri: 'gyral://skill' });
+    const llms = await client?.readResource({ uri: 'gyral://llms.txt' });
+    const forms = await client?.readResource({ uri: 'gyral://skill/references/forms.md' });
+    for (const read of [skill, llms, forms]) {
+      const first = read?.contents[0];
+      expect(first !== undefined && 'text' in first ? first.text : '').not.toContain('in a row');
+    }
+    expect(await call('start_here')).not.toContain('in a row');
+    expect(await call('list_examples')).not.toContain('in a row');
+    expect(await call('search_docs', { query: 'subscriptions' })).not.toContain('in a row');
+    expect(await call('get_doc', { path: 'forms' })).not.toContain('in a row');
+    const eighth = await call('get_doc', { path: 'intent' });
+    expect(eighth).toContain(
+      'This is read call 8 in a row (docs, examples, API) without writing code. More reading won\'t write the component. Next: `scaffold_component({ tag: "my-widget", kind: "basic" })`, adapt it to the task, write the file, then check_snippet it.',
+    );
+    await call('scaffold_component', { tag: 'my-widget', kind: 'basic' });
+    expect(await call('get_doc', { path: 'intent' })).not.toContain('in a row');
+  });
+
+  it('suggest your own typecheck and build where check_snippet does not exist', async () => {
+    const call = await connect(false);
+    for (const name of ['bmi-nested', 'shared-cart']) await call('get_example', { name });
+    const third = await call('get_example', { name: 'routing-view' });
+    expect(third).toContain('run your typecheck and build and fix what they report.');
+    expect(third).not.toContain('check_snippet');
   });
 });

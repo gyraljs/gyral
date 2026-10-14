@@ -1,6 +1,7 @@
 // check_snippet: type errors with positions, and a suggested fix for each recognized TypeScript
 // error and common Gyral mistake.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -12,6 +13,32 @@ import { blankComments, propertyValues } from '../src/source-scan.js';
 const pkgDir = fileURLToPath(new URL('..', import.meta.url));
 
 describe('check_snippet', () => {
+  it('declines cleanly when the project has TypeScript 7, which has no compiler API', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gyral-ts7-'));
+    try {
+      writeFileSync(join(dir, 'package.json'), '{"name":"ts7-project","private":true}');
+      const ts = join(dir, 'node_modules', 'typescript');
+      mkdirSync(ts, { recursive: true });
+      writeFileSync(
+        join(ts, 'package.json'),
+        '{"name":"typescript","version":"7.0.2","main":"index.js"}',
+      );
+      // TypeScript 7's main export: the version, and nothing of the compiler API.
+      writeFileSync(
+        join(ts, 'index.js'),
+        "module.exports = { version: '7.0.2', versionMajorMinor: '7.0' };",
+      );
+      const result = checkSnippet("import { define } from '@gyral/core';\ndefine(42);\n", dir);
+      expect(result.ran).toBe(false);
+      expect(result.ok).toBe(false);
+      expect(result.report).toContain(
+        `check_snippet needs the TypeScript compiler API of TypeScript 5 or 6; ${dir} has TypeScript 7.0.2, which doesn't expose it. Run the project's own typecheck (tsc --noEmit, or pnpm typecheck) instead.`,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('reports type errors with positions', () => {
     const result = checkSnippet("import { define } from '@gyral/core';\ndefine(42);\n", pkgDir);
     expect(result.ran).toBe(true);

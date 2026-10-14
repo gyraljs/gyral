@@ -9,7 +9,7 @@ import { formatSuggestions, lintGyral, type Suggestion } from './diagnose.js';
 import { explainTs } from './explain-ts.js';
 
 export interface CheckResult {
-  /** False when the check couldn't run (no package.json or TypeScript). */
+  /** False when the check couldn't run (no package.json, or no TypeScript with a compiler API). */
   readonly ran: boolean;
   readonly ok: boolean;
   /** Human-readable: diagnostics with suggested fixes, or why the check couldn't run. */
@@ -41,6 +41,22 @@ function loadTypeScript(projectDir: string): typeof TS | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** TypeScript 7's package exports only its version, without the compiler API used here. */
+function hasCompilerApi(ts: typeof TS): boolean {
+  const api: Partial<typeof TS> = ts;
+  return [
+    api.convertCompilerOptionsFromJson,
+    api.findConfigFile,
+    api.parseJsonConfigFileContent,
+    api.readConfigFile,
+    api.createCompilerHost,
+    api.createSourceFile,
+    api.createProgram,
+    api.getPreEmitDiagnostics,
+    api.flattenDiagnosticMessageText,
+  ].every((fn) => typeof fn === 'function');
 }
 
 const DEFAULTS = {
@@ -85,6 +101,14 @@ export function checkSnippet(code: string, projectDir: string): CheckResult {
       ran: false,
       ok: false,
       report: `TypeScript isn't installed in ${projectDir}; install it (npm i -D typescript) to check snippets.${fixes(linted)}`,
+      suggestions: linted,
+    };
+  }
+  if (!hasCompilerApi(ts)) {
+    return {
+      ran: false,
+      ok: false,
+      report: `check_snippet needs the TypeScript compiler API of TypeScript 5 or 6; ${projectDir} has TypeScript ${ts.version}, which doesn't expose it. Run the project's own typecheck (tsc --noEmit, or pnpm typecheck) instead.${fixes(linted)}`,
       suggestions: linted,
     };
   }

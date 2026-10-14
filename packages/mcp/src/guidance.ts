@@ -1,7 +1,8 @@
 // What get_api adds to a declaration so agents write code instead of walking types: a usage
 // module and a concrete next call for runtime exports, a short note for types, and a nudge
-// after several lookups in a row (agent pilot v3, Run B: assisted runs spent their whole
-// request budget on get_api for ComponentSpec, FormDefinition, Errors… and never wrote code).
+// after several reads in a row (agent pilot v3, Run B: assisted runs spent their whole request
+// budget on get_api for ComponentSpec, FormDefinition, Errors… and never wrote code; Run D: one
+// read ten or more examples with get_example and never wrote either).
 import { USAGE, type UsageName } from './usage.js';
 
 export type Task =
@@ -211,26 +212,91 @@ export function usageFor(name: string, snippetChecks: boolean): string {
   return `## Usage (${task.title})\n\n${schema}${code}Next: \`${task.next}\` gives ${task.gives}. Adapt it to the task, write the file, ${check}.`;
 }
 
-/** Counts get_api calls since the agent last started from code, per server instance. */
+/** The read-side tools; resource reads count too but never carry the nudge. */
+export type ReadTool =
+  'start_here' | 'search_docs' | 'get_doc' | 'get_api' | 'list_examples' | 'get_example';
+
+/** What a read returned: the example get_example found, or the task a get_api symbol suggests. */
+export interface Found {
+  readonly example?: string;
+  readonly task?: Task | undefined;
+}
+
+/** From these counts since the last write-side call, every read answer ends with the nudge. */
+export const NUDGE_FROM = { get_example: 3, get_api: 4, reads: 8 } as const;
+
+/**
+ * Counts read calls (tools and resources) since the agent last wrote code, per server
+ * instance. Run D (0.3.4): an agent read ten or more examples in a row and never wrote, because
+ * get_example used to reset a count that only get_api raised.
+ */
 export class Steering {
+  #reads = 0;
   #lookups = 0;
+  #examples = 0;
+  #exampleNames: string[] = [];
   #tasks = new Set<Task>();
 
-  /** A code tool ran (get_example, scaffold_component, check_snippet): start over. */
-  startedFromCode(): void {
+  /** A write-side tool ran (scaffold_component, check_snippet): start over. */
+  wrote(): void {
+    this.#reads = 0;
     this.#lookups = 0;
+    this.#examples = 0;
+    this.#exampleNames = [];
     this.#tasks.clear();
   }
 
-  /** Records one get_api call; returns the nudge to append, or '' before the 4th. */
-  lookedUp(task: Task | undefined, snippetChecks: boolean): string {
-    this.#lookups += 1;
-    if (task !== undefined) this.#tasks.add(task);
-    if (this.#lookups < 4) return '';
+  /** A resource read: it counts, but resource contents stay as they are. */
+  readResource(): void {
+    this.#reads += 1;
+  }
+
+  /** Records one read-side tool call; returns the nudge to append, or '' below every threshold. */
+  read(tool: ReadTool, snippetChecks: boolean, found?: Found): string {
+    this.#reads += 1;
+    if (tool === 'get_api') this.#lookups += 1;
+    if (tool === 'get_example') this.#examples += 1;
+    if (found?.task !== undefined) this.#tasks.add(found.task);
+    const example = found?.example;
+    if (example !== undefined) {
+      this.#exampleNames = this.#exampleNames.filter((name) => name !== example);
+      this.#exampleNames.push(example);
+    }
+    if (
+      this.#examples < NUDGE_FROM.get_example &&
+      this.#lookups < NUDGE_FROM.get_api &&
+      this.#reads < NUDGE_FROM.reads
+    )
+      return '';
+    return `---\n${this.#count(tool)} ${this.#next(tool, snippetChecks)}`;
+  }
+
+  #count(tool: ReadTool): string {
+    return tool === 'get_example' && this.#examples >= NUDGE_FROM.get_example
+      ? `This is get_example call ${String(this.#examples)} in a row without writing code. Another example won't write the component.`
+      : tool === 'get_api' && this.#lookups >= NUDGE_FROM.get_api
+        ? `This is get_api call ${String(this.#lookups)} in a row without writing code. More declarations won't write the component, and TypeScript infers most of these types.`
+        : `This is read call ${String(this.#reads)} in a row (docs, examples, API) without writing code. More reading won't write the component.`;
+  }
+
+  #next(tool: ReadTool, snippetChecks: boolean): string {
+    if (this.#exampleNames.length > 0) {
+      const names = this.#exampleNames.map((name) => `"${name}"`).join(', ');
+      const which =
+        this.#exampleNames.length === 1
+          ? `the example you read (${names})`
+          : `the closest example you read (${names}; the last was "${this.#exampleNames.at(-1) ?? ''}")`;
+      const check = snippetChecks
+        ? 'check_snippet it and apply the suggested fixes until it passes'
+        : 'run your typecheck and build and fix what they report';
+      return `Next: adapt ${which} to the task, write the file, then ${check}.`;
+    }
     const best = PRIORITY.find((t) => this.#tasks.has(t)) ?? 'component';
-    const check = snippetChecks
-      ? 'check_snippet it: its errors name the few types you actually need'
-      : 'typecheck it: the errors name the few types you actually need';
-    return `---\nThis is get_api call ${String(this.#lookups)} in a row without starting from code. More declarations won't write the component, and TypeScript infers most of these types. Next: \`${TASKS[best].next}\`, adapt it to the task, write the file, then ${check}.`;
+    const types =
+      tool === 'get_api'
+        ? `: ${snippetChecks ? 'its' : 'the'} errors name the few types you actually need`
+        : '';
+    const check = `${snippetChecks ? 'check_snippet' : 'typecheck'} it${types}`;
+    return `Next: \`${TASKS[best].next}\`, adapt it to the task, write the file, then ${check}.`;
   }
 }
