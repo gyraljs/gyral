@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { checkSnippet } from './check.js';
 import { getDoc, searchDocs } from './docs.js';
 import { findExample, formatExample, listExamples } from './examples.js';
-import { Steering } from './guidance.js';
+import type { Found, ReadTool, Steering } from './guidance.js';
 import { lookupApi } from './lookup.js';
 import { orientation, workflow } from './orientation.js';
 import { readInstalled, UNKNOWN, withListed } from './project.js';
@@ -23,12 +23,19 @@ const text = (body: string, isError = false) => ({
 
 const readOnly = { readOnlyHint: true, openWorldHint: false } as const;
 
-export function registerTools(server: McpServer, corpus: Corpus, options: ToolOptions): void {
+export function registerTools(
+  server: McpServer,
+  corpus: Corpus,
+  options: ToolOptions,
+  steering: Steering,
+): void {
   const local = options.snippetChecks !== false;
   const flow = workflow(local);
-  // One per server instance: a stdio session, or a single request on the stateless HTTP
-  // server (where the count never reaches the nudge, and nothing outlives the request).
-  const steering = new Steering();
+  /** A read-side answer, with the nudge appended once the reads since the last write add up. */
+  const read = (tool: ReadTool, body: string, isError = false, found?: Found) => {
+    const nudge = steering.read(tool, local, found);
+    return text(nudge === '' ? body : `${body}\n\n${nudge}`, isError);
+  };
 
   server.registerTool(
     'start_here',
@@ -37,7 +44,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       description: `Call this first, once per task. A short orientation for Gyral ${corpus.version}: the mental model, the rules agents most often break, the recommended workflow, which tool to use when, and an index from use case (form, fetch, search, routing, SSR, …) to the example and guide to start from. ${flow}`,
       annotations: readOnly,
     },
-    () => text(orientation(corpus, local)),
+    () => read('start_here', orientation(corpus, local)),
   );
 
   server.registerTool(
@@ -57,8 +64,12 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
     ({ query, limit }) => {
       const hits = searchDocs(corpus.docs, query, limit ?? 8);
       if (hits.length === 0)
-        return text(`No results for "${query}". Try other words, or get_doc "docs".`);
-      return text(
+        return read(
+          'search_docs',
+          `No results for "${query}". Try other words, or get_doc "docs".`,
+        );
+      return read(
+        'search_docs',
         hits
           .map(
             (h, n) =>
@@ -89,9 +100,9 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       if (ref === undefined)
         return text('Pass path_or_url (or path): a URL, a path or a page name like "forms".', true);
       const doc = getDoc(corpus.docs, ref);
-      if (doc !== undefined) return text(doc);
+      if (doc !== undefined) return read('get_doc', doc);
       const pages = corpus.docs.map((p) => `- ${p.title}: ${p.url}`).join('\n');
-      return text(`No page or section matches "${ref}". Pages:\n${pages}`, true);
+      return read('get_doc', `No page or section matches "${ref}". Pages:\n${pages}`, true);
     },
   );
 
@@ -111,8 +122,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
     },
     ({ symbol, package: pkg }) => {
       const found = lookupApi(corpus, symbol, pkg, local);
-      const nudge = steering.lookedUp(found.task, local);
-      return text(nudge === '' ? found.body : `${found.body}\n\n${nudge}`, found.isError);
+      return read('get_api', found.body, found.isError, { task: found.task });
     },
   );
 
@@ -123,7 +133,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       description: `Every runnable example in the Gyral repo with what it demonstrates. Read the closest one with get_example and adapt it. ${flow}`,
       annotations: readOnly,
     },
-    () => text(listExamples(corpus.examples)),
+    () => read('list_examples', listExamples(corpus.examples)),
   );
 
   server.registerTool(
@@ -137,10 +147,11 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     ({ name }) => {
-      steering.startedFromCode();
       const example = findExample(corpus.examples, name);
-      if (example !== undefined) return text(formatExample(example));
-      return text(
+      if (example !== undefined)
+        return read('get_example', formatExample(example), false, { example: example.name });
+      return read(
+        'get_example',
         `No example "${name}". Available: ${corpus.examples.map((e) => e.name).join(', ')}.`,
         true,
       );
@@ -181,7 +192,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     (args) => {
-      steering.startedFromCode();
+      steering.wrote();
       const { tag, kind, description, installed } = args;
       const problem = validTag(tag);
       if (problem !== undefined) return text(problem, true);
@@ -213,7 +224,7 @@ export function registerTools(server: McpServer, corpus: Corpus, options: ToolOp
       annotations: readOnly,
     },
     ({ code }) => {
-      steering.startedFromCode();
+      steering.wrote();
       const result = checkSnippet(code, options.projectDir);
       return text(result.report, !result.ran);
     },

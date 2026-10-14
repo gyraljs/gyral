@@ -73,11 +73,16 @@ out of budget before they write anything:
   `form()`; start from a scaffold or an example and let `check_snippet` name the types that
   matter. The few types you do write (`TemplateResult`, `Command`, `Stateless`, `FieldIssue`)
   say where.
-- From the fourth `get_api` call since the last `get_example`, `scaffold_component` or
-  `check_snippet`, the answer ends with a nudge naming the next call for the task the looked-up
-  names suggest (form names → the `form-native` scaffold). A repeated name still gets its full
-  declaration. The count lives in the server instance: one per stdio session; the stateless
-  HTTP server makes one per request, so it keeps no per-client state and never nudges.
+- The server counts reads since the last `scaffold_component` or `check_snippet`: every
+  `start_here`, `search_docs`, `get_doc`, `get_api`, `list_examples` and `get_example` call, and
+  every resource read. From the third `get_example`, the fourth `get_api` or the eighth read of
+  any kind, each tool answer ends with a nudge to stop reading and write: adapt the closest
+  example already read (the nudge names each one and the last), or, with none read, the next call
+  for the task the looked-up names suggest (form names → the `form-native` scaffold); then
+  `check_snippet` it (with `snippetChecks: false`, your own typecheck and build). A repeated
+  name still gets its full declaration, and resource contents never change. The count lives in
+  the server instance: one per stdio session; the stateless HTTP server makes one per request,
+  so it keeps no per-client state and never nudges.
 - `"*"` groups the runtime functions by task, each with a one-line purpose and the example or
   scaffold to start from, and collapses the types into one line to look up only when a compile
   error names one.
