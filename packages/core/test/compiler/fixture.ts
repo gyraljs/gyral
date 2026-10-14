@@ -33,6 +33,8 @@ export interface BuildOptions {
   readonly clientOnly?: boolean;
   /** Link this workspace's core as `node_modules/@gyral/core`, so `'@gyral/core'` resolves. */
   readonly linkCore?: boolean;
+  /** `false`: a plain Vite build without the Gyral preset (the runtime path). */
+  readonly preset?: boolean;
 }
 
 /** Core's main entry: fixtures that define components import it by absolute path. */
@@ -82,7 +84,7 @@ export async function buildApp(
         hasErrorLogged: () => false,
         hasWarned: false,
       },
-      ...preset,
+      ...(options.preset === false ? {} : preset),
       ...(options.conditions === undefined
         ? {}
         : { resolve: { conditions: [...options.conditions] } }),

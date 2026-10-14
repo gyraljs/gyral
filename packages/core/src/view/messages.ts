@@ -15,6 +15,11 @@ export const MESSAGES = {
   11: '<{tag}> has no intent parser for data-intent="{intent}".',
   12: '<{tag}> intent parser for "{intent}" failed',
   13: '<{tag}> focus("{selector}") matched no focusable element.',
+  14:
+    '<{tag}> is on the page, but no custom element named "{tag}" is defined {seconds} s after ' +
+    'it loaded, so it renders nothing. If it is one of your components, import the module ' +
+    "that calls define()('{tag}', …) from the entry; for a third-party element, load its " +
+    'package. Ignore this for an element defined later on purpose.',
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',

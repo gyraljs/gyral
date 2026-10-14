@@ -3,7 +3,8 @@
 // to write instead (core belief 7), and the call site's loc.
 import { describe, expect, it } from 'vitest';
 import { TemplateError } from '../../src/view/normalize/errors.js';
-import { normalize } from '../../src/view/normalize/normalize.js';
+import { componentName } from '../../src/view/normalize/component-name.js';
+import { analyze, normalize } from '../../src/view/normalize/normalize.js';
 import { t } from './helpers.js';
 
 function errorOf(strings: readonly string[], loc?: string): TemplateError {
@@ -109,6 +110,11 @@ describe('template errors (view/09)', () => {
     expect(() => normalize(t`<Signup-Form></Signup-Form>`)).not.toThrow();
     expect(() => normalize(t`<svg><LinearGradient></LinearGradient></svg>`)).not.toThrow();
     expect(() => normalize(t`<signupform></signupform>`)).not.toThrow();
+    // The runtime preparer passes the check only in development (prepare.ts).
+    expect(() => analyze(t`<SignupForm></SignupForm>`)).not.toThrow();
+    expect(() => analyze(t`<SignupForm></SignupForm>`, undefined, false, componentName)).toThrow(
+      TemplateError,
+    );
   });
 
   it('rule 4: dialog and popover state only as ?modal / ?popover-open where they fit', () => {

@@ -1,18 +1,12 @@
 // The template rules of view/09-template-rules.md that one template's strings reveal: every
 // message says what is wrong and what to write instead (core belief 7). The tokenizer
-// (rules 1, 2, 3, 5), the tree builder (3, 4, 6, 7, 10, 12, 13, 14, 15) and repairs.ts (7)
+// (rules 1, 2, 3, 5), the tree builder (3, 4, 6, 7, 10, 12, 13, 14) and repairs.ts (7)
 // throw them through Source.fail; the browser's own parse (prepare.ts) backs rule 7 up, and
 // template-element.ts throws rule 11 when a server template reaches the browser.
 
 import { SERVER_ONLY } from './errors.js';
 
 const H = '${…}';
-
-/** Rule 15's example tag: SignupForm → signup-form, Counter → my-counter. */
-const kebab = (raw: string): string => {
-  const name = raw.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-  return name.includes('-') ? name : `my-${name}`;
-};
 
 /** Messages, by rule. Each names the fix. */
 export const msg = {
@@ -109,12 +103,6 @@ export const msg = {
     `&${ref}; in the static text of a bound or custom-element attribute is a named character ` +
     `reference the normalizer doesn't decode (it knows &amp; &lt; &gt; &quot; &apos; &nbsp;). ` +
     `Write the character itself, or a numeric reference such as &#169;.`,
-  // 15
-  componentName: (raw: string): string =>
-    `<${raw}> looks like a component reference, but templates are HTML: the parser reads it as ` +
-    `an unknown <${raw.toLowerCase()}> element, which renders nothing. Write the tag name the ` +
-    `component was defined with, such as <${kebab(raw)}></${kebab(raw)}> for ` +
-    `define()('${kebab(raw)}', …), and import the module that defines it.`,
 };
 
 /**
@@ -168,24 +156,5 @@ export const VOID = new Set(
   (
     'area base basefont bgsound br col embed frame hr img input keygen link meta param source ' +
     'track wbr'
-  ).split(' '),
-);
-
-/**
- * Rule 15: element names the HTML parser knows (lower case): WHATWG HTML's elements, obsolete
- * ones included, and the foreign roots. Any other name without a hyphen is an unknown element.
- */
-export const KNOWN_HTML = new Set(
-  (
-    'a abbr acronym address applet area article aside audio b base basefont bdi bdo bgsound ' +
-    'big blink blockquote body br button canvas caption center cite code col colgroup data ' +
-    'datalist dd del details dfn dialog dir div dl dt em embed fencedframe fieldset figcaption ' +
-    'figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i ' +
-    'iframe image img input ins isindex kbd keygen label legend li link listing main map mark ' +
-    'marquee math menu menuitem meta meter multicol nav nextid nobr noembed noframes noscript ' +
-    'object ol optgroup option output p param picture plaintext portal pre progress q rb rp rt ' +
-    'rtc ruby s samp script search section select selectedcontent slot small source spacer span ' +
-    'strike strong style sub summary sup svg table tbody td template textarea tfoot th thead ' +
-    'time title tr track tt u ul var video wbr xmp'
   ).split(' '),
 );

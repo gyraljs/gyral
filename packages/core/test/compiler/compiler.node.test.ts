@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalize, type TemplateObject } from '../../src/view/index.js';
 import { clientObject as client } from '../view/helpers.js';
-import { buildApp, buildError, importBuilt, VIEW } from './fixture.js';
+import { buildApp, buildError, CORE, importBuilt, VIEW } from './fixture.js';
 
 const GREET = ['<p class="greeting">Hello ', '!</p>'];
 
@@ -178,6 +178,37 @@ describe('template compiler: build errors', () => {
     expect(error.message).toContain('main.ts:3:20');
     expect(error.message).toMatch(/> 3 \| export const bad = html`<button/);
     expect(error.message).toMatch(/\n\s+\|\s{20}\^+/);
+  });
+
+  it('fails on rule 15, which the runtime checks only in development', async () => {
+    const files = {
+      'main.ts': `import { html } from '${VIEW}';\nexport const a = html\`<main><SignupForm></SignupForm></main>\`;`,
+    };
+    const error = await buildError(files, { production: true });
+    expect(error.message).toContain('[gyral template rule 15]');
+    expect(error.message).toContain('<signup-form></signup-form>');
+    // Without the preset: development builds carry the check, production builds leave it out.
+    const development = await buildApp(files, { preset: false });
+    expect(development.code).toContain('looks like a component reference');
+    const production = await buildApp(files, { preset: false, production: true });
+    expect(production.code).not.toContain('looks like a component reference');
+    expect(production.code).not.toContain(' selectedcontent ');
+  });
+
+  it('leaves the undefined-tag warning out of production builds', async () => {
+    const files = {
+      'main.ts': [
+        `import { define } from '${CORE}';`,
+        `import { html } from '${VIEW}';`,
+        `export const C = define()('x-c', { init: () => ({}), view: () => html\`<p>c</p>\` });`,
+      ].join('\n'),
+    };
+    const development = await buildApp(files);
+    expect(development.code).toContain(':not(:defined)');
+    for (const preset of [true, false]) {
+      const production = await buildApp(files, { preset, production: true });
+      expect(production.code).not.toContain(':not(:defined)');
+    }
   });
 
   it('fails on a use of html it cannot follow', async () => {

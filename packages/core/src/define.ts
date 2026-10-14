@@ -9,6 +9,7 @@ import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import { recordSpec } from './server-specs.js';
 import type { ComponentSpec, ShadowOption, Tagged } from './types.js';
+import { watchUndefinedTags } from './undefined-tags.js';
 import { DEV, message } from './view/index.js';
 
 export type { GyralElement, GyralElementClass } from './element-types.js';
@@ -90,5 +91,7 @@ function defineElement(tag: string, spec: ComponentSpec<unknown, Tagged, object>
   const Element = elementClass(tag, spec);
   markGyralHost(Element);
   customElements.define(tag, Element);
+  // Development: warn about tags on the page that nothing defines (undefined-tags.ts).
+  if (DEV) watchUndefinedTags();
   return Element;
 }
