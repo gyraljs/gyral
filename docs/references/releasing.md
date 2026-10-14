@@ -244,6 +244,14 @@ hosted MCP image with the released 0.3.5 corpus (built from `e981d3f`) passes
 `verify-mcp-traefik.mjs` and `verify-mcp-proxy.mjs`; gyral.dev and gyral-shop build on 0.3.5
 from the registry.
 
+Recorded 0.3.5 follow-ups (2026-10-14): `mcp.gyral.dev` was redeployed with that image, and
+`/healthz` reports `"version":"0.3.5"` and corpus `ff6e48cf…`. The official MCP client connects
+over Streamable HTTP, lists seven tools, reads `gyral://skill` and gets answers from `get_api`,
+`search_docs` and `scaffold_component`. gyral.dev and the demo shop are deployed on 0.3.5.
+gyral-rs 0.3.0 (`d9265eb`, for Gyral 0.3.5) published all four crates to crates.io through
+Trusted Publishing, and a fresh Cargo project on Rust 1.99 builds and runs against `gyral`
+0.3.0 with the `axum` feature.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
