@@ -7,11 +7,19 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Groups take minor and patch bumps only: a major arrives as its own PR, so one breaking
+    # bump can't hold back the safe ones.
     groups:
       dev-dependencies:
         dependency-type: development
+        update-types: [minor, patch]
       runtime-dependencies:
         dependency-type: production
+        update-types: [minor, patch]
+    ignore:
+      # @types/node tracks the supported runtime major (Node 24, `engines`), not the newest.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
