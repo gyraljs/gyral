@@ -59,7 +59,8 @@ export const Counter = define<State, Msg>()('my-counter', {
 module runs. A component in its own file (`src/signup-form.ts`) needs a side-effect import in
 the entry module, or in a module the entry imports: `import './signup-form.js';` in
 `src/main.ts`. Without it the tag is never defined, and `<signup-form>` stays an empty unknown
-element with no error.
+element. Development builds warn (G0014) when a tag is still undefined 3 s after load;
+production builds stay silent.
 
 ## Golden rules
 
@@ -85,7 +86,7 @@ spec)` (two calls): the keys of `intent` are the intent names markup uses. A key
    components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
    still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
-   `defineHook`, `invalid`). Spread `gyralVitePreset()`
+   `defineHook`, `invalid`). Spread `gyralVitePreset()` (from `@gyral/core/vite`)
    into the Vite/Vitest config: `vite build` then compiles templates and checks their rules; add
    `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor. An app no
    server renders passes `{ clientOnly: true }` to leave the hydration code out (about 1 KiB).
@@ -108,9 +109,6 @@ npm create gyral@latest my-app -- --template basic   # client-rendered
 npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
 ```
 
-Upgrading a 0.2 app (0.2 rendered with Lit; 0.3 has its own view layer): follow
-https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md.
-
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
 `strict`, `moduleResolution: "bundler"`.
@@ -125,18 +123,17 @@ reading the docs end to end:
 
 1. `start_here` once: the rules, the workflow and an index from use case to example and guide.
 2. Start from code: `get_example` (the closest example) or `scaffold_component` (`basic`,
-   `form`, `form-native`, `ssr-page`; it reads `package.json` and imports only installed
-   packages).
+   `form`, `form-native`, `ssr-page`; it imports only installed packages, read from
+   `package.json` by the local server; pass `installed` to the hosted one).
 3. Write a minimal implementation of the task right away.
 4. `check_snippet` the whole module: type errors plus a suggested fix for each, and common
-   Gyral mistakes TypeScript can't see. Apply the fixes and check again until it passes.
+   Gyral mistakes TypeScript can't see. Apply the fixes and check again until it passes. It
+   needs the project's TypeScript 5 or 6 (TypeScript 7 has no compiler API); otherwise run
+   the project's typecheck.
 5. `get_api` only for one name you already saw in an example or in an error, not to walk the
    types; `search_docs` and `get_doc` for one concept you need.
 
-`start_here`, `form-native`, the installed-package checks and the suggested fixes are in
-`@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop. On 0.3.2 exactly,
-`npx -y @gyral/mcp` fails with "could not determine executable to run"; use 0.3.3 or later, or
-`npx -y -p @gyral/mcp@0.3.2 gyral-mcp`. Self-hosting the HTTP server is `gyral-mcp http`.
+Self-hosting the HTTP server is `gyral-mcp http`.
 
 ## Decision tables
 

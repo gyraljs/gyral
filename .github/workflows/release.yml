@@ -3,7 +3,7 @@
 # only, and the `npm` environment waits for the owner's approval before any step runs.
 # Runbook: docs/references/releasing.md.
 #
-# Versions are bumped BEFORE this runs: `pnpm changeset version` in a pull request, merged to
+# Versions are bumped BEFORE this runs: `pnpm version-packages` in a pull request, merged to
 # main. This workflow refuses to run with unconsumed changesets, then publishes whatever version
 # main declares that npm does not have yet. No NPM_TOKEN: npm trusts this workflow via OIDC, and
 # only to STAGE: each version goes live when the owner approves it on npmjs.com with 2FA.
@@ -43,7 +43,7 @@ jobs:
         run: |
           pending=$(find .changeset -name '*.md' ! -name README.md)
           if [ -n "$pending" ]; then
-            echo "::error::Unconsumed changesets: $pending. Run 'pnpm changeset version' in a PR and merge it first."
+            echo "::error::Unconsumed changesets: $pending. Run 'pnpm version-packages' in a PR and merge it first."
             exit 1
           fi
 

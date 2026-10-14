@@ -1,9 +1,9 @@
 # Server rendering and hydration
 
-Server rendering is Gyral's own (spec: docs/design-docs/view/06-server.md); `@gyral/ssr`
-(`renderPage`, `renderToString`, `styleHashes`, `formAction`, `@gyral/ssr/static`) is its API. Hydration is built into
-core (docs/design-docs/view/07-hydration.md): each component adopts the server's nodes in
-place, on its own, with no hydration import.
+Server rendering is Gyral's own (guide: https://gyral.dev/docs/server-rendering/); `@gyral/ssr`
+(`renderPage`, `renderToString`, `styleHashes`, `formAction`, `@gyral/ssr/static`) is its API.
+Hydration is built into core: each component adopts the server's nodes in place, on its own,
+with no hydration import.
 
 The server renders the same components to HTML: shadow components as Declarative Shadow DOM
 (`<template shadowrootmode>` with the component's CSS in a `<style>`), light components
@@ -182,9 +182,9 @@ export const Shop = define<{ readonly path: string }, Msg>()('my-shop', {
 
 ## Content-Security-Policy
 
-Since 0.3.2, build-only `writeComponentStyleManifest` in `@gyral/ssr/static` and
-`CspOptions.componentStyleHashes` serve policy-only servers. On 0.3.1, which lacks them,
-import components and call `styleHashes()` during the build. Keep the resulting
+Build-only `writeComponentStyleManifest` in `@gyral/ssr/static` and
+`CspOptions.componentStyleHashes` serve policy-only servers; alternatively, import components
+and call `styleHashes()` during the build. Keep the resulting
 policy/HTML/assets in one release. Document CSS links use `style-src 'self'`; inline attributes
 need their separate bounded first-paint policy below. Follow Vite's CSP nonce placeholder
 replacement and exact HMR `connect-src` origin for development.
@@ -398,7 +398,9 @@ css }`.
 from `/assets/`, cached across pages, and `style-src 'self'` allows them without hashes. Use
 `styles` (inline, hashed for CSP) only for small critical CSS.
 
-`productionServer` options: `assetsDir` (served at `/assets/`, default `dist/client/assets`),
+`productionServer` options: `distDir` (required), `entry` (the client entry as named in the
+Vite manifest, default `src/entry-client.ts`), `base` (Vite's `base` when served under a path,
+default `/`), `assetsDir` (served at `/assets/`, default `dist/client/assets`),
 `staticDir` (prerendered pages, default `dist/static`; `false` when nothing is prerendered, so
 page requests skip the file lookup) and `cache` (keep assets in memory, default on, bounded).
 Assets answer `GET` and `HEAD` with immutable caching, `content-length` and `nosniff`; a
@@ -589,7 +591,7 @@ own seed.
 
 ## Preloads under a service worker
 
-Chrome 152–153 may warn "preload … not used because it is a cross-world service worker
-resource mismatch" and fetch the module again from the worker when DevTools or a test driver
-is attached. It is a browser bug, fixed in Chrome 154; the page works the same. If your tests
-run Playwright's bundled Chromium, upgrade to a build ≥ 154.
+Chromium may warn "preload … not used because it is a cross-world service worker resource
+mismatch" and fetch the module again from the worker when DevTools or a test driver is
+attached. The page works the same. No browser version is known to fix it; see production.md
+"Offline lazy workspaces" for what to do when a service worker serves lazy chunks.

@@ -60,8 +60,9 @@ export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter
 - It returns a streaming driver (ADR 0006): each value goes through the command's `onSuccess`.
   The source is released automatically when the command is switched away, when the component
   disconnects, and after `fail(error)`; emits after that are ignored.
-- Lane default `'switch'`: issuing the command again replaces the subscription. Give each
-  input its own `key` when one component keeps several (one per chat room).
+- Concurrency defaults to `'switch'` and the lane (`key`) to the driver's name: issuing the
+  command again replaces the subscription. Give each input its own `key` when one component
+  keeps several (one per chat room).
 - `fail(error)` ends it with an error: `onFailure` gets it (through `toError` if given). Wrap
   the driver in `retry(driver, policy)` to subscribe again first (a socket that reconnects). A
   `subscribe` that throws fails the same way.

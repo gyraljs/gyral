@@ -80,7 +80,11 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 1. Pull requests that change a package add a changeset: `pnpm changeset` (see
    [.changeset/README.md](../../.changeset/README.md)).
 2. When ready, first prepare the release's gyral.dev changes on a gyral.dev branch: the
-   upgrade page, the "current version" wording, and every changed command or API. Don't wait
+   "current version" wording and every changed command or API. The docs describe only the new
+   release: rewrite changed behaviour in the present tense, with no "new in" or "since"
+   notes, and remove anything about older releases (history belongs in the changelogs). Add
+   an upgrade page only when the release breaks something (a new minor), and remove the
+   previous release's upgrade page at the same time. Don't wait
    for step 7: `@gyral/mcp` ships the docs snapshot taken here, and npm never replaces a
    published version, so a page written after the release reaches the package only with the
    next one (0.3.3 shipped without its own upgrade page; gyral-ttk). Build that branch and take
@@ -88,14 +92,16 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    so the llms files name the new release rather than the installed one, then run
    `pnpm mcp:refresh --from ../gyral.dev/dist`
    (a relative path is resolved from where you run pnpm; the directory must hold `llms.txt` and
-   `llms-full.txt`). Review and commit the diff, then run `pnpm changeset version`. Plain
+   `llms-full.txt`). Review and commit the diff, then run `pnpm version-packages`
+   (`changeset version`, then the skill plugin's version in `.claude-plugin/marketplace.json`
+   set to the release, which `pnpm invariants` checks). Plain
    `pnpm mcp:refresh` reads the live site, which is right only when the site already describes
    this release. It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
    "unreleased (next release)" markers on features this release ships: they are in package
    READMEs, the skill (which the MCP corpus bundles), `docs/references` and example READMEs
-   (`git grep -in 'unreleased'`). Say "since X.Y.Z" instead.
+   (`git grep -in 'unreleased'`). Remove the marker: the docs describe the current release.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
    deployment when asked.
 4. The workflow refuses unconsumed changesets, runs `pnpm check`, builds, runs

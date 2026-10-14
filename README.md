@@ -40,16 +40,14 @@ define<{ count: number }, Msg>()('gy-counter', {
 
 Start an app with `npm create gyral@latest my-app` (guides at [gyral.dev](https://gyral.dev)).
 
-> Status: 0.x; 0.3.5 is on npm. `main` can be ahead of the release: unreleased changes are in
+> Status: 0.x, on npm. `main` can be ahead of the release: unreleased changes are in
 > [.changeset/](.changeset/) and marked "unreleased" in the docs. The work plan lives in
 > [beads](https://github.com/gastownhall/beads)
 > (`bd ready`); architecture is in [ARCHITECTURE.md](ARCHITECTURE.md), decisions in
 > [docs/design-docs](docs/design-docs/index.md).
 
 Using Gyral in your own app (packages, Vite preset, template compiler, server rendering):
-[docs/references/consumer-setup.md](docs/references/consumer-setup.md). Upgrading from 0.2:
-[docs/references/migrating-0.2-to-0.3.md](docs/references/migrating-0.2-to-0.3.md). Behavior changes in
-0.3.1: [docs/references/migrating-0.3.0-to-0.3.1.md](docs/references/migrating-0.3.0-to-0.3.1.md).
+[docs/references/consumer-setup.md](docs/references/consumer-setup.md).
 
 ## Using Gyral with AI coding agents
 

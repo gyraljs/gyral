@@ -59,7 +59,7 @@ const RULES: readonly Rule[] = [
   },
   {
     rule: 'periodic',
-    problem: '`periodic` was removed in 0.3.1.',
+    problem: '`periodic` is not a Gyral export.',
     fix: "Use `every(ms, (now) => msg, key?)` from '@gyral/time' in `subscriptions: (s) => [every(1000, (now) => ({ _tag: 'Tick', now }))]`. It sends the time at once, then every `ms`; count from the first message.",
     find: all(/\bperiodic\b/),
   },
@@ -110,7 +110,7 @@ const RULES: readonly Rule[] = [
   },
   {
     rule: 'lit-import',
-    problem: 'Lit (or another renderer) is imported.',
+    problem: "Another renderer's package (lit, etc.) is imported.",
     fix: "Gyral has its own view layer: import `html`, `css`, `each`, `nothing` and hooks from '@gyral/core'.",
     find: all(/from\s+['"](?:lit|lit-html|lit-element|@lit\/[\w-]+)['"]/),
   },

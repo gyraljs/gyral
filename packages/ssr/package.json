@@ -15,14 +15,11 @@
   },
   "type": "module",
   "sideEffects": [
-    "./src/hydrate.ts",
-    "./dist/hydrate.js",
     "./src/index.ts",
     "./dist/index.js"
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./hydrate": "./src/hydrate.ts",
     "./static": "./src/static.ts",
     "./node": "./src/node.ts"
   },
@@ -31,10 +28,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./hydrate": {
-        "types": "./dist/hydrate.d.ts",
-        "default": "./dist/hydrate.js"
       },
       "./static": {
         "types": "./dist/static.d.ts",

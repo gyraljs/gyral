@@ -25,9 +25,7 @@ the same way), so an app that only delays doesn't bundle the `every` code.
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, server rendering):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading:
-[from 0.3.0 to 0.3.1](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md),
-[from 0.2 to 0.3](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral).
 
 > Status: 0.x, on npm. Breaking changes to the
 > [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)

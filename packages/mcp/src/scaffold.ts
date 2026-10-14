@@ -103,7 +103,7 @@ export const ${name} = define<Stateless, never>()('${tag}', {
 `;
   const route = `import { html } from '@gyral/core';
 import { renderPage } from '@gyral/ssr';
-import './${tag}.js';
+import '../src/${tag}.js';
 
 /** GET handler: a full HTML page with <${tag}> rendered on the server. */
 export function ${name.charAt(0).toLowerCase()}${name.slice(1)}Route(_request: Request, clientEntry: string): Response {

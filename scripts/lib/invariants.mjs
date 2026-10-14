@@ -163,3 +163,18 @@ export function relativeLinks(markdown) {
     .map((m) => m[1].split('#')[0])
     .filter((href) => href !== '' && !/^[a-z]+:/i.test(href));
 }
+
+/**
+ * The skill plugin's version (.claude-plugin/marketplace.json) is the release version: Claude
+ * Code updates an installed plugin when its version changes, so a version left behind keeps
+ * users on an old skill.
+ */
+export function checkPluginVersion(marketplace, release) {
+  return marketplace.plugins
+    .filter((plugin) => plugin.version !== release)
+    .map(
+      (plugin) =>
+        `.claude-plugin/marketplace.json: plugin "${plugin.name}" is version ${plugin.version}, ` +
+        `but the release is ${release}. Run node scripts/check-plugin-version.mjs --write.`,
+    );
+}

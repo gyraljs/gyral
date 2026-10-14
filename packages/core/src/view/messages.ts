@@ -26,16 +26,14 @@ export const MESSAGES = {
   22: '<{tag}> is missing required prop(s): {props}.',
   23:
     '<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them ' +
-    'changes platform behaviour (a prop named "hidden" hides the element). Rename them ' +
-    '(view/05-element.md).',
+    'changes platform behaviour (a prop named "hidden" hides the element). Rename them.',
   // Scheduling
   30: 'gyral: a deferred callback failed',
   31: '<{tag}> view failed; it shows its error view, or its previous DOM stays.',
   32: 'gyral: post-render work failed',
   33:
     'gyral: rendering did not settle in one flush (a cycle between {tags}). Components are ' +
-    'probably feeding each other props or messages; break the cycle with a condition in update ' +
-    '(docs/design-docs/view/04-scheduler.md "Loop guard").',
+    'probably feeding each other props or messages; break the cycle with a condition in update.',
   34:
     'settled(): the page did not settle after {rounds} flushes or busy turns. A stream is ' +
     'emitting without pause, or components (or drivers) are feeding each other messages in a ' +
@@ -46,11 +44,11 @@ export const MESSAGES = {
   42: 'gyral: subscription "{name}" failed to unsubscribe',
   43:
     '{owner}: no driver provides "{driver}". It is a driver token: provide an implementation ' +
-    'by name with provideDrivers(root, { {driver}: … }) or el.drivers (ADR 0006 "Driver tokens").',
+    'by name with provideDrivers(root, { {driver}: … }) or el.drivers.',
   // Stores
   50:
-    '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}] ' +
-    '(ADR 0013), so the component subscribes to its changes.',
+    '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}], ' +
+    'so the component subscribes to its changes.',
   51: 'store "{store}": the server\'s seed failed its schema, so it starts from init. Issues: {issues}',
   52: 'unreadable {attribute} seed on {where}',
   53:
@@ -67,18 +65,18 @@ export const MESSAGES = {
     "gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found}. The server's " +
     "HTML differs from the first client render: a view that isn't deterministic (Date.now(), " +
     'locale), a third party that changed the DOM before scripts ran, or a stale cached page ' +
-    '(docs/design-docs/view/07-hydration.md "Mismatches").',
+    '(https://gyral.dev/docs/server-rendering/#mismatches).',
   63: '<{tag}> was rendered fresh after a hydration mismatch:',
   // Templates
   70:
     'gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition ' +
-    'every html`…` must be compiled by the Gyral Vite preset (view/01-templates.md).',
+    'every html`…` must be compiled by the Gyral Vite preset.',
   71: 'gyral: template rule 11: a page shell rendered in the browser.',
   72:
     'gyral: this page\'s Trusted Types policy list does not allow the policy "gyral", so ' +
     'templates are parsed from plain strings, which works only while Trusted Types are not ' +
     'enforced. Add `trusted-types gyral` to the Content-Security-Policy.',
-  // Errors (ADR 0024)
+  // Error handling
   73: '<{tag}> update for "{message}" failed; the state is unchanged.',
   74: '<{tag}> init failed; it shows its error view, or stays empty.',
   75: '<{tag}> element hook failed; the other hooks still ran.',
@@ -87,7 +85,7 @@ export const MESSAGES = {
   78:
     '<{tag}> failed to render on the server; it renders its error view (or nothing) and ' +
     'starts fresh in the browser.',
-  // Subscriptions (ADR 0025)
+  // Subscriptions
   79:
     '<{tag}> subscriptions returned two commands for lane "{lane}"; only the first runs. ' +
     'Give each its own `key`.',
@@ -95,7 +93,7 @@ export const MESSAGES = {
     "<{tag}> subscriptions kept restarting: a subscription's input data changes with every " +
     'message it sends (for example a timestamp or a counter in the input). Keep inputs to what ' +
     'should restart it; functions are ignored, so to restart on a new selector, change the key.',
-  // Element calls (gyral-1zd.27)
+  // Element calls
   85: '<{tag}> call("{selector}", "{method}") failed',
   86: 'call("{selector}", "{method}"): arguments must be plain data.',
 } as const;

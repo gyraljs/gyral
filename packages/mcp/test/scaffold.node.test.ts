@@ -22,7 +22,7 @@ describe('scaffold_component', () => {
   // imports of sibling files are dropped; a test imports its component, so it is checked
   // appended to the component.
   const withoutLocalImports = (code: string): string =>
-    code.replace(/^import [^\n]*'\.\/[^\n]*\n/gm, '');
+    code.replace(/^import [^\n]*'\.{1,2}\/[^\n]*\n/gm, '');
   const installed = (...names: string[]): Installed => withListed(UNKNOWN, names);
   const ALL = ['@gyral/core', '@gyral/http', '@gyral/ssr', '@gyral/testing', 'vitest'];
   const variants: readonly (readonly [ScaffoldKind, string, Installed])[] = [
@@ -57,6 +57,26 @@ describe('scaffold_component', () => {
       }
     }, 60_000);
   }
+
+  it('imports sibling files by their path relative to the importing file', () => {
+    for (const [kind, , deps] of variants) {
+      const { files } = scaffold('demo-widget', kind, undefined, deps);
+      const paths = new Set(files.map((f) => f.path));
+      for (const file of files) {
+        const dir = file.path.split('/').slice(0, -1);
+        for (const [, specifier = ''] of file.code.matchAll(/^import [^\n]*'(\.{1,2}\/[^']+)'/gm)) {
+          const parts = [...dir];
+          for (const part of specifier.replace(/\.js$/, '.ts').split('/')) {
+            if (part === '..') parts.pop();
+            else if (part !== '.') parts.push(part);
+          }
+          expect(paths.has(parts.join('/')), `${kind}: ${file.path} imports ${specifier}`).toBe(
+            true,
+          );
+        }
+      }
+    }
+  });
 
   it('emits a test file only when @gyral/testing and vitest are installed', () => {
     const paths = (deps: Installed) =>

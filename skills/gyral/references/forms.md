@@ -247,8 +247,8 @@ export const Newsletter = define<State, Msg>()('my-newsletter', {
 One schema validates on both sides: the client's `form()` intent and the server's
 `formAction`, and the form works **without JavaScript** (a normal `POST`) and enhances when JS
 is present. Any **Standard Schema** library works (Valibot, Zod, ArkType, Effect Schema). To
-name the interface in your own helpers, import `type StandardSchemaV1` from `@gyral/core`
-(since 0.3.2; on 0.3.1 import it from `@standard-schema/spec`). This path also needs
+name the interface in your own helpers, import `type StandardSchemaV1` from `@gyral/core`.
+This path also needs
 `@gyral/http` to post and `@gyral/ssr` for the server half.
 
 ### Define the schema once
@@ -299,6 +299,8 @@ interface State {
   readonly values: FormFields;
   readonly errors: Readonly<Record<string, readonly string[]>>;
   readonly done: boolean;
+  /** Hydrated: the schema validates, so the browser's own check steps aside. */
+  readonly live: boolean;
 }
 type Msg =
   | { readonly _tag: 'Submit'; readonly form: FormData }
@@ -311,7 +313,7 @@ const text = (values: FormFields, key: string): string => {
 };
 
 export const Signup = define<State, Msg>()('my-signup', {
-  init: () => ({ values: {}, errors: {}, done: false }),
+  init: () => ({ values: {}, errors: {}, done: false, live: false }),
   intent: {
     Submit: form(SignupForm, (_data, raw) => ({ _tag: 'Submit', form: raw })),
   },
@@ -328,6 +330,8 @@ export const Signup = define<State, Msg>()('my-signup', {
     ],
     Done: (s) => ({ ...s, done: true }),
     Failed: (s) => ({ ...s, errors: { '': ['Something went wrong. Try again.'] } }),
+    // Without JavaScript the browser validates (the server too); once hydrated, the schema does.
+    Hydrated: (s) => ({ ...s, live: true }),
     // Client-side and server-side (422) rejections arrive the same way.
     IntentRejected: (s, m) => ({
       ...s,
@@ -338,7 +342,7 @@ export const Signup = define<State, Msg>()('my-signup', {
   view: (s, i) =>
     s.done
       ? html`<p role="status">Welcome!</p>`
-      : html`<form data-intent=${i.Submit} action="/signup" method="post">
+      : html`<form data-intent=${i.Submit} ?novalidate=${s.live} action="/signup" method="post">
           ${(['name', 'email'] as const).map((f) => {
             const errors = s.errors[f];
             return html`<p>
@@ -462,10 +466,11 @@ export const ZipInput = define<State, Msg>()('my-zip', {
 `formAction(definition, { intent, valid, invalid })` handles the `POST`:
 
 - valid → your handler; usually `seeOther(url)` (Post/Redirect/Get), or `rejectWith(...)`
-  for a server-only check (email taken). `submitForm` gets `{ _tag: 'Redirected', location }`.
+  for a server-only check (email taken). `submitForm` gets `{ _tag: 'Redirected', location }`;
+  `redirectedTo(body)` from `@gyral/http` reads the location (or `undefined`).
 - invalid → `invalid(rejected)` re-renders the page with the component's
   `.initialMessages=${[rejected]}`, so the same `IntentRejected` reducer renders the errors.
-  JSON clients get `422` with the issues instead.
+  JSON clients get `422` with the issues instead (no `values`: the client still has them).
 
 The re-rendered page seeds the rejected state, so hydration resumes with the errors shown.
 
@@ -537,7 +542,7 @@ function contactForm(data: FormData, error: string): TemplateResult {
 }
 ```
 
-# Native custom form controls (0.3.1)
+# Native custom form controls
 
 Use `formAssociated: { value: (s) => s.value }` in a component spec to participate in the
 owning form under the host's native `name` attribute. Return null to omit the control.

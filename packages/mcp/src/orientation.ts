@@ -106,8 +106,8 @@ const RULES = `1. \`define<State, Msg>()('my-tag', { init, intent, update, view 
    fetch, timers, Date.now, Math.random, DOM or storage): return commands instead.
 3. Views never attach handlers: \`data-intent=\${i.Save}\`; booleans bind with \`?disabled=\${…}\`;
    form controls with \`value=\${…}\`, never \`.value=\`.
-4. Timers: \`every(ms, (now) => msg, key?)\` from @gyral/time inside \`subscriptions\` (\`periodic\`
-   is gone). Router \`listen\` goes in \`subscriptions\` too, never in \`init\`.
+4. Timers: \`every(ms, (now) => msg, key?)\` from @gyral/time inside \`subscriptions\` (there is no
+   \`periodic\`). Router \`listen\` goes in \`subscriptions\` too, never in \`init\`.
 5. List rows (\`each\`) are pure; a row that uses \`intentsOf<typeof C>()\` needs an explicit
    \`TemplateResult\` return type.
 6. Server-rendered state is plain JSON. Import only packages the project has installed.

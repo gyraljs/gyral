@@ -58,8 +58,7 @@ export function mismatch(
       (DEV
         ? "The server's HTML differs from the first client render: a view that isn't " +
           'deterministic (Date.now(), locale), a third party that changed the DOM before ' +
-          'scripts ran, or a stale cached page (docs/design-docs/view/07-hydration.md ' +
-          '"Mismatches").'
+          'scripts ran, or a stale cached page (https://gyral.dev/docs/server-rendering/#mismatches).'
         : docsLink(62)),
   );
 }

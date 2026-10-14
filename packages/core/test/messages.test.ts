@@ -8,8 +8,8 @@ describe.runIf(DEV)('message() in development', () => {
   it('fills placeholders in order of first appearance; a repeated name repeats its argument', () => {
     expect(message(10, 'x-cart', 'Add')).toBe('<x-cart> has no update for message "Add".');
     expect(message(50, 'x-cart', 'cart')).toBe(
-      '<x-cart> uses store "cart" without declaring it. Add it to the spec: stores: [cart] ' +
-        '(ADR 0013), so the component subscribes to its changes.',
+      '<x-cart> uses store "cart" without declaring it. Add it to the spec: stores: [cart], ' +
+        'so the component subscribes to its changes.',
     );
   });
 

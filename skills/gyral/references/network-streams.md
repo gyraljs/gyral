@@ -1,4 +1,4 @@
-# Native network feeds (0.3.1)
+# Native network feeds
 
 Optional `@gyral/http/sse` and `@gyral/http/websocket` entries use browser-native transports.
 They are separate from the fetch entry, add no runtime dependencies, and open no resources

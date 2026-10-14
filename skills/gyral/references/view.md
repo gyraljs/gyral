@@ -35,7 +35,7 @@ Compute derived values in plain helper functions of state.
   so does a refused edit (the reducer kept the state). To put a control back, change the model:
   clamp to a different value, or re-create the form with a key (`references/forms.md`).
 - Classes and inline styles are plain strings: `class=${s.done ? 'done' : ''}`,
-  `style="--w: ${s.width}px"`. (`classMap` and `styleMap` may return if a real need appears.)
+  `style="--w: ${s.width}px"`.
   The client writes `style` through the CSSOM, so a strict CSP (`style-src` without
   `'unsafe-inline'`) doesn't block client renders or updates. It does block the `style`
   attributes in server-rendered HTML until hydration re-applies them: prefer classes or data
@@ -45,7 +45,7 @@ Compute derived values in plain helper functions of state.
 - Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
   (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
 - With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
-  time (docs/design-docs/view/09-template-rules.md); dev and tests use the same rules at runtime.
+  time (https://gyral.dev/docs/views/#checked-before-it-runs); dev and tests use the same rules at runtime.
 - `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
   flags `each` rows that read the view's scope (`gyral/each-row-purity`), and warns about
   intent parsers that no template in the module names (`gyral/unused-intent`). Enable it once:
@@ -227,11 +227,11 @@ export const Board = define<State, Msg>()('my-board', {
   and for tasks whose slot changed. Tasks that move because the layout changed around them
   (a resize, a column that grew) aren't animated.
 - `seen` keeps keys of deleted items; clear it when the board is reloaded.
-- The native way is a View Transition: `viewTransition` (components.md) runs a render inside
-  `document.startViewTransition`, and a task whose `view-transition-name` is the same before
-  and after (a style binding on the row, `style="view-transition-name: task-${t.id}"`)
-  morphs from its old place to its new one. Same-document View Transitions are only newly Baseline, so keep the hook as the
-  fallback for now. A built-in for moves between lists is planned for 0.4.
+- A View Transition doesn't replace this hook in a shadow-DOM component (the default): no
+  engine captures a `view-transition-name` set inside a shadow root, so rows named that way
+  don't morph. `viewTransition` (components.md) with a per-row `view-transition-name` works
+  only for `shadow: false` components. FLIP, as above, is the supported way to animate moves
+  between lists; there is no built-in for it.
 
 ## Starting over: `keyed(key, value)`
 
@@ -273,7 +273,7 @@ server and hydrates like a list. For many items keyed by identity, use `each`; `
 
 ## SVG fragments: `svg`
 
-`svg` (from `@gyral/core`, since 0.3.1) is `html` for SVG fragments: its top level is SVG
+`svg` (from `@gyral/core`) is `html` for SVG fragments: its top level is SVG
 content, so `<path />`, `<g>`, `<text>`, `<clipPath>` are SVG elements, self-closing tags are
 fine and SVG's camelCase names stay. Render an `svg` result **only inside an `<svg>`** (or
 another SVG element other than `<foreignObject>`): a development error anywhere else. HTML at an
@@ -321,7 +321,7 @@ a form from the page (below) are short recipes. Write your own with
 server-rendered start tag. A hook that must tear down adds `dispose(el, args)` (below). A hook
 acts only on its own element.
 
-Hooks run after the whole update has rendered, **children first** (0.3.1): a hook in a parent's
+Hooks run after the whole update has rendered, **children first**: a hook in a parent's
 view sees the child components it renders already updated, so it can measure a list a child
 renders or scroll to a child's row. With `update: 'always'` a hook runs on every render, even
 when its arguments are the same, so you don't keep a counter in the model only to make it run
@@ -373,8 +373,8 @@ export const Steps = define<State, Msg>()('my-steps', {
 
 Pass values to CSS through a style binding: `<div class="bar" style="--fill: ${s.done / s.total}">`
 with `inline-size: calc(var(--fill, 0) * 100%)` in the stylesheet. Style bindings are written
-through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'` (0.3.1;
-in server-rendered markup the policy blocks the attribute until the component hydrates, so keep
+through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'`
+(in server-rendered markup the policy blocks the attribute until the component hydrates, so keep
 a stylesheet default such as `var(--fill, 0)`).
 For the rare element whose inline style a hook writes too, a hook can set only the properties it
 names:
@@ -673,11 +673,11 @@ export const Pager = define<State, Msg>()('my-pager', {
 after a search), the reducer that starts the search can already ask for it:
 `focus('#results li:first-child a', { wait: true })` keeps the request until a render of this
 component produces the target, then focuses it. A newer `focus()` replaces it; after one second
-it gives up with the usual warning (0.3.1).
+it gives up with the usual warning.
 
 **Focusing into a child component.** `focus()` looks inside this component's own root, so it
 can't reach an element in a child's shadow root. Give the child `shadow: { delegatesFocus: true }` and
-focus the child itself: its first focusable element gets focus (0.3.1).
+focus the child itself: its first focusable element gets focus.
 
 ```ts
 import { define, focus, html } from '@gyral/core';

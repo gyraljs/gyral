@@ -35,14 +35,14 @@ export const fetchUser = <M>(
 
 `@gyral/http/testing` exports `fakeHttp`, a scripted HTTP driver for tests.
 
-`@gyral/http/sse` (0.3.1) exports `makeEventSourceDriver(schema, { events?, withCredentials?,
+`@gyral/http/sse` exports `makeEventSourceDriver(schema, { events?, withCredentials?,
 parse?, name? })`. It decodes default/named events, preserves event IDs, reports connection
 states and typed decoding/terminal failures, and cleans up on cancellation. Native
 EventSource owns GET/cookies/reconnection/Last-Event-ID; there is no headers/POST transport
 or extra retry loop. Imports/factories are SSR-safe. The fetch entry does not bundle it.
 See [the network feed guide](https://github.com/gyraljs/gyral/blob/main/skills/gyral/references/network-streams.md).
 
-`@gyral/http/websocket` (0.3.1) exports `makeWebSocketDriver(schema, { encode, parse?, name?,
+`@gyral/http/websocket` exports `makeWebSocketDriver(schema, { encode, parse?, name?,
 maxBufferedBytes? })`: Connect streams and Send/Close commands on explicitly owned native
 sockets. Incoming data is decoded; outgoing buffering is bounded (64 KiB by default), with
 typed failures and native close metadata. Send success means browser enqueue. Reconnect
@@ -53,9 +53,7 @@ complete, and cancellation cleans up. The entry is optional and imports/factorie
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the
 consumer setup guide (packages, Vite preset, server rendering):
-[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral). Upgrading:
-[from 0.3.0 to 0.3.1](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.3.0-to-0.3.1.md),
-[from 0.2 to 0.3](https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md).
+[github.com/gyraljs/gyral](https://github.com/gyraljs/gyral).
 
 > Status: 0.x, on npm. Breaking changes to the
 > [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
