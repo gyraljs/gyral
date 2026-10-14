@@ -65,11 +65,12 @@ need separate caching/logout policy; never serve new bytes at an old hashed URL.
 
 Choose Rust API plus build-time pages, Askama plus client widgets, or experimental `gyral-rs`
 embedded SSR. The first path needs no gyral-rs. The reviewed embedded ABI is 1,
-exact core/SSR npm 0.3.4, Linux x86_64 GNU, Rust 1.99.0, deno_core 0.412.0/V8 150.4.0.
+exact core/SSR npm 0.3.5, Linux x86_64 GNU, Rust 1.99.0, deno_core 0.412.0/V8 150.4.0.
 gyral-rs is on crates.io (`gyral`); each minor release accepts one exact Gyral version (0.2.x:
-0.3.4), so check its README before upgrading Gyral in a Rust-served app. Trusted SSR code is a
-bundled IIFE; the browser has one self-contained ESM entry. Props/HTML/bundle limits are 256 KiB/2 MiB/8 MiB. Rust verifies
-digests/SRI/CSP, owns request DTO permissions, cancellation and worker shutdown. These
-resource bounds are not an untrusted-code sandbox. Candidate Gyral releases need a newly
-reviewed Rust contract/fixture; the 0.3.4 fixture does not establish split chunks, streaming,
-dynamic CSS or full-application readiness. The snapshot experiment remains test-only.
+0.3.4, 0.3.x: 0.3.5), so check its README before upgrading Gyral in a Rust-served app.
+Trusted SSR code is a bundled IIFE; the browser has one self-contained ESM entry.
+Props/HTML/bundle limits are 256 KiB/2 MiB/8 MiB. Rust verifies digests/SRI/CSP, owns request
+DTO permissions, cancellation and worker shutdown. These resource bounds are not an
+untrusted-code sandbox. Candidate Gyral releases need a newly reviewed Rust contract/fixture;
+the 0.3.5 fixture does not establish split chunks, streaming, dynamic CSS or full-application
+readiness. The snapshot experiment remains test-only.

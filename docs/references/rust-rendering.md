@@ -29,7 +29,7 @@ server imports into one IIFE; the current browser contract uses one self-contain
 entry. Split chunks, streaming HTML and dynamic CSS have no established compatibility.
 
 Build browser and server from the same components and exact Gyral version. ABI 1's strict
-manifest currently accepts **0.3.4**; changing the npm version requires coordinated Rust
+manifest currently accepts **0.3.5**; changing the npm version requires coordinated Rust
 contract work and a new tested fixture. Verify bundle digests, the hashed client path,
 SRI and static style hashes before HTTP startup. Those digests establish matching artifacts
 against a trusted manifest; they are not signatures. Rust sends the complete enforcing CSP
@@ -57,7 +57,7 @@ source revision or changed exact npm pins, uses the Rust repository's frozen ins
 builds both asset pairs and runs its embedded, artifact and real-browser checks. It writes
 only ignored local build outputs, never edits manifests or publishes crates. A candidate
 Gyral release needs its own reviewed compatibility descriptor and coordinated Rust acceptance;
-passing the 0.3.4 descriptor does not certify unreleased Gyral changes.
+passing the 0.3.5 descriptor does not certify unreleased Gyral changes.
 
 The fixtures cover real SSR, escaped props, stores, forms, timezones, error recovery,
 request isolation, enforcing CSP, no-JS first paint, DOM adoption, typed-before-hydration

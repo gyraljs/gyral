@@ -118,8 +118,8 @@ so `npx` doesn't download a second compiler.
 ## Public hosting
 
 The public server at `https://mcp.gyral.dev/mcp` is live: Streamable HTTP, anonymous and
-read-only. It serves the 0.3.3 corpus (seven tools, including `start_here`) since
-2026-10-13, until it is redeployed with 0.3.4; `https://mcp.gyral.dev/healthz` reports the version it serves.
+read-only. It serves the released 0.3.4 corpus (seven tools, including `start_here`)
+until it is redeployed with 0.3.5; `https://mcp.gyral.dev/healthz` reports the version it serves.
 
 `gyral-mcp http` runs it: stateless Streamable HTTP at `/mcp` with seven docs tools
 (`scaffold_component` takes `installed` but no `project_dir`). It excludes `check_snippet`,
