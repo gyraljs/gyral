@@ -1,4 +1,4 @@
-# Gyral 0.3.4: complete documentation
+# Gyral 0.3.5: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -260,8 +260,9 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
 - Coming from Gyral 0.2? Read [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/). From
   0.3.0? Read [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/). From 0.3.1,
   upgrading [to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
-  [to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) and
-  [to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) needs no code changes.
+  [to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/),
+  [to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) and
+  [to 0.3.5](https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/) needs no code changes.
 
 ---
 
@@ -274,7 +275,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.4, and the site tests each one in a browser when it builds.
+0.3.5, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -592,7 +593,8 @@ export const AccountForm = define<State, Msg>()('my-account-form', {
       const count = FIELDS.filter((f) => m.errors[f] !== '').length;
       const first = FIELDS.find((f) => m.errors[f] !== '');
       const summary = `Fix ${String(count)} ${count === 1 ? 'field' : 'fields'} to continue.`;
-      return [{ ...s, errors: m.errors, summary }, first === undefined ? [] : [focus(`#${first}`)]];
+      const focusFirst = first === undefined ? [] : [focus(`#${first}`)];
+      return [{ ...s, errors: m.errors, summary }, focusFirst];
     },
     // In an app, this also returns the command that posts the form.
     SignedUp: (_s, m) => ({
@@ -961,7 +963,7 @@ GYRAL_MCP_PUBLIC_ORIGIN=http://127.0.0.1:3000 npx -y @gyral/mcp http
 It is configured by environment variables only; `gyral-mcp http --help` lists them. Put it
 behind TLS, and pin the package version you deploy. 0.3.2 shipped this server as a second
 binary, `gyral-mcp-http`; since 0.3.3 it is `gyral-mcp http`. The
-[package README](https://github.com/gyraljs/gyral/blob/v0.3.3/packages/mcp/README.md#public-hosting)
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.4/packages/mcp/README.md#public-hosting)
 has the details.
 
 ## The agent skill
@@ -982,7 +984,7 @@ In Claude Code, add Gyral's repository as a plugin marketplace and install the p
 From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
 
 Other agents: copy
-[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.3/skills/gyral) into the agent's
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.4/skills/gyral) into the agent's
 skills or rules folder, or point it at `SKILL.md`.
 
 ## Docs for agents
@@ -2724,7 +2726,8 @@ control, a self-closing `<my-el />` (HTML ignores the slash, so the element swal
 follows it), an unquoted `class=a${b}`, markup the browser would repair (a `<tr>` directly in a
 `<table>`, a `<div>` inside a `<p>`), an HTML element such as `<button>` inside an `<svg>` (it
 would become an unknown SVG element that renders nothing), a bound `xlink:href=${…}`, a
-`${…}` inside `<script>` or `<style>`, and a list row that reads the view's variables. Each
+`${…}` inside `<script>` or `<style>`, a list row that reads the view's variables, and (since
+0.3.5) a JSX-style `<SignupForm>` where the component's tag `<signup-form>` belongs. Each
 message says what to write instead.
 
 The ESLint config also reports a function written in a hole (`${() => …}`), which is never
@@ -3888,7 +3891,8 @@ export const AccountForm = define<State, Msg>()('my-account-form', {
       const count = FIELDS.filter((f) => m.errors[f] !== '').length;
       const first = FIELDS.find((f) => m.errors[f] !== '');
       const summary = `Fix ${String(count)} ${count === 1 ? 'field' : 'fields'} to continue.`;
-      return [{ ...s, errors: m.errors, summary }, first === undefined ? [] : [focus(`#${first}`)]];
+      const focusFirst = first === undefined ? [] : [focus(`#${first}`)];
+      return [{ ...s, errors: m.errors, summary }, focusFirst];
     },
     // In an app, this also returns the command that posts the form.
     SignedUp: (_s, m) => ({
@@ -6311,7 +6315,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.3/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.4/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -7085,9 +7089,10 @@ CSS to `css`. On a server, `productionServer` hands your app an `assets(modules)
 same per page and returns `{ modulepreload, stylesheets }` to spread into `renderPage` (see
 [Deploying](https://gyral.dev/docs/deploying/#node)).
 
-[gyral-shop](https://github.com/gyraljs/gyral-shop/blob/main/src/client/lazy.ts) uses this
-pattern for every page-specific component (listing, product gallery, checkout, admin), and adds
-a `MutationObserver` for components inserted after load.
+[gyral-shop](https://github.com/gyraljs/gyral-shop) used a loader like this until automatic
+components replaced it. Its
+[`vite.components.ts`](https://github.com/gyraljs/gyral-shop/blob/main/vite.components.ts) now
+only names the tags the scan can't see and keeps the admin sections in one chunk.
 
 ## Lazy hydration
 
@@ -7389,7 +7394,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.4/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -8353,7 +8358,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 recorded results are from a build shortly before the 0.3.1 release. They install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.4/docs/references/platform-spikes-2026-10-11.md)
 records the fixtures and limits.
 
 ## Server rendering in another framework
@@ -8711,7 +8716,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.3/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.4/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page. The former `labelledBy` export was removed
 in 0.3.1; the recipe is application code.
 
@@ -8869,7 +8874,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All nine
-packages are released together with the same version number (0.3.4), are ES modules with
+packages are released together with the same version number (0.3.5), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -8944,8 +8949,9 @@ including ones built with Lit; install that library yourself if you use it. Upgr
 [Migrating from 0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
 [from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
 [from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
-[from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) and
-[from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) (no code changes in the last three).
+[from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/),
+[from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) and
+[from 0.3.4 to 0.3.5](https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/) (no code changes in the last four).
 
 ## The Vite preset
 
@@ -9069,6 +9075,12 @@ written in the source (function bodies left out) and its documentation comment. 
 generated from the packages this site is built with, every time it's built, so they can't drift
 from the code.
 
+> **Writing code? Start from working code, not from the reference.** [Recipes](https://gyral.dev/docs/recipes/)
+> has a task list with filters and a signup form, with their tests, and [Forms](https://gyral.dev/docs/forms/)
+> opens with a complete validated form. Adapt the closest one and check it; come here to look up
+> a name an example or a compiler error shows you. Most of the types are inferred, so you rarely
+> write them yourself.
+
 | Package                                  | What's in it                                                                   |
 | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | [`@gyral/core`](https://gyral.dev/docs/api/core/)         | `define`, commands, subscriptions, stores, forms, the view layer; Vite, ESLint |
@@ -9118,6 +9130,9 @@ npm install @gyral/core@0.3.4 @gyral/testing@0.3.4
 Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
 made with `create-gyral` 0.3.4 start on `^0.3.4`. From 0.3.1 or 0.3.2, the same command works;
 see [Upgrading from 0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) for what 0.3.3 changed.
+
+0.3.5 followed with no code changes either: install 0.3.5 instead; see
+[Upgrading from 0.3.4 to 0.3.5](https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/).
 
 ## Server-rendered pages link each module once
 
@@ -9200,8 +9215,9 @@ Add every other `@gyral/*` package your app uses to that command, at the same ve
 made with `create-gyral` 0.3.3 start on `^0.3.3`. From 0.3.1, the same command works; see
 [Upgrading from 0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/) for what 0.3.2 added.
 
-0.3.4 followed with fixes and no code changes either: install 0.3.4 instead; see
-[Upgrading from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/).
+0.3.4 and 0.3.5 followed with no code changes either: install 0.3.5 instead; see
+[Upgrading from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) and
+[from 0.3.4 to 0.3.5](https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/).
 
 ## `npx -y @gyral/mcp` works again
 
@@ -9231,6 +9247,63 @@ In a container, the command becomes `[gyral-mcp, http]`. See
 
 The full list is in the
 [`@gyral/mcp` changelog](https://github.com/gyraljs/gyral/blob/v0.3.3/packages/mcp/CHANGELOG.md).
+
+---
+
+# Upgrading from 0.3.4 to 0.3.5
+
+> Gyral 0.3.5 needs no code changes. The template compiler now reports a JSX-style component tag such as `<SignupForm>`, which never rendered.
+
+Source: https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/
+
+Gyral 0.3.5 is a patch release with one new template check in `@gyral/core` and an updated docs
+snapshot in `@gyral/mcp`. It removes and renames nothing, so an app on 0.3.4 upgrades without
+code changes. Move every `@gyral/*` package to 0.3.5 together (they share one version), install,
+and run your tests and build:
+
+```sh
+npm install @gyral/core@0.3.5 @gyral/testing@0.3.5
+```
+
+Add every other `@gyral/*` package your app uses to that command, at the same version. Apps
+made with `create-gyral` 0.3.5 start on `^0.3.5`. From 0.3.1, 0.3.2 or 0.3.3, the same command
+works; see [Upgrading from 0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) for what 0.3.4
+changed.
+
+## A JSX-style component tag is a template error
+
+Templates are HTML, so a component is rendered by the tag it was defined with:
+
+```ts
+// Before: HTML reads this as an unknown <signupform> element, and nothing renders.
+view: () => html`<h1>Sign up</h1><SignupForm></SignupForm>`,
+// After: the tag given to define()('signup-form', …).
+view: () => html`<h1>Sign up</h1><signup-form></signup-form>`,
+```
+
+Before 0.3.5 the first form typechecked and built, and the page silently lacked the component.
+Now a start tag that begins with a capital letter, has no hyphen and is not an HTML element is
+template rule 15. Like the other [template rules](https://gyral.dev/docs/views/#checked-before-it-runs), it fails
+`vite build` with a code frame, throws in the development runtime naming where the template is
+written, and is reported by the `gyral/template` ESLint rule. The message names the tag to write
+and reminds you to import the module that defines it.
+
+Markup that worked before is not affected: HTML elements in any case (`<DIV>`, `<IFrame>`),
+hyphenated names (`<Signup-Form>` is `<signup-form>`), SVG names such as `<linearGradient>`,
+and lower-case unknown elements still build. So if the upgrade fails with rule 15, that tag
+never rendered anything; write the component's tag name.
+
+## The MCP server ships the current docs
+
+`@gyral/mcp` keeps the same tools. Its docs snapshot and bundled skill now include what gyral.dev
+gained since 0.3.4: the [API reference](https://gyral.dev/docs/api/) pages open by pointing to Recipes and Forms
+(most of the types are inferred), the [Forms](https://gyral.dev/docs/forms/) example names its focus command
+before returning it, and the agent pack says to render a component by its tag. See
+[Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
+
+The full lists are in the changelogs of
+[`@gyral/core`](https://github.com/gyraljs/gyral/blob/v0.3.5/packages/core/CHANGELOG.md) and
+[`@gyral/mcp`](https://github.com/gyraljs/gyral/blob/v0.3.5/packages/mcp/CHANGELOG.md).
 
 ---
 
@@ -9333,7 +9406,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.4/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -9351,7 +9424,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.4/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9891,7 +9964,7 @@ props, styles, server rendering and hydration.
 Most apps migrate in this order: dependencies, imports, the build checks (the compiler and the
 ESLint rules list every template that needs a change), props, lists, tests, server. This page
 follows that order and describes 0.3.0. The 0.2 snippets are plain text; every snippet with a
-file name compiles against the current release, 0.3.4, so it uses 0.3.1's spelling where 0.3.1
+file name compiles against the current release, 0.3.5, so it uses 0.3.1's spelling where 0.3.1
 changed one (the two-call `define<…>()(…)`, `intentsOf`, `extraHead`). Once your app runs on
 0.3.0, go on to [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/).
 
@@ -10300,9 +10373,9 @@ dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.3/docs/references/public-api-0.3.1.md)
-records the public boundary: what 0.3.1 exports, and what 0.3.2 added. 0.3.3 and 0.3.4 export
-the same as 0.3.2.
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.4/docs/references/public-api-0.3.1.md)
+records the public boundary: what 0.3.1 exports, and what 0.3.2 added. 0.3.3, 0.3.4 and
+0.3.5 export the same as 0.3.2.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version. Keep core, router,
 HTTP, time, testing, devtools, SSR and MCP aligned; verify your lockfile when a package manager
@@ -10310,7 +10383,7 @@ resolves multiple versions. The [package guide](https://gyral.dev/docs/packages/
 
 ## Releases
 
-These guides describe **0.3.4**, the `latest` version on npm. Every package is published
+These guides describe **0.3.5**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -10320,16 +10393,18 @@ templates can cause hydration mismatches. Versioned hashed assets help keep that
 
 Since 0.3.1, breaking changes wait for a new minor version, with a migration guide. 0.3.2
 changed or removed nothing that 0.3.1 exports, 0.3.3 only fixes how `@gyral/mcp` starts, and
-0.3.4 fixes duplicate preload links, the component scan and the MCP server's guidance, so moving
-from 0.3.1, 0.3.2 or 0.3.3 to 0.3.4 needs no code changes.
+0.3.4 fixes duplicate preload links, the component scan and the MCP server's guidance, and 0.3.5
+reports JSX-style component tags (which never rendered) as a template error, so moving from
+0.3.1, 0.3.2, 0.3.3 or 0.3.4 to 0.3.5 needs no code changes.
 
 ## Upgrade with evidence
 
 1. Read the relevant guide: [0.2 to 0.3](https://gyral.dev/docs/migrating-0-2-to-0-3/),
    [0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/),
    [0.3.1 to 0.3.2](https://gyral.dev/docs/upgrading-0-3-1-to-0-3-2/),
-   [0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/) or
-   [0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) (no code changes in the last three).
+   [0.3.2 to 0.3.3](https://gyral.dev/docs/upgrading-0-3-2-to-0-3-3/),
+   [0.3.3 to 0.3.4](https://gyral.dev/docs/upgrading-0-3-3-to-0-3-4/) or
+   [0.3.4 to 0.3.5](https://gyral.dev/docs/upgrading-0-3-4-to-0-3-5/) (no code changes in the last four).
 2. Update packages together and install from the lockfile.
 3. Run typechecking, component/browser tests and the production build.
 4. Test server/client hydration, edited forms, routing and the production CSP if your app
@@ -10360,7 +10435,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.3, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
+The codes and messages are read from `@gyral/core` 0.3.4, the version this site is built with; codes are never reused. Production builds print them since 0.3.1 (see [Migrating from 0.3.0 to 0.3.1](https://gyral.dev/docs/migrating-0-3-0-to-0-3-1/#short-error-messages-in-production)).
 
 ## Components
 
@@ -10888,6 +10963,8 @@ Gyral core: Model-View-Intent web components on the web platform, with their own
 npm install @gyral/core
 ```
 
+> **Writing code? Start from working code, not from this page.** [Recipes](https://gyral.dev/docs/recipes/) has a task list with filters and a signup form, with their tests; [Forms](https://gyral.dev/docs/forms/) opens with a complete validated form; [Getting started](https://gyral.dev/docs/getting-started/) builds a first component. Adapt the closest example and check it, then look a name up here when you are about to call it.
+
 Generated from the package's type declarations. Entry points: [`@gyral/core`](#gyralcore), [`@gyral/core/storage`](#gyralcorestorage), [`@gyral/core/indexeddb`](#gyralcoreindexeddb), [`@gyral/core/vite`](#gyralcorevite), [`@gyral/core/eslint`](#gyralcoreeslint).
 
 ## `@gyral/core`
@@ -11339,6 +11416,8 @@ const prop: { readonly string: Scalar<string>; readonly number: Scalar<number>; 
 The prop builders.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -12618,6 +12697,8 @@ JSON storage with typed reads/writes and cancellable native + own-write change s
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`LocalStorageOptions`](#core-storage-localstorageoptions) |  |
@@ -12752,6 +12833,8 @@ function makeIndexedDBDriver<S extends IndexedDBStores>(stores: S, options: Inde
 Typed record operations and atomic batches over application-owned stores and migrations.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -12940,6 +13023,8 @@ With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`ComponentsOptions`](#core-vite-componentsoptions) |  |
@@ -13057,6 +13142,8 @@ const default: GyralPlugin
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`GyralPlugin`](#core-eslint-gyralplugin) |  |
@@ -13089,6 +13176,8 @@ Gyral HTTP driver: fetch requests as data, typed errors, Standard Schema decodin
 ```sh
 npm install @gyral/http
 ```
+
+> **Writing code? Start from working code, not from this page.** [Effects and drivers](https://gyral.dev/docs/effects/). Adapt the closest example and check it, then look a name up here when you are about to call it.
 
 Generated from the package's type declarations. Entry points: [`@gyral/http`](#gyralhttp), [`@gyral/http/sse`](#gyralhttpsse), [`@gyral/http/websocket`](#gyralhttpwebsocket), [`@gyral/http/testing`](#gyralhttptesting).
 
@@ -13190,6 +13279,8 @@ const http: Driver<HttpRequest, unknown, HttpError>
 The default driver. Substitute it by name: `el.drivers = { http: makeHttpDriver({...}) }`.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -13368,6 +13459,8 @@ A cancellable feed; native EventSource owns reconnection, credentials and Last-E
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`EventSourceError`](#http-sse-eventsourceerror) |  |
@@ -13449,6 +13542,8 @@ function makeWebSocketDriver<T, Out>(schema: StandardSchemaV1<unknown, T>, optio
 Typed receive/send/close commands on one owned socket, with bounded outgoing buffering.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -13622,6 +13717,8 @@ The error a fake request fails with when the `respond` option threw.
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`FakeHttp`](#http-testing-fakehttp) |  |
@@ -13714,6 +13811,8 @@ Gyral router: typed route tables, navigation as commands, History API baseline w
 npm install @gyral/router
 ```
 
+> **Writing code? Start from working code, not from this page.** [Routing](https://gyral.dev/docs/routing/). Adapt the closest example and check it, then look a name up here when you are about to call it.
+
 Generated from the package's type declarations. Entry points: [`@gyral/router`](#gyralrouter).
 
 ## `@gyral/router`
@@ -13805,6 +13904,8 @@ const router: RouterDriver
 The default router (global window, Navigation API when available).
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -14034,6 +14135,8 @@ Gyral time: delays, debounces and wall-clock ticks (every) as commands.
 npm install @gyral/time
 ```
 
+> **Writing code? Start from working code, not from this page.** [Effects and drivers](https://gyral.dev/docs/effects/). Adapt the closest example and check it, then look a name up here when you are about to call it.
+
 Generated from the package's type declarations. Entry points: [`@gyral/time`](#gyraltime).
 
 ## `@gyral/time`
@@ -14089,6 +14192,8 @@ const time: TimeDriver
 The default time driver.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -14164,6 +14269,8 @@ Gyral server rendering: Declarative Shadow DOM pages with hydration seeds.
 ```sh
 npm install @gyral/ssr
 ```
+
+> **Writing code? Start from working code, not from this page.** [Server rendering](https://gyral.dev/docs/server-rendering/). Adapt the closest example and check it, then look a name up here when you are about to call it.
 
 Generated from the package's type declarations. Entry points: [`@gyral/ssr`](#gyralssr), [`@gyral/ssr/static`](#gyralssrstatic), [`@gyral/ssr/node`](#gyralssrnode).
 
@@ -14271,6 +14378,8 @@ Whether the request asks for JSON rather than a page (`Accept: application/json`
 `formAction` answers by; for your own routes that serve both.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -14578,6 +14687,8 @@ only when invoked; production reads the resulting JSON into `CspOptions.componen
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`AppAssets`](#ssr-static-appassets) | What `productionServer` hands `createApp`: the built entry and what pages link with it. |
@@ -14878,6 +14989,8 @@ A `node:http` request listener that runs `fetch` for each request:
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`DevApp`](#ssr-node-devapp) | A request handler: a Hono app, `productionServer`'s result, or `{ fetch }`. |
@@ -15022,6 +15135,8 @@ Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual
 ```sh
 npm install @gyral/testing
 ```
+
+> **Writing code? Start from working code, not from this page.** [Testing](https://gyral.dev/docs/testing/). Adapt the closest example and check it, then look a name up here when you are about to call it.
 
 Generated from the package's type declarations. Entry points: [`@gyral/testing`](#gyraltesting), [`@gyral/testing/vitest`](#gyraltestingvitest).
 
@@ -15278,6 +15393,8 @@ so promises and the runtime keep working. Animation frames are faked only where 
 so model and driver tests can use it in a Node project.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -15589,6 +15706,8 @@ await hydrated(page);
 
 ### Types and interfaces
 
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
+
 | Name | Summary |
 | --- | --- |
 | [`ServerRenderRequest`](#testing-vitest-serverrenderrequest) | What `renderOnServer` renders. |
@@ -15637,6 +15756,8 @@ Gyral devtools: an in-page timeline of messages, state, commands and stores (dev
 npm install @gyral/devtools
 ```
 
+> **Writing code? Start from working code, not from this page.** [Devtools](https://gyral.dev/docs/devtools/). Adapt the closest example and check it, then look a name up here when you are about to call it.
+
 Generated from the package's type declarations. Entry points: [`@gyral/devtools`](#gyraldevtools).
 
 ## `@gyral/devtools`
@@ -15657,6 +15778,8 @@ Mounts the panel and starts listening. Events arrive in batches (one per microta
 burst of messages renders once. Returns a handle to remove everything again.
 
 ### Types and interfaces
+
+You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
 
 | Name | Summary |
 | --- | --- |
@@ -15830,7 +15953,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.3/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.4/docs/design-docs).
 
 ## The platform is the framework
 
@@ -17670,7 +17793,7 @@ export const Demo = define<State, Msg>()('gy-devtools-demo', {
 
 ## A whole application
 
-[gyral-shop](https://github.com/gyraljs/gyral-shop) is a department store built with Gyral: catalog, search, cart, checkout, accounts and an admin area, server-rendered with forms that work without JavaScript, and four switchable themes.
+[gyral-shop](https://github.com/gyraljs/gyral-shop) is a department store built with Gyral: catalog, search, cart, checkout, accounts and an admin area, server-rendered with forms that work without JavaScript, and four switchable themes. It runs at https://demo-shop.gyral.dev, reset every night.
 
 ---
 
