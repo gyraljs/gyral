@@ -231,6 +231,19 @@ and `npx --no-install @gyral/mcp` (help, then a stdio session with eight tools).
 (basic 21.9 KiB JS, SSR 34.4 KiB JS). The `@gyral/mcp` docs snapshot comes from the gyral.dev
 `release/0.3.5` build with `GYRAL_DOCS_VERSION=0.3.5`.
 
+Recorded 0.3.5 registry checks (2026-10-14, step 6): all nine packages serve 0.3.5 as
+`latest` with SLSA v1 provenance. `npx -y @gyral/mcp@0.3.5 --help` prints both modes, and the
+server answers `initialize` over stdio as `gyral 0.3.5` with eight tools. `npm create
+gyral@0.3.5` generated both templates in fresh directories, and npm installed them. Each app's
+`typecheck`, `build` and `test` pass (basic: two Chromium tests; SSR: three server tests), with
+client builds unchanged from 0.3.4. Both manifests depend on `^0.3.5`, with no overrides. Every
+lockfile entry resolves from `registry.npmjs.org`, and no Lit package is installed.
+`node scripts/verify-ssr-production.mjs` (exact 0.3.5; a 59,333-byte one-file server) and the
+Rust compatibility fixture (gyral-rs `6ccc1b3`, which pins core and SSR 0.3.5) also pass. The
+hosted MCP image with the released 0.3.5 corpus (built from `e981d3f`) passes
+`verify-mcp-traefik.mjs` and `verify-mcp-proxy.mjs`; gyral.dev and gyral-shop build on 0.3.5
+from the registry.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

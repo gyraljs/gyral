@@ -2,12 +2,11 @@
 
 The public Gyral MCP server is live at `https://mcp.gyral.dev/mcp` (Streamable HTTP,
 anonymous, read-only; no token). Point any MCP client that supports Streamable HTTP at that
-URL; see [Client review](#client-review) for what to check. Since 2026-10-13 the deployed container
-serves 0.3.3 (`/healthz` reports `"version":"0.3.3"`, and `initialize` answers as
-`gyral 0.3.3` with seven tools, including `start_here`). Its image is built from `ee2021d`:
-the 0.3.3 API, examples and skill with a gyral.dev snapshot refreshed after the site moved to
-0.3.3, so it has the 0.3.2 to 0.3.3 upgrade guide that the corpus in the npm package lacks.
-It will serve 0.3.4 once it is rebuilt with the 0.3.4 corpus and redeployed. The server is `gyral-mcp http`, the HTTP mode of the package's
+URL; see [Client review](#client-review) for what to check. The deployed container
+serves the released 0.3.4 corpus (`/healthz` reports `"version":"0.3.4"` and corpus
+`ef76afe3…`; its image is built from `b2f6e1b`). An image with the released 0.3.5 corpus
+(`ff6e48cf…`, built from `e981d3f`) passed the Compose/Traefik and proxy checks and is pushed;
+it serves 0.3.5 once it is redeployed. The server is `gyral-mcp http`, the HTTP mode of the package's
 only bin, since 0.3.3. 0.3.2 shipped it as a second bin, `gyral-mcp-http`, which broke `npx -y @gyral/mcp`;
 0.3.1 has only the stdio server. This page is the recipe for building, deploying and
 updating that service. Implementation policy is [ADR 0030](../design-docs/0030-public-mcp.md).
@@ -49,11 +48,11 @@ An HTTP server built from current source can instead serve the complete corpus f
 already published npm release:
 
 ```sh
-node scripts/stage-mcp-container.mjs --released-corpus 0.3.4
+node scripts/stage-mcp-container.mjs --released-corpus 0.3.5
 ```
 
-This downloads `@gyral/mcp@0.3.4` from the public npm registry and replaces the packed
-`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.4;
+This downloads `@gyral/mcp@0.3.5` from the public npm registry and replaces the packed
+`corpus.json` wholesale. API, examples, skill and docs then all describe released 0.3.5;
 new framework APIs stay out until their release. It does not publish npm or use a vendored
 framework dependency. The ignored `deploy/mcp/artifact.json` records source revision,
 registry integrity, corpus source/version/digests and packed artifact digest. Build from a
@@ -105,7 +104,7 @@ its external network and publishes no host port. It runs `command: [gyral-mcp, h
 image must be built from `@gyral/mcp` 0.3.3 source or later (the Dockerfile's default command
 is the same). An older image has only the 0.3.2
 `gyral-mcp-http` bin; its `gyral-mcp` ignores `http`, starts the stdio server and never turns
-healthy. **When redeploying, build and push the 0.3.4 image first, then update `compose.yaml`
+healthy. **When redeploying, build and push the 0.3.5 image first, then update `compose.yaml`
 and the image digest together**; to roll back to an older image, restore its compose file
 too. Labels route `mcp.gyral.dev` to internal
 port 3000, preserve Host, enable HTTPS using the existing certificate resolver, and attach
@@ -188,10 +187,10 @@ The app starts no timers, refresh jobs or persistent storage, and has no databas
 
 The owner deploys manually on an existing server using Traefik; agent server access is
 excluded. `mcp.gyral.dev` is live behind that Traefik instance with a source-built HTTP image
-serving the 0.3.3 corpus with a refreshed gyral.dev snapshot. After each npm release, rebuild the image with that
+serving the released 0.3.4 corpus. After each npm release, rebuild the image with that
 release's corpus (`--released-corpus X.Y.Z`), redeploy it by digest and check `/healthz`
-reports the new version and digest. The next redeploy needs an image built from 0.3.4 source
-(`node scripts/stage-mcp-container.mjs --released-corpus 0.3.4`, now that 0.3.4 is on npm) and the
+reports the new version and digest. The next redeploy uses the pushed 0.3.5 image
+(`node scripts/stage-mcp-container.mjs --released-corpus 0.3.5`, built from `e981d3f`) and the
 current `compose.yaml`, which runs `gyral-mcp http`. Verify client-specific connection instructions against
 installed client versions before announcing support; a client that only supports legacy
 HTTP+SSE should use stdio.
