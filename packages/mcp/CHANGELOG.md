@@ -1,5 +1,29 @@
 # @gyral/mcp
 
+## 0.3.6
+
+### Patch Changes
+
+- 893c4e7: Docs and agent guidance aligned with the code:
+
+  - `listen`'s doc comment (and so `get_api("listen")` and the API reference) starts it from `subscriptions`, not `init`, matching the guides and `check_snippet`.
+  - `scaffold_component`'s `ssr-page` route imports the component from `../src/`, where it is written; a test now resolves every relative import in every scaffold.
+  - Development error messages no longer cite internal design documents; the hydration-mismatch message links to gyral.dev. The error groups on the errors page are named "Error handling", "Subscriptions" and "Element calls".
+  - `retry`'s doc comment names `provideDrivers` and `el.drivers` (the spec `drivers` field was removed in 0.3.1); `@gyral/testing`'s description drops the removed schema arbitraries; the `clientOnly` comment drops a removed API.
+  - create-gyral's `AGENTS.md` adds the MCP server, `llms-small.txt`, the `subscriptions` rule and the real `typecheck` script.
+
+- 79aa5e1: The stdio server's nudge now counts every read since the last `scaffold_component` or
+  `check_snippet`, not only `get_api` calls: `start_here`, `search_docs`, `get_doc`, `get_api`,
+  `list_examples`, `get_example` and resource reads. In 0.3.4, `get_example` reset the count, so
+  an agent could read ten examples in a row and never be told to write. From the third
+  `get_example`, the fourth `get_api` or the eighth read of any kind, tool answers end with a
+  nudge to adapt the closest example already read (by name) and run `check_snippet`, or, with no
+  example read, the next call for the task. The stateless HTTP server still never nudges.
+- 24a1b29: `check_snippet` no longer crashes with `ts.convertCompilerOptionsFromJson is not a function` in
+  a project with TypeScript 7, which exposes no compiler API: it says it needs TypeScript 5 or 6
+  and to run the project's own typecheck instead. The optional `typescript` peer is now
+  `>=5.0 <7`.
+
 ## 0.3.5
 
 ### Patch Changes

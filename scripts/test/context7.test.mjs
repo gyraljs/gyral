@@ -77,8 +77,9 @@ describe('release-gated Context7 preflight', () => {
   });
 
   it('accepts the npm move relabelling release links, and nothing more', async () => {
-    const tag = `/gyraljs/gyral/blob/v${version}/`;
-    expect(snapshot).toContain(tag);
+    // The snapshot is taken before the release, so its links name the previous tag.
+    const tag = /\/gyraljs\/gyral\/blob\/v\d+\.\d+\.\d+\//.exec(snapshot)?.[0] ?? '';
+    expect(tag).not.toBe('');
     const moved = snapshot.replaceAll(tag, '/gyraljs/gyral/blob/v9.9.9/');
     expect((await preflight(registry({ live: moved }).fetch)).version).toBe(version);
     await expect(
