@@ -16,7 +16,7 @@ const read = (path) => readFileSync(path, 'utf8');
 
 /**
  * Published packages and entry points, in reading order (`@gyral/core/compiled` is for the
- * template compiler's output, `@gyral/ssr/hydrate` an empty 0.2 leftover: neither is listed).
+ * template compiler's output, so it is not listed).
  */
 const ENTRIES = [
   ['core', ['.', './storage', './indexeddb', './vite', './eslint']],
