@@ -259,6 +259,42 @@ gyral-rs 0.3.0 (`d9265eb`, for Gyral 0.3.5) published all four crates to crates.
 Trusted Publishing, and a fresh Cargo project on Rust 1.99 builds and runs against `gyral`
 0.3.0 with the `axum` feature.
 
+Recorded 0.3.6 candidate checks (2026-10-14): `pnpm check` passes (316 test files, 2065
+tests, one skipped). The `@gyral/mcp` docs snapshot comes from the gyral.dev
+`release/0.3.6-docs` build with `GYRAL_DOCS_VERSION=0.3.6` and
+`GYRAL_ERRORS_JSON=../gyral/packages/core/src/errors.json`, so the errors page already
+lists G0014.
+
+Recorded 0.3.6 registry checks (2026-10-14, step 6): all nine packages serve 0.3.6 as
+`latest` with SLSA v1 provenance; `@gyral/ssr` exports `.`, `./node` and `./static` only.
+`npx -y @gyral/mcp@0.3.6 --help` prints both modes, and the server answers `initialize` over
+stdio as `gyral 0.3.6` with eight tools; `search_docs` finds G0014 and `check_snippet` runs
+TypeScript 6.0.3. `npm create gyral@0.3.6` generated both templates in fresh directories, and
+npm installed them. Each app's `typecheck`, `build` and `test` pass (basic: two Chromium tests;
+SSR: three server tests and a prerendered page), and the SSR production server answers 200
+with a declarative shadow root. Both manifests depend on `^0.3.6`.
+`node scripts/verify-ssr-production.mjs` (exact 0.3.6; a 59,337-byte one-file server) and the
+Rust compatibility fixture (gyral-rs `771b28c`, which pins core and SSR 0.3.6) also pass. The
+hosted MCP image with the released 0.3.6 corpus (built from `b276ff0`) passes
+`verify-mcp-traefik.mjs` and `verify-mcp-proxy.mjs`; gyral.dev, gyral-shop (40 client assets
+byte-identical to 0.3.5) and the benchmarks harness build on 0.3.6 from the registry.
+
+Recorded 0.3.6 follow-ups (2026-10-14): `mcp.gyral.dev` was redeployed with that image, and
+`/healthz` reports `"version":"0.3.6"` and corpus `0dcdedc7…`. The official MCP client connects
+over Streamable HTTP, lists seven tools, reads `gyral://skill` and gets answers from `get_api`,
+`search_docs` and `scaffold_component`. gyral.dev and the demo shop are deployed on 0.3.6.
+Hand-written repository links in the gyral.dev docs pages had to be moved to the new tag by
+hand; gyral.dev's content test now fails on a docs page that links an older tag.
+The published 0.3.6 snapshot's API reference pages were rendered from the installed 0.3.5
+declarations (three stale doc comments; `get_api` is built from source and correct). Main's
+snapshot was refreshed from the deployed 0.3.6 site; `gyral-ns9` makes release builds read
+the checkout's declarations.
+gyral-rs 0.4.0 (`9987531`, for Gyral 0.3.6) published all four crates to crates.io through
+Trusted Publishing (release run 38613425206; its first `verify` attempt failed on a transient
+npm registry fetch inside the Docker build and passed on re-run). docs.rs built all four, and a
+fresh Cargo project on Rust 1.99 with `gyral` 0.4.0 and the `axum` feature builds, resolves V8
+150.4.0 and reports `GYRAL_VERSION` 0.3.6.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
