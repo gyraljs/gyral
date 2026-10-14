@@ -31,6 +31,21 @@ export const QUERIES = [
 
 export const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
+/**
+ * The docs with release labels blanked: links into gyraljs/gyral at a release tag, and the
+ * errors page's "read from `@gyral/core` X.Y.Z" line. The MCP snapshot is taken from a gyral.dev
+ * release build while the site still installs the previous release, so those name the previous
+ * tag; the site's npm move then relabels them (gyral releasing.md, step 7). Nothing else may
+ * differ between the published corpus and the live site.
+ */
+export const withoutReleaseLabels = (text) =>
+  text
+    .replace(/(github\.com\/gyraljs\/gyral\/(?:blob|tree)\/)v\d+\.\d+\.\d+\//g, '$1vX.Y.Z/')
+    .replace(
+      /(read from `@gyral\/core` )\d+\.\d+\.\d+(, the version this site is built with)/g,
+      '$1X.Y.Z$2',
+    );
+
 async function get(url, fetchFn) {
   const response = await fetchFn(url, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new Error(`Preflight HTTP ${response.status}: ${url}`);
@@ -62,7 +77,7 @@ export async function preflight(fetchFn = fetch) {
     }),
   );
   const live = await (await get(SOURCE, fetchFn)).text();
-  if (live !== snapshot)
+  if (withoutReleaseLabels(live) !== withoutReleaseLabels(snapshot))
     throw new Error('Public llms-full.txt differs from the released docs snapshot.');
   const mcp = packages.find((pkg) => pkg.name === '@gyral/mcp');
   if (!mcp || !mcp.dist.tarball.startsWith('https://registry.npmjs.org/'))
@@ -80,7 +95,7 @@ export async function preflight(fetchFn = fetch) {
   );
   if (
     corpus.version !== version ||
-    JSON.stringify(corpus.docs) !== JSON.stringify(parseLlmsFull(live))
+    JSON.stringify(corpus.docs) !== JSON.stringify(parseLlmsFull(snapshot))
   ) {
     throw new Error('Public documentation differs from the published MCP corpus.');
   }
@@ -89,6 +104,7 @@ export async function preflight(fetchFn = fetch) {
     version,
     source: SOURCE,
     sourceSha256: digest(live),
+    snapshotSha256: digest(snapshot),
     packages,
   };
 }

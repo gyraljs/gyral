@@ -76,6 +76,16 @@ describe('release-gated Context7 preflight', () => {
     ).rejects.toThrow('differs from');
   });
 
+  it('accepts the npm move relabelling release links, and nothing more', async () => {
+    const tag = `/gyraljs/gyral/blob/v${version}/`;
+    expect(snapshot).toContain(tag);
+    const moved = snapshot.replaceAll(tag, '/gyraljs/gyral/blob/v9.9.9/');
+    expect((await preflight(registry({ live: moved }).fetch)).version).toBe(version);
+    await expect(
+      preflight(registry({ live: moved.replace('/blob/v9.9.9/', '/blob/main/') }).fetch),
+    ).rejects.toThrow('differs from');
+  });
+
   it('refuses corrupted published tarballs', async () => {
     await expect(preflight(registry({ bytes: Buffer.from('corrupted') }).fetch)).rejects.toThrow(
       'integrity mismatch',

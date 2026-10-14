@@ -27,8 +27,11 @@ node scripts/context7.mjs preflight
 
 This is read-only. It requires all nine packages to serve the snapshot's final version
 as npm `latest`, with provenance present. It compares production llms-full.txt with the
-committed snapshot and the actual published MCP corpus, after verifying the npm tarball's
-SHA512 integrity. It saves version, source hash and registry evidence in a fresh temporary
+committed snapshot, and the snapshot with the actual published MCP corpus, after verifying the
+npm tarball's SHA512 integrity. The live comparison ignores release labels only: links into
+gyraljs/gyral at a release tag and the errors page's core version. The snapshot comes from a
+release build while gyral.dev still installs the previous release, so those name the previous
+tag until the site's npm move relabels them; any other difference fails. It saves version, source hash and registry evidence in a fresh temporary
 directory, printed by the command. `--out <new-directory>` selects another evidence location.
 
 This does not replace the [release runbook](releasing.md): registry-only starter checks
