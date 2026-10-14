@@ -14,7 +14,8 @@ import {
   type Context,
   type Ns,
 } from './repairs.js';
-import { BOOLEAN_ATTRS, formStateFix, KNOWN_HTML, msg, SVG_ONLY, VOID } from './rules.js';
+import type { NameCheck } from './component-name.js';
+import { BOOLEAN_ATTRS, formStateFix, msg, SVG_ONLY, VOID } from './rules.js';
 import type { Source } from './source.js';
 import { HTML_ONLY, namespacedAttr, SVG_HTML_POINT, svgAttr } from './svg.js';
 import type { AttrToken, ContentMode, Sink, StartTag } from './tokenizer.js';
@@ -65,6 +66,8 @@ export class TreeBuilder implements Sink {
   constructor(
     private readonly src: Source,
     private readonly svg = false,
+    /** Rule 15 (component-name.ts), when the caller checks it. */
+    private readonly names?: NameCheck,
   ) {}
 
   private get children(): TreeNode[] {
@@ -171,9 +174,8 @@ export class TreeBuilder implements Sink {
 
   private checkHtml(tag: StartTag): void {
     const { name } = tag;
-    if (/^[A-Z]/.test(tag.raw) && !name.includes('-') && !KNOWN_HTML.has(name)) {
-      this.src.fail(15, msg.componentName(tag.raw));
-    }
+    const misnamed = this.names?.(tag.raw, name);
+    if (misnamed !== undefined) this.src.fail(15, misnamed);
     if (SVG_ONLY.has(name)) this.src.fail(10, msg.svgOnly(tag.raw));
     if (DOCUMENT.has(name)) this.server = true;
     if (tag.selfClosing && !VOID.has(name)) this.src.fail(6, msg.selfClosing(tag.raw));

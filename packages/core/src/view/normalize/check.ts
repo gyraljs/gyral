@@ -3,6 +3,7 @@
 // steps as `analyze` (normalize.ts) up to the last one that can fail: minify whitespace, then
 // tokenize and build the tree (emit and the id never throw). Like the compiler and the runtime,
 // it stops at a template's first error: the tokenizer can't recover from one.
+import { componentName } from './component-name.js';
 import { TemplateError } from './errors.js';
 import { Source } from './source.js';
 import { tokenize, type ContentMode, type Sink, type StartTag } from './tokenizer.js';
@@ -93,7 +94,7 @@ class Tracker implements Sink {
 export function checkTemplate(strings: readonly string[], svg = false): TemplateIssue | undefined {
   const normalized = minifyStrings(strings);
   const src = new Source(normalized, undefined);
-  const tracker = new Tracker(src, new TreeBuilder(src, svg));
+  const tracker = new Tracker(src, new TreeBuilder(src, svg, componentName));
   try {
     tokenize(src, tracker);
   } catch (error) {

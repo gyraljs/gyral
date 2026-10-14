@@ -35,6 +35,13 @@
     "url": "https://gyral.dev/errors/#G0013"
   },
   {
+    "code": "G0014",
+    "group": "Components",
+    "message": "<{tag}> is on the page, but no custom element named \"{tag}\" is defined {seconds} s after it loaded, so it renders nothing. If it is one of your components, import the module that calls define()('{tag}', …) from the entry; for a third-party element, load its package. Ignore this for an element defined later on purpose.",
+    "arguments": ["tag", "seconds"],
+    "url": "https://gyral.dev/errors/#G0014"
+  },
+  {
     "code": "G0020",
     "group": "Props",
     "message": "<{tag}> prop \"{prop}\" has an asynchronous schema; it must be synchronous.",

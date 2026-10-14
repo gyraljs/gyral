@@ -41,6 +41,12 @@ Arguments: `tag`, `intent`.
 
 Arguments: `tag`, `selector`.
 
+### G0014
+
+> \<{tag}> is on the page, but no custom element named "{tag}" is defined {seconds} s after it loaded, so it renders nothing. If it is one of your components, import the module that calls define()('{tag}', …) from the entry; for a third-party element, load its package. Ignore this for an element defined later on purpose.
+
+Arguments: `tag`, `seconds`.
+
 ## Props
 
 ### G0020

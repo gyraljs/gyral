@@ -53,6 +53,12 @@ element is now an error that says to write the defined tag name and import its m
 names in any case (`<DIV>`, `<IFrame>`), hyphenated names (`<Signup-Form>` is
 `<signup-form>`), SVG and MathML content (`<LinearGradient>` parses as `linearGradient`), and
 lower-case unknown elements are not checked; markup the rule rejects never rendered a component.
+Since 0.3.6 the runtime preparer checks rule 15 only in development (`#view-dev`), as it
+checks call sites: `vite build` with the preset and ESLint always check it, and production
+bundles built without the preset don't carry the list of HTML element names (about 0.4 KiB
+gzip). The rule's code is `view/normalize/component-name.ts`, passed to the tree builder.
+A hyphenated tag that nothing defines is legal markup, so it is a development warning instead
+(Warnings, below).
 
 **Rule 14 since 0.3.1** (gyral-1zd.25): `<option selected=${on}>` renders `selected="false"` when
 `on` is false, and the browser selects the option anyway; an app shipped exactly that. A known
@@ -148,13 +154,14 @@ it.
 
 ## Warnings
 
-| Pattern                                                | Why                                                  | Where                                                |
-| ------------------------------------------------------ | ---------------------------------------------------- | ---------------------------------------------------- |
-| `raw()` rendered in the browser                        | It works, but every change re-parses the markup (02) | development runtime, once per page                   |
-| `true` in a child hole                                 | Usually a `cond && x` slip (02)                      | development runtime and server render, once per part |
-| An object in an attribute or text-content hole         | It is written as `String(v)` (02)                    | development runtime and server render, once per part |
-| A function in a property binding (`.onclick=${fn}`)    | Views attach no closures; props are data (02)        | development runtime, once per part (0.3.1)           |
-| An intent parser that the component's view never names | Probably a renamed intent or dead code               | ESLint `gyral/unused-intent` (0.3.1, below)          |
+| Pattern                                                | Why                                                                    | Where                                                                                            |
+| ------------------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `raw()` rendered in the browser                        | It works, but every change re-parses the markup (02)                   | development runtime, once per page                                                               |
+| `true` in a child hole                                 | Usually a `cond && x` slip (02)                                        | development runtime and server render, once per part                                             |
+| An object in an attribute or text-content hole         | It is written as `String(v)` (02)                                      | development runtime and server render, once per part                                             |
+| A function in a property binding (`.onclick=${fn}`)    | Views attach no closures; props are data (02)                          | development runtime, once per part (0.3.1)                                                       |
+| An intent parser that the component's view never names | Probably a renamed intent or dead code                                 | ESLint `gyral/unused-intent` (0.3.1, below)                                                      |
+| A custom-element tag on the page that nothing defines  | It renders nothing: usually a component module the entry never imports | development runtime, 3 s after load and after each later `define()`, once per tag (G0014, 0.3.6) |
 
 ## Native primitives
 
