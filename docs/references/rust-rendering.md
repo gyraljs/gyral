@@ -19,7 +19,7 @@ The coordination fixture is [rust-compatibility.json](rust-compatibility.json), 
 the reviewed Rust source, exact npm releases, ABI and target. `gyral-rs` is experimental and
 published on crates.io as `gyral` (front door; the `axum` feature adds `gyral-axum`) with
 `gyral-renderer` and `gyral-renderer-domain`. Each gyral-rs minor accepts one Gyral release:
-0.3.x accepts 0.3.5, 0.2.x accepts 0.3.4.
+0.4.x accepts 0.3.6, 0.3.x accepts 0.3.5.
 The supported embedded target is Linux x86_64 GNU, Rust 1.99.0/edition 2024,
 deno_core 0.412.0 and V8 150.4.0. Other targets have no verified support claim.
 
@@ -31,7 +31,7 @@ server imports into one IIFE; the current browser contract uses one self-contain
 entry. Split chunks, streaming HTML and dynamic CSS have no established compatibility.
 
 Build browser and server from the same components and exact Gyral version. ABI 1's strict
-manifest currently accepts **0.3.5**; changing the npm version requires coordinated Rust
+manifest currently accepts **0.3.6**; changing the npm version requires coordinated Rust
 contract work and a new tested fixture. Verify bundle digests, the hashed client path,
 SRI and static style hashes before HTTP startup. Those digests establish matching artifacts
 against a trusted manifest; they are not signatures. Rust sends the complete enforcing CSP
@@ -59,7 +59,7 @@ source revision or changed exact npm pins, uses the Rust repository's frozen ins
 builds both asset pairs and runs its embedded, artifact and real-browser checks. It writes
 only ignored local build outputs, never edits manifests or publishes crates. A candidate
 Gyral release needs its own reviewed compatibility descriptor and coordinated Rust acceptance;
-passing the 0.3.5 descriptor does not certify unreleased Gyral changes.
+passing the 0.3.6 descriptor does not certify unreleased Gyral changes.
 
 The fixtures cover real SSR, escaped props, stores, forms, timezones, error recovery,
 request isolation, enforcing CSP, no-JS first paint, DOM adoption, typed-before-hydration
