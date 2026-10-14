@@ -22,14 +22,14 @@ component listens for the events its templates name. A type that comes from a bo
 `data-intent-on=${…}` and isn't in the list above takes a per-event attribute instead
 (`data-intent-pointerdown=${i.Press}`, below), whose name the template carries.
 
-`data-intent-on` takes a list separated by spaces (0.3.1): `data-intent-on="keydown keyup"`
+`data-intent-on` takes a list separated by spaces: `data-intent-on="keydown keyup"`
 fires the intent for both, and the parser tells them apart with `event.type` (see "Press and
 release" below).
 
 ### One element, an intent per event: `data-intent-<event>`
 
-When each event on an element means something different, name an intent per event type
-(0.3.1): `data-intent-pointerdown=${i.Grab} data-intent-keydown=${i.Key}`. For an event of type
+When each event on an element means something different, name an intent per event type:
+`data-intent-pointerdown=${i.Grab} data-intent-keydown=${i.Key}`. For an event of type
 T, an element's `data-intent-T` comes first; its plain `data-intent` (with `data-intent-on` or
 its default trigger) handles the other events. Lookup still starts at the element that was hit
 and goes outward: the nearest element with an intent for that event wins. A sortable list, where
@@ -238,7 +238,7 @@ an `update` that covers every tag.
 Lookup starts at the element that was hit and goes outward, and the nearest element with an
 intent for the event runs its parser. When that parser returns `undefined` **synchronously**,
 it declines: the next element outward with an intent for the same event gets it, up to the
-component's root (0.3.1; before, `undefined` ended the lookup). So a container's keyboard
+component's root. So a container's keyboard
 shortcuts and its fields' own keys live together:
 
 ```ts
@@ -286,14 +286,14 @@ its own listener (once). To skip events by where they started rather than by key
 it, and TypeScript reports a long assignability error on that `intent` key. Inside the spec, leave the return type off: the key types
 it. A parser written outside the spec needs `_tag: 'Qty' as const` or the variant as its return
 type (`Extract<Msg, { _tag: 'Qty' }> | undefined`, or `ParseResult<Variant<Msg, 'Qty'>>`, which
-also allows `IntentRejected`; both type exports are available since 0.3.2). The same holds
+also allows `IntentRejected`). The same holds
 for `child()`, `form()` and `field()` mappers.
 
 ## Props, state and stores in a parser: `(input, ctx)`
 
 A parser's second argument is the read-only context reducers get, plus the component's state:
 `props` as they are when the event fires, `state` at that moment, and `read(store)` for the
-stores in `spec.stores` (0.3.1). Parsers that don't need it take one parameter. Use it when the decision must happen during the event, such as whether
+stores in `spec.stores`. Parsers that don't need it take one parameter. Use it when the decision must happen during the event, such as whether
 to call `preventDefault()`, which an async reducer is too late for:
 
 ```ts
@@ -378,7 +378,7 @@ export const Seats = define<Grid, Msg>()('my-seat-grid', {
 ```
 
 `state` is the state when the event fires, including messages sent before the next render, and
-it is read-only (`Readonly<State>`); a parser that needs it no longer has to have the view write
+it is read-only (`Readonly<State>`); a parser that needs it doesn't need the view to write
 `data-first`/`data-last` attributes for it. Keep parsers pure apart from `preventDefault()`:
 read, don't write. `form()`, `field()` and `child()` return one-parameter parsers, so a parser
 can still call one directly (`field(schema, toMsg)(input)`).

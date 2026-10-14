@@ -75,7 +75,7 @@ export interface Corpus {
   readonly version: string;
   readonly docs: readonly DocPage[];
   readonly api: readonly ApiEntry[];
-  /** Types the public API uses without exporting them (corpora built by 0.3.1 lack it). */
+  /** Types the public API uses without exporting them; optional, so a corpus without it loads. */
   readonly internalTypes?: readonly InternalType[];
   readonly examples: readonly Example[];
   readonly skill: readonly SkillFile[];

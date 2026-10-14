@@ -273,7 +273,7 @@ server and hydrates like a list. For many items keyed by identity, use `each`; `
 
 ## SVG fragments: `svg`
 
-`svg` (from `@gyral/core`, since 0.3.1) is `html` for SVG fragments: its top level is SVG
+`svg` (from `@gyral/core`) is `html` for SVG fragments: its top level is SVG
 content, so `<path />`, `<g>`, `<text>`, `<clipPath>` are SVG elements, self-closing tags are
 fine and SVG's camelCase names stay. Render an `svg` result **only inside an `<svg>`** (or
 another SVG element other than `<foreignObject>`): a development error anywhere else. HTML at an
@@ -321,7 +321,7 @@ a form from the page (below) are short recipes. Write your own with
 server-rendered start tag. A hook that must tear down adds `dispose(el, args)` (below). A hook
 acts only on its own element.
 
-Hooks run after the whole update has rendered, **children first** (0.3.1): a hook in a parent's
+Hooks run after the whole update has rendered, **children first**: a hook in a parent's
 view sees the child components it renders already updated, so it can measure a list a child
 renders or scroll to a child's row. With `update: 'always'` a hook runs on every render, even
 when its arguments are the same, so you don't keep a counter in the model only to make it run
@@ -373,8 +373,8 @@ export const Steps = define<State, Msg>()('my-steps', {
 
 Pass values to CSS through a style binding: `<div class="bar" style="--fill: ${s.done / s.total}">`
 with `inline-size: calc(var(--fill, 0) * 100%)` in the stylesheet. Style bindings are written
-through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'` (0.3.1;
-in server-rendered markup the policy blocks the attribute until the component hydrates, so keep
+through the CSSOM, so they work under a Content-Security-Policy without `'unsafe-inline'`
+(in server-rendered markup the policy blocks the attribute until the component hydrates, so keep
 a stylesheet default such as `var(--fill, 0)`).
 For the rare element whose inline style a hook writes too, a hook can set only the properties it
 names:
@@ -673,11 +673,11 @@ export const Pager = define<State, Msg>()('my-pager', {
 after a search), the reducer that starts the search can already ask for it:
 `focus('#results li:first-child a', { wait: true })` keeps the request until a render of this
 component produces the target, then focuses it. A newer `focus()` replaces it; after one second
-it gives up with the usual warning (0.3.1).
+it gives up with the usual warning.
 
 **Focusing into a child component.** `focus()` looks inside this component's own root, so it
 can't reach an element in a child's shadow root. Give the child `shadow: { delegatesFocus: true }` and
-focus the child itself: its first focusable element gets focus (0.3.1).
+focus the child itself: its first focusable element gets focus.
 
 ```ts
 import { define, focus, html } from '@gyral/core';

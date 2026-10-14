@@ -90,11 +90,8 @@ out of budget before they write anything:
 Resources: `gyral://llms.txt`, `gyral://skill` and `gyral://skill/references/{name}`.
 Prompt: `build-gyral-component` (plan, scaffold, test and typecheck a component).
 
-### Since 0.3.2
+### Scaffolding, checking and lookup
 
-These are new in 0.3.2 (0.3.1 lacks them):
-
-- `start_here`, and the workflow in every tool description.
 - `scaffold_component` reads the project's `package.json` (the server's project directory, or
   `project_dir`), or takes an `installed` list of package names, and imports only packages the
   project has: with nothing known, only `@gyral/core`. It writes a model test only when
@@ -125,8 +122,8 @@ of checking, and you run the project's own typecheck (`tsc --noEmit`, `pnpm type
 ## Public hosting
 
 The public server at `https://mcp.gyral.dev/mcp` is live: Streamable HTTP, anonymous and
-read-only. It serves the released 0.3.5 corpus (seven tools, including `start_here`);
-`https://mcp.gyral.dev/healthz` reports the version it serves.
+read-only. It serves the corpus of a released Gyral version (seven tools, including
+`start_here`); `https://mcp.gyral.dev/healthz` reports the version it serves.
 
 `gyral-mcp http` runs it: stateless Streamable HTTP at `/mcp` with seven docs tools
 (`scaffold_component` takes `installed` but no `project_dir`). It excludes `check_snippet`,
@@ -145,10 +142,7 @@ The package has one executable, `gyral-mcp`, so `npx -y @gyral/mcp` knows what t
 | `gyral-mcp http`   | The public Streamable HTTP server, configured by environment |
 | `gyral-mcp --help` | Usage for both modes (`gyral-mcp http --help` for HTTP)      |
 
-Any other argument is an error. 0.3.2 shipped the HTTP server as a second binary,
-`gyral-mcp-http`, which broke `npx -y @gyral/mcp` ("could not determine executable to run");
-0.3.3 replaced it with `gyral-mcp http`. On 0.3.2, run `npx -y -p @gyral/mcp@0.3.2 gyral-mcp`.
-0.3.1 has only the stdio server.
+Any other argument is an error.
 
 ## Embedding
 

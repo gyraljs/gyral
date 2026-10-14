@@ -1,4 +1,4 @@
-# Native browser storage (0.3.1)
+# Native browser storage
 
 Storage is a driver effect. Keep reads/writes out of reducers, init and views. The optional
 `@gyral/core/storage` entry adds no storage code to apps that do not import it. Factories and

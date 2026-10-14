@@ -5,18 +5,16 @@ proxy trust, resource budgets, metrics and graceful shutdown belong to the host 
 
 ## Strict CSP
 
-On 0.3.1, import trusted SSR-safe components during the build and collect `styleHashes()`.
-Store their quoted SHA-256 sources with the matching HTML/client release. A policy-only
-server or proxy can build its complete CSP from that artifact. Shadow `<style>` hashes and
-inline `style` attribute sources are different directives. Document CSS should be linked
-from Vite's manifest; `style-src 'self'` permits same-origin files without changing native
-nesting, theme functions or local `color-scheme` behavior.
-
-Since 0.3.2, the `@gyral/ssr/static` helper `writeComponentStyleManifest({ root, clientDir,
-outFile, vite? })` automatically imports the client metadata's component modules in an
-isolated build-time Node process. It writes `{ schema: 1, hashes: [...] }`. Pass validated
-hashes as `CspOptions.componentStyleHashes`; 0.3.1 lacks both APIs.
-It executes module initialization, so review modules and split browser-only initialization.
+The `@gyral/ssr/static` helper `writeComponentStyleManifest({ root, clientDir, outFile,
+vite? })` imports the client metadata's component modules in an isolated build-time Node
+process and writes `{ schema: 1, hashes: [...] }`. It executes module initialization, so
+review modules and split browser-only initialization. Alternatively, import trusted SSR-safe
+components during the build and collect `styleHashes()`. Store the quoted SHA-256 sources with
+the matching HTML/client release and pass validated hashes as `CspOptions.componentStyleHashes`;
+a policy-only server or proxy can build its complete CSP from that artifact. Shadow `<style>`
+hashes and inline `style` attribute sources are different directives. Document CSS should be
+linked from Vite's manifest; `style-src 'self'` permits same-origin files without changing
+native nesting, theme functions or local `color-scheme` behavior.
 
 `styleAttributes: 'hash'` buffers the whole page before headers and caps distinct sources at
 128 by default, about seven KiB before the rest of the headers. Prefer finite classes/data
@@ -47,9 +45,8 @@ HTTP/upgrades, close sockets and dispose app resources within the application's 
 
 ## Offline lazy workspaces
 
-A merged dynamic chunk may lack `src` or `isDynamicEntry`. Since 0.3.2, the component
-metadata's `chunkModules` maps actual emitted chunks to root-relative original module IDs; 0.3.1
-does not emit it. Assign app feature ownership from emitted IDs, following static edges for
+A merged dynamic chunk may lack `src` or `isDynamicEntry`. The component metadata's
+`chunkModules` maps actual emitted chunks to root-relative original module IDs. Assign app feature ownership from emitted IDs, following static edges for
 shared code/CSS and selected dynamic edges for feature pins. Worker outputs are a separate
 build graph. Keep worker/font/image URLs too. Explicit `components.modules` handles wrappers
 and intentional grouped registration, while `chunks` maps tags to their actual output.
@@ -66,8 +63,9 @@ need separate caching/logout policy; never serve new bytes at an old hashed URL.
 Choose Rust API plus build-time pages, Askama plus client widgets, or experimental `gyral-rs`
 embedded SSR. The first path needs no gyral-rs. The reviewed embedded ABI is 1,
 exact core/SSR npm 0.3.5, Linux x86_64 GNU, Rust 1.99.0, deno_core 0.412.0/V8 150.4.0.
-gyral-rs is on crates.io (`gyral`); each minor release accepts one exact Gyral version (0.2.x:
-0.3.4, 0.3.x: 0.3.5), so check its README before upgrading Gyral in a Rust-served app.
+gyral-rs is on crates.io (`gyral`). gyral-rs 0.3.x accepts Gyral 0.3.5 bundles; a later Gyral
+release needs a new gyral-rs minor, so check its README before upgrading Gyral in a Rust-served
+app.
 Trusted SSR code is a bundled IIFE; the browser has one self-contained ESM entry.
 Props/HTML/bundle limits are 256 KiB/2 MiB/8 MiB. Rust verifies digests/SRI/CSP, owns request
 DTO permissions, cancellation and worker shutdown. These resource bounds are not an

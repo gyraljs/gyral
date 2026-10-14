@@ -100,7 +100,7 @@ then `.owner=${null}` (or `prop.json(…)` and the attribute `owner="null"`).
 
 ### When a prop counts as changed
 
-A new value that equals the old one changes nothing: no re-render, no `PropsChanged` (0.3.1).
+A new value that equals the old one changes nothing: no re-render, no `PropsChanged`.
 `prop.json` compares the JSON (`JSON.stringify`), so a parent that writes
 `.range=${{ min: s.min, max: s.max }}` with a fresh object every render is fine.
 `prop.value` compares with `Object.is` (it can hold anything: class instances, functions, DOM

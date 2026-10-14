@@ -14,7 +14,7 @@ and other continuous watches in `subscriptions`, so they recover after a true de
 
 To type a reducer written outside the spec, name its entry: `Reducer<State, Msg, Variant<Msg,
 'Add'>>`, where `Variant<Msg, 'Add'>` is the member of `Msg` tagged `Add` (both are type exports
-of `@gyral/core` since 0.3.2; on 0.3.1 use `Update<State, Msg>['Add']`):
+of `@gyral/core`):
 
 ```ts
 import type { Reducer, Update, Variant } from '@gyral/core';

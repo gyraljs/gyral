@@ -123,7 +123,7 @@ ignores some outputs); a mapper defined outside the spec needs `_tag: 'ItemOut' 
 
 ### Who hears an output, and slotted children
 
-An output goes to the **direct parent** only (0.3.1). It fires the intent on the child's host,
+An output goes to the **direct parent** only. It fires the intent on the child's host,
 where the parent's `data-intent` sits, never an intent on an ancestor; once that parser takes it
 (returns a message), the event stops there. So a grandparent never mistakes a grandchild's
 output for its child's, and parsers need no `event.target` checks. A parser that returns

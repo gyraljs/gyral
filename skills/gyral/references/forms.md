@@ -247,8 +247,8 @@ export const Newsletter = define<State, Msg>()('my-newsletter', {
 One schema validates on both sides: the client's `form()` intent and the server's
 `formAction`, and the form works **without JavaScript** (a normal `POST`) and enhances when JS
 is present. Any **Standard Schema** library works (Valibot, Zod, ArkType, Effect Schema). To
-name the interface in your own helpers, import `type StandardSchemaV1` from `@gyral/core`
-(since 0.3.2; on 0.3.1 import it from `@standard-schema/spec`). This path also needs
+name the interface in your own helpers, import `type StandardSchemaV1` from `@gyral/core`.
+This path also needs
 `@gyral/http` to post and `@gyral/ssr` for the server half.
 
 ### Define the schema once
@@ -542,7 +542,7 @@ function contactForm(data: FormData, error: string): TemplateResult {
 }
 ```
 
-# Native custom form controls (0.3.1)
+# Native custom form controls
 
 Use `formAssociated: { value: (s) => s.value }` in a component spec to participate in the
 owning form under the host's native `name` attribute. Return null to omit the control.

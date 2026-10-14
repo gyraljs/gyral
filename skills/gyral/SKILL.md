@@ -59,8 +59,8 @@ export const Counter = define<State, Msg>()('my-counter', {
 module runs. A component in its own file (`src/signup-form.ts`) needs a side-effect import in
 the entry module, or in a module the entry imports: `import './signup-form.js';` in
 `src/main.ts`. Without it the tag is never defined, and `<signup-form>` stays an empty unknown
-element. Since 0.3.6, development builds warn (G0014) when a tag is still undefined 3 s after
-load; production builds stay silent.
+element. Development builds warn (G0014) when a tag is still undefined 3 s after load;
+production builds stay silent.
 
 ## Golden rules
 
@@ -109,9 +109,6 @@ npm create gyral@latest my-app -- --template basic   # client-rendered
 npm create gyral@latest my-app -- --template ssr     # prerendered + hydrated
 ```
 
-Upgrading a 0.2 app (0.2 rendered with Lit; 0.3 has its own view layer): follow
-https://github.com/gyraljs/gyral/blob/main/docs/references/migrating-0.2-to-0.3.md.
-
 Manual install: `npm i @gyral/core` (+ `@gyral/ssr` for SSR, `@gyral/http @gyral/router
 @gyral/time` as needed, `-D @gyral/testing`). tsconfig:
 `strict`, `moduleResolution: "bundler"`.
@@ -136,10 +133,7 @@ reading the docs end to end:
 5. `get_api` only for one name you already saw in an example or in an error, not to walk the
    types; `search_docs` and `get_doc` for one concept you need.
 
-`start_here`, `form-native`, the installed-package checks and the suggested fixes are in
-`@gyral/mcp` since 0.3.2; 0.3.1 has the other tools and the same loop. On 0.3.2 exactly,
-`npx -y @gyral/mcp` fails with "could not determine executable to run"; use 0.3.3 or later, or
-`npx -y -p @gyral/mcp@0.3.2 gyral-mcp`. Self-hosting the HTTP server is `gyral-mcp http`.
+Self-hosting the HTTP server is `gyral-mcp http`.
 
 ## Decision tables
 

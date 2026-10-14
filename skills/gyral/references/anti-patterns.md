@@ -17,28 +17,28 @@
 
 ## Anti-patterns → do this instead
 
-| Don't                                                                             | Do                                                                       |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `@click=${() => this.x()}` or any closure in a view                               | `data-intent=${i.X}` + an intent parser                                  |
-| `fetch()`/`setTimeout`/`Math.random()`/`Date.now()` in `update`, `init` or `view` | return a command (`get`, `delay`, a random driver, a custom driver)      |
-| Mutating state (`s.items.push(x)`)                                                | return a new object (`{ ...s, items: [...s.items, x] }`)                 |
-| Array as the whole state                                                          | wrap it: `{ items: [...] }` (an array return means `[state, commands]`)  |
-| Copying props into state in `view` or forgetting later changes                    | `init(props)` + a `PropsChanged` reducer, or read `ctx.props` directly   |
-| `.value=${s.text}` / `.checked=${s.on}` on form controls                          | `value=${s.text}` / `?checked=${s.on}` (live form state)                 |
-| `selected=${s.on}` / `disabled=${s.busy}` (renders `"false"`, still on)           | `?selected=${s.on}` / `?disabled=${s.busy}` (template rule 14)           |
-| `<SignupForm></SignupForm>` (JSX-style; HTML reads an unknown `<signupform>`)     | the defined tag, `<my-signup-form></my-signup-form>` (template rule 15)  |
-| Writing a component's module but never importing it (its tag renders nothing)     | import it from the entry; dev builds warn after 3 s (G0014, since 0.3.6) |
-| A list row reading `s`, `i` or `ctx` from the view                                | `intentsOf<typeof C>()` at module level for names; the rest via `pick`   |
-| Parent reading or setting a child's internal state                                | props down, outputs up (`outputs<O>()`), or a store                      |
-| Global singletons / module-level mutable state for shared data                    | `defineStore` + `send` + `ctx.read`                                      |
-| Booleans `isLoading`, `hasError`, `data` side by side                             | one tagged union                                                         |
-| `Map`, `Set`, `Date`, class instances, functions in server-rendered state         | plain JSON (arrays, objects, ISO strings); client-only state may differ  |
-| Passwords or tokens in state                                                      | keep them only in the submitted `FormData`                               |
-| Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                   |
-| Importing `lit` (0.2's renderer) or another renderer's `html` in Gyral components | import `html`, `css`, `each`, hooks from `@gyral/core`                   |
-| `attr=${x ?? nothing}`                                                            | `attr=${x}`: `null`/`undefined` remove the attribute                     |
-| jsdom/happy-dom tests                                                             | Vitest browser mode, plus DOM-free `step`/`run` tests                    |
-| Blanket `:not(:defined) { visibility: hidden }` in SSR apps                       | scope it to client-rendered tags only                                    |
+| Don't                                                                             | Do                                                                      |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `@click=${() => this.x()}` or any closure in a view                               | `data-intent=${i.X}` + an intent parser                                 |
+| `fetch()`/`setTimeout`/`Math.random()`/`Date.now()` in `update`, `init` or `view` | return a command (`get`, `delay`, a random driver, a custom driver)     |
+| Mutating state (`s.items.push(x)`)                                                | return a new object (`{ ...s, items: [...s.items, x] }`)                |
+| Array as the whole state                                                          | wrap it: `{ items: [...] }` (an array return means `[state, commands]`) |
+| Copying props into state in `view` or forgetting later changes                    | `init(props)` + a `PropsChanged` reducer, or read `ctx.props` directly  |
+| `.value=${s.text}` / `.checked=${s.on}` on form controls                          | `value=${s.text}` / `?checked=${s.on}` (live form state)                |
+| `selected=${s.on}` / `disabled=${s.busy}` (renders `"false"`, still on)           | `?selected=${s.on}` / `?disabled=${s.busy}` (template rule 14)          |
+| `<SignupForm></SignupForm>` (JSX-style; HTML reads an unknown `<signupform>`)     | the defined tag, `<my-signup-form></my-signup-form>` (template rule 15) |
+| Writing a component's module but never importing it (its tag renders nothing)     | import it from the entry; dev builds warn after 3 s (G0014)             |
+| A list row reading `s`, `i` or `ctx` from the view                                | `intentsOf<typeof C>()` at module level for names; the rest via `pick`  |
+| Parent reading or setting a child's internal state                                | props down, outputs up (`outputs<O>()`), or a store                     |
+| Global singletons / module-level mutable state for shared data                    | `defineStore` + `send` + `ctx.read`                                     |
+| Booleans `isLoading`, `hasError`, `data` side by side                             | one tagged union                                                        |
+| `Map`, `Set`, `Date`, class instances, functions in server-rendered state         | plain JSON (arrays, objects, ISO strings); client-only state may differ |
+| Passwords or tokens in state                                                      | keep them only in the submitted `FormData`                              |
+| Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                  |
+| Importing another renderer's `html` (`lit`, etc.) in Gyral components             | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
+| `attr=${x ?? nothing}`                                                            | `attr=${x}`: `null`/`undefined` remove the attribute                    |
+| jsdom/happy-dom tests                                                             | Vitest browser mode, plus DOM-free `step`/`run` tests                   |
+| Blanket `:not(:defined) { visibility: hidden }` in SSR apps                       | scope it to client-rendered tags only                                   |
 
 ## Common errors and fixes
 

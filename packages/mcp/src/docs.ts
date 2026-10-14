@@ -139,9 +139,6 @@ const K1 = 1.2;
 const B = 0.75;
 /** Guides explain concepts; API entries are one symbol each. Prefer guides on a tie. */
 const API_WEIGHT = 0.7;
-/** Upgrade guides show what changed between releases; a guide on the current API ranks first. */
-const HISTORY_WEIGHT = 0.6;
-const HISTORY = /\/docs\/(?:migrating|upgrading)-/;
 
 /**
  * BM25 over sections (substring matches, so "hydrat" finds "hydration"), plus a bonus when a
@@ -180,7 +177,6 @@ export function searchDocs(pages: readonly DocPage[], query: string, limit = 8):
       if (section.heading.toLowerCase().includes(phrase)) score *= 2;
       score *= (matched / words.length) ** 2;
       if (page.url.includes('/docs/api/')) score *= API_WEIGHT;
-      if (HISTORY.test(page.url)) score *= HISTORY_WEIGHT;
       return {
         page: page.title,
         section: section.trail,

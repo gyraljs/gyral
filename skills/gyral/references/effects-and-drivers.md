@@ -462,7 +462,7 @@ provideDrivers(document.body, {
 Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `provideDrivers`,
 `el.drivers` or `mountSsr`.
 
-## Optional route segments and catch-all routes (0.3.1)
+## Optional route segments and catch-all routes
 
 `routes({ product: '/products/:id?', docs: '/docs/:path*', notFound: '/:path*' })` supports
 optional string captures and trailing catch-all arrays. Omitted optional captures are absent

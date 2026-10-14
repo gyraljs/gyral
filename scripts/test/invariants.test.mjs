@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkDependencies,
+  checkPluginVersion,
   checkWorkflow,
   findEffectLeaks,
   findEscapedBackticks,
@@ -131,5 +132,25 @@ describe('workflow triggers', () => {
 describe('relativeLinks', () => {
   it('keeps relative targets only, without anchors', () => {
     expect(relativeLinks('[a](docs/x.md#y) [b](https://e.com) [c](#top)')).toEqual(['docs/x.md']);
+  });
+});
+
+describe('checkPluginVersion', () => {
+  const marketplace = (version) => ({ plugins: [{ name: 'gyral', version }] });
+
+  it('accepts a plugin at the release version', () => {
+    expect(checkPluginVersion(marketplace('0.3.6'), '0.3.6')).toEqual([]);
+  });
+
+  it('names a plugin left at another version', () => {
+    expect(checkPluginVersion(marketplace('0.1.0'), '0.3.6')).toEqual([
+      expect.stringContaining('plugin "gyral" is version 0.1.0, but the release is 0.3.6'),
+    ]);
+  });
+
+  it('holds for the committed marketplace', () => {
+    const release = JSON.parse(readFileSync('packages/core/package.json', 'utf8')).version;
+    const file = JSON.parse(readFileSync('.claude-plugin/marketplace.json', 'utf8'));
+    expect(checkPluginVersion(file, release)).toEqual([]);
   });
 });
