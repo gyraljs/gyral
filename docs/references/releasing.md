@@ -289,6 +289,11 @@ The published 0.3.6 snapshot's API reference pages were rendered from the instal
 declarations (three stale doc comments; `get_api` is built from source and correct). Main's
 snapshot was refreshed from the deployed 0.3.6 site; `gyral-ns9` makes release builds read
 the checkout's declarations.
+gyral-rs 0.4.0 (`9987531`, for Gyral 0.3.6) published all four crates to crates.io through
+Trusted Publishing (release run 38613425206; its first `verify` attempt failed on a transient
+npm registry fetch inside the Docker build and passed on re-run). docs.rs built all four, and a
+fresh Cargo project on Rust 1.99 with `gyral` 0.4.0 and the `axum` feature builds, resolves V8
+150.4.0 and reports `GYRAL_VERSION` 0.3.6.
 
 ## When something goes wrong
 
