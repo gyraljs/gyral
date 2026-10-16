@@ -60,15 +60,11 @@ need separate caching/logout policy; never serve new bytes at an old hashed URL.
 
 ## Rust
 
-Choose Rust API plus build-time pages, Askama plus client widgets, or experimental `gyral-rs`
-embedded SSR. The first path needs no gyral-rs. The reviewed embedded ABI is 1,
-exact core/SSR npm 0.3.6, Linux x86_64 GNU, Rust 1.99.0, deno_core 0.412.0/V8 150.4.0.
-gyral-rs is on crates.io (`gyral`). gyral-rs 0.4.x accepts Gyral 0.3.6 bundles; a later Gyral
-release needs a new gyral-rs minor, so check its README before upgrading Gyral in a Rust-served
-app.
-Trusted SSR code is a bundled IIFE; the browser has one self-contained ESM entry.
-Props/HTML/bundle limits are 256 KiB/2 MiB/8 MiB. Rust verifies digests/SRI/CSP, owns request
-DTO permissions, cancellation and worker shutdown. These resource bounds are not an
-untrusted-code sandbox. Candidate Gyral releases need a newly reviewed Rust contract/fixture;
-the 0.3.6 fixture does not establish split chunks, streaming, dynamic CSS or full-application
-readiness. The snapshot experiment remains test-only.
+Three paths, all with the same components: build-time pages plus a Rust API, Askama pages with
+browser-rendered components (tags + fallback, no hydration), or experimental `gyral-rs`
+embedded SSR that hydrates. Only the last needs gyral-rs. Read
+https://gyral.dev/docs/rust-servers/ (`get_doc "rust-servers"`) before writing any of them.
+gyral-rs 0.4.x accepts Gyral 0.3.6 exactly, on Linux x86_64 GNU; a later Gyral release needs a
+new gyral-rs minor. Its bundle is one IIFE using `renderToString` (no `renderPage`, no Fetch,
+no `TextEncoder`), built with one self-contained ESM client. Rust owns permissions, approved
+props, the CSP and worker shutdown; the renderer is not a sandbox.
