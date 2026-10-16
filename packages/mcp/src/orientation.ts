@@ -73,6 +73,11 @@ export const USE_CASES: readonly UseCase[] = [
     doc: 'server-rendering',
     scaffold: 'ssr-page',
   },
+  {
+    task: 'A Rust server: build-time pages, Askama, or gyral-rs embedded rendering',
+    examples: [],
+    doc: 'rust-servers',
+  },
   { task: 'Undo, redo, replay (history as data)', examples: ['undo-replay'], doc: 'update' },
   {
     task: 'Wrap a canvas or third-party widget in a driver',
