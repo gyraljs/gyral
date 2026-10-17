@@ -56,8 +56,10 @@ framework dependency. The ignored `deploy/mcp/artifact.json` records source revi
 registry integrity, corpus source/version/digests and packed artifact digest. Build from a
 clean committed checkout, pin `NODE_IMAGE`, and pass `SOURCE_REVISION`, `CORPUS_VERSION` and
 `CORPUS_SHA256` as build arguments. The OCI source label links the image to `gyraljs/gyral`.
-Publish `ghcr.io/gyraljs/gyral-mcp:sha-<source revision>` and `:latest`; pin the registry image
-digest in deployment. These image tags are independent of npm versions.
+Publish `docker-push.xode.app/gyraljs/gyral-mcp:sha-<source revision>` and `:latest` (push
+needs `docker login docker-push.xode.app`; pulls are anonymous); pin the registry image digest
+in deployment. These image tags are independent of npm versions. Don't publish to or deploy
+from `ghcr.io` or `registry.livepeer.tools`.
 
 ## Production shape
 
