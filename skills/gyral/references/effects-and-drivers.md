@@ -462,6 +462,46 @@ provideDrivers(document.body, {
 Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `provideDrivers`,
 `el.drivers` or `mountSsr`.
 
+## Booting a page: drivers before the first render
+
+A component's `init` commands start after its first render (0.3.7), not when it connects. An
+entry that statically imports its components defines them, and connects the elements already
+in the page, before its own code runs; their first render is a microtask later. So
+`provideDrivers` anywhere in the entry's synchronous code is in time. After an `await` it is
+not: provide drivers before awaiting, or create the element in code and set its `drivers`
+before inserting it.
+
+```ts
+import { command, define, defineDriver, html, provideDrivers } from '@gyral/core';
+
+// components.ts: a token, and a component whose init asks it for something.
+const session = defineDriver<string, string>('session');
+type Msg = { readonly _tag: 'Named'; readonly name: string };
+const Badge = define<{ readonly name: string }, Msg>()('user-badge', {
+  init: () => [
+    { name: '' },
+    [command(session, 'me', { onSuccess: (name): Msg => ({ _tag: 'Named', name }) })],
+  ],
+  update: { Named: (s, m) => ({ ...s, name: m.name }) },
+  view: (s) => html`<p>${s.name}</p>`,
+});
+
+const live = defineDriver<string, string>({ name: 'session', run: async (who) => who });
+
+// main.ts, after `import './components.js'`: still the same synchronous run, so in time.
+provideDrivers(document.body, { session: live });
+
+// After an await it would be too late for elements already in the page. Build the element
+// in code instead, with its drivers set before it is inserted:
+async function addBadge(): Promise<void> {
+  await document.fonts.ready;
+  const badge = new Badge();
+  badge.drivers = { session: live };
+  document.body.append(badge);
+}
+void addBadge();
+```
+
 ## Optional route segments and catch-all routes
 
 `routes({ product: '/products/:id?', docs: '/docs/:path*', notFound: '/:path*' })` supports
