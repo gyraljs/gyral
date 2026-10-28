@@ -321,8 +321,19 @@ from the candidate checks (basic 21.9 KiB JS, 8.3 KiB gzip; SSR 34.5 KiB JS, 14.
 Both manifests depend on `^0.3.7`, with no overrides; every lockfile entry resolves from
 `registry.npmjs.org` with SHA-512 integrity, none uses `file:` or `link:`, and no Lit package
 is installed. `node scripts/verify-ssr-production.mjs` (exact 0.3.7; a 59,418-byte one-file
-server) passes. The Rust compatibility fixture stays on 0.3.6 until gyral-rs accepts 0.3.7
-bundles (gyral-k97 follow-up).
+server) passes.
+
+Recorded 0.3.7 follow-ups (2026-10-28): `mcp.gyral.dev` was redeployed with the image built from
+`2dc7fe0` with `--released-corpus 0.3.7` (it passed `verify-mcp-proxy.mjs` and
+`verify-mcp-traefik.mjs` first); `/healthz` reports `"version":"0.3.7"` and corpus `f3918955…`,
+and the official MCP client lists seven tools, reads `gyral://skill` and gets answers from
+`get_api`, `search_docs` and `scaffold_component`. gyral-rs 0.5.0 (`fcd466e`, for Gyral 0.3.7)
+published all four crates to crates.io through Trusted Publishing (release run 40761977308); it
+also adopts rustls 0.23.46 and tokio 1.53.3, and ignores three advisories, which reach only its
+unpublished examples, until their fixes are two weeks old. docs.rs built all four, and a fresh
+Cargo project on Rust 1.99 with `gyral` 0.5.0 and the `axum` feature builds and resolves V8
+150.4.0. The Rust compatibility fixture now pins gyral-rs `fcd466e` and npm 0.3.7, and
+`verify-rust-compatibility.mjs` passes against it (gyral-k97.8).
 
 ## When something goes wrong
 
