@@ -23,7 +23,7 @@ const noExternal = async (
 
 describe('gyralVitePreset() (gyral-a7r)', () => {
   it('adds the template compiler, for `vite build` only (view/01-templates.md)', () => {
-    const [compiler, locations, devServer, types, ...rest] = gyralVitePreset().plugins;
+    const [compiler, locations, devServer, oneCore, types, ...rest] = gyralVitePreset().plugins;
     expect(rest).toEqual([]);
     // Generated element typings (gyral-1zd.25); `types: false` leaves the plugin out.
     expect(types?.name).toBe('gyral:element-types');
@@ -36,12 +36,16 @@ describe('gyralVitePreset() (gyral-a7r)', () => {
     expect(locations?.enforce).toBe('pre');
     expect(devServer?.name).toBe('gyral:dev-server');
     expect(devServer?.apply).toBe('serve');
+    // One copy of core, in dev and builds (gyral-k97.2, test/compiler/one-core.node.test.ts).
+    expect(oneCore?.name).toBe('gyral:one-core');
+    expect(oneCore?.apply).toBeUndefined();
     expect(compiler?.name).toBe('gyral:template-compiler');
     expect(compiler?.apply).toBe('build');
     expect(compiler?.enforce).toBe('pre');
   });
 
-  it('pre-bundles nothing by default, and extra modules without duplicates', () => {
+  // Gyral's own packages are pre-bundled by the one-core plugin, from what is installed.
+  it('lists no extra modules by default, and extra modules without duplicates', () => {
     expect(gyralVitePreset().optimizeDeps.include).toEqual([]);
     expect(gyralVitePreset()).not.toHaveProperty('resolve'); // nothing to dedupe since Lit left
     const include = gyralVitePreset({ optimize: ['a', 'b', 'a'] }).optimizeDeps.include;

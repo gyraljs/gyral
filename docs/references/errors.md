@@ -47,6 +47,12 @@ Arguments: `tag`, `selector`.
 
 Arguments: `tag`, `seconds`.
 
+### G0015
+
+> Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from {secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not work in the other. Install one copy: pin @gyral/core to one version with your package manager's overrides (gyralVitePreset warns when it is installed more than once).
+
+Arguments: `first`, `firstUrl`, `second`, `secondUrl`.
+
 ## Props
 
 ### G0020
