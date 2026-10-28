@@ -195,6 +195,17 @@ describe('template compiler: build errors', () => {
     expect(production.code).not.toContain(' selectedcontent ');
   });
 
+  it('fails on rule 16, which the runtime checks only in development', async () => {
+    const files = {
+      'main.ts': `import { html } from '${VIEW}';\nexport const a = (n: number) => html\`<pool-card playerBase=\${n}></pool-card>\`;`,
+    };
+    const error = await buildError(files, { production: true });
+    expect(error.message).toContain('[gyral template rule 16]');
+    expect(error.message).toContain('player-base=${…}');
+    const production = await buildApp(files, { preset: false, production: true });
+    expect(production.code).not.toContain('HTML lowercases attribute names');
+  });
+
   it('leaves the undefined-tag warning out of production builds', async () => {
     const files = {
       'main.ts': [

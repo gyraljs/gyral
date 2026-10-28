@@ -5,7 +5,7 @@
 // means the parser repaired the markup: rule 7 (view/09-template-rules.md). Builds made with
 // the `gyral-compiled` condition get prepare-stub.ts instead.
 import { DEV } from '#view-dev';
-import { componentName } from './normalize/component-name.js';
+import { nameChecks } from './normalize/component-name.js';
 import { locOf } from './loc.js';
 import { recordTemplateId } from './normalize/id.js';
 import { analyze } from './normalize/normalize.js';
@@ -27,9 +27,9 @@ export function prepare(strings: readonly string[], svg?: boolean): TemplateObje
   let template = prepared.get(strings);
   if (template === undefined) {
     // Development: the call site (loc.ts), so rule errors and hydration mismatches name it,
-    // and rule 15, which the compiler checks for preset builds (component-name.ts).
+    // and rules 15 and 16, which the compiler checks for preset builds (component-name.ts).
     const analysis = DEV
-      ? analyze(strings, locOf(strings), svg, componentName)
+      ? analyze(strings, locOf(strings), svg, nameChecks)
       : analyze(strings, undefined, svg);
     template = analysis.template;
     recordTemplateId(analysis.template.id, analysis.strings);

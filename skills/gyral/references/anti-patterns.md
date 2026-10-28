@@ -27,6 +27,8 @@
 | `.value=${s.text}` / `.checked=${s.on}` on form controls                          | `value=${s.text}` / `?checked=${s.on}` (live form state)                |
 | `selected=${s.on}` / `disabled=${s.busy}` (renders `"false"`, still on)           | `?selected=${s.on}` / `?disabled=${s.busy}` (template rule 14)          |
 | `<SignupForm></SignupForm>` (JSX-style; HTML reads an unknown `<signupform>`)     | the defined tag, `<my-signup-form></my-signup-form>` (template rule 15) |
+| `<pool-card playerBase=${n}>` (HTML lowercases it to `playerbase`)                | `player-base=${n}` or `.playerBase=${n}` (template rule 16)             |
+| A prop named `state`, `send`, `drivers` or `stores` (replaces the element's own)  | rename it; keep the attribute: `prop.string({ attribute: 'state' })`    |
 | Writing a component's module but never importing it (its tag renders nothing)     | import it from the entry; dev builds warn after 3 s (G0014)             |
 | A list row reading `s`, `i` or `ctx` from the view                                | `intentsOf<typeof C>()` at module level for names; the rest via `pick`  |
 | Parent reading or setting a child's internal state                                | props down, outputs up (`outputs<O>()`), or a store                     |

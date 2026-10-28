@@ -72,9 +72,16 @@
   {
     "code": "G0023",
     "group": "Props",
-    "message": "<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named \"hidden\" hides the element). Rename them.",
+    "message": "<{tag}> declares prop(s) named like a member every element already has: {props}. The prop would replace it: a prop named \"hidden\" hides the element, one named \"state\" hides the component's model. Rename the property. The name of one of Gyral's members (state, send, drivers, stores) can stay the attribute: badge: prop.string({ attribute: \"state\" }).",
     "arguments": ["tag", "props"],
     "url": "https://gyral.dev/errors/#G0023"
+  },
+  {
+    "code": "G0024",
+    "group": "Props",
+    "message": "<{tag}> has a \"{attribute}\" attribute, which no prop reads: HTML lowercases attribute names, and prop {prop} reads \"{expected}\". Write {expected}=\"…\", or set the property (el.{prop} = …).",
+    "arguments": ["tag", "attribute", "prop", "expected"],
+    "url": "https://gyral.dev/errors/#G0024"
   },
   {
     "code": "G0030",

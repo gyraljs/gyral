@@ -89,6 +89,11 @@ attributes can't be bound: `xlink:href=${v}`, `xml:lang=${v}` and `xmlns…` are
 them in their own namespace and `setAttribute` can't. Static ones (`xlink:href="#a"`) are fine:
 the parser handles them on both sides (0.3.1).
 
+On a custom element, an attribute written with capitals (`<pool-card playerBase=${n}>`) is a
+rule 16 error (09, 0.3.7): the parser lowercases it to `playerbase`, and a Gyral prop
+`playerBase` reads `player-base` (05 "Props", kebab-case). Write the prop's attribute,
+`player-base=${n}`, or bind the property, `.playerBase=${n}`.
+
 Intent attributes are plain attribute bindings: `data-intent=${i.Save}` and the per-event
 `data-intent-pointerdown=${i.Grab}` (05 "Per-event intents") write the intent's name, and
 `nothing` removes one, so an intent can come and go with the state.
