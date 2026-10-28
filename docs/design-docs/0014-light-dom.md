@@ -180,3 +180,22 @@ markers to reveal, no hydrate import, no dependence on evaluation order. `data-g
 stays on the host after hydration; a parent's walk uses it to skip the host's content whole,
 so a light child may hydrate before or after its parent. A parent template that gives a light
 host children (other than whitespace) is a hydration mismatch, as it is a server error.
+
+## Addendum: children in page HTML are fallback content (gyral-k97.4, 0.3.7)
+
+A light host rendered in the browser (no seed, nothing to hydrate) kept the children the page's
+HTML gave it and appended its first render after them. Nothing decided that: the light branch
+of the first start never cleared, while a shadow root, a server-rendered host whose hydration
+code failed to load and a host that failed on the server all start empty. A page's no-script
+message inside `<dw-listening>` (driftwake) stayed visible beside the rendered page.
+
+Since 0.3.7 a light host that doesn't hydrate replaces its children on its first render, as
+the component owns them: children written in the page's HTML are **fallback content**, shown
+until the component renders, and in a browser without JavaScript. Hydration is unchanged: a
+server-rendered light host adopts its own children in place. A host moved after its first
+render keeps its view. Not covered: an element defined by a synchronous classic script that
+runs before the parser reaches the element's children; it upgrades as the parser creates it,
+before the children exist, and the parser can append them after the first render. Module scripts
+(Vite's entry) run after parsing, so pages built the usual way are covered. No development
+warning: replacing fallback content is the intended use, not a mistake. A behaviour change,
+listed in the release notes.

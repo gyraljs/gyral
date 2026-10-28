@@ -235,13 +235,13 @@ export function elementClass<S, M extends Tagged, P>(
       this.#root = root;
       this.#hydrating = this.#serverRendered && hydrationCode != null && root.hasChildNodes();
       sheets ??= light ? [] : sheetsFor(spec.styles);
-      // Rendering fresh: a shadow root without a seed (hand-written DSD) or a server-rendered
-      // host whose hydration code failed to load starts empty.
-      // A host that failed on the server (ADR 0024) starts fresh: its content is a fallback.
-      const failedOnServer = this.hasAttribute(ERROR_ATTRIBUTE);
-      if (failedOnServer) this.removeAttribute(ERROR_ATTRIBUTE);
+      // Rendering fresh, every root starts empty: a shadow root without a seed (hand-written
+      // DSD), a server-rendered host whose hydration code failed to load, a host that failed on
+      // the server (ADR 0024: its content is a fallback), and a light host's children from the
+      // page's HTML, fallback content for a page without JavaScript (ADR 0014, gyral-k97.4).
+      this.removeAttribute(ERROR_ATTRIBUTE);
       if (!this.#hydrating) {
-        if (!light || this.#serverRendered || failedOnServer) root.replaceChildren();
+        root.replaceChildren();
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       this.#listen(DEFAULT_EVENTS);
