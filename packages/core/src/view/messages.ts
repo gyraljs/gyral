@@ -44,7 +44,9 @@ export const MESSAGES = {
   42: 'gyral: subscription "{name}" failed to unsubscribe',
   43:
     '{owner}: no driver provides "{driver}". It is a driver token: provide an implementation ' +
-    'by name with provideDrivers(root, { {driver}: … }) or el.drivers.',
+    'by name with provideDrivers(root, { {driver}: … }) or el.drivers. A page provides it ' +
+    "before its components' first render: before importing them, or later in the same task " +
+    '(no await in between).',
   // Stores
   50:
     '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}], ' +

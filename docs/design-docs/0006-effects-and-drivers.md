@@ -401,3 +401,15 @@ command<string, number, Error, Msg>(fetchCount, q, { onSuccess: (n) => ({ _tag: 
 command(log, line);
 command(fetchCount, q, { onSuccess: (n) => ({ _tag: 'Loaded', n }) });
 ```
+
+## Addendum: init's commands start after the first render (gyral-k97.3, 0.3.7)
+
+A client-rendered host started init's commands at connect, which for an element already in the
+page is inside `define()`: before a page entry's `provideDrivers()` that follows its static
+imports. The override rule above then resolved too early (a token failed with G0043; a driver
+with a default ran the default). Since 0.3.7 every host starts init's commands in its
+first-render steps, as server-rendered hosts always did (view/05 "When init's commands
+start"), so providers set in the entry's synchronous code apply. Holding commands until a
+provider appears was rejected: a missing provider would become a silent wait, and `settled()`
+would have to decide what an unprovided command means. A behaviour change, listed in the
+release notes.

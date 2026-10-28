@@ -140,6 +140,8 @@ describe('tree-scoped driver overrides (gyral-czi.35)', () => {
       expect(errors.errors).toHaveLength(1);
       expect(errors.errors[0]?.phase).toBe('command');
       expect(errors.text()).toMatch(/<test-drivers-token>: no driver provides "echo-token"/);
+      // The boot order that leaves a token unprovided (gyral-k97.3).
+      expect(errors.text()).toContain('before importing them, or later in the same task');
     } finally {
       errors.stop();
     }

@@ -108,7 +108,10 @@ export function elementClass<S, M extends Tagged, P>(
     #serverRendered = false;
     /** The first render adopts the server's DOM (07): resumed from a seed, root not empty. */
     #hydrating = false;
-    /** init's commands for a server-rendered host: started after its first render. */
+    /**
+     * init's commands: started after the host's first render that succeeds, server-rendered or
+     * not, so a page's provideDrivers() in the task that defined the component is in place.
+     */
     #afterInit: readonly ModelCommand[] = [];
     #task: HostTask = {
       tag,
@@ -207,7 +210,7 @@ export function elementClass<S, M extends Tagged, P>(
         if (def === undefined || this.#values[name] !== undefined) continue;
         this.#values[name] = DEV ? checked(props)(tag, name, def, value, 'the seed') : value;
       }
-      this.#afterInit = this.#model.resume(seed);
+      this.#model.resume(seed);
       this.#serverRendered = true;
     }
 
@@ -246,6 +249,7 @@ export function elementClass<S, M extends Tagged, P>(
       }
       this.#listen(DEFAULT_EVENTS);
       this.#state(); // init, unless resumed from a seed
+      this.#afterInit = this.#model.take(); // gyral-k97.3
       this.#connect();
     }
 
