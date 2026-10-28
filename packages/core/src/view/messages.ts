@@ -68,6 +68,10 @@ export const MESSAGES = {
     '(https://gyral.dev/docs/server-rendering/#mismatches).',
   63: '<{tag}> was rendered fresh after a hydration mismatch:',
   // Templates
+  69:
+    '<{element}> ?{binding} does nothing: this build left the dialog and popover code out, ' +
+    'because no module the build scanned binds it (a package that does not depend on Gyral ' +
+    'is not scanned).',
   70:
     'gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition ' +
     'every html`…` must be compiled by the Gyral Vite preset.',

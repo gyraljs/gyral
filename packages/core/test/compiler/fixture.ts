@@ -35,6 +35,10 @@ export interface BuildOptions {
   readonly linkCore?: boolean;
   /** `false`: a plain Vite build without the Gyral preset (the runtime path). */
   readonly preset?: boolean;
+  /** Imports to leave in the output, as a published library leaves its dependencies. */
+  readonly external?: readonly (string | RegExp)[];
+  /** Minify the output, as a library's release build may. */
+  readonly minify?: boolean;
 }
 
 /** Core's main entry: fixtures that define components import it by absolute path. */
@@ -90,10 +94,14 @@ export async function buildApp(
         : { resolve: { conditions: [...options.conditions] } }),
       build: {
         write: false,
-        minify: false,
+        minify: options.minify === true,
         ...(options.ssr === true ? { ssr: entry } : {}),
         // Keep the entry's exports, so tests can import the built module.
-        rolldownOptions: { input: entry, preserveEntrySignatures: 'strict' },
+        rolldownOptions: {
+          input: entry,
+          preserveEntrySignatures: 'strict',
+          ...(options.external === undefined ? {} : { external: [...options.external] }),
+        },
       },
     });
     const outputs = (Array.isArray(output) ? output : [output]) as Rolldown.RolldownOutput[];

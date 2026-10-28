@@ -203,6 +203,13 @@
     "url": "https://gyral.dev/errors/#G0063"
   },
   {
+    "code": "G0069",
+    "group": "Templates",
+    "message": "<{element}> ?{binding} does nothing: this build left the dialog and popover code out, because no module the build scanned binds it (a package that does not depend on Gyral is not scanned).",
+    "arguments": ["element", "binding"],
+    "url": "https://gyral.dev/errors/#G0069"
+  },
+  {
     "code": "G0070",
     "group": "Templates",
     "message": "gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition every html`…` must be compiled by the Gyral Vite preset.",

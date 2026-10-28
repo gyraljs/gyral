@@ -286,8 +286,18 @@ two. The error view and `Errored` save about 80-100 B gzip in apps that name nei
 counts a module whose template text binds `?modal=` or `?popover-open=`, and adds
 `use-dialogs.ts`, which installs the code (`view/render/modal.ts`) in the view layer's slot
 (`view/render/toggles.ts`). Without a build step `spec-features.ts` installs it at load. A
-binding whose code the build left out does nothing, and development builds warn once per
-element.
+binding whose code the build left out does nothing; development builds warn once per element,
+and production builds log G0069 each time it changes (gyral-k97.1).
+
+**Compiled templates in installed packages (gyral-k97.1, 0.3.7).** A published component
+library ships its templates already compiled (01 "Compiled"), so its markup is gone: `?modal`
+is a client part tuple `[BOOL_PART, path, 'modal']` or an SSR segment
+`{ k: 'bool', name: 'modal' }`, and a bound `data-intent-on` is an `ATTR_PART` or `MULTI_PART`
+tuple or a `{ k: 'attr', name: 'data-intent-on' }` segment. The scan counts these forms too,
+with keys quoted as the compiler emits them or bare after a library's minifier, and so does
+the text fallback. A part kind must be a number and the name exact, so the words alone still
+don't count. Before 0.3.7 a library's dialogs never opened in an app's production build unless
+some other module happened to bind `?modal` in source (joystyk, Appendix H of its feedback).
 
 The view layer does the same with values that carry their own commit code (02, 03): `each`,
 `raw` and `defineHook` (argument comparison, the client queue). Disposal tracking

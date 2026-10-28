@@ -11,6 +11,12 @@
 //     `data-intent-on="command"` or a bound `data-intent-on`, or a string that is exactly "command" (`events: ['command']`, a
 //     `setAttribute`);
 //   - dialog and popover bindings: a template whose markup binds `?modal=` or `?popover-open=`;
+//   - the same bindings in templates a published library ships compiled (view/01 "Compiled",
+//     gyral-k97.1): a client part tuple `[BOOL_PART, path, 'modal']` or an SSR segment
+//     `{ k: 'bool', name: 'modal' }` (keys quoted as emitted, or bare after minifying), and
+//     `[ATTR_PART | MULTI_PART, path, 'data-intent-on', …]` or `{ k: 'attr', name: 'data-intent-on' }`
+//     for a bound `data-intent-on`. A part kind must be a number and the name exact, so a word
+//     alone still doesn't count;
 //   - `raw` (its markup is read at run time, so it may hold `data-intent-on="command"`): the
 //     module lists the specifiers through which it may reach a `raw` export, and features.ts
 //     counts it when one of them is a module of `@gyral/core`. Through: a named import of `raw` (any
@@ -18,6 +24,7 @@
 //     (`ns.raw`, `ns[key]`, the namespace passed on); a re-export of `raw`, `export *`; a
 //     dynamic `import()`. A module that re-exports core's `raw` counts itself, so `raw`
 //     imported through a re-exporting module (the app's, a design system's) is still seen there.
+import { ATTR_PART, BOOL_PART, MULTI_PART } from '../view/normalize/types.js';
 import { children, nodeAt, nodesAt, type Node } from './ast.js';
 
 /** Optional machinery the build adds when a module may use it. */
@@ -67,6 +74,8 @@ export interface ModuleFacts {
   readonly rawSources: readonly string[];
   /** Whether the module may give a component an error view (see `specError`). */
   readonly errorView: boolean;
+  /** Bindings in compiled templates, as `bool:<name>` and `attr:<name>` (see the header). */
+  readonly compiled: ReadonlySet<string>;
 }
 
 const stringOf = (node: Node | undefined): string | undefined => {
@@ -89,6 +98,34 @@ function templateText(node: Node): string {
 /** An identifier's name, or a string literal's value (`import { 'raw' as r }`). */
 const nameOf = (node: Node | undefined): string | undefined =>
   node?.type === 'Identifier' ? (node['name'] as string) : stringOf(node);
+
+/** A compiled part's kind (`[kind, path, name, …]`) as its segment would name it. */
+const PART_KINDS: ReadonlyMap<unknown, string> = new Map([
+  [BOOL_PART, 'bool'],
+  [ATTR_PART, 'attr'],
+  [MULTI_PART, 'attr'],
+]);
+
+/** A compiled template's binding (see the header), as `<kind>:<name>`, or undefined. */
+function compiledBinding(node: Node): string | undefined {
+  if (node.type === 'ArrayExpression') {
+    const elements = node['elements'] as readonly (Node | null)[];
+    const first = elements[0];
+    const kind = first?.type === 'Literal' ? PART_KINDS.get(first['value']) : undefined;
+    const name = stringOf(elements[2] ?? undefined);
+    return kind === undefined || name === undefined ? undefined : `${kind}:${name}`;
+  }
+  if (node.type !== 'ObjectExpression') return undefined;
+  const fields = new Map<string, string>();
+  for (const p of nodesAt(node, 'properties')) {
+    const key = p['computed'] === true ? undefined : nameOf(nodeAt(p, 'key'));
+    const value = stringOf(nodeAt(p, 'value'));
+    if (key !== undefined && value !== undefined) fields.set(key, value);
+  }
+  const kind = fields.get('k');
+  const name = fields.get('name');
+  return (kind === 'bool' || kind === 'attr') && name !== undefined ? `${kind}:${name}` : undefined;
+}
 
 const isValue = (node: Node): boolean =>
   node['importKind'] !== 'type' && node['exportKind'] !== 'type';
@@ -197,6 +234,7 @@ export function factsOf(program: Node): ModuleFacts {
   const names = new Set<string>();
   const refs = new Map<string, number>();
   const texts: string[] = [];
+  const compiled = new Set<string>();
   const reached: string[] = [];
   /** Imports of `raw` (local name → specifier), and namespace imports. */
   const rawImports = new Map<string, string>();
@@ -231,6 +269,8 @@ export function factsOf(program: Node): ModuleFacts {
   };
 
   const visit = (node: Node): void => {
+    const binding = compiledBinding(node);
+    if (binding !== undefined) compiled.add(binding);
     switch (node.type) {
       case 'ImportDeclaration':
         return;
@@ -284,7 +324,13 @@ export function factsOf(program: Node): ModuleFacts {
   for (const [local, specifier] of namespaces) {
     if ((refs.get(local) ?? 0) > (safe.get(local) ?? 0)) reached.push(specifier);
   }
-  return { names, texts, rawSources: [...new Set(reached)], errorView: specError(program) };
+  return {
+    names,
+    texts,
+    rawSources: [...new Set(reached)],
+    errorView: specError(program),
+    compiled,
+  };
 }
 
 /**
@@ -293,9 +339,18 @@ export function factsOf(program: Node): ModuleFacts {
  */
 export function writes(facts: ModuleFacts, feature: Feature): boolean {
   if (feature === 'invokers') {
-    return facts.texts.some((text) => text === 'command' || INTENT_ON_COMMAND.test(text));
+    return (
+      facts.compiled.has('attr:data-intent-on') ||
+      facts.texts.some((text) => text === 'command' || INTENT_ON_COMMAND.test(text))
+    );
   }
-  if (feature === 'dialogs') return facts.texts.some((text) => TOGGLE_BINDING.test(text));
+  if (feature === 'dialogs') {
+    return (
+      facts.compiled.has('bool:modal') ||
+      facts.compiled.has('bool:popover-open') ||
+      facts.texts.some((text) => TOGGLE_BINDING.test(text))
+    );
+  }
   if (feature === 'errorView') return facts.errorView;
   const name = FIELDS[feature];
   return facts.names.has(name) || facts.texts.includes(name);

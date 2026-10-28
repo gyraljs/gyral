@@ -10,6 +10,7 @@
 // as committed (adopt-attr.ts), so edits made before scripts ran stay by the same rule.
 // `style` is written through the CSSOM, never `setAttribute`, so a strict CSP allows it.
 import { DEV } from '#view-dev';
+import { message } from '../message.js';
 import type { PartSpec } from '../normalize/types.js';
 import { COMMIT_HOOK, isHook, type HookResult, type HookSpec } from './hooks.js';
 import { toggle } from './toggles.js';
@@ -180,6 +181,8 @@ export class AttrPart implements Part {
         this.value = on;
         if (toggle !== undefined) toggle(this, this.name, on);
         else if (DEV) warnToggle(el, this.name);
+        // Production: the build left the code out (gyral-k97.1). Say so, once per change.
+        else console.warn(message(69, el.localName, this.name));
         return;
       }
       case TITLE:
