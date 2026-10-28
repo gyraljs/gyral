@@ -18,7 +18,7 @@ import {
 } from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
-import type { PropFeature, PropTable, propertyValue } from './props.js';
+import { warnLowercased, type PropFeature, type PropTable, type propertyValue } from './props.js';
 import {
   afterRender,
   markDirty,
@@ -167,7 +167,7 @@ export function elementClass<S, M extends Tagged, P>(
         this.#connect();
         return;
       }
-      if (DEV && names.length > 0) props.warnLowercased?.(this, tag, table);
+      if (DEV && names.length > 0) warnLowercased(this, tag, table);
       this.#resume();
       this.#begin();
     }

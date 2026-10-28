@@ -203,9 +203,10 @@ export function checkShadowed(tag: string, names: readonly string[]): void {
  * Development, at a host's first connect (gyral-k97.5): an attribute that HTML lowercased from a
  * camelCase prop's name (`playerbase` for `playerBase`, in a page's HTML or set by a host
  * framework) and that isn't the prop's attribute, so no prop reads it (G0024). Templates are
- * checked when they are written instead (template rule 16).
+ * checked when they are written instead (template rule 16). element.ts imports it under `DEV`,
+ * so production bundles leave it out (not registered as a feature).
  */
-function warnLowercased(el: Element, tag: string, table: PropTable): void {
+export function warnLowercased(el: Element, tag: string, table: PropTable): void {
   for (const [name, def] of Object.entries(table)) {
     const lower = name.toLowerCase();
     const attr = attributeOf(name, def);
@@ -224,7 +225,6 @@ export const propFeature = {
   attributeOf,
   attributeValue,
   propertyValue: DEV ? propertyValue : undefined,
-  warnLowercased: DEV ? warnLowercased : undefined,
   warnMissing,
   readProps,
   checkShadowed,
