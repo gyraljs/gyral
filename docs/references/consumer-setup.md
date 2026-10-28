@@ -60,9 +60,9 @@ export default defineConfig({
 });
 ```
 
-- **`plugins`**: the template compiler (below), `gyral:template-locations` and
-  `gyral:dev-server`. If your config has plugins of its own, list them all, or the spread is
-  overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`plugins`**: the template compiler (below), `gyral:template-locations`,
+  `gyral:dev-server` and `gyral:one-core`. If your config has plugins of its own, list them
+  all, or the spread is overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
 - **`gyral:template-locations`** (dev server and Vitest only, 0.3.1): tells the development
   runtime where each `html` and `svg` template was written, so template rule errors and
   hydration mismatches name your file, line and column (view/01-templates.md "Source
@@ -74,9 +74,17 @@ export default defineConfig({
   Vite instead of Node, so it renders development output and they all share one `@gyral/core`.
   It adds them to the server environments' `resolve.noExternal` in serve mode; builds keep
   them external (view/06-server.md "Development markers").
-- **`optimizeDeps.include`**: empty by default. If Vite discovers a dependency during the
-  first browser test run and reloads the page ("Vite unexpectedly reloaded a test"), list it:
-  `gyralVitePreset({ optimize: ['some-dependency'] })`.
+- **`gyral:one-core`** (0.3.7): keeps the app on one copy of `@gyral/core` (below, "One copy
+  of core"). In the dev server and Vitest it pre-bundles the browser entry points of every
+  Gyral package installed for the app (`@gyral/core` with `/compiled`, `/internal`, `/storage`
+  and `/indexeddb`; `@gyral/http` with `/testing`, `/sse` and `/websocket`; `@gyral/router`,
+  `@gyral/time`, `@gyral/devtools` and `@gyral/testing`), never the Node-only ones. Packages
+  linked from source, such as a workspace's, stay unbundled, as Vite serves them. An entry
+  your config lists in `optimizeDeps.exclude` is left out.
+- **`optimizeDeps.include`**: your own extra dependencies. If Vite discovers another
+  dependency during the first browser test run and reloads the page ("Vite unexpectedly
+  reloaded a test"), list it: `gyralVitePreset({ optimize: ['some-dependency'] })`. Gyral's
+  packages no longer need listing (0.3.7).
 - **`clientOnly: true`** (0.3.1), for apps no server renders:
   `gyralVitePreset({ clientOnly: true })` adds `gyral:client-only`, which leaves the hydration
   code out of the browser bundle (about 1 KiB gzip with Vite's preload helper; hello-world: 8.9
@@ -87,6 +95,29 @@ export default defineConfig({
   dependencies never keep it. Server-rendered markup met anyway renders fresh, replacing the
   server's (development warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
   tests match the build (view/07-hydration.md "Client-only builds").
+
+### One copy of core
+
+An app and the libraries it installs must share one copy of `@gyral/core`. A value one copy
+makes doesn't work in another: a stylesheet from `css` is branded by its copy, and a store
+lives in its copy's registry. The failure shows up far from the cause, for example as
+`styles.flatMap is not a function` when one copy's component gets the other copy's
+stylesheet. A second copy has two sources, and the preset covers both (0.3.7):
+
+- **Dev server and Vitest.** Vite pre-bundles dependencies. One it meets partway through a run
+  is bundled again with a copy of core of its own, and Vitest reports a reload. The preset
+  pre-bundles Gyral's packages up front (above).
+- **The install.** A library pinned to another version of core, or pnpm resolving different
+  peers for one, installs a second folder. When `@gyral/core` resolves to more than one
+  folder from the app and its dependencies, the preset warns once at startup, in dev and in
+  builds, with each copy's version, folder and the packages that use it (G0015). Pin one
+  version with your package manager (`pnpm.overrides` or pnpm-workspace.yaml `overrides`,
+  npm `overrides`, Yarn `resolutions`) and reinstall. A library should list `@gyral/core` as a
+  peer dependency, so it shares the app's copy.
+
+Development builds also warn in the browser when a page runs a second copy (G0015, with both
+versions and the URLs they loaded from). Production builds don't check at run time, because
+separately bundled widgets may each carry their own copy on purpose.
 
 ### Coverage
 

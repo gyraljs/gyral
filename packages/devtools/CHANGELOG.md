@@ -1,5 +1,16 @@
 # @gyral/devtools
 
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies [295c705]
+- Updated dependencies [2c1f071]
+- Updated dependencies [16ef016]
+- Updated dependencies [3d21a73]
+- Updated dependencies [1454ffe]
+  - @gyral/core@0.3.7
+
 ## 0.3.6
 
 ### Patch Changes

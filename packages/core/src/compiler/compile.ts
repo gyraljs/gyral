@@ -6,7 +6,7 @@
 // Line breaks inside a rewritten template are kept, so every following line keeps its number;
 // the source map covers columns.
 import { analyze, TemplateError, type TemplateObject } from '../view/index.js';
-import { componentName } from '../view/normalize/component-name.js';
+import { nameChecks } from '../view/normalize/component-name.js';
 import type { Node } from './ast.js';
 import { nodeAt, nodesAt } from './ast.js';
 import { checkWithParse5, type Parse5 } from './parse5-check.js';
@@ -137,7 +137,7 @@ export function compileModule(input: CompileInput): { code: string; map: SourceM
     const loc = `${input.file}:${String(line)}:${String(column + 1)}`;
     let analysis;
     try {
-      analysis = analyze(cookedStrings(node, tag), loc, tag === 'svg', componentName);
+      analysis = analyze(cookedStrings(node, tag), loc, tag === 'svg', nameChecks);
     } catch (error) {
       if (error instanceof TemplateError)
         throw new CompileError(node.start, node.end, error.message);

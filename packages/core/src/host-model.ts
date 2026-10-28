@@ -144,16 +144,16 @@ export class HostModel<S, P> implements LocalHost {
 
   /**
    * Resumes from a server seed (ADR 0012): the server's state, or `init(props)`'s when the
-   * seed left it out. Returns init's commands, to start after the first render.
+   * seed left it out. init's commands are kept, to start after the first render (take).
    */
-  resume(seed: Seed): readonly Cmd[] {
+  resume(seed: Seed): void {
     this.#seen = this.#host.props();
     const next = this.#init();
-    if (next === undefined) return [];
+    if (next === undefined) return;
     const [initial, commands] = splitNext(next);
     // Sound: the seed is this component's own state, written by the server.
     this.#model = { value: 'state' in seed ? (seed.state as S) : initial };
-    return commands;
+    this.#pending?.push(...(commands as readonly Cmd[]));
   }
 
   /**
@@ -213,9 +213,19 @@ export class HostModel<S, P> implements LocalHost {
     }
   }
 
-  /** Starts commands kept for later (init's, after a server-rendered host's first render). */
+  /** Starts commands kept for later (init's, after the host's first render). */
   run(commands: readonly Cmd[]): void {
     this.apply([this.state(), commands]);
+  }
+
+  /**
+   * Takes the commands kept before the first connect (init's, and any sent before it): the
+   * host starts them after its first render, server-rendered or not (gyral-k97.3).
+   */
+  take(): readonly Cmd[] {
+    const kept = this.#pending ?? [];
+    this.#pending = [];
+    return kept;
   }
 
   // Reducers and the view get this too; only parsers' type (ParserCtx) names `state`.

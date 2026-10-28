@@ -81,3 +81,21 @@ A declared prop whose name is a built-in element property (`hidden`, `title`, `i
 setting it silently changes platform behaviour: gyral-shop's form disappeared because a prop
 was named `hidden`. `define()` now warns once, in the browser, listing the offending names
 (`name in HTMLElement.prototype`). Rename such props (`isHidden`, `heading`, `itemId`).
+
+## Addendum: Gyral's member names and lowercased attributes (gyral-k97.5, 0.3.7)
+
+Two names the platform resolved silently. **A prop named like one of the element's own
+members:** prop accessors are installed on the prototype, so a prop named `state` replaced the
+model's getter (football-pool-tracker renamed it, keeping the attribute: `badge:
+prop.string({ attribute: 'state' })`). The check above covers HTMLElement's properties only;
+since 0.3.7 it also covers `state`, `send`, `drivers`, `stores`, `initialMessages` and the
+custom-element callbacks, as a development error (G0023), and `define()`'s prop types reject
+all of these names. Production keeps warning about built-ins only: the list of Gyral's names
+would cost every app with props about 85 bytes gzip, for a mistake development and the types
+already stop. **A camelCase attribute:** HTML lowercases attribute names, and props keep
+kebab-case attributes (Stencil's and Vue's convention; Lit and FAST use lower case), so
+`playerBase=${n}` set `playerbase`, which no prop read (football-pool-tracker added eight
+`attribute: 'playerbase'` overrides). Template rule 16 (view/09) now rejects capitals in an
+attribute name on a custom element, and development warns at a host's first connect about a
+lowercased camelCase prop name in a page's HTML (G0024). Overrides such as `attribute:
+'playerbase'` keep working; templates write the attribute in lower case.

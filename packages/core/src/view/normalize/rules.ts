@@ -1,8 +1,9 @@
 // The template rules of view/09-template-rules.md that one template's strings reveal: every
 // message says what is wrong and what to write instead (core belief 7). The tokenizer
-// (rules 1, 2, 3, 5), the tree builder (3, 4, 6, 7, 10, 12, 13, 14) and repairs.ts (7)
-// throw them through Source.fail; the browser's own parse (prepare.ts) backs rule 7 up, and
-// template-element.ts throws rule 11 when a server template reaches the browser.
+// (rules 1, 2, 3, 5), the tree builder (3, 4, 6, 7, 10, 12, 13, 14, and 15 and 16 from
+// component-name.ts) and repairs.ts (7) throw them through Source.fail; the browser's own
+// parse (prepare.ts) backs rule 7 up, and template-element.ts throws rule 11 when a server
+// template reaches the browser.
 
 import { SERVER_ONLY } from './errors.js';
 

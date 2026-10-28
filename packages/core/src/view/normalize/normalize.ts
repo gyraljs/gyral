@@ -4,7 +4,7 @@
 // build the tree (rules of view/09-template-rules.md), emit HTML, segments and parts, and hash
 // the normalized strings into the id. No DOM: it runs in Node and in the browser. An svg
 // template (01 "svg templates") is built as SVG content from its top level, and is flagged.
-import { componentName, type NameCheck } from './component-name.js';
+import { nameChecks, type NameChecks } from './component-name.js';
 import { emit } from './emit.js';
 import { templateId } from './id.js';
 import { Source } from './source.js';
@@ -23,14 +23,15 @@ export interface Analysis {
 
 /**
  * The template object plus what the runtime preparer checks it against. `svg`: the strings are
- * an svg template's (`` svg`…` ``), whose top level is SVG content. `names`: rule 15
- * (component-name.ts), which the compiler always checks and the runtime only in development.
+ * an svg template's (`` svg`…` ``), whose top level is SVG content. `names`: rules 15
+ * and 16 (component-name.ts), which the compiler always checks and the runtime only in
+ * development.
  */
 export function analyze(
   strings: readonly string[],
   loc?: string,
   svg = false,
-  names?: NameCheck,
+  names?: NameChecks,
 ): Analysis {
   const normalized = minifyStrings(strings);
   const src = new Source(normalized, loc);
@@ -59,5 +60,5 @@ export function normalize(
   loc?: string,
   svg = false,
 ): NormalizedTemplate {
-  return analyze(strings, loc, svg, componentName).template;
+  return analyze(strings, loc, svg, nameChecks).template;
 }

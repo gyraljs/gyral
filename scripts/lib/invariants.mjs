@@ -178,3 +178,17 @@ export function checkPluginVersion(marketplace, release) {
         `but the release is ${release}. Run node scripts/check-plugin-version.mjs --write.`,
     );
 }
+
+/**
+ * Core's VERSION constant (packages/core/src/view/version.ts) is the release version: development
+ * builds name it when a page runs two copies of core (G0015).
+ */
+export function checkCoreVersion(source, release) {
+  const version = /export const VERSION = '([^']*)';/.exec(source)?.[1];
+  return version === release
+    ? []
+    : [
+        `packages/core/src/view/version.ts: VERSION is ${version ?? 'missing'}, but the release is ` +
+          `${release}. Run node scripts/check-plugin-version.mjs --write.`,
+      ];
+}

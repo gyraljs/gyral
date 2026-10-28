@@ -295,6 +295,21 @@ npm registry fetch inside the Docker build and passed on re-run). docs.rs built 
 fresh Cargo project on Rust 1.99 with `gyral` 0.4.0 and the `axum` feature builds, resolves V8
 150.4.0 and reports `GYRAL_VERSION` 0.3.6.
 
+Recorded 0.3.7 candidate checks (2026-10-28, epic gyral-k97): `pnpm check` passes (323 test
+files, 2117 tests, one skipped; 21 bundles within budget, register at 18,428 of 18,432 gzip
+bytes) and `pnpm smoke:prod` passes. `verify:install` passes with nine tarballs, all
+Node-loadable entries, native SSR output and `npx --no-install @gyral/mcp` (help, then a stdio
+session with eight tools); no Lit package is installed. Both `verify:create` templates
+typecheck, build and pass their tests (basic 21.9 KiB JS, 8.3 KiB gzip; SSR 34.5 KiB JS, 14.1
+KiB gzip). The `@gyral/mcp` docs snapshot comes from the gyral.dev `release/0.3.7-docs` build
+(8861ce2), made with the packed 0.3.7 tarballs installed temporarily (and
+`GYRAL_DOCS_VERSION=0.3.7`), so its API reference pages render 0.3.7's declarations rather
+than 0.3.6's (the gap gyral-ns9 records) and its repository links point at `v0.3.7`. Before
+the release, each fix was checked in an app that uses Gyral, on a pre-release tarball: joystyk's
+production E2Es without its compiled-library workaround, football-pool-tracker's browser suite
+without its include list, and driftwake's listening page with a static import and its fallback
+inside the element (gyral-k97.7 lists the migrations).
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

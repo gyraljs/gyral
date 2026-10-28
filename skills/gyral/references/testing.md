@@ -9,6 +9,8 @@ Two layers, both with Vitest:
    mount it, swap drivers for fakes, click and type, assert on the DOM.
 
 Vite/Vitest config: spread `gyralVitePreset()` (from `@gyral/core/vite`) into each project.
+It pre-bundles Gyral's own packages (0.3.7), so don't list them in `optimize`; list only other
+dependencies Vite discovers mid-run ("Vite unexpectedly reloaded a test").
 
 ## Model tests
 

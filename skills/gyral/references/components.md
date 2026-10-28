@@ -90,8 +90,14 @@ library works (valibot, zod, …); schemas must be synchronous and should valida
 - No reflection: props never write attributes. State that CSS needs goes through `states`.
 - Objects and arrays travel as properties: `prop.value(v.array(Item), { default: [] })` and
   `.items=${s.items}` in the parent.
-- Don't name props after built-in element properties (`hidden`, `title`, `id`): it's an error
-  in development, because setting them changes platform behaviour.
+- Don't name props after members the element already has: built-in properties (`hidden`,
+  `title`, `id`), changing what the platform does, or Gyral's own (`state`, `send`,
+  `drivers`, `stores`, `initialMessages`, the `…Callback`s), hiding the component's model.
+  It's a type error and a development error (G0023). Rename the property; keep the public
+  attribute name if you need it: `badge: prop.string({ attribute: 'state' })`.
+- Attributes are kebab-case: a prop `playerBase` reads `player-base`. In templates write
+  `player-base=${n}` or `.playerBase=${n}`; `playerBase=${n}` is template rule 16, because HTML
+  lowercases it to `playerbase`. Development warns (G0024) when page HTML does the same.
 
 A `default` replaces only `undefined`: setting a defaulted prop to `undefined` (or removing its
 attribute) brings the default back, so `undefined` can't mean "nobody on purpose". Use `null`
@@ -173,6 +179,15 @@ element's own children, so document CSS applies and crawlers see plain HTML. No 
 no `styles` (ignored with a warning); style with document CSS, e.g. `@scope (my-page)`. Keep
 widgets (buttons, popovers, form controls) in shadow DOM. Intents still belong to the nearest
 Gyral host, so nested components keep their own intents.
+
+Children you write inside a light component's tag in the page's HTML are fallback content:
+shown until the component renders (and without JavaScript), then replaced by its first render
+(0.3.7; earlier versions appended the view after them). A server-rendered light component
+hydrates its own children in place instead.
+
+```html
+<my-about-page><p>Turn on JavaScript to see this page.</p></my-about-page>
+```
 
 ```ts
 import { define, html, type Stateless } from '@gyral/core';

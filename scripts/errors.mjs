@@ -77,7 +77,7 @@ const sourceFiles = (dir) =>
 function readUses(errors) {
   const uses = [];
   for (const file of sourceFiles(SRC)) {
-    if (file === TABLE || file.endsWith('view/message.ts')) continue;
+    if (file === TABLE) continue;
     const source = parse(file);
     const visit = (node) => {
       if (

@@ -18,7 +18,7 @@ import {
 } from './intent.js';
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
-import type { PropFeature, PropTable, propertyValue } from './props.js';
+import { warnLowercased, type PropFeature, type PropTable, type propertyValue } from './props.js';
 import {
   afterRender,
   markDirty,
@@ -108,7 +108,10 @@ export function elementClass<S, M extends Tagged, P>(
     #serverRendered = false;
     /** The first render adopts the server's DOM (07): resumed from a seed, root not empty. */
     #hydrating = false;
-    /** init's commands for a server-rendered host: started after its first render. */
+    /**
+     * init's commands: started after the host's first render that succeeds, server-rendered or
+     * not, so a page's provideDrivers() in the task that defined the component is in place.
+     */
     #afterInit: readonly ModelCommand[] = [];
     #task: HostTask = {
       tag,
@@ -164,6 +167,7 @@ export function elementClass<S, M extends Tagged, P>(
         this.#connect();
         return;
       }
+      if (DEV && names.length > 0) warnLowercased(this, tag, table);
       this.#resume();
       this.#begin();
     }
@@ -207,7 +211,7 @@ export function elementClass<S, M extends Tagged, P>(
         if (def === undefined || this.#values[name] !== undefined) continue;
         this.#values[name] = DEV ? checked(props)(tag, name, def, value, 'the seed') : value;
       }
-      this.#afterInit = this.#model.resume(seed);
+      this.#model.resume(seed);
       this.#serverRendered = true;
     }
 
@@ -235,17 +239,18 @@ export function elementClass<S, M extends Tagged, P>(
       this.#root = root;
       this.#hydrating = this.#serverRendered && hydrationCode != null && root.hasChildNodes();
       sheets ??= light ? [] : sheetsFor(spec.styles);
-      // Rendering fresh: a shadow root without a seed (hand-written DSD) or a server-rendered
-      // host whose hydration code failed to load starts empty.
-      // A host that failed on the server (ADR 0024) starts fresh: its content is a fallback.
-      const failedOnServer = this.hasAttribute(ERROR_ATTRIBUTE);
-      if (failedOnServer) this.removeAttribute(ERROR_ATTRIBUTE);
+      // Rendering fresh, every root starts empty: a shadow root without a seed (hand-written
+      // DSD), a server-rendered host whose hydration code failed to load, a host that failed on
+      // the server (ADR 0024: its content is a fallback), and a light host's children from the
+      // page's HTML, fallback content for a page without JavaScript (ADR 0014, gyral-k97.4).
+      this.removeAttribute(ERROR_ATTRIBUTE);
       if (!this.#hydrating) {
-        if (!light || this.#serverRendered || failedOnServer) root.replaceChildren();
+        root.replaceChildren();
         if (!light) (root as ShadowRoot).adoptedStyleSheets = sheets;
       }
       this.#listen(DEFAULT_EVENTS);
       this.#state(); // init, unless resumed from a seed
+      this.#afterInit = this.#model.take(); // gyral-k97.3
       this.#connect();
     }
 

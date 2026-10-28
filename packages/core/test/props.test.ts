@@ -182,11 +182,53 @@ describe('honest prop types (ADR 0007 addendum)', () => {
   it('rejects a prop that shadows a built-in element property in development (view/05)', () => {
     const shadowing = () =>
       define()('test-shadowing-props', {
+        // @ts-expect-error -- hidden and title are HTMLElement's (the type rejects them too)
         props: { hidden: prop.boolean(), title: prop.string(), label: prop.string() },
         init: () => ({ n: 0 }),
         view: () => html``,
       });
     expect(shadowing).toThrow(/<test-shadowing-props>.*hidden, title/);
     expect(shadowing).not.toThrow(/label/);
+  });
+
+  // gyral-k97.5: a prop named `state` replaced the element's model getter, silently.
+  it("rejects a prop named like one of Gyral's members or a callback, in development", () => {
+    const named = (props: object) => () =>
+      define()(`test-reserved-${String(Object.keys(props).length)}`, {
+        props,
+        init: () => ({ n: 0 }),
+        view: () => html``,
+      });
+    expect(named({ state: prop.string(), send: prop.string() })).toThrow(
+      /<test-reserved-2>.*state, send.*hides the component's model.*attribute: "state"/,
+    );
+    expect(named({ drivers: prop.string(), stores: prop.string(), x: prop.string() })).toThrow(
+      /drivers, stores/,
+    );
+    expect(named({ connectedCallback: prop.string() })).toThrow(/connectedCallback/);
+    expect(() =>
+      define()('test-reserved-types', {
+        // @ts-expect-error -- `state` is the element's model (a type error too)
+        props: { state: prop.string() },
+        init: () => ({ n: 0 }),
+        view: () => html``,
+      }),
+    ).toThrow(/state/);
+  });
+
+  it('keeps a reserved name as the attribute, with the property renamed', async () => {
+    const Badge = define()('test-reserved-badge', {
+      props: { badge: prop.string({ attribute: 'state' }) },
+      view: (_s, _i, ctx) => html`<b>${ctx.props.badge}</b>`,
+    });
+    const el = document.createElement('test-reserved-badge') as InstanceType<typeof Badge>;
+    el.setAttribute('state', 'open');
+    document.body.append(el);
+    await settled();
+    expect(el).toBeInstanceOf(Badge);
+    expect(el.badge).toBe('open');
+    expect(el.state).toEqual({});
+    expect(el.shadowRoot?.textContent).toBe('open');
+    el.remove();
   });
 });

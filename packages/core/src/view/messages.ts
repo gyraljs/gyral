@@ -20,13 +20,24 @@ export const MESSAGES = {
     'it loaded, so it renders nothing. If it is one of your components, import the module ' +
     "that calls define()('{tag}', …) from the entry; for a third-party element, load its " +
     'package. Ignore this for an element defined later on purpose.',
+  15:
+    'Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from ' +
+    '{secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not ' +
+    'work in the other. Install one copy: pin @gyral/core to one version with your package ' +
+    "manager's overrides (gyralVitePreset warns when it is installed more than once).",
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',
   22: '<{tag}> is missing required prop(s): {props}.',
   23:
-    '<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them ' +
-    'changes platform behaviour (a prop named "hidden" hides the element). Rename them.',
+    '<{tag}> declares prop(s) named like a member every element already has: {props}. The ' +
+    'prop would replace it: a prop named "hidden" hides the element, one named "state" hides ' +
+    "the component's model. Rename the property. The name of one of Gyral's members (state, " +
+    'send, drivers, stores) can stay the attribute: badge: prop.string({ attribute: "state" }).',
+  24:
+    '<{tag}> has a "{attribute}" attribute, which no prop reads: HTML lowercases attribute ' +
+    'names, and prop {prop} reads "{expected}". Write {expected}="…", or set the property ' +
+    '(el.{prop} = …).',
   // Scheduling
   30: 'gyral: a deferred callback failed',
   31: '<{tag}> view failed; it shows its error view, or its previous DOM stays.',
@@ -44,7 +55,9 @@ export const MESSAGES = {
   42: 'gyral: subscription "{name}" failed to unsubscribe',
   43:
     '{owner}: no driver provides "{driver}". It is a driver token: provide an implementation ' +
-    'by name with provideDrivers(root, { {driver}: … }) or el.drivers.',
+    'by name with provideDrivers(root, { {driver}: … }) or el.drivers. A page provides it ' +
+    "before its components' first render: before importing them, or later in the same task " +
+    '(no await in between).',
   // Stores
   50:
     '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}], ' +
@@ -68,6 +81,10 @@ export const MESSAGES = {
     '(https://gyral.dev/docs/server-rendering/#mismatches).',
   63: '<{tag}> was rendered fresh after a hydration mismatch:',
   // Templates
+  69:
+    '<{element}> ?{binding} does nothing: this build left the dialog and popover code out, ' +
+    'because no module the build scanned binds it (a package that does not depend on Gyral ' +
+    'is not scanned).',
   70:
     'gyral: an html template was not compiled: `{start}`. Under the gyral-compiled condition ' +
     'every html`…` must be compiled by the Gyral Vite preset.',

@@ -1,5 +1,12 @@
 # @gyral/mcp
 
+## 0.3.7
+
+### Patch Changes
+
+- 92c6cfd: The bundled docs include the new Rust servers guide (`get_doc "rust-servers"`): build-time pages with a Rust API, Askama pages with browser-rendered components, and embedded rendering with `gyral-rs`. `start_here` lists it as a use case, and the skill's Rust section points to it.
+- 50052ca: The bundled docs snapshot matches gyral.dev for 0.3.7: the guides describe this release (`init`'s commands start after the first render, a light-DOM component's page children are fallback content, template rule 16 and reserved prop names, the preset pre-bundles Gyral's packages), the errors page explains G0015, G0024 and G0069, the API reference pages carry 0.3.7's doc comments, and repository links point at the `v0.3.7` tag.
+
 ## 0.3.6
 
 ### Patch Changes

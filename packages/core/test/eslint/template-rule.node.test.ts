@@ -94,6 +94,11 @@ describe('gyral/template', () => {
       bad('<b class="&copy; ${x}"></b>', '<b class="&copy; ${x}">'),
       // 15: a PascalCase tag written as a component reference
       bad('<main>\n  <SignupForm></SignupForm>\n</main>', '<SignupForm>'),
+      // 16: a camelCase attribute on a custom element, which HTML lowercases
+      bad(
+        '<main>\n  <pool-card playerBase=${x}></pool-card>\n</main>',
+        '<pool-card playerBase=${x}>',
+      ),
     ],
   });
 

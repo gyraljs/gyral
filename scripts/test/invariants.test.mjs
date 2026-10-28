@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkDependencies,
+  checkCoreVersion,
   checkPluginVersion,
   checkWorkflow,
   findEffectLeaks,
@@ -152,5 +153,24 @@ describe('checkPluginVersion', () => {
     const release = JSON.parse(readFileSync('packages/core/package.json', 'utf8')).version;
     const file = JSON.parse(readFileSync('.claude-plugin/marketplace.json', 'utf8'));
     expect(checkPluginVersion(file, release)).toEqual([]);
+  });
+});
+
+describe('checkCoreVersion', () => {
+  it('accepts a VERSION at the release version', () => {
+    expect(checkCoreVersion("export const VERSION = '0.3.7';\n", '0.3.7')).toEqual([]);
+  });
+
+  it('names a VERSION left at another version, or missing', () => {
+    expect(checkCoreVersion("export const VERSION = '0.3.6';\n", '0.3.7')).toEqual([
+      expect.stringContaining('VERSION is 0.3.6, but the release is 0.3.7'),
+    ]);
+    expect(checkCoreVersion('', '0.3.7')).toEqual([expect.stringContaining('VERSION is missing')]);
+  });
+
+  it('holds for the committed source', () => {
+    const release = JSON.parse(readFileSync('packages/core/package.json', 'utf8')).version;
+    const source = readFileSync('packages/core/src/view/version.ts', 'utf8');
+    expect(checkCoreVersion(source, release)).toEqual([]);
   });
 });
