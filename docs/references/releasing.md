@@ -310,6 +310,20 @@ production E2Es without its compiled-library workaround, football-pool-tracker's
 without its include list, and driftwake's listening page with a static import and its fallback
 inside the element (gyral-k97.7 lists the migrations).
 
+Recorded 0.3.7 registry checks (2026-10-28, step 6): all nine packages serve 0.3.7 as
+`latest` with SLSA v1 provenance (release run 40747424576, tag `v0.3.7` at `0baddb3`; the GitHub
+release opens with the three behavior changes). `npx -y @gyral/mcp@0.3.7 --help` prints both
+modes, and the server answers `initialize` over stdio as `gyral 0.3.7` with eight tools;
+`search_docs` finds G0015 and template rule 16. `npm create gyral@0.3.7` generated both
+templates in fresh directories, and npm installed them. Each app's `typecheck`, `build` and
+`test` pass (basic: two Chromium tests; SSR: three server tests), with client builds unchanged
+from the candidate checks (basic 21.9 KiB JS, 8.3 KiB gzip; SSR 34.5 KiB JS, 14.1 KiB gzip).
+Both manifests depend on `^0.3.7`, with no overrides; every lockfile entry resolves from
+`registry.npmjs.org` with SHA-512 integrity, none uses `file:` or `link:`, and no Lit package
+is installed. `node scripts/verify-ssr-production.mjs` (exact 0.3.7; a 59,418-byte one-file
+server) passes. The Rust compatibility fixture stays on 0.3.6 until gyral-rs accepts 0.3.7
+bundles (gyral-k97 follow-up).
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

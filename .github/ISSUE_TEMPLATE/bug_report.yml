@@ -6,7 +6,7 @@ body:
     id: packages
     attributes:
       label: Packages and versions
-      placeholder: '@gyral/core 0.3.6, @gyral/ssr 0.3.6, vite 8.0.0, Chrome 141'
+      placeholder: '@gyral/core 0.3.7, @gyral/ssr 0.3.7, vite 8.0.0, Chrome 141'
     validations:
       required: true
   - type: textarea
