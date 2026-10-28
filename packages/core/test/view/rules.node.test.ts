@@ -3,7 +3,7 @@
 // to write instead (core belief 7), and the call site's loc.
 import { describe, expect, it } from 'vitest';
 import { TemplateError } from '../../src/view/normalize/errors.js';
-import { componentName } from '../../src/view/normalize/component-name.js';
+import { nameChecks } from '../../src/view/normalize/component-name.js';
 import { analyze, normalize } from '../../src/view/normalize/normalize.js';
 import { t } from './helpers.js';
 
@@ -112,7 +112,35 @@ describe('template errors (view/09)', () => {
     expect(() => normalize(t`<signupform></signupform>`)).not.toThrow();
     // The runtime preparer passes the check only in development (prepare.ts).
     expect(() => analyze(t`<SignupForm></SignupForm>`)).not.toThrow();
-    expect(() => analyze(t`<SignupForm></SignupForm>`, undefined, false, componentName)).toThrow(
+    expect(() => analyze(t`<SignupForm></SignupForm>`, undefined, false, nameChecks)).toThrow(
+      TemplateError,
+    );
+  });
+
+  it('rule 16: a camelCase attribute on a custom element', () => {
+    // HTML reads playerBase as playerbase; a prop playerBase reads player-base.
+    expectRule(
+      t`<pool-card playerBase=${0}></pool-card>`,
+      16,
+      '<pool-card> playerBase',
+      '"playerbase"',
+      'player-base=${…}',
+      '.playerBase=${…}',
+    );
+    expectRule(t`<my-el isOpen="yes"></my-el>`, 16, 'is-open=${…}');
+    expectRule(t`<my-el ?isOpen=${0}></my-el>`, 16, '?is-open=${…}', '.isOpen=${…}');
+    expectRule(t`<div><my-el class="a" maxItems="3"></my-el></div>`, 16, 'max-items');
+    // Fine: kebab-case and lower case, properties, built-in elements, and SVG's camelCase.
+    expect(() =>
+      normalize(t`<my-el player-base=${0} playerbase=${1} .playerBase=${2}></my-el>`),
+    ).not.toThrow();
+    expect(() => normalize(t`<div tabIndex=${0} contentEditable="true"></div>`)).not.toThrow();
+    expect(() =>
+      normalize(t`<svg viewBox="0 0 1 1"><path pathLength="1"></path></svg>`),
+    ).not.toThrow();
+    // The runtime preparer passes the check only in development (prepare.ts).
+    expect(() => analyze(t`<my-el fooBar=${0}></my-el>`)).not.toThrow();
+    expect(() => analyze(t`<my-el fooBar=${0}></my-el>`, undefined, false, nameChecks)).toThrow(
       TemplateError,
     );
   });

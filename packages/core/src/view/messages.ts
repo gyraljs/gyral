@@ -25,8 +25,14 @@ export const MESSAGES = {
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',
   22: '<{tag}> is missing required prop(s): {props}.',
   23:
-    '<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them ' +
-    'changes platform behaviour (a prop named "hidden" hides the element). Rename them.',
+    '<{tag}> declares prop(s) named like a member every element already has: {props}. The ' +
+    'prop would replace it: a prop named "hidden" hides the element, one named "state" hides ' +
+    "the component's model. Rename the property. The name of one of Gyral's members (state, " +
+    'send, drivers, stores) can stay the attribute: badge: prop.string({ attribute: "state" }).',
+  24:
+    '<{tag}> has a "{attribute}" attribute, which no prop reads: HTML lowercases attribute ' +
+    'names, and prop {prop} reads "{expected}". Write {expected}="…", or set the property ' +
+    '(el.{prop} = …).',
   // Scheduling
   30: 'gyral: a deferred callback failed',
   31: '<{tag}> view failed; it shows its error view, or its previous DOM stays.',

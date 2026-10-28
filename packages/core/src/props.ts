@@ -167,22 +167,52 @@ export function warnMissing(tag: string, values: Bag, table: PropTable): void {
 }
 
 /**
- * Declared props that collide with a built-in element property (`hidden`, `title`, `id`, …):
- * the accessor replaces the built-in, so setting the prop silently changes what the platform
- * does with it (gyral-czi.33).
+ * The members every Gyral element has besides HTMLElement's (element.ts), and the custom-element
+ * callbacks, between spaces (gyral-k97.5). Development only: `define()` throws there, and the
+ * prop types reject them, so production bundles don't carry the list.
+ */
+const OWN_MEMBERS =
+  ' state send drivers stores initialMessages connectedCallback disconnectedCallback ' +
+  'connectedMoveCallback adoptedCallback attributeChangedCallback formAssociatedCallback ' +
+  'formResetCallback formDisabledCallback formStateRestoreCallback ';
+
+/**
+ * Declared props that collide with a member the element already has: a built-in property
+ * (`hidden`, `title`, `id`, …, gyral-czi.33), or in development one of Gyral's (`state`,
+ * `send`, …). The accessor replaces the member, so the prop silently changes what the platform
+ * does, or hides the component's model.
  */
 export function shadowedBuiltins(names: readonly string[]): string[] {
-  if (typeof HTMLElement === 'undefined') return [];
-  return names.filter((name) => name in HTMLElement.prototype);
+  return names.filter(
+    (name) =>
+      (DEV && OWN_MEMBERS.includes(` ${name} `)) ||
+      (typeof HTMLElement !== 'undefined' && name in HTMLElement.prototype),
+  );
 }
 
-/** define(): a prop named like a built-in property is an error in development, else a warning. */
+/** define(): a prop named like an element member is an error in development, else a warning. */
 export function checkShadowed(tag: string, names: readonly string[]): void {
   const shadowed = shadowedBuiltins(names);
   if (shadowed.length === 0) return;
   const text = message(23, tag, shadowed.join(', '));
   if (DEV) throw new TypeError(text);
   console.warn(text);
+}
+
+/**
+ * Development, at a host's first connect (gyral-k97.5): an attribute that HTML lowercased from a
+ * camelCase prop's name (`playerbase` for `playerBase`, in a page's HTML or set by a host
+ * framework) and that isn't the prop's attribute, so no prop reads it (G0024). Templates are
+ * checked when they are written instead (template rule 16).
+ */
+function warnLowercased(el: Element, tag: string, table: PropTable): void {
+  for (const [name, def] of Object.entries(table)) {
+    const lower = name.toLowerCase();
+    const attr = attributeOf(name, def);
+    if (attr !== undefined && lower !== name && lower !== attr && el.hasAttribute(lower)) {
+      console.warn(message(24, tag, lower, name, attr));
+    }
+  }
 }
 
 /**
@@ -194,6 +224,7 @@ export const propFeature = {
   attributeOf,
   attributeValue,
   propertyValue: DEV ? propertyValue : undefined,
+  warnLowercased: DEV ? warnLowercased : undefined,
   warnMissing,
   readProps,
   checkShadowed,

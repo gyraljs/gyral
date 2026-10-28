@@ -14,7 +14,7 @@ import {
   type Context,
   type Ns,
 } from './repairs.js';
-import type { NameCheck } from './component-name.js';
+import type { NameChecks } from './component-name.js';
 import { BOOLEAN_ATTRS, formStateFix, msg, SVG_ONLY, VOID } from './rules.js';
 import type { Source } from './source.js';
 import { HTML_ONLY, namespacedAttr, SVG_HTML_POINT, svgAttr } from './svg.js';
@@ -66,8 +66,8 @@ export class TreeBuilder implements Sink {
   constructor(
     private readonly src: Source,
     private readonly svg = false,
-    /** Rule 15 (component-name.ts), when the caller checks it. */
-    private readonly names?: NameCheck,
+    /** Rules 15 and 16 (component-name.ts), when the caller checks them. */
+    private readonly names?: NameChecks,
   ) {}
 
   private get children(): TreeNode[] {
@@ -174,8 +174,15 @@ export class TreeBuilder implements Sink {
 
   private checkHtml(tag: StartTag): void {
     const { name } = tag;
-    const misnamed = this.names?.(tag.raw, name);
+    const misnamed = this.names?.tag(tag.raw, name);
     if (misnamed !== undefined) this.src.fail(15, misnamed);
+    if (name.includes('-')) {
+      for (const a of tag.attrs) {
+        if (a.kind === 'prop' || a.kind === 'hook') continue;
+        const lowered = this.names?.attribute(tag.raw, a.name, a.kind === 'bool');
+        if (lowered !== undefined) this.src.fail(16, lowered);
+      }
+    }
     if (SVG_ONLY.has(name)) this.src.fail(10, msg.svgOnly(tag.raw));
     if (DOCUMENT.has(name)) this.server = true;
     if (tag.selfClosing && !VOID.has(name)) this.src.fail(6, msg.selfClosing(tag.raw));

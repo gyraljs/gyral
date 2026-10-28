@@ -132,8 +132,20 @@ user on 2026-10-08. Tests: `packages/core/test/prop-equals.test.ts`.
   chunks do this). That creates an own property that hides the accessor. In the constructor,
   each declared prop that exists as an own property is read, deleted and set again through the
   accessor.
-- A prop named like a built-in element property (`hidden`, `title`, `id`, …) is a definition
-  error in development and a warning in production.
+- A prop named like a member the element already has is a definition error in development
+  (G0023), and a type error: a built-in element property (`hidden`, `title`, `id`, …, also a
+  warning in production), or one of Gyral's members and the custom-element callbacks (0.3.7,
+  gyral-k97.5): `state`, `send`, `drivers`, `stores`, `initialMessages`, `connectedCallback`,
+  `disconnectedCallback`, `connectedMoveCallback`, `adoptedCallback`,
+  `attributeChangedCallback` and the four `form…Callback`s. A prop named `state` replaced the
+  model's getter, so `el.state` returned the prop. Production doesn't check Gyral's names: the
+  development error and the type catch them, and the list stays out of production bundles. A
+  reserved name can stay the attribute: `badge: prop.string({ attribute: 'state' })`.
+- **Lowercased attributes** (0.3.7): HTML lowercases attribute names, so `playerBase="7"` in a
+  page's HTML, or set by a host framework, arrives as `playerbase`, which a prop `playerBase`
+  (attribute `player-base`) doesn't read. In development a host warns once, at its first
+  connect, when it carries the lowercased name of a camelCase prop that isn't that prop's
+  attribute (G0024). Templates get the error at once instead (rule 16, 09).
 
 ## Lifecycle
 

@@ -164,6 +164,7 @@ export function elementClass<S, M extends Tagged, P>(
         this.#connect();
         return;
       }
+      if (DEV && names.length > 0) props.warnLowercased?.(this, tag, table);
       this.#resume();
       this.#begin();
     }

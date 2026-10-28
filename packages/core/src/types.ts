@@ -211,7 +211,30 @@ export type IntentNames<N extends string> = { readonly [K in N]: K };
  * `undefined` needs `required: true` or a `default` (the honesty rule, ADR 0007 addendum).
  * Without explicit type arguments, `define()` infers `P` from the builders.
  */
-export type PropDeclarations<P> = { readonly [K in keyof P]-?: Prop<P[K]> };
+export type PropDeclarations<P> = { readonly [K in keyof P]-?: Prop<P[K]> } & {
+  readonly [K in ReservedPropName]?: 'a member every element has: rename the prop (G0023)';
+};
+
+/**
+ * Names a prop can't take (G0023): HTMLElement's properties, the members every Gyral element
+ * has, and the custom-element callbacks. The prop's accessor would replace the member.
+ */
+type ReservedPropName =
+  | keyof HTMLElement
+  | 'state'
+  | 'send'
+  | 'drivers'
+  | 'stores'
+  | 'initialMessages'
+  | 'connectedCallback'
+  | 'disconnectedCallback'
+  | 'connectedMoveCallback'
+  | 'adoptedCallback'
+  | 'attributeChangedCallback'
+  | 'formAssociatedCallback'
+  | 'formResetCallback'
+  | 'formDisabledCallback'
+  | 'formStateRestoreCallback';
 
 /** State of a component that keeps none (a pure view of its props). Its `init` is optional. */
 export type Stateless = Readonly<Record<string, never>>;

@@ -69,9 +69,15 @@ Arguments: `tag`, `props`.
 
 ### G0023
 
-> \<{tag}> declares prop(s) that shadow built-in element properties: {props}. Setting them changes platform behaviour (a prop named "hidden" hides the element). Rename them.
+> \<{tag}> declares prop(s) named like a member every element already has: {props}. The prop would replace it: a prop named "hidden" hides the element, one named "state" hides the component's model. Rename the property. The name of one of Gyral's members (state, send, drivers, stores) can stay the attribute: badge: prop.string({ attribute: "state" }).
 
 Arguments: `tag`, `props`.
+
+### G0024
+
+> \<{tag}> has a "{attribute}" attribute, which no prop reads: HTML lowercases attribute names, and prop {prop} reads "{expected}". Write {expected}="…", or set the property (el.{prop} = …).
+
+Arguments: `tag`, `attribute`, `prop`, `expected`.
 
 ## Scheduling
 
