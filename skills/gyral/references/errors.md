@@ -169,6 +169,7 @@ https://gyral.dev/errors/. The ones agents hit most:
 | G0010         | a message has no reducer                                         | add the `update` entry for that tag                                   |
 | G0011         | `data-intent` names an intent the spec doesn't have              | add the `intent` key, or fix the name (use `i.Name`, not a string)    |
 | G0014         | a tag is still undefined 3 s after load (dev builds)             | import the component's module from the entry                          |
+| G0015         | two copies of `@gyral/core` are installed or run in the page     | pin one version with package-manager `overrides`, then reinstall      |
 | G0021 / G0022 | a prop value failed its schema / a required prop is missing      | pass a valid value, or give the prop a `default`                      |
 | G0033 / G0034 | rendering or `settled()` never settles                           | break the props/messages cycle with a condition in `update`           |
 | G0041         | a driver failed and the command has no `onFailure`               | add `onFailure` and a message for the failure                         |

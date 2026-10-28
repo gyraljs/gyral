@@ -20,6 +20,11 @@ export const MESSAGES = {
     'it loaded, so it renders nothing. If it is one of your components, import the module ' +
     "that calls define()('{tag}', …) from the entry; for a third-party element, load its " +
     'package. Ignore this for an element defined later on purpose.',
+  15:
+    'Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from ' +
+    '{secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not ' +
+    'work in the other. Install one copy: pin @gyral/core to one version with your package ' +
+    "manager's overrides (gyralVitePreset warns when it is installed more than once).",
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',

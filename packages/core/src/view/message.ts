@@ -5,6 +5,7 @@
 // and texts are in messages.ts.
 import { DEV } from '#view-dev';
 import { MESSAGES } from './messages.js';
+import { VERSION } from './version.js';
 
 /** A diagnostic's code (messages.ts). */
 export type MessageCode = keyof typeof MESSAGES;
@@ -43,3 +44,30 @@ export function message(code: MessageCode, ...args: readonly unknown[]): string 
   const id = codeName(code);
   return [`Gyral ${id}`, ...args, ERRORS_URL + id].join(' ');
 }
+
+/** A copy of core a page runs: its version, and the URL of this module in it. */
+interface CoreCopy {
+  readonly version: string;
+  readonly url: string;
+}
+
+/**
+ * Development, in a browser (gyral-k97.2): registers this copy of core on the page, and warns
+ * when another copy registered first (G0015), since a value one copy makes fails in the other.
+ * Here because every module that can raise a diagnostic imports this one, so each copy of core
+ * that runs evaluates it. A module evaluated again at the same URL is the same copy.
+ */
+function registerCopy(): void {
+  if (typeof document === 'undefined') return;
+  const page = globalThis as { [key: symbol]: CoreCopy[] | undefined };
+  const key = Symbol.for('gyral.core');
+  const copies = (page[key] ??= []);
+  const url = import.meta.url;
+  if (copies.some((copy) => copy.url === url)) return;
+  copies.push({ version: VERSION, url });
+  const first = copies[0];
+  if (first !== undefined && first.url !== url) {
+    console.warn(message(15, first.version, first.url, VERSION, url));
+  }
+}
+if (DEV) registerCopy();

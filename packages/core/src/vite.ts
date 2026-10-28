@@ -1,6 +1,7 @@
 // Vite / Vitest settings every Gyral app needs (gyral-a7r, docs/references/consumer-setup.md):
-// the template compiler (view/01-templates.md "Compiled") and, in serve mode, development
-// output from the dev server's SSR (view/06-server.md "Development markers"). Only Node
+// the template compiler (view/01-templates.md "Compiled"), in serve mode development output
+// from the dev server's SSR (view/06-server.md "Development markers"), and one copy of core
+// (./compiler/one-core.ts: Gyral's packages pre-bundled, a second install reported). Only Node
 // built-ins are imported up front, so it loads from vite.config.ts and vitest.config.ts in any
 // way: bundled with the config, by Node from source (type stripping), or by a Vite module
 // runner. The compiler is a plugin applied in `vite build` only, so dev servers and test runs
@@ -333,13 +334,29 @@ function gyralElementTypes(options: ElementTypesOptions): Plugin {
   return tagMap.elementTypesPlugin(options);
 }
 
+/**
+ * One copy of core per app (./compiler/one-core.ts): pre-bundles Gyral's installed browser
+ * entry points in dev, and warns when @gyral/core is installed more than once. Node built-ins
+ * only, so Node's require loads it, as gyralElementTypes does.
+ */
+function gyralOneCore(): Plugin {
+  const source = import.meta.url.endsWith('.ts')
+    ? './compiler/one-core.ts'
+    : './compiler/one-core.js';
+  const oneCore = createRequire(import.meta.url)(source) as typeof import('./compiler/one-core.js');
+  return oneCore.oneCorePlugin();
+}
+
 export interface GyralViteOptions {
   /**
    * Generated element typings (`.gyral/elements.d.ts`, see `ElementTypesOptions`), or `false`
    * to write none. Default: on, scanning `src`.
    */
   readonly types?: ElementTypesOptions | false;
-  /** Modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload. */
+  /**
+   * More modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload.
+   * Gyral's own installed browser entry points are always pre-bundled.
+   */
   readonly optimize?: readonly string[];
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
@@ -389,6 +406,7 @@ export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig
       gyralTemplateCompiler(options.compiler),
       gyralTemplateLocations(options.compiler),
       gyralDevSsr(),
+      gyralOneCore(),
       ...(options.components === undefined || options.components === false
         ? []
         : [gyralComponents(options.components === true ? {} : options.components)]),
