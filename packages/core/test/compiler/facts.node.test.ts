@@ -81,6 +81,59 @@ describe('facts: command intents', () => {
   });
 });
 
+// A published library ships its templates compiled (01 "Compiled"): a client part table of
+// `[kind, path, name, …]` tuples, and in SSR builds `{ k, name }` segments, keys quoted as
+// emitted or bare after minifying (gyral-k97.1).
+describe('facts: compiled templates', () => {
+  it.each([
+    [
+      'a client ?modal part',
+      'compiled({"html":"<dialog></dialog>","parts":[[5,[0],"modal"]]}, [o]);',
+    ],
+    [
+      'a client ?popover-open part',
+      'compiled({ html: "<p></p>", parts: [[5, 0, "popover-open"]] }, [o]);',
+    ],
+    [
+      'an SSR ?modal segment',
+      'const t = {"segments":["<dialog",{"k":"bool","name":"modal"},">"]};',
+    ],
+    ['a minified one', 'const t={segments:[{k:"bool",name:"popover-open"}]};'],
+  ])('count dialogs in %s', (_name, code) => {
+    expect(uses(code, 'dialogs')).toBe(true);
+  });
+
+  it.each([
+    ['another boolean binding', 'const t = { parts: [[5, [0], "open"]] };'],
+    [
+      'an attribute named modal',
+      'const t = { parts: [[3, [0], "modal"]], segments: [{ k: "attr", name: "modal" }] };',
+    ],
+    ['a part kind as a string', 'const t = [["5", [0], "modal"]];'],
+  ])('ignore %s', (_name, code) => {
+    expect(uses(code, 'dialogs')).toBe(false);
+  });
+
+  it.each([
+    ['a client bound data-intent-on', 'const t = { parts: [[3, [0, 1], "data-intent-on"]] };'],
+    [
+      'a client multi-part one',
+      'const t = { parts: [[4, [0], "data-intent-on", ["keyup ", ""]]] };',
+    ],
+    ['an SSR one', 'const t = {"segments":[{"k":"attr","name":"data-intent-on"}]};'],
+    [
+      'an SSR multi-part one',
+      'const t={segments:[{k:"attr",name:"data-intent-on",strings:["keyup ",""]}]};',
+    ],
+  ])('count command intents in %s', (_name, code) => {
+    expect(uses(code, 'invokers')).toBe(true);
+  });
+
+  it('ignore a bound data-intent, which is not data-intent-on', () => {
+    expect(uses('const t = { parts: [[3, [0], "data-intent"]] };', 'invokers')).toBe(false);
+  });
+});
+
 describe('facts: where raw may come from', () => {
   const sources = (code: string): readonly string[] => facts(code).rawSources;
 

@@ -21,22 +21,35 @@
 // bytes that weren't needed. Core's own modules are skipped (they implement it); a module that
 // doesn't parse is matched on its text, comments included.
 import { join } from 'node:path';
+import { ATTR_PART, BOOL_PART, MULTI_PART } from '../view/normalize/types.js';
 import { langOf, type Node } from './ast.js';
 import { factsOf, writes, type Feature } from './facts.js';
 import { createScope, type Scope } from './scope.js';
 
 export type { Feature } from './facts.js';
 
-/** The text fallback, for a module that doesn't parse: the 0.3.1-next.0 scan. */
+/** A compiled template's binding of `name` (facts.ts): a client part tuple or an SSR segment. */
+const compiledText = (kinds: readonly number[], segment: string, name: string): string =>
+  String.raw`\[\s*(?:${kinds.join('|')})\s*,\s*(?:\[[^\]]*\]|\d+)\s*,\s*["']${name}["']` +
+  String.raw`|["']?k["']?\s*:\s*["']${segment}["']\s*,\s*["']?name["']?\s*:\s*["']${name}["']`;
+
+/** The text fallback, for a module that doesn't parse: the 0.3.1-next.0 scan, plus compiled templates. */
 const TEXT_USES: Readonly<Record<Feature, RegExp>> = {
-  invokers:
-    /data-intent-command\s*=|data-intent-on\s*=\s*\\?["']?(?:[\w-]+\s+)*(?:command\b|\$\{)|(["'`])command\1|\braw\b\s*(?:\(|as\b)/i,
+  invokers: new RegExp(
+    String.raw`${/data-intent-command\s*=|data-intent-on\s*=\s*\\?["']?(?:[\w-]+\s+)*(?:command\b|\$\{)|(["'`])command\1|\braw\b\s*(?:\(|as\b)/.source}|` +
+      compiledText([ATTR_PART, MULTI_PART], 'attr', 'data-intent-on'),
+    'i',
+  ),
   transitions: /\bviewTransition\b/,
   frame: /\brenderOnFrame\b/,
   states: /\bstates\b/,
   forms: /\bformAssociated\b/,
   subscriptions: /\bsubscriptions\b/,
-  dialogs: /\?(?:modal|popover-open)\s*=/i,
+  dialogs: new RegExp(
+    String.raw`\?(?:modal|popover-open)\s*=|` +
+      compiledText([BOOL_PART], 'bool', '(?:modal|popover-open)'),
+    'i',
+  ),
   disposal: /\bdispose\b/,
   errorView: /\berror\b/,
   errored: /\bErrored\b/,
