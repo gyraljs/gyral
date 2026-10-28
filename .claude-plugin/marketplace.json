@@ -10,7 +10,7 @@
       "name": "gyral",
       "source": "./skills",
       "description": "Teaches coding agents the Gyral framework: define() components, intents, pure updates, commands and drivers, forms, SSR with in-place hydration, stores and DOM-free tests.",
-      "version": "0.3.6",
+      "version": "0.3.7",
       "author": { "name": "Mike Zupper" },
       "homepage": "https://gyral.dev",
       "repository": "https://github.com/gyraljs/gyral",

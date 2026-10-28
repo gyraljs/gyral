@@ -1,5 +1,68 @@
 # @gyral/core
 
+## 0.3.7
+
+0.3.7 fixes five bugs found in the apps that use Gyral. The first three entries change
+behaviour that a working app can notice; [Behavior changes in 0.3.7](https://github.com/gyraljs/gyral/blob/v0.3.7/docs/references/migrating-0.3.6-to-0.3.7.md)
+lists each with its fix, then the new checks and the workarounds you can remove.
+
+### Patch Changes
+
+- 2c1f071: **Behaviour change:** a client-rendered component's `init` commands now start after its first
+  render, as a server-rendered component's always did (gyral-k97.3). They started when the
+  element connected, which for an element already in the page is inside `define()`, so a page
+  entry that statically imports its components ran them before its own `provideDrivers()`: a
+  driver token failed with G0043, and a driver with a default silently ran the default instead of
+  the page's override. `provideDrivers()` anywhere in the entry's synchronous code is now in time.
+
+  - A driver that answers synchronously during `init` delivers its message after the first
+    render: one more render, in the same task.
+  - A component whose first render throws starts its `init` commands once a render succeeds.
+  - A component removed before its first render starts them once it is attached and renders.
+  - G0043 now says how to order a page's boot: provide drivers before importing components, or
+    later in the same task, with no `await` in between (or set `el.drivers` on an element built
+    in code before inserting it).
+
+- 16ef016: **Behaviour change:** a light-DOM component (`shadow: false`) rendered in the browser now
+  replaces the children the page's HTML gave it on its first render, as a shadow root always did
+  (gyral-k97.4). It used to keep them and append its view after them, so a no-script message
+  written inside the component stayed visible beside it. Children in the page's HTML are fallback
+  content: shown until the component renders, and without JavaScript. Server-rendered light
+  components still hydrate their own children in place, and a component moved after its first
+  render keeps its view. An element defined by a synchronous classic script before the parser
+  reaches its children is not covered (module scripts, such as Vite's entry, run after parsing).
+
+- 3d21a73: **Behaviour change:** a new template error, rule 16, and two checks catch names the
+  platform resolved silently (gyral-k97.5).
+
+  - **New template error, rule 16:** an attribute name with capitals on a custom element,
+    `<pool-card playerBase=${n}>`. HTML lowercases it to `playerbase`, and a prop `playerBase`
+    reads `player-base`, so the value was lost. Write `player-base=${n}`, or bind the property,
+    `.playerBase=${n}`. `vite build` with the preset and ESLint (`gyral/template`) report it, and
+    the runtime in development. An `attribute: 'playerbase'` override keeps working; write the
+    attribute in lower case in templates. Built-in HTML elements and SVG content are not checked.
+  - **Reserved prop names:** a prop named `state`, `send`, `drivers`, `stores`, `initialMessages`
+    or a custom-element callback replaced the element's own member (a prop `state` hid the
+    model). It is now a development error (G0023, as built-in names already were) and a type
+    error in `define()`, as are built-in names such as `hidden`. Rename the property and keep the
+    attribute: `badge: prop.string({ attribute: 'state' })`.
+  - **Development warning G0024:** a host whose page HTML (or host framework) gave it the
+    lowercased name of a camelCase prop, such as `playerbase` for `playerBase`, warns once at its
+    first connect.
+
+- 295c705: Dialogs and command intents in installed component libraries now work in production builds. A published library ships its templates compiled, and the build's feature scan only recognized `?modal=`, `?popover-open=` and a bound `data-intent-on` in source markup, so the reduced `gyral-compiled` runtime left their code out and a library's `<dialog ?modal=…>` silently never opened (development was unaffected). The scan now reads the compiled forms too. If you removed the `gyral-compiled` condition to work around this, you can restore it. A production build that still runs one of these bindings without its code now logs `Gyral G0069` instead of failing silently.
+
+- 1454ffe: Keep an app on one copy of `@gyral/core` (gyral-k97.2). A second copy fails far from the cause:
+  a stylesheet one copy made crashed the other with `styles.flatMap is not a function`.
+
+  - `gyralVitePreset()` now pre-bundles the browser entry points of every Gyral package installed
+    for the app, in the dev server and Vitest, so Vite no longer bundles a second copy of core for
+    a Gyral package it meets partway through a run ("Vite unexpectedly reloaded a test"). Remove
+    Gyral's packages from your `optimize` list; keep other dependencies there.
+  - The preset warns once, in dev and builds, when `@gyral/core` is installed more than once,
+    naming each copy's version, folder and the packages that use it, and how to pin one version.
+  - Development builds warn in the browser when a page runs a second copy of core (G0015).
+
 ## 0.3.6
 
 ### Patch Changes
