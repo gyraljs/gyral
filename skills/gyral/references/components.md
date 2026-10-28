@@ -174,6 +174,15 @@ no `styles` (ignored with a warning); style with document CSS, e.g. `@scope (my-
 widgets (buttons, popovers, form controls) in shadow DOM. Intents still belong to the nearest
 Gyral host, so nested components keep their own intents.
 
+Children you write inside a light component's tag in the page's HTML are fallback content:
+shown until the component renders (and without JavaScript), then replaced by its first render
+(0.3.7; earlier versions appended the view after them). A server-rendered light component
+hydrates its own children in place instead.
+
+```html
+<my-about-page><p>Turn on JavaScript to see this page.</p></my-about-page>
+```
+
 ```ts
 import { define, html, type Stateless } from '@gyral/core';
 

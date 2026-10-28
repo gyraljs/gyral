@@ -39,7 +39,8 @@ Pages work before JavaScript loads.
    "Content-Security-Policy" below.
 7. **Light components own their children.** Don't write children inside a `shadow: false`
    component's tag (the server throws); pass data as props. Shadow components take children
-   for their `<slot>`s.
+   for their `<slot>`s. In a client-rendered page's HTML, children of a light component are
+   fallback content: its first render replaces them (0.3.7).
 
 ## Request handler
 

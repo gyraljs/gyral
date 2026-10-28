@@ -91,3 +91,41 @@ describe('shadow: false (ADR 0014)', () => {
     expect(isLightComponent(LightOuter)).toBe(true);
   });
 });
+
+// Children the page's HTML put in a light host are fallback content for a page without
+// JavaScript: the component owns its children (ADR 0014), so its first fresh render replaces
+// them, as a shadow root's does (gyral-k97.4, 0.3.7). Hydration still adopts the server's.
+describe("a light host's first render", () => {
+  it("replaces the page's fallback children, defined after the markup as a page does", async () => {
+    document.body.innerHTML =
+      '<test-ld-fallback><p class="fallback">This page needs JavaScript.</p></test-ld-fallback>';
+    counter('test-ld-fallback', false);
+    await settled();
+    const el = document.querySelector('test-ld-fallback') as Live;
+    expect(el.querySelector('.fallback')).toBeNull();
+    expect([...el.children].map((child) => child.className)).toEqual(['hit']);
+  });
+
+  it('replaces them when the element is created with children, then attached', async () => {
+    const el = document.createElement('test-ld-light-outer') as Live;
+    el.innerHTML = '<p class="fallback">fallback</p>';
+    document.body.append(el);
+    await settled();
+    expect(el.querySelector('.fallback')).toBeNull();
+    expect(el.querySelector(':scope > .hit')?.textContent).toBe('0');
+  });
+
+  it('keeps its view, and its state, when moved after its first render', async () => {
+    const el = await mount('test-ld-light-outer');
+    (el.querySelector(':scope > .hit') as HTMLElement).click();
+    await settled();
+    const button = el.querySelector(':scope > .hit');
+    const elsewhere = document.createElement('section');
+    document.body.append(elsewhere);
+    elsewhere.append(el);
+    await settled();
+    expect(el.querySelector(':scope > .hit')).toBe(button);
+    expect(el.querySelectorAll(':scope > .hit')).toHaveLength(1);
+    expect(button?.textContent).toBe('1');
+  });
+});
