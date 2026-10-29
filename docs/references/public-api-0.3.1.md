@@ -1,8 +1,8 @@
-# Public API (0.3.1 baseline, current 0.3.7)
+# Public API (0.3.1 baseline, current 0.3.8)
 
 Everything the `@gyral/*` packages and `create-gyral` export, entry point by entry point, as of
-0.3.7 (which exports the same as 0.3.6, and as 0.3.2 through 0.3.5 but for the empty
-`@gyral/ssr/hydrate` entry point that 0.3.6 removed, which exported nothing). This list is Gyral's semver promise: from 0.3.1 on, removing or changing an export listed
+0.3.8 (which adds to 0.3.7's exports, such as `on`, `gyral` and the driver-list types; 0.3.6
+removed the empty `@gyral/ssr/hydrate` entry point, which exported nothing). This list is Gyral's semver promise: from 0.3.1 on, removing or changing an export listed
 here as `documented` or `supporting type` takes a minor release (0.x) and a migration note. The
 file keeps the 0.3.1 name because 0.3.1 is the baseline the promise starts from; patch releases
 only add to it.

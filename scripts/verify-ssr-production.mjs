@@ -17,7 +17,7 @@ try {
       private: true,
       type: 'module',
       sideEffects: true,
-      dependencies: { '@gyral/core': '0.3.7', '@gyral/ssr': '0.3.7', vite: '8.3.3' },
+      dependencies: { '@gyral/core': '0.3.8', '@gyral/ssr': '0.3.8', vite: '8.3.3' },
     }),
   );
   await execute('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], {
@@ -27,7 +27,7 @@ try {
   const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
   for (const name of ['core', 'ssr']) {
     const entry = lock.packages[`node_modules/@gyral/${name}`];
-    assert.equal(entry.version, '0.3.7');
+    assert.equal(entry.version, '0.3.8');
     assert.match(entry.resolved, /^https:\/\/registry\.npmjs\.org\//);
     assert.match(entry.integrity, /^sha512-/);
   }
@@ -128,7 +128,7 @@ try {
     assert.equal(app.state.aborted, true);
     assert.equal(app.state.count, 2);
     console.log(
-      `Registry-only 0.3.7: one ${Buffer.byteLength(bundle)}-byte server, no runtime Vite/node_modules/.vite; metadata, HTTP/upgrade/cancel checks passed.`,
+      `Registry-only 0.3.8: one ${Buffer.byteLength(bundle)}-byte server, no runtime Vite/node_modules/.vite; metadata, HTTP/upgrade/cancel checks passed.`,
     );
   } finally {
     await new Promise((ok, fail) => app.server.close((error) => (error ? fail(error) : ok())));

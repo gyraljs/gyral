@@ -357,6 +357,21 @@ snapshot comes from the gyral.dev `release/0.3.8-docs` build (22fe4fd), made wit
 starwars.run and football-pool-tracker, and the codemod was applied to each: four regressions
 it found are fixed (gyral-337.14 to .17), and gyral-337.13 lists the migrations.
 
+Recorded 0.3.8 registry checks (2026-10-29, step 6): all ten packages serve 0.3.8 as `latest`
+with SLSA v1 provenance (release run 40939098610, tag `v0.3.8` at `3dc51ec`; the GitHub release
+opens with the three behavior changes), and each sibling package peers on `@gyral/core` 0.3.8
+exactly. `npx -y @gyral/mcp@0.3.8 --help` prints its commands, and the server answers
+`initialize` over stdio as `gyral 0.3.8` with eight tools; `search_docs` finds G0017, and
+`get_api` returns 0.3.8's `on`, `gyral` and the three `defineDriver` overloads.
+`npx -y @gyral/codemod@0.3.8 --help` lists the 0.3.8 transforms, and `--version` prints 0.3.8.
+`npm create gyral@0.3.8` generated both templates in fresh directories on Node 24.22.0, and
+npm installed them. Each app's `typecheck`, `build` and `test` pass (basic: two Chromium tests;
+SSR: three server tests), with client builds matching the candidate checks (basic 22.2 KiB JS,
+8.4 KiB gzip; the SSR client assets byte-identical). Both manifests depend on `^0.3.8`, with no
+overrides; every lockfile entry resolves from `registry.npmjs.org` with SHA-512 integrity, none
+uses `file:` or `link:`, and no Lit package is installed. `node scripts/verify-ssr-production.mjs`
+(exact 0.3.8; a 59,874-byte one-file server) passes.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
