@@ -242,6 +242,29 @@ export default tseslint.config(
     },
   },
   {
+    // @gyral/codemod is a Node CLI that rewrites any app's source: no browser Baseline, and no
+    // Gyral imports (it recognizes Gyral's APIs by name in the parsed source, never by importing).
+    files: ['packages/codemod/src/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    rules: {
+      'compat/compat': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          ...effectImports,
+          patterns: [
+            ...effectImports.patterns,
+            {
+              group: ['@gyral/*'],
+              message:
+                '@gyral/codemod must run on any app, whatever Gyral it has installed: match Gyral APIs in the parsed source instead of importing them.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: { globals: globals.node },
   },

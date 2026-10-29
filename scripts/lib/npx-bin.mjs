@@ -3,8 +3,11 @@
 // otherwise it fails with "could not determine executable to run". @gyral/mcp 0.3.2 shipped a
 // second bin and broke the documented `npx -y @gyral/mcp`; pack:check now asserts this.
 
-/** Packages people run by name: `npx -y @gyral/mcp`, and `npm create gyral` (`npm exec create-gyral`). */
-export const RUN_BY_NAME = ['@gyral/mcp', 'create-gyral'];
+/**
+ * Packages people run by name: `npx -y @gyral/mcp`, `npx @gyral/codemod 0.3.8`, and
+ * `npm create gyral` (`npm exec create-gyral`).
+ */
+export const RUN_BY_NAME = ['@gyral/mcp', '@gyral/codemod', 'create-gyral'];
 
 /** Why `npx <name>` could not pick a bin from this `bin` field, or undefined if it can. */
 export function npxBinProblem(name, bin) {

@@ -53,6 +53,7 @@ First run needs `pnpm exec playwright install chromium`.
 | [CONTRIBUTING.md](CONTRIBUTING.md)                                                               | Contributor setup, DCO sign-off, changesets, ADR process                                              |
 | [skills/gyral/](skills/gyral/SKILL.md)                                                           | Agent skill for Gyral users; update it with API changes (check-skill)                                 |
 | [packages/mcp/](packages/mcp/README.md)                                                          | `@gyral/mcp` MCP server; `pnpm mcp:refresh [--from <site dist>]` updates docs                         |
+| [packages/codemod/](packages/codemod/README.md)                                                  | `npx @gyral/codemod <release>`: per-release source rewrites in `src/transforms/<release>/`            |
 | `.claude-plugin/marketplace.json`                                                                | Claude Code plugin marketplace serving the skill (`claude plugin validate .`)                         |
 | `archive/` (gitignored)                                                                          | Old Cycle.js source. Reference only; never import or copy-paste blindly                               |
 

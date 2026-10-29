@@ -78,6 +78,18 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 <!-- inventory:start -->
 
+### `@gyral/codemod`
+
+| Export            | Kind  | Status     | Documented in                                                  |
+| ----------------- | ----- | ---------- | -------------------------------------------------------------- |
+| `CodemodOptions`  | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `CodemodResult`   | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `FileResult`      | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `Finding`         | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `releases`        | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `runCodemod`      | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `transformSource` | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+
 ### `@gyral/core`
 
 | Export                | Kind  | Status          | Documented in                                                                                          |
@@ -266,15 +278,15 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 ### `@gyral/core/vite`
 
-| Export                    | Kind  | Status          | Documented in                                              |
-| ------------------------- | ----- | --------------- | ---------------------------------------------------------- |
-| `ComponentsOptions`       | type  | supporting type |                                                            |
-| `ElementTypesOptions`     | type  | supporting type |                                                            |
-| `gyral`                   | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)       |
-| `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md) |
-| `GyralViteOptions`        | type  | supporting type |                                                            |
-| `gyralVitePreset`         | value | documented      | [consumer-setup.md](consumer-setup.md)                     |
-| `TemplateCompilerOptions` | type  | supporting type |                                                            |
+| Export                    | Kind  | Status          | Documented in                                                  |
+| ------------------------- | ----- | --------------- | -------------------------------------------------------------- |
+| `ComponentsOptions`       | type  | supporting type |                                                                |
+| `ElementTypesOptions`     | type  | supporting type |                                                                |
+| `gyral`                   | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)           |
+| `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)     |
+| `GyralViteOptions`        | type  | supporting type |                                                                |
+| `gyralVitePreset`         | value | documented      | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `TemplateCompilerOptions` | type  | supporting type |                                                                |
 
 ### `@gyral/core/compiled`
 

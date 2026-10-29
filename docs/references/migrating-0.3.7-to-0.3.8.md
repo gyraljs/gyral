@@ -53,11 +53,14 @@ addendum (the third).
 - **`token.provide(run)` and `subscription(token, …)`**, with drivers supplied as a list:
   `provideDrivers(root, [session.provide(run), subscription(feed, listen)])`. The name comes from
   the token and `run` is typed by it. `el.drivers`, `<gyral-drivers>`, `mount({ drivers })` and
-  stores take lists too; records keep working. `npx @gyral/codemod 0.3.8` rewrites records of
-  tokens into lists.
+  stores take lists too; records keep working. `npx @gyral/codemod 0.3.8` turns `provideDrivers`
+  and `el.drivers` records into lists where each key is the name of a driver the module declares
+  (test files keep theirs), and `subscription('feed', …)` into `subscription(feed, …)`; it lists
+  every candidate it leaves, with the reason.
 - **`gyral()`** (`@gyral/core/vite`): `plugins: [gyral(), mine()]` replaces
   `...gyralVitePreset()` and the hand-merged `...preset.plugins`; the preset still works through
-  0.3.x. `npx @gyral/codemod 0.3.8` rewrites it.
+  0.3.x. `npx @gyral/codemod 0.3.8` rewrites both where it can prove the result the same, and
+  lists the rest.
 - **`optimize: 'auto'`**: pre-bundles what the modules defining components import, and a
   Vitest browser project's tests, at startup. On by default for a custom server (`gyralDevServer`).
 - **`gyralDevMiddleware`** (`@gyral/ssr/node`): the dev server inside an Express, Connect or
