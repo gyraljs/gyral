@@ -1,3 +1,6 @@
 packages:
   - packages/*
   - examples/*
+
+# Adopt a version only once it is two weeks old (docs/design-docs/0032-dependency-updates.md).
+minimumReleaseAge: 20160

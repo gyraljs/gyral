@@ -157,6 +157,34 @@ export function checkWorkflow(file, text) {
   return errors;
 }
 
+const TWO_WEEKS_MINUTES = 20_160;
+
+/**
+ * The two-week release age (docs/design-docs/0032-dependency-updates.md): pnpm refuses younger
+ * versions, and every Dependabot ecosystem waits as long.
+ */
+export function checkReleaseAge(workspace, dependabot) {
+  const errors = [];
+  const age = Number(/^minimumReleaseAge:\s*(\d+)\s*$/m.exec(workspace)?.[1] ?? 0);
+  if (age < TWO_WEEKS_MINUTES) {
+    errors.push(
+      `pnpm-workspace.yaml: set "minimumReleaseAge: ${TWO_WEEKS_MINUTES}" (two weeks) so pnpm ` +
+        `never resolves a younger version (docs/design-docs/0032-dependency-updates.md).`,
+    );
+  }
+  for (const entry of dependabot.split(/^\s+- package-ecosystem:/m).slice(1)) {
+    const days = Number(/^\s+cooldown:\s*\n\s+default-days:\s*(\d+)/m.exec(entry)?.[1] ?? 0);
+    if (days < 14) {
+      const ecosystem = entry.trim().split(/\s/)[0];
+      errors.push(
+        `.github/dependabot.yml: give "${ecosystem}" "cooldown:\n  default-days: 14" so its ` +
+          `pull requests wait two weeks (docs/design-docs/0032-dependency-updates.md).`,
+      );
+    }
+  }
+  return errors;
+}
+
 /** Relative markdown link targets (without anchors). */
 export function relativeLinks(markdown) {
   return [...markdown.matchAll(/\]\(([^)\s]+)\)/g)]

@@ -4,6 +4,7 @@ import {
   checkDependencies,
   checkCoreVersion,
   checkPluginVersion,
+  checkReleaseAge,
   checkWorkflow,
   findEffectLeaks,
   findEscapedBackticks,
@@ -127,6 +128,45 @@ describe('workflow triggers', () => {
     expect(
       checkWorkflow('release.yml', release.replace('    environment: npm\n', '')),
     ).toHaveLength(1);
+  });
+});
+
+describe('checkReleaseAge', () => {
+  const workspace = 'packages:\n  - packages/*\nminimumReleaseAge: 20160\n';
+  const dependabot =
+    'version: 2\nupdates:\n' +
+    '  - package-ecosystem: npm\n    cooldown:\n      default-days: 14\n' +
+    '  - package-ecosystem: github-actions\n    cooldown:\n      default-days: 14\n';
+
+  it('accepts two weeks in pnpm and every Dependabot ecosystem', () => {
+    expect(checkReleaseAge(workspace, dependabot)).toEqual([]);
+  });
+
+  it('rejects a missing or shorter pnpm age', () => {
+    expect(checkReleaseAge('packages: []\n', dependabot)).toHaveLength(1);
+    expect(checkReleaseAge(workspace.replace('20160', '1440'), dependabot)).toHaveLength(1);
+  });
+
+  it('names each ecosystem without a two-week cooldown', () => {
+    const errors = checkReleaseAge(
+      workspace,
+      dependabot.replace(
+        '    cooldown:\n      default-days: 14\n  - package-ecosystem: g',
+        '  - package-ecosystem: g',
+      ),
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('"npm"');
+    expect(checkReleaseAge(workspace, dependabot.replace(/14/g, '3'))).toHaveLength(2);
+  });
+
+  it('holds for this repository', () => {
+    expect(
+      checkReleaseAge(
+        readFileSync('pnpm-workspace.yaml', 'utf8'),
+        readFileSync('.github/dependabot.yml', 'utf8'),
+      ),
+    ).toEqual([]);
   });
 });
 
