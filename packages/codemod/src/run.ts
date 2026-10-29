@@ -1,9 +1,10 @@
 /// <reference types="node" />
-// A whole run: check the working tree, read every module under the paths, transform it, then
-// write it (or diff it, with `dry`).
+// A whole run: check the working tree, read every module under the paths, transform it, keep it
+// formatted with the app's Prettier, then write it (or diff it, with `dry`).
 import { readFile, writeFile } from 'node:fs/promises';
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff';
 import { collectFiles, displayPath } from './files.js';
+import { keepFormatted, loadPrettier, type Prettier } from './format.js';
 import { workingTreeProblem } from './git.js';
 import { transformSource, type FileResult, type Finding } from './transform.js';
 import { RELEASES } from './transforms/index.js';
@@ -32,6 +33,11 @@ export type CodemodResult =
       readonly files: number;
       /** The modules it changed (or would change, with `dry`), relative to `cwd`. */
       readonly changed: readonly string[];
+      /**
+       * The changed modules left as the codemod wrote them, not formatted with the app's
+       * Prettier: the app has none, or they didn't pass it before the rewrite.
+       */
+      readonly unformatted: readonly string[];
       /** Every candidate left as is, by file and line. */
       readonly findings: readonly Finding[];
       /** With `dry`: the unified diff of every change. Empty otherwise. */
@@ -84,16 +90,22 @@ export async function runCodemod(options: CodemodOptions): Promise<CodemodResult
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
   const changed: string[] = [];
+  const unformatted: string[] = [];
   const findings: Finding[] = [];
   let diff = '';
+  let prettier: Promise<Prettier | undefined> | undefined;
   for (const absolute of files) {
     const file = displayPath(absolute, cwd);
     const result = safely(release, await readFile(absolute, 'utf8'), file);
     findings.push(...result.findings);
     if (result.after === result.before) continue;
+    prettier ??= loadPrettier(cwd);
+    const formatted = await keepFormatted(await prettier, absolute, result.before, result.after);
+    if (formatted === undefined) unformatted.push(file);
+    const after = formatted ?? result.after;
     changed.push(file);
-    if (dry) diff += unifiedDiff(file, result.before, result.after);
-    else await writeFile(absolute, result.after);
+    if (dry) diff += unifiedDiff(file, result.before, after);
+    else await writeFile(absolute, after);
   }
-  return { ok: true, files: files.length, changed, findings, diff };
+  return { ok: true, files: files.length, changed, unformatted, findings, diff };
 }

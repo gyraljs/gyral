@@ -10,4 +10,6 @@ the `feed` token. It rewrites only what it can prove safe and reports every cand
 with `file:line` and the reason. It writes only into a clean git working tree (`--force`
 overrides), `--dry` prints a unified diff instead, and a second run changes nothing. It parses
 with `@babel/parser`, never the app's TypeScript, and imports no Gyral package, so it runs on any
-app.
+app. A rewritten module that passed the app's own Prettier before is formatted with it after, so
+a `prettier --check` gate stays green; the report marks any other rewritten module "not
+formatted".

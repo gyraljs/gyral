@@ -179,7 +179,8 @@ describe('a run over a clean git repository', () => {
     expect(stdout).toBe(
       [
         '@gyral/codemod 0.3.8: changed 1 of 2 files',
-        '  src/main.ts',
+        '  src/main.ts (not formatted)',
+        'Run your formatter on the files marked "not formatted": the app has no Prettier, or they didn\'t pass it before the rewrite.',
         'Left as is, to review by hand (1):',
         '  src/feed.test.ts:4 [driver-list] a driver record left as is: test file (records stay idiomatic for fakes)',
         '',

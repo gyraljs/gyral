@@ -25,9 +25,12 @@ git diff                          # review what it changed
 - Running it a second time changes nothing.
 - It exits 0 when it ran, whatever it found; the report goes to stdout.
 - It parses with [@babel/parser](https://babel.dev/docs/babel-parser) and edits text ranges,
-  so code it doesn't touch keeps its formatting. Run your formatter afterwards if you like. It
-  never loads your app's TypeScript, and it imports no Gyral package, so it works whatever
-  Gyral version the app has installed.
+  so code it doesn't touch keeps its formatting. It never loads your app's TypeScript, and it
+  imports no Gyral package, so it works whatever Gyral version the app has installed.
+- A rewritten module that passed your app's own Prettier before is formatted with it after,
+  with your config, so a `prettier --check` gate stays green. The report marks any other
+  rewritten module "not formatted" (the app has no Prettier, or the module didn't pass it):
+  run your formatter on those.
 
 Options: `--dry`, `--force`, `-h, --help`, `-v, --version`.
 
