@@ -26,10 +26,11 @@ that includes it** (npm only lets you configure a trusted publisher for a packag
 exists): add its placeholder, re-run the script (published names are skipped), then do steps
 3 and 4 for it.
 
-**Before the 0.3.8 release:** `@gyral/codemod` is new in 0.3.8 and its placeholder
-(`release/placeholders/@gyral/codemod`) is not on npm yet. The owner publishes it with the
-script below, then configures its trusted publisher (step 3) and locks its publishing down
-(step 4). Until then the release workflow cannot stage it.
+**Before the 0.3.8 release:** `@gyral/codemod` is new in 0.3.8. Its name was reserved on
+2026-10-29 (npm shows `0.0.0-stage`, the placeholder npm creates when staged publishing is
+set up, owned by `mikezupper` like the other packages). The owner still configures its trusted
+publisher (step 3) and locks its publishing down (step 4); until then the release workflow
+cannot stage it.
 
 ```sh
 npm login                                        # browser login, 2FA
