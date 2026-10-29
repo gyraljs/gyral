@@ -54,8 +54,8 @@ This downloads `@gyral/mcp@0.3.7` from the public npm registry and replaces the 
 new framework APIs stay out until their release. It does not publish npm or use a vendored
 framework dependency. The ignored `deploy/mcp/artifact.json` records source revision,
 registry integrity, corpus source/version/digests and packed artifact digest. Build from a
-clean committed checkout, pin `NODE_IMAGE`, and pass `SOURCE_REVISION`, `CORPUS_VERSION` and
-`CORPUS_SHA256` as build arguments. The OCI source label links the image to `gyraljs/gyral`.
+clean committed checkout and pass `SOURCE_REVISION`, `CORPUS_VERSION` and `CORPUS_SHA256` as
+build arguments. The OCI source label links the image to `gyraljs/gyral`.
 Publish `docker-push.xode.app/gyraljs/gyral-mcp:sha-<source revision>` and `:latest` (push
 needs `docker login docker-push.xode.app`; pulls are anonymous); pin the registry image digest
 in deployment. These image tags are independent of npm versions. Don't publish to or deploy
@@ -70,10 +70,12 @@ preserve that Host at the proxy. DNS and TLS must terminate at the approved host
 If another proxy fronts nginx, replace the peer policy only after configuring a trusted
 proxy network; arbitrary Forwarded/X-Forwarded-For headers must not establish client identity.
 
-Pin the base image by digest with `--build-arg NODE_IMAGE=...` and deploy the resulting image
-by digest, rather than rebuilding a mutable tag during rollout. Run as the unprivileged image
-user with the same read-only/capability/resource bounds as the review command. Mount no
-application checkout, API keys or user data. The service only needs its bundled corpus.
+The Dockerfile pins its Node base image by digest, an exact patch release at least two weeks
+old ([ADR 0032](../design-docs/0032-dependency-updates.md)); `--build-arg NODE_IMAGE=...`
+overrides it for one build. Deploy the resulting image by digest, rather than rebuilding a
+mutable tag during rollout. Run as the unprivileged image user with the same
+read-only/capability/resource bounds as the review command. Mount no application checkout,
+API keys or user data. The service only needs its bundled corpus.
 
 | Setting                         | Default     | Purpose                                                    |
 | ------------------------------- | ----------- | ---------------------------------------------------------- |

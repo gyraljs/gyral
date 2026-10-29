@@ -37,8 +37,8 @@ all packages to 0.3.8 and a minor to 0.4.0 (dry run in a scratch worktree, 2026-
 - `pnpm pack:check` checks each packed peer is the exact release version, then installs the
   packed core and http into a throwaway app: at the same release, and with core repacked at
   another version. Both must give one copy of core; the mismatch must make pnpm report the
-  unmet peer. The 0.3.7 packages, which depended on core, installed two copies there and said
-  nothing.
+  unmet peer (`pnpm peers check`: pnpm 11 and later only warn during the install). The 0.3.7
+  packages, which depended on core, installed two copies there and said nothing.
 - A test checks that every entry point that loads core imports `./core.js` and that
   `sideEffects` keeps it; `check-plugin-version.mjs` keeps each package's `VERSION` at the
   release.

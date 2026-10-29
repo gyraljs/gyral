@@ -4,3 +4,8 @@ packages:
 
 # Adopt a version only once it is two weeks old (docs/design-docs/0032-dependency-updates.md).
 minimumReleaseAge: 20160
+
+# pnpm runs no dependency's install script unless it is listed here. esbuild (through tsx) works
+# from its platform package without its postinstall check.
+allowBuilds:
+  esbuild: false

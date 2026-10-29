@@ -1,5 +1,7 @@
-# Supply the approved digest through --build-arg NODE_IMAGE=node:24-bookworm-slim@sha256:...
-ARG NODE_IMAGE=node:24-bookworm-slim
+# Node 24 on Debian trixie: an exact patch release at least two weeks old, pinned by its
+# multi-arch index digest (docs/design-docs/0032-dependency-updates.md). Move it with the
+# dependency updates; `--build-arg NODE_IMAGE=...` overrides it for one build.
+ARG NODE_IMAGE=node:24.22.0-trixie-slim@sha256:a6155384446670e9719bdc4fd0ebe4d4b29fb32a8d6aa523da3547a6cfbcf22c
 FROM ${NODE_IMAGE}
 ARG SOURCE_REVISION=development
 ARG CORPUS_VERSION=development

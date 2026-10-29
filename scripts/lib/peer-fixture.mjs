@@ -1,8 +1,9 @@
 // Core as an exact-version peer (docs/design-docs/0033-core-peer.md): installs the packed
 // @gyral/core and @gyral/http into a throwaway app, first at the same release, then with core
 // repacked at another version. Either way the app must get exactly one copy of core; the
-// mismatch must also make pnpm report the unmet peer at install time, instead of installing a
-// second core for @gyral/http as an ordinary dependency did.
+// mismatch must also make pnpm report the unmet peer, instead of installing a second core for
+// @gyral/http as an ordinary dependency did. pnpm 11 and later only warn during the install
+// and list the unmet peer under `pnpm peers check`.
 import { execFile } from 'node:child_process';
 import {
   mkdirSync,
@@ -23,6 +24,23 @@ const run = promisify(execFile);
 // fixture needs no network and no registry metadata.
 const SPEC = realpathSync('packages/core/node_modules/@standard-schema/spec');
 
+// pnpm runs in the app with `--dir`, from the workspace root: corepack picks the version by the
+// working directory, so the fixture runs the workspace's pnpm (packageManager), as CI does,
+// rather than a machine's default. Pinning it in the app instead would make the offline install
+// fetch pnpm's own metadata.
+const pnpm = (app, args) => run('pnpm', ['--dir', app, ...args]);
+
+/** `pnpm peers check` output (pnpm 11 and later); it exits 1 when it finds a problem. */
+async function peersCheck(app) {
+  try {
+    const { stdout, stderr } = await pnpm(app, ['peers', 'check']);
+    return stdout + stderr;
+  } catch (error) {
+    if (error?.code !== 1) throw error;
+    return `${String(error.stdout)}${String(error.stderr)}`;
+  }
+}
+
 /** `tarball` repacked with `version` in its package.json. */
 async function repack(tarball, version, dir) {
   const work = join(dir, 'repack');
@@ -41,17 +59,22 @@ async function install(dir, core, http) {
   const app = join(dir, `app-${String(Date.now())}`);
   mkdirSync(app);
   const dependencies = { '@gyral/core': `file:${core}`, '@gyral/http': `file:${http}` };
-  const pnpm = { overrides: { '@standard-schema/spec': `link:${SPEC}` } };
-  writeFileSync(join(app, 'package.json'), JSON.stringify({ name: 'app', dependencies, pnpm }));
-  const { stdout, stderr } = await run(
-    'pnpm',
-    ['install', '--offline', '--ignore-scripts', '--config.minimumReleaseAge=0'],
-    { cwd: app },
+  writeFileSync(join(app, 'package.json'), JSON.stringify({ name: 'app', dependencies }));
+  // pnpm reads settings only from pnpm-workspace.yaml (since pnpm 11), not package.json.
+  writeFileSync(
+    join(app, 'pnpm-workspace.yaml'),
+    `overrides:\n  '@standard-schema/spec': ${JSON.stringify(`link:${SPEC}`)}\n`,
   );
+  const { stdout, stderr } = await pnpm(app, [
+    'install',
+    '--offline',
+    '--ignore-scripts',
+    '--config.minimumReleaseAge=0',
+  ]);
   const copies = readdirSync(join(app, 'node_modules', '.pnpm')).filter((d) =>
     d.startsWith('@gyral+core@'),
   );
-  return { output: stdout + stderr, copies };
+  return { output: stdout + stderr + (await peersCheck(app)), copies };
 }
 
 /** Problems with how core and http install together, matched and mismatched. */
