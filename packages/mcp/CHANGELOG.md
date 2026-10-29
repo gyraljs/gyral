@@ -1,5 +1,19 @@
 # @gyral/mcp
 
+## 0.3.8
+
+### Patch Changes
+
+- afa277c: `gyral-mcp skill` (gyral-337.4): `npx @gyral/mcp@<version> skill`, in an app with that
+  `@gyral/core` version installed, writes the Gyral skill it bundles to `.claude/skills/gyral`,
+  and to `.agents/skills/gyral` when that folder exists (`--dir` names others), removing files the
+  skill no longer has. `--check` writes nothing and exits 1 when a copy differs, for CI. It
+  replaces hand-copied skills pinned by hash.
+- cb0a568: Depend on zod 4.6.7, which fixes GHSA-mrhx-c7xc-m3w5: validating an oversized constrained
+  collection could exhaust memory (gyral-337.8). The server's tool schemas have no collections and
+  it caps request bodies at 16 KiB, so it wasn't reachable, but security scanners flagged the
+  exact 4.6.5 pin.
+
 ## 0.3.7
 
 ### Patch Changes

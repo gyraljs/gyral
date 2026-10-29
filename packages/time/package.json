@@ -1,6 +1,6 @@
 {
   "name": "@gyral/time",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Gyral time: delays, debounces and wall-clock ticks (every) as commands.",
   "license": "MIT",
   "author": "Mike Zupper",

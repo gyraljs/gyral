@@ -1,5 +1,39 @@
 # @gyral/ssr
 
+## 0.3.8
+
+### Patch Changes
+
+- 3e3200b: Gyral's packages take `@gyral/core` as a peer at their exact version (gyral-337.5, ADR 0033),
+  so a package manager never installs a second core for them: the app's copy is used, and a
+  mismatch shows at install time (pnpm reports the unmet peer, npm stops with ERESOLVE). Give
+  every `@gyral/*` package the same version.
+
+  Each package also checks core's version when it loads: another release throws G0016 in
+  development, naming both versions, and logs the coded warning in production. A new guide,
+  "Publishing a component library", says how third-party libraries list core: a caret peer, and
+  public entry points only.
+
+- fd34041: `gyral()` from `@gyral/core/vite` is Gyral's Vite plugin list: `plugins: [gyral(), mine()]`,
+  with nothing to spread or merge (gyral-337.3). `gyralVitePreset()` still works through 0.3.x.
+  In dev, the app's direct dependencies that use Gyral (a design system, a widget library) are
+  pre-bundled with core, and `optimize: 'auto'` points Vite's startup scan at the modules that
+  define components and at a Vitest browser project's tests, so Vite stops discovering their
+  imports mid-run; it is on by default when Vite runs as a custom server.
+
+  `gyralDevServer` builds the app once per server-module version, not per request, and
+  `gyralDevMiddleware` (`@gyral/ssr/node`) runs the dev server inside an Express, Connect or
+  Fastify server of your own (gyral-337.12).
+
+- Updated dependencies [3e3200b]
+- Updated dependencies [fd34041]
+- Updated dependencies [8d5ebb4]
+- Updated dependencies [6fa91db]
+- Updated dependencies [44eba98]
+- Updated dependencies [c765366]
+- Updated dependencies [29bcfb1]
+  - @gyral/core@0.3.8
+
 ## 0.3.7
 
 ### Patch Changes

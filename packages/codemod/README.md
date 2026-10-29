@@ -4,7 +4,8 @@ Rewrites a [Gyral](https://gyral.dev) app's source for a release's API changes. 
 code only where it can prove the rewrite safe, and lists every candidate it leaves as is, with
 `file:line` and the reason, for you to review by hand.
 
-> Status: unreleased (next release). First published with Gyral 0.3.8.
+> Status: 0.x, on npm, released with every Gyral release at the same version. It has
+> transforms for each release whose API changes it can rewrite.
 
 ## Usage
 

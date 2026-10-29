@@ -26,11 +26,10 @@ that includes it** (npm only lets you configure a trusted publisher for a packag
 exists): add its placeholder, re-run the script (published names are skipped), then do steps
 3 and 4 for it.
 
-**Before the 0.3.8 release:** `@gyral/codemod` is new in 0.3.8. Its name was reserved on
-2026-10-29 (npm shows `0.0.0-stage`, the placeholder npm creates when staged publishing is
-set up, owned by `mikezupper` like the other packages). The owner still configures its trusted
-publisher (step 3) and locks its publishing down (step 4); until then the release workflow
-cannot stage it.
+`@gyral/codemod`, new in 0.3.8, was set up on 2026-10-29: its name is reserved (npm shows
+`0.0.0-stage`, the placeholder npm creates when staged publishing is set up, owned by
+`mikezupper` like the other packages), its trusted publisher is configured (step 3) and its
+publishing is locked down (step 4).
 
 ```sh
 npm login                                        # browser login, 2FA
@@ -345,6 +344,18 @@ unpublished examples, until their fixes are two weeks old. docs.rs built all fou
 Cargo project on Rust 1.99 with `gyral` 0.5.0 and the `axum` feature builds and resolves V8
 150.4.0. The Rust compatibility fixture now pins gyral-rs `fcd466e` and npm 0.3.7, and
 `verify-rust-compatibility.mjs` passes against it (gyral-k97.8).
+
+Recorded 0.3.8 candidate checks (2026-10-29, epic gyral-337): `pnpm check` passes on Node
+24.22.0 and on 26.12.0 (342 test files, 2265 tests, one skipped; 21 bundles within budget). `pnpm smoke:prod` passes. `verify:install` passes with ten
+tarballs (`@gyral/codemod` is new), all Node-loadable entries, native SSR output and
+`npx --no-install @gyral/mcp` (help, then a stdio session with eight tools); no extra peers and
+no Lit package are installed. Both `verify:create` templates typecheck, build and pass their
+tests (basic 22.2 KiB JS, 8.4 KiB gzip; SSR 34.8 KiB JS, 14.2 KiB gzip). The `@gyral/mcp` docs
+snapshot comes from the gyral.dev `release/0.3.8-docs` build (22fe4fd), made with
+`GYRAL_PACKAGES_DIR` pointing at this checkout, so its API pages render 0.3.8's declarations
+(gyral-ns9). Before the release, the packed 0.3.8 tarballs ran the gates of joystyk, gyral-shop,
+starwars.run and football-pool-tracker, and the codemod was applied to each: four regressions
+it found are fixed (gyral-337.14 to .17), and gyral-337.13 lists the migrations.
 
 ## When something goes wrong
 

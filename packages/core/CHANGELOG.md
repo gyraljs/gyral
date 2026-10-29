@@ -1,5 +1,75 @@
 # @gyral/core
 
+## 0.3.8
+
+0.3.8 delivers the "Now" items of the 2026-10-28 ecosystem review and a full dependency update.
+The first three entries change behaviour that a working app can notice: a view renders only when
+its inputs change, Gyral's packages take core as an exact-version peer, and `gyralDevServer`
+builds the app once per server-module version. [Behavior changes in 0.3.8](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/references/migrating-0.3.7-to-0.3.8.md)
+lists each with what to do, then the new checks and the workarounds you can remove, and
+`npx @gyral/codemod 0.3.8` rewrites the API changes it can prove safe.
+
+### Patch Changes
+
+- c765366: **Behavior change:** a component renders only when its state, a declared prop or a declared
+  store's value changes (gyral-337.1). A message whose `update` returns the same state no longer
+  runs the view; that render wrote nothing anyway. A view that reads anything else (`Date.now()`,
+  a module variable, the DOM) stops refreshing on unrelated messages: move that into state, a
+  prop or a store. Development re-runs skipped views and warns once per component when one
+  renders differently (G0017).
+
+  `each(items, key, row, { pick, equals })` compares picked values with `equals`, and
+  `subscription(…, { select, equals, coalesce })` maps each value, drops repeats, or delivers
+  only the latest per microtask or animation frame.
+
+- 3e3200b: Gyral's packages take `@gyral/core` as a peer at their exact version (gyral-337.5, ADR 0033),
+  so a package manager never installs a second core for them: the app's copy is used, and a
+  mismatch shows at install time (pnpm reports the unmet peer, npm stops with ERESOLVE). Give
+  every `@gyral/*` package the same version.
+
+  Each package also checks core's version when it loads: another release throws G0016 in
+  development, naming both versions, and logs the coded warning in production. A new guide,
+  "Publishing a component library", says how third-party libraries list core: a caret peer, and
+  public entry points only.
+
+- fd34041: `gyral()` from `@gyral/core/vite` is Gyral's Vite plugin list: `plugins: [gyral(), mine()]`,
+  with nothing to spread or merge (gyral-337.3). `gyralVitePreset()` still works through 0.3.x.
+  In dev, the app's direct dependencies that use Gyral (a design system, a widget library) are
+  pre-bundled with core, and `optimize: 'auto'` points Vite's startup scan at the modules that
+  define components and at a Vitest browser project's tests, so Vite stops discovering their
+  imports mid-run; it is on by default when Vite runs as a custom server.
+
+  `gyralDevServer` builds the app once per server-module version, not per request, and
+  `gyralDevMiddleware` (`@gyral/ssr/node`) runs the dev server inside an Express, Connect or
+  Fastify server of your own (gyral-337.12).
+
+- 29bcfb1: Typed driver provision (gyral-337.2): a driver token provides its own implementation,
+  `token.provide(run)` (named by the token, `run` typed by its input and output), and
+  `subscription(token, subscribe)` is a subscription named and typed by its token. Drivers can be
+  supplied as a list, each under its own name: `provideDrivers(root, [session.provide(run)])`,
+  `el.drivers = [fake]`, `<gyral-drivers>`, `mount({ drivers })` and stores. Records keep working;
+  development throws G0044 for two drivers of one name in a list and warns (G0045) when a
+  record's key isn't its driver's name.
+
+- 6fa91db: `on(event, [filter], parser)` (gyral-337.6): an intent parser typed by its event (`keydown`
+  gives a `KeyboardEvent`), whose input adds `control`, `form`, `modifiers`, `files`,
+  `valueAsNumber` and `origin`. A key filter (`keys`, `modifiers`) declines other keys, which pass
+  outward with their default action. Development throws G0018 when another event reaches an
+  `on()` parser, and the new `gyral/intent-event` ESLint rule (an error in the recommended
+  config) finds such a binding in the editor. A module of its own: apps that don't call it don't
+  bundle it.
+
+- 44eba98: `gyral/prefer-built-in` (gyral-337.4), a new `@gyral/core/eslint` rule, warns in the recommended
+  config about hand-written versions of what Gyral has built in, each message naming the built-in:
+  a dialog opened with `showModal()` (`?modal`), `.focus()` in a driver (the `focus()` command),
+  `JSON.parse` of an attribute or prop (`prop.json()`), a subscription that drops repeats by hand
+  (`equals`), a record of drivers outside tests (a list), and intent parsers that check the event's
+  type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`). `gyral/intent-event` now
+  reads every event of a quoted `data-intent-on="keydown keyup"`, not only the first.
+
+- 8d5ebb4: Node 26, LTS since 2026-10-28, is supported beside Node 24 (gyral-337.11): every package's gate
+  runs on both.
+
 ## 0.3.7
 
 0.3.7 fixes five bugs found in the apps that use Gyral. The first three entries change
