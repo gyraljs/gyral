@@ -1,4 +1,4 @@
-import { define, html, nothing, type Next } from '@gyral/core';
+import { define, html, nothing, on, type Next } from '@gyral/core';
 import { delay } from '@gyral/time';
 import {
   COLORS,
@@ -73,17 +73,16 @@ export const Editor = define<State, Msg>()('gy-pixel-editor', {
     Undo: true,
     Redo: true,
     Clear: true,
-    Scrub: ({ value }) => ({ _tag: 'Scrub', to: Number(value) }),
+    Scrub: on('input', ({ valueAsNumber }) => ({ _tag: 'Scrub', to: valueAsNumber ?? 0 })),
     Replay: true,
-    // Ctrl/⌘+Z undoes; Ctrl/⌘+Shift+Z or Ctrl+Y redoes.
-    Shortcut: ({ event, key }) => {
-      if (!(event instanceof KeyboardEvent) || !(event.ctrlKey || event.metaKey)) return;
+    // Ctrl/⌘+Z undoes; Ctrl/⌘+Shift+Z or Ctrl+Y redoes. Other keys pass on untouched.
+    Shortcut: on('keydown', { keys: ['z', 'Z', 'y', 'Y'] }, ({ event, key, modifiers }) => {
+      if (!modifiers.ctrl && !modifiers.meta) return;
       const k = key?.toLowerCase();
-      const action = k === 'y' || (k === 'z' && event.shiftKey) ? 'redo' : k === 'z' ? 'undo' : '';
-      if (action === '') return;
+      const action = k === 'y' || modifiers.shift ? 'redo' : 'undo';
       event.preventDefault();
       return { _tag: 'Shortcut', action };
-    },
+    }),
   },
   update: {
     Paint: (s, m) => paint(s, m.cell),

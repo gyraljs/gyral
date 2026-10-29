@@ -103,14 +103,14 @@ interface DraftStore {
 export const draft = defineDriver<void, Draft>('draft');
 
 export const provideDraft = (element: Element, store: DraftStore): (() => void) =>
-  provideDrivers(element, {
-    draft: subscription<Draft>('draft', (emit) => {
+  provideDrivers(element, [
+    subscription(draft, (emit) => {
       emit(store.getState());
       return store.subscribe(() => {
         emit(store.getState());
       });
     }),
-  });
+  ]);
 ```
 
 ## One feed, several components
@@ -165,8 +165,9 @@ export const Sidebar = define<Mailbox, Msg>()('my-sidebar', {
 });
 ```
 
-- Both components name the driver `mailbox`, so one `provideDrivers(ancestor, { mailbox: … })`
-  (or `provideDrivers(container, { mailbox: fakeDriver('mailbox') })` in a test) reaches both:
+- Both components name the driver `mailbox`, so one `provideDrivers(ancestor, [driver])` with a
+  driver named `mailbox` (or `provideDrivers(container, { mailbox: fakeDriver('mailbox') })` in a
+  test) reaches both:
   provide it on an element that contains them, such as the page or the test's container ("A
   store per page, provided by name" above).
 - Each component can keep only what it shows (pick it in `onSuccess`). A feed that emits many

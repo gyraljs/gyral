@@ -207,7 +207,7 @@ A parser returns a message, `undefined` (decline the event), or an `IntentReject
 `form()`/`field()`); it may be async. Validate here so reducers only see valid messages.
 
 ```ts
-import { define, html } from '@gyral/core';
+import { define, html, on } from '@gyral/core';
 
 interface State {
   readonly query: string;
@@ -222,11 +222,12 @@ export const Filters = define<State, Msg>()('my-filters', {
   init: () => ({ query: '', qty: 1 }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
-    // Ignore anything that isn't a whole number in range.
-    Qty: ({ value }) => {
-      const qty = Number(value);
-      return Number.isInteger(qty) && qty >= 1 && qty <= 99 ? { _tag: 'Qty', qty } : undefined;
-    },
+    // A number input: on() reads it as a number. Ignore anything that isn't a whole number in range.
+    Qty: on('input', ({ valueAsNumber: qty }) =>
+      qty !== undefined && Number.isInteger(qty) && qty >= 1 && qty <= 99
+        ? { _tag: 'Qty', qty }
+        : undefined,
+    ),
     // Only the Escape key cancels.
     Cancel: ({ key }) => (key === 'Escape' ? { _tag: 'Cancel' } : undefined),
   },

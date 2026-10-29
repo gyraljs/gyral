@@ -93,15 +93,15 @@ setup, a component's `drivers`, or a test fake. Apps that never call `retry` don
 import { provideDrivers, retry } from '@gyral/core';
 import { makeHttpDriver, retryableHttpError } from '@gyral/http';
 
-provideDrivers(document.body, {
-  http: retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
+provideDrivers(document.body, [
+  retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
     times: 3,
     delayMs: 300,
     backoff: 'exponential',
     jitter: true,
     retryIf: retryableHttpError,
   }),
-});
+]);
 ```
 
 ## Streaming drivers

@@ -1,4 +1,4 @@
-import { css, define, html, outputs, prop, type Stateless } from '@gyral/core';
+import { css, define, html, on, outputs, prop, type Stateless } from '@gyral/core';
 
 export interface SliderProps {
   readonly label: string;
@@ -36,10 +36,10 @@ export const LabeledSlider = define<Stateless, Msg, SliderProps, SliderOutput>()
     },
     // Stateless: no init needed.
     intent: {
-      Changed: ({ value }) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? { _tag: 'Changed', value: n } : undefined;
-      },
+      // A range input: on() reads its value as a number (undefined while it has none).
+      Changed: on('input', ({ valueAsNumber }) =>
+        valueAsNumber === undefined ? undefined : { _tag: 'Changed', value: valueAsNumber },
+      ),
     },
     update: {
       // Props as context (ADR 0007): clamp to the bounds the parent configured.
