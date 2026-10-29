@@ -128,9 +128,10 @@ stylesheet. A second copy has two sources, and the preset covers both (0.3.7):
   second folder. When `@gyral/core` resolves to more than one folder from the app and its
   dependencies, the preset warns once at startup, in dev and in builds, with each copy's
   version, folder and the packages that use it (G0015). Pin one version with your package
-  manager (`pnpm.overrides` or pnpm-workspace.yaml `overrides`, npm `overrides`, Yarn
-  `resolutions`) and reinstall. A library lists `@gyral/core` as a peer, so it shares the
-  app's copy ([component-libraries.md](component-libraries.md)).
+  manager and reinstall: `overrides` in pnpm-workspace.yaml (pnpm 11 and later ignore
+  package.json's `pnpm.overrides`), npm `overrides` or Yarn `resolutions`. A library lists
+  `@gyral/core` as a peer, so it shares the app's copy
+  ([component-libraries.md](component-libraries.md)).
 
 Development builds also warn in the browser when a page runs a second copy (G0015, with both
 versions and the URLs they loaded from). Production builds don't check at run time, because
