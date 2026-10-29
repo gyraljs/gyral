@@ -109,6 +109,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `defineStore`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Driver`              | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
 | `DriverContext`       | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
+| `DriverList`          | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `DriverOverrides`     | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
 | `DriverToken`         | type  | supporting type |                                                                                                        |
 | `each`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -201,6 +202,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `svg`                 | value | documented      | [skills/gyral/references/view.md](../../skills/gyral/references/view.md)                               |
 | `Tagged`              | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `TemplateResult`      | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `TokenDriver`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Unsubscribe`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Update`              | type  | documented      | [skills/gyral/references/update-and-commands.md](../../skills/gyral/references/update-and-commands.md) |
 | `Variant`             | type  | documented      | [skills/gyral/references/intent.md](../../skills/gyral/references/intent.md)                           |

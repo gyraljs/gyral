@@ -164,23 +164,25 @@ Development builds print the full sentence; production prints
 `Gyral G0010 <arguments…> https://gyral.dev/errors/#G0010`. The full list is at
 https://gyral.dev/errors/. The ones agents hit most:
 
-| Code          | Means                                                            | Fix                                                                   |
-| ------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
-| G0010         | a message has no reducer                                         | add the `update` entry for that tag                                   |
-| G0011         | `data-intent` names an intent the spec doesn't have              | add the `intent` key, or fix the name (use `i.Name`, not a string)    |
-| G0014         | a tag is still undefined 3 s after load (dev builds)             | import the component's module from the entry                          |
-| G0015         | two copies of `@gyral/core` are installed or run in the page     | pin one version with package-manager `overrides`, then reinstall      |
-| G0016         | a `@gyral/*` package of another release than `@gyral/core`       | install the same version of every `@gyral` package                    |
-| G0021 / G0022 | a prop value failed its schema / a required prop is missing      | pass a valid value, or give the prop a `default`                      |
-| G0023         | a prop is named like an element member (`hidden`, `state`)       | rename the property; keep the attribute with `attribute:`             |
-| G0024         | page HTML has a lowercased camelCase prop name (`playerbase`)    | write the prop's kebab-case attribute (`player-base`)                 |
-| G0033 / G0034 | rendering or `settled()` never settles                           | break the props/messages cycle with a condition in `update`           |
-| G0041         | a driver failed and the command has no `onFailure`               | add `onFailure` and a message for the failure                         |
-| G0043         | a driver token has no implementation                             | `provideDrivers(root, { name: driver })` at app setup, or a test fake |
-| G0050         | the view reads a store the spec doesn't list                     | add it to `stores: [...]`                                             |
-| G0053         | a store read during a server render without a scope              | pass the request's stores to `renderPage({ stores })`                 |
-| G0062 / G0063 | hydration mismatch; the component was rendered fresh             | make the view deterministic (no `Date.now()`, locale) — see `ssr.md`  |
-| G0070         | an `html` template reached the browser uncompiled                | build with `gyral()`                                                  |
-| G0073 / G0074 | a reducer / `init` threw (state kept / error view shown)         | fix the throw; handle it with `Errored` or `error` (above)            |
-| G0078         | a component threw during a server render                         | as above; the browser renders it fresh                                |
-| G0079 / G0080 | two subscriptions share a lane / a subscription keeps restarting | give each its own `key` / keep changing data out of its input         |
+| Code          | Means                                                            | Fix                                                                       |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| G0010         | a message has no reducer                                         | add the `update` entry for that tag                                       |
+| G0011         | `data-intent` names an intent the spec doesn't have              | add the `intent` key, or fix the name (use `i.Name`, not a string)        |
+| G0014         | a tag is still undefined 3 s after load (dev builds)             | import the component's module from the entry                              |
+| G0015         | two copies of `@gyral/core` are installed or run in the page     | pin one version with package-manager `overrides`, then reinstall          |
+| G0016         | a `@gyral/*` package of another release than `@gyral/core`       | install the same version of every `@gyral` package                        |
+| G0021 / G0022 | a prop value failed its schema / a required prop is missing      | pass a valid value, or give the prop a `default`                          |
+| G0023         | a prop is named like an element member (`hidden`, `state`)       | rename the property; keep the attribute with `attribute:`                 |
+| G0024         | page HTML has a lowercased camelCase prop name (`playerbase`)    | write the prop's kebab-case attribute (`player-base`)                     |
+| G0033 / G0034 | rendering or `settled()` never settles                           | break the props/messages cycle with a condition in `update`               |
+| G0041         | a driver failed and the command has no `onFailure`               | add `onFailure` and a message for the failure                             |
+| G0043         | a driver token has no implementation                             | `provideDrivers(root, [token.provide(run)])` at app setup, or a test fake |
+| G0044         | two drivers of one name in a list of drivers                     | give each driver its own name, or drop one                                |
+| G0045         | a record key that isn't its driver's name (`{ shuot: shout… }`)  | supply a list (`[driver]`), or fix the key                                |
+| G0050         | the view reads a store the spec doesn't list                     | add it to `stores: [...]`                                                 |
+| G0053         | a store read during a server render without a scope              | pass the request's stores to `renderPage({ stores })`                     |
+| G0062 / G0063 | hydration mismatch; the component was rendered fresh             | make the view deterministic (no `Date.now()`, locale) — see `ssr.md`      |
+| G0070         | an `html` template reached the browser uncompiled                | build with `gyral()`                                                      |
+| G0073 / G0074 | a reducer / `init` threw (state kept / error view shown)         | fix the throw; handle it with `Errored` or `error` (above)                |
+| G0078         | a component threw during a server render                         | as above; the browser renders it fresh                                    |
+| G0079 / G0080 | two subscriptions share a lane / a subscription keeps restarting | give each its own `key` / keep changing data out of its input             |

@@ -15,12 +15,20 @@ Details: ADR 0033 (the first), ADR 0016's 0.3.8 addendum (the second).
 
 ## New checks and warnings
 
+- **Driver lists and records (G0044, G0045; development):** two drivers of one name in a list
+  throw; a record key that isn't its driver's name warns, since commands of that driver never
+  use it.
 - **A Gyral package of another release than core (G0016):** each of `@gyral/devtools`, `http`,
   `router`, `ssr`, `testing` and `time` checks core's version when it loads. Development
   throws, naming both versions; production logs the coded warning.
 
 ## New APIs
 
+- **`token.provide(run)` and `subscription(token, …)`**, with drivers supplied as a list:
+  `provideDrivers(root, [session.provide(run), subscription(feed, listen)])`. The name comes from
+  the token and `run` is typed by it. `el.drivers`, `<gyral-drivers>`, `mount({ drivers })` and
+  stores take lists too; records keep working. `npx @gyral/codemod 0.3.8` rewrites records of
+  tokens into lists.
 - **`gyral()`** (`@gyral/core/vite`): `plugins: [gyral(), mine()]` replaces
   `...gyralVitePreset()` and the hand-merged `...preset.plugins`; the preset still works through
   0.3.x. `npx @gyral/codemod 0.3.8` rewrites it.
@@ -31,6 +39,8 @@ Details: ADR 0033 (the first), ADR 0016's 0.3.8 addendum (the second).
 
 ## Workarounds you can remove
 
+- Helpers that wrap a token and its implementation (gymtime's and containment's `implement`),
+  and name-keyed records that repeat a token's name: `token.provide(run)` in a list.
 - Lists of your Gyral libraries in `optimize` or `optimizeDeps.include`: the app's direct
   dependencies that use Gyral are pre-bundled with core.
 - Import walkers that fill `optimizeDeps.include` (gyral-shop's `vite.deps.ts`): `optimize:

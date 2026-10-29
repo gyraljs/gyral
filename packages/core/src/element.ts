@@ -3,7 +3,7 @@
 // through the global scheduler (view/04-scheduler.md); intents are delegated listeners on the
 // root (ADR 0001). The model side (state, commands, stores) is host-model.ts.
 import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
-import type { DriverOverrides } from './command.js';
+import type { DriverList, DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { fail, type GyralError } from './errors.js';
 import { HostModel, type ModelCommand } from './host-model.js';
@@ -96,7 +96,7 @@ export function elementClass<S, M extends Tagged, P>(
       }
     }
 
-    declare drivers: DriverOverrides;
+    declare drivers: DriverOverrides | DriverList;
     declare stores: StoreOverrides;
     declare initialMessages: readonly Tagged[];
 

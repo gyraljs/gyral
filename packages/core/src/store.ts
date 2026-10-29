@@ -6,9 +6,11 @@ import {
   splitNext,
   type AnyDriver,
   type Command,
+  type DriverList,
   type DriverOverrides,
   type Next,
 } from './command.js';
+import { driverNamed } from './drivers-scope.js';
 import { fail } from './errors.js';
 import { features, type LocalHost } from './features.js';
 import { makeInterpreter, type Interpreter } from './internal/interpreter.js';
@@ -30,7 +32,7 @@ export interface StoreSpec<S, M extends Tagged> {
   readonly init: () => Next<S, M>;
   readonly update: StoreUpdate<S, M>;
   /** Driver substitutions by name for this store's commands. */
-  readonly drivers?: DriverOverrides;
+  readonly drivers?: DriverOverrides | DriverList;
   /**
    * Validates the server's page seed before the client uses it (any synchronous Standard
    * Schema). An invalid seed is reported with console.error and the store starts from `init`.
@@ -59,7 +61,7 @@ export interface StoreInstance<S, M extends Tagged> {
   /** Called after every state change. Returns an unsubscribe function. */
   subscribe(listener: (state: S, prev: S) => void): () => void;
   /** Per-instance driver substitutions (test fakes). Checked before the spec's. */
-  drivers: DriverOverrides;
+  drivers: DriverOverrides | DriverList;
   /** Stops running commands and drops subscribers. */
   dispose(): void;
   /** Set by the registry that holds the instance (store-to-store `send`). */
@@ -154,7 +156,9 @@ function createInstance<S, M extends Tagged>(
   let state = initial === undefined ? initState : initial;
 
   const resolve = (driver: AnyDriver): AnyDriver =>
-    instance.drivers[driver.name] ?? store.spec.drivers?.[driver.name] ?? driver;
+    driverNamed(instance.drivers, driver.name) ??
+    driverNamed(store.spec.drivers, driver.name) ??
+    driver;
 
   let scope: StoreResolver | undefined;
 

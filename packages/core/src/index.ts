@@ -6,8 +6,10 @@ export type {
   Concurrency,
   Driver,
   DriverContext,
+  DriverList,
   DriverOverrides,
   DriverToken,
+  TokenDriver,
   Next,
   RetryPolicy,
 } from './command.js';

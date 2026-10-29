@@ -57,11 +57,35 @@ const asError = (reason: unknown): Error =>
 export function subscription<O, I = undefined, E = unknown>(
   name: string,
   subscribe: (emit: (value: O) => void, ctx: SubscriptionContext<I>) => Unsubscribe,
+  options?: SubscriptionOptions<E>,
+): Driver<I, O, E>;
+/**
+ * The subscription that implements a driver token (`defineDriver<I, O, E>('feed')`, ADR 0006
+ * addendum "Typed provision"): named by the token, its values and input typed by it.
+ *
+ *   provideDrivers(root, [subscription(feed, (emit) => session.subscribe(emit))]);
+ */
+export function subscription<I, O, E>(
+  token: Driver<I, O, E>,
+  subscribe: (emit: (value: O) => void, ctx: SubscriptionContext<I>) => Unsubscribe,
+  options?: SubscriptionOptions<E>,
+): Driver<I, O, E>;
+export function subscription<O, I, E>(
+  of: string | Driver<I, O, E>,
+  subscribe: (emit: (value: O) => void, ctx: SubscriptionContext<I>) => Unsubscribe,
   options: SubscriptionOptions<E> = {},
 ): Driver<I, O, E> {
+  // A token's name and policy (not its run or provide), then the options.
+  const token: Omit<Driver<I, O, E>, 'run'> = typeof of === 'string'
+    ? { name: of }
+    : {
+        name: of.name,
+        ...(of.concurrency === undefined ? {} : { concurrency: of.concurrency }),
+        ...(of.toError === undefined ? {} : { toError: of.toError }),
+      };
   return {
-    name,
     concurrency: 'switch',
+    ...token,
     ...options,
     run: (input, { signal, emit }) =>
       new Promise<never>((_resolve, reject) => {
@@ -73,7 +97,7 @@ export function subscription<O, I = undefined, E = unknown>(
           if (sub.ended) return;
           sub.ended = true;
           signal.removeEventListener('abort', onAbort);
-          release(name, sub.stop);
+          release(token.name, sub.stop);
           // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
           reject(error);
         };
@@ -93,7 +117,7 @@ export function subscription<O, I = undefined, E = unknown>(
             { input, signal, fail: end },
           );
           // fail() or an abort while subscribing ended it before `stop` was known.
-          if (sub.ended) release(name, stop);
+          if (sub.ended) release(token.name, stop);
           else sub.stop = stop;
         } catch (error) {
           end(error);

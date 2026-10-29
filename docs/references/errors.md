@@ -145,9 +145,21 @@ Arguments: `name`.
 
 ### G0043
 
-> {owner}: no driver provides "{driver}". It is a driver token: provide an implementation by name with provideDrivers(root, { {driver}: … }) or el.drivers. A page provides it before its components' first render: before importing them, or later in the same task (no await in between).
+> {owner}: no driver provides "{driver}". It is a driver token: provide its implementation with provideDrivers(root, [token.provide(run)]) or el.drivers. A page provides it before its components' first render: before importing them, or later in the same task (no await in between).
 
 Arguments: `owner`, `driver`.
+
+### G0044
+
+> Two drivers named "{name}" in one list of drivers: give each a name of its own, or drop one.
+
+Arguments: `name`.
+
+### G0045
+
+> A driver supplied as "{key}" is named "{name}", so commands of the "{name}" driver never use it. Supply drivers as a list, each under its own name (provideDrivers(root, [driver])), or make the key match.
+
+Arguments: `key`, `name`.
 
 ## Stores
 
