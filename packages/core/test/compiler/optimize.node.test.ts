@@ -40,6 +40,9 @@ function libraryApp(): string {
         './node': { node: './node.js' }, // a Node-only entry
         './types': { types: './types.d.ts' }, // types only
         './icons/*': './icons/*.js', // a pattern
+        './theme': { import: { types: './theme.d.ts', default: './theme.mjs' } },
+        './styles.css': './styles.css', // CSS, which Vite doesn't pre-bundle
+        './tokens.css': { default: './tokens.css' },
         './package.json': './package.json',
       },
     }),
@@ -71,6 +74,7 @@ it("lists the browser entry points of the app's installed dependencies that use 
   expect(libraryEntries(libraryApp())).toEqual([
     'design-system',
     'design-system/button',
+    'design-system/theme',
     'test-widgets',
   ]);
 });
@@ -104,6 +108,7 @@ it('pre-bundles those libraries in dev, with an optimize list of the app', async
     '@gyral/core',
     'design-system',
     'design-system/button',
+    'design-system/theme',
     'test-widgets',
     'left-pad',
   ]);

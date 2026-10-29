@@ -93,16 +93,22 @@ export function browserEntries(root: string): string[] {
   return entries;
 }
 
-/** Whether an exports target can load in a browser: a path, or conditions besides node's. */
-const loadsInBrowser = (target: unknown): boolean =>
-  typeof target === 'string' ||
-  (typeof target === 'object' &&
-    target !== null &&
-    !Array.isArray(target) &&
-    Object.keys(target).some((c) => ['browser', 'import', 'module', 'default'].includes(c)));
+/** What Vite pre-bundles: script modules only (its `isOptimizable`), not a library's CSS. */
+const SCRIPT = /\.[cm]?[jt]s$/;
+const BROWSER_CONDITIONS = ['browser', 'import', 'module', 'default', 'development', 'production'];
+
+/** Whether an exports target is a script a browser loads: a path, or one under such conditions. */
+function loadsInBrowser(target: unknown): boolean {
+  if (typeof target === 'string') return SCRIPT.test(target);
+  if (typeof target !== 'object' || target === null || Array.isArray(target)) return false;
+  return Object.entries(target).some(
+    ([c, t]) => BROWSER_CONDITIONS.includes(c) && loadsInBrowser(t),
+  );
+}
 
 /** A package's browser subpaths from its exports map: `.` alone without one. */
 function browserSubpaths(exported: unknown): string[] {
+  if (typeof exported === 'string') return loadsInBrowser(exported) ? ['.'] : [];
   if (typeof exported !== 'object' || exported === null || Array.isArray(exported)) return ['.'];
   const map = exported as Record<string, unknown>;
   if (!Object.keys(map).some((key) => key.startsWith('.'))) return loadsInBrowser(map) ? ['.'] : [];
