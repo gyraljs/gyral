@@ -1,4 +1,4 @@
-import type { DriverOverrides } from './command.js';
+import type { DriverList, DriverOverrides } from './command.js';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, Tagged } from './types.js';
 
@@ -11,7 +11,7 @@ export interface GyralElement<S, M extends Tagged> extends HTMLElement {
   /** Feeds a message through `update`, as if an intent had produced it. */
   send(msg: M): void;
   /** Per-instance driver substitutions by name (test fakes). Checked before the spec's. */
-  drivers: DriverOverrides;
+  drivers: DriverOverrides | DriverList;
   /**
    * Per-instance store instances by store name (tests, islands). Checked before the nearest
    * `<gyral-stores>` provider and the document default (ADR 0013).

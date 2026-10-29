@@ -3,7 +3,7 @@
 // `command()` the interpreter, `defineStore()` the store binding, a prop builder the prop
 // machinery. An app that never calls one doesn't bundle what it registers. No module does this
 // at load time: bundlers keep `sideEffects: false` and tree-shake as usual.
-import type { DriverOverrides } from './command.js';
+import type { DriverList, DriverOverrides } from './command.js';
 import type { CommandFailure, Interpreter } from './internal/interpreter.js';
 import type { PropFeature } from './props.js';
 import type { AnyStore, StoreOverrides, StoreRef, StoreSendInput } from './store.js';
@@ -11,7 +11,10 @@ import type { CommandTrace } from './devtools-events.js';
 import type { IntentRejected, Tagged } from './types.js';
 
 /** A host's element, as features see it. */
-export type FeatureHost = HTMLElement & { drivers: DriverOverrides; stores: StoreOverrides };
+export type FeatureHost = HTMLElement & {
+  drivers: DriverOverrides | DriverList;
+  stores: StoreOverrides;
+};
 
 /** What a component's store binding offers its model (store-binding.ts). */
 export interface StoreLink {

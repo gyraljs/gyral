@@ -5,6 +5,8 @@
 //   import gyral from '@gyral/core/eslint';
 //   export default [gyral.configs.recommended];
 import type { ESLint, Linter } from 'eslint';
+import { intentEventRule } from './intent-event-rule.js';
+import { preferBuiltInRule } from './prefer-built-in-rule.js';
 import { rowPurityRule } from './row-purity-rule.js';
 import { templateRule } from './template-rule.js';
 import { unusedIntentRule } from './unused-intent-rule.js';
@@ -14,6 +16,8 @@ export interface GyralPlugin extends ESLint.Plugin {
     readonly template: typeof templateRule;
     readonly 'each-row-purity': typeof rowPurityRule;
     readonly 'unused-intent': typeof unusedIntentRule;
+    readonly 'intent-event': typeof intentEventRule;
+    readonly 'prefer-built-in': typeof preferBuiltInRule;
   };
   readonly configs: { readonly recommended: Linter.Config };
 }
@@ -22,6 +26,8 @@ const rules = {
   template: templateRule,
   'each-row-purity': rowPurityRule,
   'unused-intent': unusedIntentRule,
+  'intent-event': intentEventRule,
+  'prefer-built-in': preferBuiltInRule,
 };
 const configs: { recommended: Linter.Config } = { recommended: {} };
 
@@ -36,6 +42,8 @@ configs.recommended = {
     'gyral/template': 'error',
     'gyral/each-row-purity': 'error',
     'gyral/unused-intent': 'warn',
+    'gyral/intent-event': 'error',
+    'gyral/prefer-built-in': 'warn',
   },
 };
 

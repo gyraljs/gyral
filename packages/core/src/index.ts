@@ -6,14 +6,18 @@ export type {
   Concurrency,
   Driver,
   DriverContext,
+  DriverList,
   DriverOverrides,
   DriverToken,
+  TokenDriver,
   Next,
   RetryPolicy,
 } from './command.js';
 export { retry } from './retry.js';
 export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
+export { on } from './on.js';
+export type { EventIntentInput, IntentControl, KeyFilter, Modifiers } from './on.js';
 export { child, outputs } from './children.js';
 export { focus } from './focus.js';
 export { call, type CallInput } from './call.js';
@@ -96,6 +100,7 @@ export { css, defineHook, each, html, keyed, nothing, raw, svg } from './view/in
 export type {
   ChildValue,
   CssValue,
+  EachOptions,
   HookAttributes,
   HookResult,
   HookSpec,

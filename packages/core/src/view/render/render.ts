@@ -7,7 +7,8 @@
 // `hydrate(value, root)` (hydrate.ts) makes the same root part from server DOM instead (07).
 import { DEV } from '#view-dev';
 import { ChildPart } from './child-part.js';
-import { resetRowChecks } from './dev-check.js';
+import { checkSkippedView, resetRowChecks, sameChild } from './dev-check.js';
+import { message } from '../message.js';
 import { dropHooks, endHooks, hookMark, runHooks, startHooks } from './hooks.js';
 import { listenFor, type SeenMarkup } from './seen.js';
 import type { ChildValue } from './values.js';
@@ -60,6 +61,31 @@ export function render(
     listenFor(outer);
   }
   runHooks(mark, root);
+}
+
+/** Components already warned about (G0017), once each. */
+const impure = new Set<string>();
+
+/**
+ * Development (gyral-337.1): `view` is the view of host `tag`, whose render was skipped because
+ * its state, props and stores are unchanged. If it renders anything else than what `root`
+ * shows, the view reads something besides them: warn once for the component (G0017).
+ */
+export function recheckView(root: Node, tag: string, view: () => ChildValue): void {
+  // Also guarded here: a build that splits this module from its caller keeps the export, and
+  // only this guard keeps the check's code out of production.
+  if (!DEV) return;
+  const part = roots.get(root);
+  if (part === undefined || impure.has(tag) || !checkSkippedView()) return;
+  let same: boolean;
+  try {
+    same = sameChild(part, view());
+  } catch {
+    same = false;
+  }
+  if (same) return;
+  impure.add(tag);
+  console.warn(message(17, tag));
 }
 
 /** Hydration (hydrate.ts): `part`, built over server DOM, is `root`'s part from now on. */

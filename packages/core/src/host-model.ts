@@ -17,7 +17,13 @@ import { fail, type ErrorPhase, type GyralError } from './errors.js';
 import type { Seed } from './hydration.js';
 import { runInit } from './init.js';
 import type { Interpreter } from './internal/interpreter.js';
-import { noteActivity, requestTransition } from './scheduler.js';
+import {
+  afterRender,
+  noteActivity,
+  POST_HYDRATED,
+  POST_INIT,
+  requestTransition,
+} from './scheduler.js';
 import { errored, subscriptions as subscriptionSet } from '#spec-features';
 import type { Subscriptions } from './subscriptions.js';
 import type { AnyStore } from './store.js';
@@ -250,6 +256,29 @@ export class HostModel<S, P> implements LocalHost {
     for (const cmd of pending) this.#commands().run(cmd);
     this.#resubscribe(); // a move: unchanged, nothing restarts
     return rebound;
+  }
+
+  /**
+   * After the host's first render that succeeds (view/05 "Lifecycle"): `Hydrated` when it has a
+   * reducer, then init's `commands`, then the subscriptions, each after the render's commit.
+   */
+  firstRendered(serverRendered: boolean, commands: readonly Cmd[]): void {
+    if (this.hasReducer('Hydrated')) {
+      const msg = { _tag: 'Hydrated', serverRendered } as Tagged;
+      afterRender(POST_HYDRATED, () => {
+        this.dispatch(msg);
+      });
+    }
+    if (commands.length > 0) {
+      afterRender(POST_INIT, () => {
+        this.run(commands);
+      });
+    }
+    if (this.#spec.subscriptions !== undefined) {
+      afterRender(POST_INIT, () => {
+        this.subscribe();
+      });
+    }
   }
 
   /**

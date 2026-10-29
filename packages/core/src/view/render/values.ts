@@ -30,6 +30,8 @@ export interface ListResult {
   readonly key: (item: unknown) => unknown;
   readonly row: (item: unknown, picked: unknown) => unknown;
   readonly pick: ((item: unknown) => unknown) | undefined;
+  /** Replaces the one-level comparison of picked values (`each(…, { pick, equals })`). */
+  readonly equals?: ((prev: unknown, next: unknown) => boolean) | undefined;
 }
 
 /** Everything a child hole accepts. */

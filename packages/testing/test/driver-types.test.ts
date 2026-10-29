@@ -12,6 +12,7 @@ import {
   retry,
   settled,
   subscription,
+  type TokenDriver,
   type AnyDriver,
   type Driver,
   type DriverContext,
@@ -160,7 +161,8 @@ const Table = define<{ readonly turn: number }, GameMsg>()('test-driver-types-ta
 
 describe('driver tokens', () => {
   it('are typed drivers that a fake supplies by name, with no cast', async () => {
-    expectTypeOf(game).toEqualTypeOf<Driver<Move, number, string>>();
+    expectTypeOf(game).toEqualTypeOf<TokenDriver<Move, number, string>>();
+    expectTypeOf(game).toExtend<Driver<Move, number, string>>();
     expectTypeOf(game).toExtend<AnyDriver>();
     const fake = fakeDriver<Move, number, string>('game', (move) => move.card * 2);
     const el = new Table();

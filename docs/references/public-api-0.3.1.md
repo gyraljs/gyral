@@ -78,6 +78,18 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 <!-- inventory:start -->
 
+### `@gyral/codemod`
+
+| Export            | Kind  | Status     | Documented in                                                  |
+| ----------------- | ----- | ---------- | -------------------------------------------------------------- |
+| `CodemodOptions`  | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `CodemodResult`   | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `FileResult`      | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `Finding`         | type  | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `releases`        | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `runCodemod`      | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `transformSource` | value | documented | [packages/codemod/README.md](../../packages/codemod/README.md) |
+
 ### `@gyral/core`
 
 | Export                | Kind  | Status          | Documented in                                                                                          |
@@ -93,9 +105,9 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `ChildValue`          | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
 | `command`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Command`             | type  | documented      | [skills/gyral/references/browser-storage.md](../../skills/gyral/references/browser-storage.md)         |
-| `CommandHandlers`     | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
+| `CommandHandlers`     | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
 | `CommandInfo`         | type  | supporting type |                                                                                                        |
-| `ComponentSpec`       | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
+| `ComponentSpec`       | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
 | `componentsReady`     | value | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `Concurrency`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `css`                 | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -108,15 +120,18 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `Definer`             | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `defineStore`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Driver`              | type  | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
-| `DriverContext`       | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
+| `DriverContext`       | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
+| `DriverList`          | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `DriverOverrides`     | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
 | `DriverToken`         | type  | supporting type |                                                                                                        |
 | `each`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `EachOptions`         | type  | supporting type |                                                                                                        |
 | `Errored`             | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ErrorPhase`          | type  | documented      | [design-docs/0024-errors.md](../design-docs/0024-errors.md)                                            |
+| `EventIntentInput`    | type  | supporting type |                                                                                                        |
 | `field`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
-| `fieldErrors`         | value | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
-| `FieldIssue`          | type  | supporting type |                                                                                                        |
+| `fieldErrors`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `FieldIssue`          | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FieldName`           | type  | supporting type |                                                                                                        |
 | `focus`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `FocusOptions`        | type  | supporting type |                                                                                                        |
@@ -124,7 +139,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `FormAssociation`     | type  | supporting type |                                                                                                        |
 | `FormControlValidity` | type  | supporting type |                                                                                                        |
 | `FormControlValue`    | type  | supporting type |                                                                                                        |
-| `FormDefinition`      | type  | supporting type |                                                                                                        |
+| `FormDefinition`      | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
 | `FormDisabled`        | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormFields`          | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `FormOptions`         | type  | supporting type |                                                                                                        |
@@ -145,6 +160,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `html`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Hydrated`            | type  | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `HydrateStrategy`     | type  | supporting type |                                                                                                        |
+| `IntentControl`       | type  | supporting type |                                                                                                        |
 | `IntentInput`         | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `IntentNames`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `IntentParser`        | type  | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
@@ -154,9 +170,12 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `invalid`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `JsonValue`           | type  | documented      | [design-docs/0019-head-model.md](../design-docs/0019-head-model.md)                                    |
 | `keyed`               | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
+| `KeyFilter`           | type  | supporting type |                                                                                                        |
 | `ListResult`          | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
+| `Modifiers`           | type  | supporting type |                                                                                                        |
 | `Next`                | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `nothing`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `on`                  | value | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
 | `OUTPUT_EVENT`        | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `OutputEvent`         | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `outputs`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
@@ -164,7 +183,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `OutputSource`        | type  | supporting type |                                                                                                        |
 | `ParserCtx`           | type  | documented      | [design-docs/view/05-element.md](../design-docs/view/05-element.md)                                    |
 | `ParseResult`         | type  | documented      | [skills/gyral/references/intent.md](../../skills/gyral/references/intent.md)                           |
-| `ParserFor`           | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
+| `ParserFor`           | type  | documented      | [agent-benchmark-pilot-v3.md](agent-benchmark-pilot-v3.md)                                             |
 | `prop`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Prop`                | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `PropDeclarations`    | type  | supporting type |                                                                                                        |
@@ -201,6 +220,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `svg`                 | value | documented      | [skills/gyral/references/view.md](../../skills/gyral/references/view.md)                               |
 | `Tagged`              | type  | documented      | [design-docs/0023-intent-name-inference.md](../design-docs/0023-intent-name-inference.md)              |
 | `TemplateResult`      | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `TokenDriver`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Unsubscribe`         | type  | documented      | [design-docs/0006-effects-and-drivers.md](../design-docs/0006-effects-and-drivers.md)                  |
 | `Update`              | type  | documented      | [skills/gyral/references/update-and-commands.md](../../skills/gyral/references/update-and-commands.md) |
 | `Variant`             | type  | documented      | [skills/gyral/references/intent.md](../../skills/gyral/references/intent.md)                           |
@@ -246,6 +266,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `isSecretField`          | value | internal |               |
 | `jsonHazard`             | value | internal |               |
 | `LIGHT_ATTRIBUTE`        | value | internal |               |
+| `requireCore`            | value | internal |               |
 | `resetDocumentStores`    | value | internal |               |
 | `runInit`                | value | internal |               |
 | `scriptSafeJson`         | value | internal |               |
@@ -257,14 +278,15 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 ### `@gyral/core/vite`
 
-| Export                    | Kind  | Status          | Documented in                                              |
-| ------------------------- | ----- | --------------- | ---------------------------------------------------------- |
-| `ComponentsOptions`       | type  | supporting type |                                                            |
-| `ElementTypesOptions`     | type  | supporting type |                                                            |
-| `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md) |
-| `GyralViteOptions`        | type  | supporting type |                                                            |
-| `gyralVitePreset`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)       |
-| `TemplateCompilerOptions` | type  | supporting type |                                                            |
+| Export                    | Kind  | Status          | Documented in                                                  |
+| ------------------------- | ----- | --------------- | -------------------------------------------------------------- |
+| `ComponentsOptions`       | type  | supporting type |                                                                |
+| `ElementTypesOptions`     | type  | supporting type |                                                                |
+| `gyral`                   | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)           |
+| `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)     |
+| `GyralViteOptions`        | type  | supporting type |                                                                |
+| `gyralVitePreset`         | value | documented      | [packages/codemod/README.md](../../packages/codemod/README.md) |
+| `TemplateCompilerOptions` | type  | supporting type |                                                                |
 
 ### `@gyral/core/compiled`
 
@@ -343,7 +365,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `HttpMethod`         | type  | supporting type |                                                                                                        |
 | `HttpRequest`        | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `makeHttpDriver`     | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
-| `redirectedTo`       | value | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
+| `redirectedTo`       | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
 | `request`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `RequestHandlers`    | type  | supporting type |                                                                                                        |
 | `retryableHttpError` | value | documented      | [skills/gyral/references/effects-and-drivers.md](../../skills/gyral/references/effects-and-drivers.md) |
@@ -396,7 +418,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `DocSection`   | type  | supporting type |                                                        |
 | `Example`      | type  | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `ExampleFile`  | type  | supporting type |                                                        |
-| `InternalType` | type  | supporting type |                                                        |
+| `InternalType` | type  | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `loadCorpus`   | value | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `refreshDocs`  | value | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
 | `SkillFile`    | type  | documented      | [packages/mcp/README.md](../../packages/mcp/README.md) |
@@ -443,7 +465,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `rejectWith`            | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)           |
 | `RenderOptions`         | type  | supporting type |                                                                                      |
 | `renderPage`            | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                 |
-| `renderToString`        | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `renderToString`        | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
 | `seeOther`              | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)           |
 | `styleHashes`           | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
 | `wantsJson`             | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
@@ -476,18 +498,21 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 ### `@gyral/ssr/node`
 
-| Export                | Kind  | Status          | Documented in                                                                        |
-| --------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
-| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
-| `DevServer`           | type  | supporting type |                                                                                      |
-| `DevServerContext`    | type  | supporting type |                                                                                      |
-| `DevServerOptions`    | type  | supporting type |                                                                                      |
-| `FetchHandler`        | type  | supporting type |                                                                                      |
-| `gyralDevServer`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
-| `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
-| `NodeListener`        | type  | supporting type |                                                                                      |
-| `NodeListenerOptions` | type  | supporting type |                                                                                      |
-| `toNodeListener`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| Export                 | Kind  | Status          | Documented in                                                                        |
+| ---------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
+| `DevApp`               | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `DevMiddleware`        | type  | supporting type |                                                                                      |
+| `DevMiddlewareOptions` | type  | supporting type |                                                                                      |
+| `DevServer`            | type  | supporting type |                                                                                      |
+| `DevServerContext`     | type  | supporting type |                                                                                      |
+| `DevServerOptions`     | type  | supporting type |                                                                                      |
+| `FetchHandler`         | type  | supporting type |                                                                                      |
+| `gyralDevMiddleware`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `gyralDevServer`       | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `NodeEnv`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `NodeListener`         | type  | supporting type |                                                                                      |
+| `NodeListenerOptions`  | type  | supporting type |                                                                                      |
+| `toNodeListener`       | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
 
 ### `@gyral/testing`
 

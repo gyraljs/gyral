@@ -64,9 +64,12 @@ invariants`), so it can't drift from the real API.
 
   From a shell: `claude plugin marketplace add gyraljs/gyral && claude plugin install gyral@gyral`.
 
+- **A copy in your app (any agent):** `npx @gyral/mcp@<your @gyral/core version> skill` writes
+  the skill to `.claude/skills/gyral` (and `.agents/skills/gyral` when it exists), and
+  `npx @gyral/mcp@<version> skill --check` in CI keeps it at your Gyral version (0.3.8).
 - **Other agents (Codex, Cursor, Copilot, …):** point the agent at
-  [skills/gyral/SKILL.md](skills/gyral/SKILL.md), or copy `skills/gyral/` into the agent's
-  skills or rules folder. The docs for agents are at https://gyral.dev/llms.txt and
+  [skills/gyral/SKILL.md](skills/gyral/SKILL.md), or write a copy into its skills or rules
+  folder as above (`--dir <folder>`). The docs for agents are at https://gyral.dev/llms.txt and
   https://gyral.dev/llms-full.txt.
 - **MCP server (any MCP client):** `@gyral/mcp` searches the docs, looks up API signatures,
   returns examples, scaffolds components and typechecks snippets against your project. Claude

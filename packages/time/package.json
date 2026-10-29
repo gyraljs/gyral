@@ -1,6 +1,6 @@
 {
   "name": "@gyral/time",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Gyral time: delays, debounces and wall-clock ticks (every) as commands.",
   "license": "MIT",
   "author": "Mike Zupper",
@@ -14,7 +14,10 @@
     "url": "https://github.com/gyraljs/gyral/issues"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/core.ts",
+    "./dist/core.js"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
@@ -37,10 +40,11 @@
     "build": "node ../../scripts/build-package.mjs",
     "prepack": "node ../../scripts/build-package.mjs"
   },
-  "dependencies": {
-    "@gyral/core": "workspace:*"
-  },
   "devDependencies": {
+    "@gyral/core": "workspace:*",
     "@gyral/testing": "workspace:*"
+  },
+  "peerDependencies": {
+    "@gyral/core": "workspace:*"
   }
 }

@@ -327,24 +327,33 @@ export interface ElementTypesOptions {
  * which may be closed by the time a build starts (see loadCompiler).
  */
 function gyralElementTypes(options: ElementTypesOptions): Plugin {
-  const source = import.meta.url.endsWith('.ts')
-    ? './compiler/tag-map.ts'
-    : './compiler/tag-map.js';
-  const tagMap = createRequire(import.meta.url)(source) as typeof import('./compiler/tag-map.js');
-  return tagMap.elementTypesPlugin(options);
+  return (requireCompiler('tag-map') as TagMap).elementTypesPlugin(options);
 }
+
+/** ./compiler/ module `name`, loaded with Node's require (Node built-ins only), from source too. */
+function requireCompiler(name: 'one-core' | 'tag-map'): unknown {
+  const ext = import.meta.url.endsWith('.ts') ? 'ts' : 'js';
+  return createRequire(import.meta.url)(`./compiler/${name}.${ext}`);
+}
+type TagMap = typeof import('./compiler/tag-map.js');
 
 /**
  * One copy of core per app (./compiler/one-core.ts): pre-bundles Gyral's installed browser
- * entry points in dev, and warns when @gyral/core is installed more than once. Node built-ins
- * only, so Node's require loads it, as gyralElementTypes does.
+ * entry points and the app's Gyral libraries in dev, runs `optimize`, and warns when
+ * @gyral/core is installed more than once. The `'auto'` scan starts at the modules that define
+ * components, found the way element typings find them (./compiler/tag-map.ts), under
+ * `components.include`, else `types.dirs`, else `src`.
  */
-function gyralOneCore(): Plugin {
-  const source = import.meta.url.endsWith('.ts')
-    ? './compiler/one-core.ts'
-    : './compiler/one-core.js';
-  const oneCore = createRequire(import.meta.url)(source) as typeof import('./compiler/one-core.js');
-  return oneCore.oneCorePlugin();
+function gyralOneCore(options: GyralViteOptions): Plugin {
+  const oneCore = requireCompiler('one-core') as typeof import('./compiler/one-core.js');
+  const tagMap = requireCompiler('tag-map') as TagMap;
+  const { components, types, optimize } = options;
+  const dirs = (typeof components === 'object' ? components.include : undefined) ??
+    (types === false ? undefined : types?.dirs) ?? ['src'];
+  return oneCore.oneCorePlugin({
+    ...(optimize === undefined ? {} : { optimize }),
+    components: (root) => tagMap.discoverComponents(root, dirs).map((found) => found.file),
+  });
 }
 
 export interface GyralViteOptions {
@@ -354,10 +363,15 @@ export interface GyralViteOptions {
    */
   readonly types?: ElementTypesOptions | false;
   /**
-   * More modules to pre-bundle in dev, so Vite doesn't discover them mid-run and reload.
-   * Gyral's own installed browser entry points are always pre-bundled.
+   * Pre-bundling in dev, so Vite doesn't discover a dependency mid-run and reload. Gyral's
+   * installed browser entry points, and those of the app's dependencies that use Gyral, are
+   * always pre-bundled. A list adds more modules. `'auto'` points Vite's startup scan at the
+   * modules that define components (and, in a Vitest browser project, at its tests), so every
+   * dependency they import is pre-bundled up front; it is the default when Vite runs as a
+   * custom server (`appType: 'custom'`, as gyralDevServer does) and the config sets no
+   * `optimizeDeps.entries`. `false` turns that scan off.
    */
-  readonly optimize?: readonly string[];
+  readonly optimize?: readonly string[] | 'auto' | false;
   /** Template compiler options (`vite build` only). */
   readonly compiler?: TemplateCompilerOptions;
   /**
@@ -392,28 +406,39 @@ export interface GyralViteConfig {
 }
 
 /**
- * Spread into a Vite config, or into each Vitest project:
+ * Gyral's Vite plugins, for a Vite config or each Vitest project:
+ *
+ *   export default defineConfig({ plugins: [gyral(), mine()], build: { … } });
+ *
+ * Settings of their own (pre-bundling) come through the plugins' `config` hooks, so nothing
+ * needs spreading or merging.
+ */
+export function gyral(options: GyralViteOptions = {}): Plugin[] {
+  return [
+    // Before the compiler: its feature scan reads the author's templates, not compiled ones.
+    ...(options.clientOnly === true ? [gyralClientOnly()] : []),
+    gyralTemplateCompiler(options.compiler),
+    gyralTemplateLocations(options.compiler),
+    gyralDevSsr(),
+    gyralOneCore(options),
+    ...(options.components === undefined || options.components === false
+      ? []
+      : [gyralComponents(options.components === true ? {} : options.components)]),
+    ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
+  ];
+}
+
+/**
+ * `gyral()` as a config to spread, kept through 0.3.x for existing configs (the 0.3.8 codemod
+ * rewrites them to `gyral()`):
  *
  *   export default defineConfig({ ...gyralVitePreset(), build: { … } });
  *
- * With plugins of your own, list both: `plugins: [...preset.plugins, mine()]`.
+ * `optimizeDeps.include` lists `optimize`'s modules, which `gyral()` adds by itself.
  */
 export function gyralVitePreset(options: GyralViteOptions = {}): GyralViteConfig {
-  return {
-    plugins: [
-      // Before the compiler: its feature scan reads the author's templates, not compiled ones.
-      ...(options.clientOnly === true ? [gyralClientOnly()] : []),
-      gyralTemplateCompiler(options.compiler),
-      gyralTemplateLocations(options.compiler),
-      gyralDevSsr(),
-      gyralOneCore(),
-      ...(options.components === undefined || options.components === false
-        ? []
-        : [gyralComponents(options.components === true ? {} : options.components)]),
-      ...(options.types === false ? [] : [gyralElementTypes(options.types ?? {})]),
-    ],
-    optimizeDeps: { include: [...new Set(options.optimize ?? [])] },
-  };
+  const include = typeof options.optimize === 'object' ? options.optimize : [];
+  return { plugins: gyral(options), optimizeDeps: { include: [...new Set(include)] } };
 }
 
 type Hook = (this: unknown, ...args: unknown[]) => unknown;

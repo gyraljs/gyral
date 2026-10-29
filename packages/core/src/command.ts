@@ -71,6 +71,24 @@ export interface DriverToken<E = unknown> {
 export type DriverOverrides = Readonly<Record<string, AnyDriver>>;
 
 /**
+ * Drivers supplied as a list (0.3.8, ADR 0006 addendum "Typed provision"): each one under its
+ * own name, so there is no key to mistype. `provideDrivers`, `el.drivers`, `<gyral-drivers>`,
+ * `mount({ drivers })` and stores take a list or a `DriverOverrides` record:
+ *
+ *   provideDrivers(root, [session.provide((input) => send(input)), subscription(feed, listen)]);
+ */
+export type DriverList = readonly AnyDriver[];
+
+/**
+ * A driver token from `defineDriver<I, O, E>('name')`. `provide(run)` gives the driver that
+ * implements it: the token's name, concurrency and `toError`, and a `run` checked against `I`
+ * and `O`, for `provideDrivers` or a test.
+ */
+export interface TokenDriver<I, O, E = unknown> extends Driver<I, O, E> {
+  readonly provide: (run: Driver<I, O, E>['run']) => Driver<I, O, E>;
+}
+
+/**
  * A side effect described as data, plus pure mappers from its outcome to messages. Commands
  * that answer with no message (`focus()`, `call()`, `navigate()`) are `Command<never>`,
  * which fits wherever a `Command<Msg>` is expected: no type argument needed.
@@ -109,13 +127,31 @@ export type Next<S, M> = S | readonly [S, ReadonlyArray<Command<M | IntentReject
  * Defines a driver. Given an implementation (`run`), it returns it as is, so literals infer
  * `I`, `O` and `E`. Given only a name, it returns a typed **token**: commands built from it are
  * typed, and it runs only when a provider (`provideDrivers`) or `el.drivers` supplies a driver of
- * that name. A command whose token nothing provides fails with G0043, naming the driver.
+ * that name, such as `token.provide(run)`. A command whose token nothing provides fails with
+ * G0043, naming the driver.
  */
+export function defineDriver<I, O, E = unknown>(spec: Driver<I, O, E>): Driver<I, O, E>;
+export function defineDriver<I, O, E = unknown>(
+  spec: DriverToken<E> | string,
+): TokenDriver<I, O, E>;
+// Last, so `ReturnType<typeof defineDriver<I, O>>` (which reads the last overload) stays the
+// `Driver` it was before tokens could provide themselves. The directive sits outside the
+// signature, which the API pages render as written.
+/* eslint-disable @typescript-eslint/unified-signatures -- kept apart for ReturnType */
+export function defineDriver<I, O, E = unknown>(
+  spec: Driver<I, O, E> | DriverToken<E> | string,
+): Driver<I, O, E>;
+/* eslint-enable @typescript-eslint/unified-signatures */
 export function defineDriver<I, O, E = unknown>(
   spec: Driver<I, O, E> | DriverToken<E> | string,
 ): Driver<I, O, E> {
-  if (typeof spec === 'string') return { name: spec, run: unprovided };
-  return 'run' in spec ? spec : { ...spec, run: unprovided };
+  if (typeof spec === 'object' && 'run' in spec) return spec;
+  const token = typeof spec === 'string' ? { name: spec } : spec;
+  return { ...token, run: unprovided, provide: (run) => ({ ...token, run }) } as TokenDriver<
+    I,
+    O,
+    E
+  >;
 }
 
 const none = (): undefined => undefined;

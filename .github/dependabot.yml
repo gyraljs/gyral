@@ -20,7 +20,8 @@ updates:
         dependency-type: production
         update-types: [minor, patch]
     ignore:
-      # @types/node tracks the supported runtime major (Node 24, `engines`), not the newest.
+      # @types/node tracks the newest Node line Gyral supports (26; the Node 24 CI job catches
+      # 26-only APIs), so a new major waits until Gyral supports that line.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions

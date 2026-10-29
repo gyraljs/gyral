@@ -282,7 +282,7 @@ before submit; the schema adds what HTML can't express. Schemas may be async (a 
 - `submitForm(url, formData, { onSuccess, onFailure })` posts the valid submission; a server
   422 comes back as the same `IntentRejected`. A CSRF token from a `<meta>` is added by the
   http driver, configured once for the app:
-  `provideDrivers(document.body, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) })`.
+  `provideDrivers(document.body, [makeHttpDriver({ headers: csrfFromMeta('csrf-token') })])`.
   `csrf: { token }` sends a token the app already holds.
 
 ```ts

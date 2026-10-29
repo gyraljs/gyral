@@ -140,9 +140,17 @@ The package has one executable, `gyral-mcp`, so `npx -y @gyral/mcp` knows what t
 | ------------------ | ------------------------------------------------------------ |
 | `gyral-mcp`        | The stdio server (what `npx -y @gyral/mcp` starts)           |
 | `gyral-mcp http`   | The public Streamable HTTP server, configured by environment |
-| `gyral-mcp --help` | Usage for both modes (`gyral-mcp http --help` for HTTP)      |
+| `gyral-mcp skill`  | Writes the Gyral skill into the app's agent folders (0.3.8)  |
+| `gyral-mcp --help` | Usage for every command (`gyral-mcp http --help`, `skill`)   |
 
 Any other argument is an error.
+
+`npx @gyral/mcp@<version> skill`, run in an app with that `@gyral/core` version installed, writes
+the skill (`SKILL.md` and its references) to `.claude/skills/gyral`, and to `.agents/skills/gyral`
+when that folder exists (`--dir <folder>` names others), removing files the skill no longer has.
+`--check` writes nothing and exits 1 when a copy differs: run it in CI so the agents working on
+the app read the guidance for the Gyral version it runs. The version must match, because each
+release's skill describes that release.
 
 ## Embedding
 

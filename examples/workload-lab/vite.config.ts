@@ -1,3 +1,3 @@
 import { defineConfig } from 'vite';
-import { gyralVitePreset } from '@gyral/core/vite';
-export default defineConfig(gyralVitePreset({ clientOnly: true }));
+import { gyral } from '@gyral/core/vite';
+export default defineConfig({ plugins: [gyral({ clientOnly: true })] });

@@ -93,15 +93,15 @@ setup, a component's `drivers`, or a test fake. Apps that never call `retry` don
 import { provideDrivers, retry } from '@gyral/core';
 import { makeHttpDriver, retryableHttpError } from '@gyral/http';
 
-provideDrivers(document.body, {
-  http: retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
+provideDrivers(document.body, [
+  retry(makeHttpDriver({ baseUrl: '/api', timeoutMs: 8000 }), {
     times: 3,
     delayMs: 300,
     backoff: 'exponential',
     jitter: true,
     retryIf: retryableHttpError,
   }),
-});
+]);
 ```
 
 ## Streaming drivers
@@ -407,8 +407,11 @@ These are a few lines each, so they are recipes rather than exports.
 ## Substituting drivers (by name)
 
 Lookup order: the element's `drivers` property → the nearest `<gyral-drivers>` provider
-(`provideDrivers(element, { http: … })`) → the command's own driver. Configure app-wide
-drivers once, at the entry.
+(`provideDrivers(element, [driver, …])`) → the command's own driver. Supply drivers as a
+**list** (0.3.8): each one under its own name, so there is no key to mistype. A record keyed by
+name (`{ http: … }`) still works, and is handy for fakes in tests; development warns when a key
+isn't its driver's name (G0045), and two drivers of one name in a list are an error (G0044).
+Configure app-wide drivers once, at the entry.
 
 ```ts
 import { provideDrivers } from '@gyral/core';
@@ -416,12 +419,12 @@ import { csrfFromMeta, makeHttpDriver } from '@gyral/http';
 import { makeRouter } from '@gyral/router';
 
 // The whole page: this app owns it, so its router captures link clicks.
-provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) });
+provideDrivers(document.body, [makeRouter({ captureLinks: true })]);
 
 // One subtree: every component under <main> sends the CSRF token with its requests.
 const main = document.querySelector('main');
 if (main !== null) {
-  provideDrivers(main, { http: makeHttpDriver({ headers: csrfFromMeta('csrf-token') }) });
+  provideDrivers(main, [makeHttpDriver({ headers: csrfFromMeta('csrf-token') })]);
 }
 ```
 
@@ -433,8 +436,13 @@ when a provider or `el.drivers` supplies a driver of that name. If nothing does,
 reported as G0043, naming the driver and the component. There are no placeholder drivers that
 throw, no import order to get right and no casts.
 
+The entry provides it from the token itself: `token.provide(run)` is a driver with the
+token's name and policy and a `run` checked against its input and output, and
+`subscription(token, subscribe)` is a subscription the same way. A wrong type fails to compile,
+and the name can't be mistyped.
+
 ```ts
-import { command, defineDriver, provideDrivers, type Command } from '@gyral/core';
+import { command, defineDriver, provideDrivers, subscription, type Command } from '@gyral/core';
 
 interface Move {
   readonly card: number;
@@ -443,24 +451,32 @@ interface Snapshot {
   readonly turn: number;
 }
 
-// Shared module: the token. No implementation here.
+// Shared module: the tokens. No implementation here.
 export const session = defineDriver<Move, Snapshot, string>('session');
+export const scores = defineDriver<undefined, number>('scores');
 
 // Components: fully typed, no type arguments.
 export const play = (card: number): Command<{ readonly _tag: 'Synced'; readonly turn: number }> =>
   command(session, { card }, { onSuccess: (s) => ({ _tag: 'Synced', turn: s.turn }) });
 
-// App entry (or a test): the implementation, by name.
-provideDrivers(document.body, {
-  session: defineDriver<Move, Snapshot, string>({
-    name: 'session',
-    run: async (move) => ({ turn: move.card }),
+// App entry: each implementation from its token, typed by it.
+const board = new EventTarget();
+provideDrivers(document.body, [
+  session.provide(async (move) => ({ turn: move.card })),
+  subscription(scores, (emit) => {
+    const onScore = (event: Event): void => {
+      emit((event as CustomEvent<number>).detail);
+    };
+    board.addEventListener('score', onScore);
+    return () => {
+      board.removeEventListener('score', onScore);
+    };
   }),
-});
+]);
 ```
 
-Tests provide a fake the same way: `fakeDriver('session', (move) => …)` with `provideDrivers`,
-`el.drivers` or `mountSsr`.
+Tests provide a fake the same way: `fakeDriver(session, (move) => …)` copies the token's name
+and types, in a list for `provideDrivers`, `el.drivers` or `mountSsr`.
 
 ## Booting a page: drivers before the first render
 
@@ -486,17 +502,17 @@ const Badge = define<{ readonly name: string }, Msg>()('user-badge', {
   view: (s) => html`<p>${s.name}</p>`,
 });
 
-const live = defineDriver<string, string>({ name: 'session', run: async (who) => who });
+const live = session.provide(async (who) => who);
 
 // main.ts, after `import './components.js'`: still the same synchronous run, so in time.
-provideDrivers(document.body, { session: live });
+provideDrivers(document.body, [live]);
 
 // After an await it would be too late for elements already in the page. Build the element
 // in code instead, with its drivers set before it is inserted:
 async function addBadge(): Promise<void> {
   await document.fonts.ready;
   const badge = new Badge();
-  badge.drivers = { session: live };
+  badge.drivers = [live];
   document.body.append(badge);
 }
 void addBadge();

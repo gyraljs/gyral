@@ -3,7 +3,7 @@
 // through the global scheduler (view/04-scheduler.md); intents are delegated listeners on the
 // root (ADR 0001). The model side (state, commands, stores) is host-model.ts.
 import { DEVTOOLS_ENABLED, devConnect, devHydrated } from '#devtools';
-import type { DriverOverrides } from './command.js';
+import type { DriverList, DriverOverrides } from './command.js';
 import type { GyralElement } from './element-types.js';
 import { fail, type GyralError } from './errors.js';
 import { HostModel, type ModelCommand } from './host-model.js';
@@ -19,22 +19,17 @@ import {
 import { isLight } from './light-dom.js';
 import { features } from './features.js';
 import { warnLowercased, type PropFeature, type PropTable, type propertyValue } from './props.js';
-import {
-  afterRender,
-  markDirty,
-  POST_HYDRATED,
-  POST_INIT,
-  POST_STATES,
-  type HostTask,
-} from './scheduler.js';
+import { afterRender, markDirty, POST_STATES, type HostTask } from './scheduler.js';
 import { checkSpecFeatures, customStates, errorView, formAssociation } from '#spec-features';
 import type { StoreOverrides } from './store.js';
 import type { ComponentSpec, IntentNames, IntentParser, Tagged } from './types.js';
+import { sameInputs, viewInputs } from './view-inputs.js';
 import {
   DEV,
   ERROR_ATTRIBUTE,
   message,
   onHookFailure,
+  recheckView,
   render,
   sheetsFor,
   suspendHooks,
@@ -96,13 +91,15 @@ export function elementClass<S, M extends Tagged, P>(
       }
     }
 
-    declare drivers: DriverOverrides;
+    declare drivers: DriverOverrides | DriverList;
     declare stores: StoreOverrides;
     declare initialMessages: readonly Tagged[];
 
     #values: Bag = {};
     #root: ShadowRoot | HTMLElement | undefined;
     #rendered = false;
+    /** What the view read at its last render that succeeded: unchanged, no render. */
+    #inputs: readonly unknown[] | undefined;
     /** Something changed while disconnected: render on reconnect. */
     #stale = false;
     #serverRendered = false;
@@ -179,8 +176,10 @@ export function elementClass<S, M extends Tagged, P>(
 
     disconnectedCallback(): void {
       this.#model.disconnect();
-      // Element hooks' dispose; they run client again after the render on reconnect (02).
+      // Element hooks' dispose; they run client again after the render on reconnect (02), which
+      // runs the view even with nothing else changed.
       if (suspendHooks(this.#root)) this.#stale = true;
+      this.#inputs = undefined;
       if (DEVTOOLS_ENABLED) devConnect(this, tag, false);
     }
 
@@ -283,18 +282,29 @@ export function elementClass<S, M extends Tagged, P>(
         this.#rendered = true;
         return;
       }
+      // Nothing the view reads changed (view-inputs.ts): the render would write nothing.
+      const ctx = this.#model.ctx();
+      const inputs = viewInputs(this.state, names, ctx, spec.stores);
+      if (sameInputs(inputs, this.#inputs)) {
+        if (DEV)
+          recheckView(root, tag, () =>
+            spec.view(this.state, intentNames as IntentNames<string>, ctx),
+          );
+        return;
+      }
       try {
-        const view = spec.view(this.state, intentNames as IntentNames<string>, this.#model.ctx());
+        const view = spec.view(this.state, intentNames as IntentNames<string>, ctx);
         if (this.#hydrating) {
           hydrationCode?.hydrateRoot(this, tag, view, root, light ? undefined : sheets, this.#seen);
           this.#hydrating = false;
         } else render(view, root, this.#seen);
-        formAssociation?.sync(this, this.state, this.#model.ctx(), root);
+        formAssociation?.sync(this, this.state, ctx, root);
       } catch (cause) {
         const error = this.#model.fail(cause, 'view', message(31, tag));
         this.#fallback(root, error, this.state);
         return; // the first-render steps wait for a render that succeeds
       }
+      this.#inputs = inputs;
       const states = spec.states;
       const sync = customStates;
       if (states !== undefined && sync !== undefined) {
@@ -305,24 +315,9 @@ export function elementClass<S, M extends Tagged, P>(
       if (this.#rendered) return;
       this.#rendered = true;
       if (DEVTOOLS_ENABLED) devHydrated(this, tag, this.#serverRendered);
-      if (this.#model.hasReducer('Hydrated')) {
-        const msg = { _tag: 'Hydrated', serverRendered: this.#serverRendered } as Tagged;
-        afterRender(POST_HYDRATED, () => {
-          this.#model.dispatch(msg);
-        });
-      }
       const commands = this.#afterInit;
       this.#afterInit = [];
-      if (commands.length > 0) {
-        afterRender(POST_INIT, () => {
-          this.#model.run(commands);
-        });
-      }
-      if (spec.subscriptions !== undefined) {
-        afterRender(POST_INIT, () => {
-          this.#model.subscribe();
-        });
-      }
+      this.#model.firstRendered(this.#serverRendered, commands);
     }
 
     /**
@@ -330,6 +325,7 @@ export function elementClass<S, M extends Tagged, P>(
      * throws too is reported and changes nothing.
      */
     #fallback(root: ShadowRoot | HTMLElement, error: GyralError, state: S | undefined): void {
+      this.#inputs = undefined; // the next render runs the view again
       if (spec.error === undefined || errorView === undefined) return;
       const view = (failure: GyralError, at: never): unknown => spec.error?.(failure, at);
       if (errorView(view, root, error, state, this.#hydrating, this.#seen, this, tag)) {

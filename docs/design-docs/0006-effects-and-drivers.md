@@ -413,3 +413,28 @@ start"), so providers set in the entry's synchronous code apply. Holding command
 provider appears was rejected: a missing provider would become a silent wait, and `settled()`
 would have to decide what an unprovided command means. A behaviour change, listed in the
 release notes.
+
+## Addendum: typed provision (0.3.8, gyral-337.2)
+
+Owner's decisions, 2026-10-29 (review recommendation #3). Apps provided a token's implementation
+under a string key, `provideDrivers(root, { 'cribbage-session': subscription('cribbage-session',
+…) })`: the name three times, a typo found only when the first command ran (G0043), and a
+driver of the wrong input or output accepted, because the record erases types. joystyk has 374
+tokens wired this way; eight projects are affected. Angular (`{ provide: TOKEN, useValue }`), Vue
+(`provide(InjectionKey<T>, value)`) and Effect (`Layer.succeed(Tag, impl)`) provide a value
+against its typed token instead.
+
+- **`token.provide(run)`**: `defineDriver<I, O, E>(name)` returns a `TokenDriver`, whose
+  `provide` gives the implementing driver: the token's name, concurrency and `toError`, and a
+  `run` checked against `I` and `O`.
+- **`subscription(token, subscribe)`**: a subscription named and typed by its token.
+- **Lists**: `provideDrivers`, `el.drivers`, `<gyral-drivers>`, `mount({ drivers })` and stores
+  take a `DriverList` (`readonly AnyDriver[]`), each driver under its own name, as well as the
+  `DriverOverrides` record, which stays: lookup is by name so a test fakes a driver without
+  importing its token (`fakeDriver(token)` copies its name and types).
+- **Development checks**: two drivers of one name in a list throw G0044; a record key that
+  isn't its driver's name warns once per record (G0045), which catches typos in code that keeps
+  records. Production carries neither.
+
+A token nothing provides is still found at run time (G0043): TypeScript can't see, across
+modules, which tokens an app's components use.

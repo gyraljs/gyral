@@ -1,5 +1,5 @@
 // `componentsReady()` (ADR 0016 "Automatic components"): wait until the components the page
-// renders are defined and have rendered. The loader that gyralVitePreset({ components: true })
+// renders are defined and have rendered. The loader that gyral({ components: true })
 // generates registers itself under a well-known symbol; without it (no automatic components,
 // or a server render) this is just `settled()`.
 import { settled } from './settled.js';

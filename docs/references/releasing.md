@@ -19,12 +19,17 @@ placeholders are for.
 
 ### 2. Reserve the names (placeholders)
 
-`release/placeholders/` holds 0.0.0 "Coming soon — https://gyral.dev" manifests for the eight
+`release/placeholders/` holds 0.0.0 "Coming soon — https://gyral.dev" manifests for the nine
 `@gyral/*` packages and the unscoped `gyral`, `gyraljs` and `create-gyral`. Publish them once,
 from a clean checkout of `main`. **A new package needs this again before the first release
 that includes it** (npm only lets you configure a trusted publisher for a package that
 exists): add its placeholder, re-run the script (published names are skipped), then do steps
 3 and 4 for it.
+
+`@gyral/codemod`, new in 0.3.8, was set up on 2026-10-29: its name is reserved (npm shows
+`0.0.0-stage`, the placeholder npm creates when staged publishing is set up, owned by
+`mikezupper` like the other packages), its trusted publisher is configured (step 3) and its
+publishing is locked down (step 4).
 
 ```sh
 npm login                                        # browser login, 2FA
@@ -40,9 +45,10 @@ other names still publish; record the rejected one in the release bead.
 
 ### 3. Trusted publisher, per released package
 
-For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools`, `mcp`
-**and `create-gyral`** (9 packages; create-gyral joined the lockstep release on 2026-10-05,
-`@gyral/mcp` on 2026-10-05 and needs its placeholder published first):
+For each of `@gyral/core`, `http`, `router`, `time`, `ssr`, `testing`, `devtools`, `mcp`,
+`codemod` **and `create-gyral`** (10 packages; create-gyral joined the lockstep release on
+2026-10-05, `@gyral/mcp` on 2026-10-05, `@gyral/codemod` with 0.3.8; each new one needs its
+placeholder published first):
 npmjs.com/package/NAME → **Settings** → **Trusted Publisher** → GitHub Actions:
 
 | Field                | Value         |
@@ -89,15 +95,18 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    published version, so a page written after the release reaches the package only with the
    next one (0.3.3 shipped without its own upgrade page; gyral-ttk). Build that branch and take
    the snapshot from its output, on a gyral branch. Build it with
-   `GYRAL_DOCS_VERSION=X.Y.Z GYRAL_ERRORS_JSON=../gyral/packages/core/src/errors.json pnpm build`
-   so the llms files name the new release and the errors page lists its codes, then run
+   `GYRAL_DOCS_VERSION=X.Y.Z GYRAL_ERRORS_JSON=../gyral/packages/core/src/errors.json GYRAL_PACKAGES_DIR=../gyral/packages pnpm build`
+   so the llms files name the new release, the errors page lists its codes and the API pages
+   render this checkout's declarations, not the previous release's from npm (gyral-ns9), then run
    `pnpm mcp:refresh --from ../gyral.dev/dist`
    (a relative path is resolved from where you run pnpm; the directory must hold `llms.txt` and
    `llms-full.txt`). Review and commit the diff, then run `pnpm version-packages`
    (`changeset version`, then the skill plugin's version in `.claude-plugin/marketplace.json`
    set to the release, which `pnpm invariants` checks). Plain
    `pnpm mcp:refresh` reads the live site, which is right only when the site already describes
-   this release. It consumes the changesets, bumps every
+   this release. Once the changesets are consumed, `pnpm check` fails unless the snapshot names
+   this release and its API pages carry this checkout's doc comments
+   (packages/mcp/test/snapshot-api.node.test.ts). It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
    "unreleased (next release)" markers on features this release ships: they are in package
@@ -112,14 +121,14 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
 5. **Approve the staged versions**: npmjs.com → the `gyral` org → Packages → **Staged
    Packages** → review → **Approve** (2FA) for each, or `npm stage list @gyral/NAME` then
    `npm stage approve <stage-id>`. Approve `@gyral/core` first; the others depend on it.
-   That is 9 approvals: the eight `@gyral/*` packages and `create-gyral`.
-6. Verify all nine versions and `latest` tags on the registry, including npm provenance.
+   That is 10 approvals: the nine `@gyral/*` packages and `create-gyral`.
+6. Verify all ten versions and `latest` tags on the registry, including npm provenance.
    Generate both templates in fresh directories using `npm create gyral@X.Y.Z app-basic --
 --template basic --yes` and the equivalent `ssr` command. Install with npm, then run each
    app's `typecheck`, `build` and `test`. Check manifests and lockfiles contain registry
    dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral. Run
    `npx -y @gyral/mcp@X.Y.Z --help` (the documented command, which picks the package's only
-   bin) and start it as an MCP stdio server.
+   bin) and start it as an MCP stdio server, and `npx -y @gyral/codemod@X.Y.Z --help`.
 7. Move gyral.dev to the verified npm release (registry dependencies only, no overrides or
    vendored packages) on the branch from step 2, run its gate and deploy matching docs and llms
    files. Then rebuild the hosted MCP image (production-mcp.md) with `--released-corpus X.Y.Z`.
@@ -134,9 +143,10 @@ The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the
 
 - `pnpm pack:check` (part of `pnpm check`): packs each package as `pnpm publish` will and
   runs publint, @arethetypeswrong/cli (esm-only profile), tarball content assertions and an
-  `npm pack --dry-run` file-list comparison. Packages run by name (`@gyral/mcp` through
-  `npx`, `create-gyral` through `npm create gyral`) must have exactly one bin or one named
-  after the unscoped package, or npx cannot pick a command (`scripts/lib/npx-bin.mjs`).
+  `npm pack --dry-run` file-list comparison. Packages run by name (`@gyral/mcp` and
+  `@gyral/codemod` through `npx`, `create-gyral` through `npm create gyral`) must have exactly
+  one bin or one named after the unscoped package, or npx cannot pick a command
+  (`scripts/lib/npx-bin.mjs`).
 - `pnpm verify:install` (network, not in the gate): installs the tarballs with npm in a fresh
   temp project, imports every Node-loadable entry, server-renders a component, runs
   `npx --no-install @gyral/mcp --help`, then starts the server through
@@ -334,6 +344,18 @@ unpublished examples, until their fixes are two weeks old. docs.rs built all fou
 Cargo project on Rust 1.99 with `gyral` 0.5.0 and the `axum` feature builds and resolves V8
 150.4.0. The Rust compatibility fixture now pins gyral-rs `fcd466e` and npm 0.3.7, and
 `verify-rust-compatibility.mjs` passes against it (gyral-k97.8).
+
+Recorded 0.3.8 candidate checks (2026-10-29, epic gyral-337): `pnpm check` passes on Node
+24.22.0 and on 26.12.0 (342 test files, 2265 tests, one skipped; 21 bundles within budget). `pnpm smoke:prod` passes. `verify:install` passes with ten
+tarballs (`@gyral/codemod` is new), all Node-loadable entries, native SSR output and
+`npx --no-install @gyral/mcp` (help, then a stdio session with eight tools); no extra peers and
+no Lit package are installed. Both `verify:create` templates typecheck, build and pass their
+tests (basic 22.2 KiB JS, 8.4 KiB gzip; SSR 34.8 KiB JS, 14.2 KiB gzip). The `@gyral/mcp` docs
+snapshot comes from the gyral.dev `release/0.3.8-docs` build (22fe4fd), made with
+`GYRAL_PACKAGES_DIR` pointing at this checkout, so its API pages render 0.3.8's declarations
+(gyral-ns9). Before the release, the packed 0.3.8 tarballs ran the gates of joystyk, gyral-shop,
+starwars.run and football-pool-tracker, and the codemod was applied to each: four regressions
+it found are fixed (gyral-337.14 to .17), and gyral-337.13 lists the migrations.
 
 ## When something goes wrong
 

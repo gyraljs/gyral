@@ -3,7 +3,7 @@
 // shadow root; type() and click() dispatch real events and wait for the result. Mounted
 // elements are removed after each test when the runner has a global afterEach (Vitest with
 // globals, Jest, Mocha); otherwise call dispose() in the test's own cleanup.
-import { settled, type DriverOverrides, type StoreOverrides } from '@gyral/core';
+import { settled, type DriverList, type DriverOverrides, type StoreOverrides } from '@gyral/core';
 
 type Constructor<E extends HTMLElement> = new () => E;
 
@@ -16,7 +16,7 @@ export interface MountOptions<E extends HTMLElement> {
   /** Attributes, set before the element connects. */
   readonly attrs?: Readonly<Record<string, string>>;
   /** Driver substitutions by name (`el.drivers`), set before the element connects. */
-  readonly drivers?: DriverOverrides;
+  readonly drivers?: DriverOverrides | DriverList;
   /** Store instances by name (`el.stores`), set before the element connects. */
   readonly stores?: StoreOverrides;
   /** Query the element's light DOM instead of its shadow root (for `shadow: false`). */

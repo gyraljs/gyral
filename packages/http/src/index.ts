@@ -1,3 +1,4 @@
+import './core.js';
 import { command, type Command, type Concurrency } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { http, type HttpError, type HttpRequest } from './driver.js';

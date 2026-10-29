@@ -168,7 +168,7 @@ export const COMPONENTS_MANIFEST = 'gyral-components.json';
 
 /**
  * `renderPage({ components })` for a production build made with
- * `gyralVitePreset({ components: true })`, from the manifests in memory: each tag's module with
+ * `gyral({ components: true })`, from the manifests in memory: each tag's module with
  * its imports, Gyral's hydration chunk and its CSS, and the loader.
  */
 export function componentAssets(

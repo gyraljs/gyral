@@ -107,7 +107,8 @@ describe('the flush', () => {
     el.addEventListener('focusin', () => order.push('focus'));
     document.body.append(el);
     await settled();
-    expect(order).toEqual(['focus', 'states', 'hydrated:false', 'states']);
+    // Hydrated returns the same state, so no second render, and no second states sync (0.3.8).
+    expect(order).toEqual(['focus', 'states', 'hydrated:false']);
     expect(el.shadowRoot?.activeElement).toBe(button());
   });
 

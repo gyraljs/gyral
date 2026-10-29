@@ -262,7 +262,7 @@ server still imports the components it renders.
 ```text
 // vite.config.ts
 export default defineConfig({
-  ...gyralVitePreset({ components: true }), // finds define()'d tags under src/
+  plugins: [gyral({ components: true })], // finds define()'d tags under src/
   build: { outDir: 'dist/client', emptyOutDir: true },
 });
 ```
@@ -287,7 +287,7 @@ Keep component modules under `src/` (the `include` option changes that). The sca
 `export const X = define<…>()('my-tag', …)` in code, not in comments, strings or template text
 (code inside `${…}` counts), so a code sample in a string registers nothing; a component defined through a wrapper (a helper
 that calls `define()` with a tag it was given) is invisible to it, so list it:
-`gyralVitePreset({ components: { modules: { 'member-form': 'src/forms/member.ts' } } })`. A
+`gyral({ components: { modules: { 'member-form': 'src/forms/member.ts' } } })`. A
 component module that another chunk imports statically (the entry, or another component) is
 bundled into that chunk; it still loads, and its preload is that chunk. Tags rendered inside
 the shadow root of a component the loader defined are found too, so a component doesn't have to
@@ -461,7 +461,7 @@ import { productionServer } from '@gyral/ssr/static';
 const app = await productionServer({
   distDir: join(process.cwd(), 'dist'),
   staticDir: false, // nothing prerendered: every page renders per request
-  // With gyralVitePreset({ components: true }): each page loads the components it rendered.
+  // With gyral({ components: true }): each page loads the components it rendered.
   // With a client entry instead: scripts: [clientEntry], plus modulepreload and stylesheets.
   createApp: ({ components, stylesheets }) => ({
     fetch: (_request: Request) =>
@@ -481,8 +481,10 @@ createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).liste
 ## Development server
 
 `gyralDevServer` (from `@gyral/ssr/node`, Vite loaded on first use) is the whole dev server:
-Vite serves client modules, CSS and HMR; every other request loads the server module through
-Vite (edits show at once) and streams the app's response. `state` is created once from the
+Vite serves client modules, CSS and HMR; every other request goes to the server module, loaded
+through Vite (edits show at once), and streams the app's response. `app` builds the handler
+once per module version and component set, not per request: keep per-request work inside the
+handler, and drop any cache of your own around it (0.3.8). `state` is created once from the
 first module, so in-memory data survives reloads; a render error answers 500 with Vite's error
 overlay.
 
@@ -495,13 +497,18 @@ interface AppModule {
 }
 
 const { url } = await gyralDevServer({
-  entry: '/server/app.ts', // loaded per request
+  entry: '/server/app.ts', // reloaded after an edit
   state: () => new Map<string, string>(), // kept across reloads
   app: (mod: AppModule, { components, state }) => mod.createApp(components, state),
   // port (default PORT or 5173), hmrPort, origin, vite: { …more Vite settings }
 });
 console.log(`Dev server: ${url}`);
 ```
+
+`gyralDevMiddleware` takes the same options without `port` and `host`, for a server of the
+app's own: it returns `{ middleware, vite, close }`. Express and Connect take `middleware` with
+`app.use()`, Fastify through `@fastify/middie`. It answers every request that reaches it
+(Vite's modules, then the app), so mount the server's own routes before it.
 
 ## Request layer
 

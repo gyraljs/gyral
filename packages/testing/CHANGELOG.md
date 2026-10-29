@@ -1,5 +1,35 @@
 # @gyral/testing
 
+## 0.3.8
+
+### Patch Changes
+
+- 3e3200b: Gyral's packages take `@gyral/core` as a peer at their exact version (gyral-337.5, ADR 0033),
+  so a package manager never installs a second core for them: the app's copy is used, and a
+  mismatch shows at install time (pnpm reports the unmet peer, npm stops with ERESOLVE). Give
+  every `@gyral/*` package the same version.
+
+  Each package also checks core's version when it loads: another release throws G0016 in
+  development, naming both versions, and logs the coded warning in production. A new guide,
+  "Publishing a component library", says how third-party libraries list core: a caret peer, and
+  public entry points only.
+
+- 29bcfb1: Typed driver provision (gyral-337.2): a driver token provides its own implementation,
+  `token.provide(run)` (named by the token, `run` typed by its input and output), and
+  `subscription(token, subscribe)` is a subscription named and typed by its token. Drivers can be
+  supplied as a list, each under its own name: `provideDrivers(root, [session.provide(run)])`,
+  `el.drivers = [fake]`, `<gyral-drivers>`, `mount({ drivers })` and stores. Records keep working;
+  development throws G0044 for two drivers of one name in a list and warns (G0045) when a
+  record's key isn't its driver's name.
+- Updated dependencies [3e3200b]
+- Updated dependencies [fd34041]
+- Updated dependencies [8d5ebb4]
+- Updated dependencies [6fa91db]
+- Updated dependencies [44eba98]
+- Updated dependencies [c765366]
+- Updated dependencies [29bcfb1]
+  - @gyral/core@0.3.8
+
 ## 0.3.7
 
 ### Patch Changes

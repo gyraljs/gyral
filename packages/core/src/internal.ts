@@ -2,6 +2,7 @@
 // @gyral/http, @gyral/devtools) share with core. INTERNAL: not part of Gyral's public API and
 // not covered by semver; any release may change or remove these. Apps import from `@gyral/core`
 // (docs/references/public-api-0.3.1.md).
+export { requireCore } from './core-version.js';
 export { STORE_SEND } from './store.js';
 export type { StoreSendInput } from './store.js';
 export { scriptSafeJson } from './script-json.js';

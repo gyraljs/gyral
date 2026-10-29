@@ -20,6 +20,6 @@ describe('npx bin selection (pack:check)', () => {
   });
 
   it('covers the packages documented as `npx` / `npm create` commands', () => {
-    expect(RUN_BY_NAME).toEqual(['@gyral/mcp', 'create-gyral']);
+    expect(RUN_BY_NAME).toEqual(['@gyral/mcp', '@gyral/codemod', 'create-gyral']);
   });
 });

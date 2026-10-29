@@ -49,7 +49,7 @@ export const CORE_BUILD_TIME_PEERS = ['eslint', 'parse5', 'vite'];
 /**
  * Dependency rules (docs/design-docs/0015-runtime-size-spike.md): no package depends on
  * `effect`, and @gyral/core has no runtime dependency beyond the allowlist: its only peers are
- * optional build-time tools.
+ * optional build-time tools. Every other package takes core as an exact-version peer (ADR 0033).
  */
 export function checkDependencies(file, manifest) {
   const errors = [];
@@ -64,6 +64,18 @@ export function checkDependencies(file, manifest) {
         );
       }
     }
+  }
+  const core = manifest.peerDependencies?.['@gyral/core'];
+  if (
+    manifest.dependencies?.['@gyral/core'] !== undefined ||
+    (core ?? 'workspace:*') !== 'workspace:*'
+  ) {
+    errors.push(
+      `${file}: take @gyral/core as a peer at this release's exact version ` +
+        `("peerDependencies": { "@gyral/core": "workspace:*" }, and the same in ` +
+        `devDependencies), not as a dependency, so a package manager never installs a second ` +
+        `copy of core for this package (docs/design-docs/0033-core-peer.md).`,
+    );
   }
   if (manifest.name === '@gyral/core') {
     for (const dep of Object.keys(manifest.dependencies ?? {})) {
@@ -207,16 +219,25 @@ export function checkPluginVersion(marketplace, release) {
     );
 }
 
+/** The `VERSION` constants that follow the release: core's (G0015) and each package's (G0016). */
+export const VERSION_FILES = [
+  'packages/core/src/view/version.ts',
+  ...['devtools', 'http', 'router', 'ssr', 'testing', 'time'].map(
+    (pkg) => `packages/${pkg}/src/version.ts`,
+  ),
+];
+
 /**
- * Core's VERSION constant (packages/core/src/view/version.ts) is the release version: development
- * builds name it when a page runs two copies of core (G0015).
+ * A `VERSION` constant (VERSION_FILES) is the release version: development builds name core's
+ * when a page runs two copies of core (G0015), and each package gives its own to
+ * `requireCore()` when it loads (G0016).
  */
-export function checkCoreVersion(source, release) {
+export function checkVersionConstant(file, source, release) {
   const version = /export const VERSION = '([^']*)';/.exec(source)?.[1];
   return version === release
     ? []
     : [
-        `packages/core/src/view/version.ts: VERSION is ${version ?? 'missing'}, but the release is ` +
-          `${release}. Run node scripts/check-plugin-version.mjs --write.`,
+        `${file}: VERSION is ${version ?? 'missing'}, but the release is ${release}. ` +
+          `Run node scripts/check-plugin-version.mjs --write.`,
       ];
 }

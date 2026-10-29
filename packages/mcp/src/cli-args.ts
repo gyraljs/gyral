@@ -1,10 +1,12 @@
 // The `gyral-mcp` command line: one executable, so `npx -y @gyral/mcp` always knows what to run.
-// No arguments starts the stdio server; `http` starts the public Streamable HTTP server.
-// Anything else is an error rather than a silent stdio start.
+// No arguments starts the stdio server; `http` starts the public Streamable HTTP server; `skill`
+// writes or checks the app's copy of the Gyral skill. Anything else is an error rather than a
+// silent stdio start.
 
 export type CliCommand =
   | { readonly kind: 'stdio' }
   | { readonly kind: 'http' }
+  | { readonly kind: 'skill'; readonly check: boolean; readonly dirs: readonly string[] }
   | { readonly kind: 'help'; readonly text: string }
   | { readonly kind: 'error'; readonly message: string };
 
@@ -17,6 +19,9 @@ Commands:
             point your MCP client at it. Has every tool, including check_snippet.
   http      Serve the public, read-only Streamable HTTP endpoint at /mcp (no check_snippet,
             no project paths). See \`gyral-mcp http --help\`.
+  skill     Write the Gyral skill for this app's @gyral/core version to .claude/skills/gyral
+            (and .agents/skills/gyral when it exists); --check fails when a copy differs.
+            See \`gyral-mcp skill --help\`.
 
 Options:
   -h, --help  Show this help
@@ -43,7 +48,40 @@ Options:
   -h, --help  Show this help
 `;
 
+export const SKILL_USAGE = `Usage: gyral-mcp skill [--check] [--dir <folder>]...
+
+Write the Gyral skill (SKILL.md and its references) into this app's agent folders, for the
+@gyral/core version the app has installed: run \`npx @gyral/mcp@<that version> skill\`. Files in
+those folders that the skill no longer has are removed.
+
+Options:
+  --check         Write nothing; exit 1 when a folder's copy differs (for CI)
+  --dir <folder>  A folder to keep, relative to the app (repeatable). Default:
+                  .claude/skills/gyral, and .agents/skills/gyral when it exists
+  -h, --help      Show this help
+`;
+
 const isHelp = (arg: string | undefined): boolean => arg === '-h' || arg === '--help';
+
+function skillArgs(rest: readonly string[]): CliCommand {
+  if (rest.length === 1 && isHelp(rest[0])) return { kind: 'help', text: SKILL_USAGE };
+  let check = false;
+  const dirs: string[] = [];
+  for (let k = 0; k < rest.length; k++) {
+    const arg = rest[k];
+    if (arg === '--check') check = true;
+    else if (arg === '--dir' && rest[k + 1] !== undefined && !(rest[k + 1] ?? '').startsWith('-')) {
+      dirs.push(rest[k + 1] ?? '');
+      k++;
+    } else {
+      return {
+        kind: 'error',
+        message: `unknown option '${arg ?? ''}' for 'skill'. Run \`gyral-mcp skill --help\`.`,
+      };
+    }
+  }
+  return { kind: 'skill', check, dirs };
+}
 
 function unknown(arg: string, where: string): CliCommand {
   const what = arg.startsWith('-') ? 'option' : 'command';
@@ -62,8 +100,10 @@ export function parseArgs(argv: readonly string[]): CliCommand {
   if (first === 'help') {
     if (rest.length === 0) return { kind: 'help', text: USAGE };
     if (rest.length === 1 && rest[0] === 'http') return { kind: 'help', text: HTTP_USAGE };
+    if (rest.length === 1 && rest[0] === 'skill') return { kind: 'help', text: SKILL_USAGE };
     return unknown(rest[0] ?? '', " after 'help'");
   }
+  if (first === 'skill') return skillArgs(rest);
   if (first === 'http') {
     const [next, ...more] = rest;
     if (next === undefined) return { kind: 'http' };

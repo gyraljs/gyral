@@ -4,7 +4,7 @@ import './app.js';
 
 // This app owns the whole page, so its router captures link clicks (ADR 0009). Drivers are
 // configured once, at the entry, for every component on the page (ADR 0006).
-provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) });
+provideDrivers(document.body, [makeRouter({ captureLinks: true })]);
 // Route-level code splitting: the About page's component loads on demand, and the entry
 // finishes once it is defined (top-level await, as gyral-shop's entry does). A lazy chunk can't
 // import from an entry that awaits it, so the bundler moves shared code into a chunk evaluated

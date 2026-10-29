@@ -162,7 +162,7 @@ shell is right on the server); rows ESLint can't follow statically (a row return
 parameter), which 03's development check covers.
 
 Options (every rule): `{ sources: ['@gyral/core', 'my-design-system'] }`, the same list as the Vite
-preset's `compiler.sources` (`gyralVitePreset({ compiler: { sources } })`). Core's own code and
+preset's `compiler.sources` (`gyral({ compiler: { sources } })`). Core's own code and
 tests, which import `html` and `each` from core's modules by relative path, are recognised without
 it.
 

@@ -47,7 +47,8 @@ Unit and browser tests prove behaviour, but not that a page _looks_ right. `pnpm
   violation, and 2 on bad arguments or scenarios.
 - **Visual diffs:** `--baseline` saves the run's screenshots to `.ui-check/baseline/`;
   `--compare` pixel-diffs against them with pixelmatch (`--threshold`, default 0.1 per pixel;
-  `--max-diff`, default 0.001 of the pixels) and writes diff images.
+  `--max-diff`, default 0.001 of the pixels) and writes diff images. pixelmatch 8 measures
+  colour in OKLab; the defaults were re-checked for it in 0.3.8 (ADR 0032 addendum).
 - **Not part of `pnpm check`:** a full run takes a couple of minutes. Agents run it, at
   least for the examples they touched, before reporting UI work done.
 

@@ -180,7 +180,7 @@ CSP step and the entry each needed side-effect imports. A forgotten flag or impo
 silently (a component that never hydrated, or a CSP violation). Astro's islands are the model:
 the page loads exactly the components it rendered.
 
-- **Build.** `gyralVitePreset({ components: true })` (include: `['src']` by default) finds every
+- **Build.** `gyral({ components: true })` (include: `['src']` by default) finds every
   two-call `define<…>()('tag', …)` in the app's source files (test files and
   `customElements.define` excluded; since gyral-lbg, so are calls in comments and in string,
   template or regular expression text, while code inside a template's `${…}` still counts)
@@ -282,3 +282,29 @@ survives reloads. A render error answers 500 with Vite's error overlay and the s
 stack. With the preset's `components`, the app gets `components` for development (the loader
 from source and Vite's client). It lives in `@gyral/ssr/node` rather than `@gyral/core/vite`
 because it is a server, not build configuration, and needs the Node adapter.
+
+## Addendum: `gyral()`, pre-bundling, and the dev server in 0.3.8 (gyral-337.3, .12)
+
+Owner's decisions, 2026-10-29 (review recommendation #4):
+
+- **`gyral(options)` is a Vite plugin list** (`plugins: [gyral(), mine()]`), the shape React's,
+  Svelte's and Vue's plugins have. Its settings come through the plugins' `config` hooks, so an
+  app with plugins of its own no longer merges `...preset.plugins` and `preset.optimizeDeps`
+  by hand. `gyralVitePreset()` stays through 0.3.x as the spread-in wrapper.
+- **The app's Gyral libraries are pre-bundled in dev** with Gyral's own packages: its direct
+  dependencies that depend on a Gyral browser package, each browser entry point in their
+  `exports` (node-only, type-only and pattern entries left out; linked packages served as
+  source). A server-only package that uses only `@gyral/ssr` is never bundled for the browser.
+- **`optimize: 'auto'`** points Vite's startup scan (`optimizeDeps.entries`) at the modules
+  that define components, found as element typings find them, and at a Vitest browser
+  project's tests. Components are browser code by definition, so server modules (and their
+  native or Node-only dependencies) are never scanned; Vite follows the components' imports
+  to everything else. It is the default when Vite runs as a custom server (`appType:
+'custom'`), where there is no HTML page for Vite's default crawl, and opt-in elsewhere,
+  since it replaces that crawl and costs startup time in large repos; an app's own `entries`
+  win. It replaces hand-written import walkers such as gyral-shop's `vite.deps.ts`.
+- **The dev server builds the app once per server-module version and component set**, not per
+  request: `ssrLoadModule` returns the same module until an edit, so the cached handler is
+  current. starwars.run's hand-written per-module cache goes away. **`gyralDevMiddleware`** is
+  the same without the HTTP server: a Connect-style handler for Express, Connect or Fastify
+  (`@fastify/middie`) that answers every request reaching it.

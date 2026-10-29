@@ -205,7 +205,7 @@ in the browser is an error.
 
 ### Compiled (default: the Vite preset, production builds)
 
-- `gyralVitePreset` adds the template compiler. In `vite build` it rewrites every `html` tagged
+- `gyral()` adds the template compiler. In `vite build` it rewrites every `html` tagged
   template, including those in dependencies, into an internal call that takes a hoisted,
   module-level template object and the values array. The result type is the same.
   - The call is `compiled(template, values)`, imported from `@gyral/core/compiled`: an

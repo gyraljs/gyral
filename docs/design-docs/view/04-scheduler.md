@@ -15,10 +15,16 @@ update maps or completion promises.
   flush with `queueMicrotask`.
 - Messages a spec lists in `renderOnFrame` mark their host in the **frame lane** instead
   (below): it renders in the next animation frame.
-- Every delivered message marks its host, even when the reducer returns the same state. That
-  render writes nothing: every part, form state included, writes only when its value changed
-  since its last commit (02 "Live form state"), so a refused edit stays in the control. To
-  put a control back, change the model (02 "Putting a control back").
+- Every delivered message marks its host, even when the reducer returns the same state. Since
+  0.3.8 (gyral-337.1, ADR 0018 addendum "Render skipping") the render is skipped when nothing
+  the view reads changed since the host's last render that succeeded: its state (`Object.is`),
+  each declared prop and the value of each declared store. That render would write nothing
+  anyway: every part, form state included, writes only when its value changed since its last
+  commit (02 "Live form state"), so a refused edit stays in the control either way. To put a
+  control back, change the model (02 "Putting a control back"). The first render, hydration,
+  the render after an error view and the render after a disconnect that disposed element
+  hooks always run. Development re-runs skipped views, up to `VIEW_CHECKS` (50) per flush, and
+  warns once per component when one differs from what is committed (G0017).
 - A host that isn't connected isn't rendered; it renders when it reconnects.
 - Each host records its **depth** (number of Gyral host ancestors in the composed tree) when it
   connects. Sorting by depth needs no DOM queries.

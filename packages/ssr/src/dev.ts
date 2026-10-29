@@ -1,9 +1,12 @@
 /// <reference types="node" />
 // `gyralDevServer` (ADR 0016 addendum "Development server"): the development server every SSR
 // app used to write by hand. Vite serves client modules in middleware mode; every other request
-// is server-rendered by the app module, re-loaded through Vite per request (edits show at once),
-// streamed through `toNodeListener`. Exported from `@gyral/ssr/node`; Vite loads on first use.
-import { createServer, type Server } from 'node:http';
+// is server-rendered by the app module, which Vite reloads after an edit (edits show at once),
+// streamed through `toNodeListener`. The app is built once per module version and component
+// set, not per request (gyral-337.12). `gyralDevMiddleware` is the same without the HTTP
+// server, for an Express, Connect or Fastify app of its own. Exported from `@gyral/ssr/node`;
+// Vite loads on first use.
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { InlineConfig, ViteDevServer } from 'vite';
 import type { ComponentAssets, ComponentModule } from './components.js';
@@ -12,7 +15,7 @@ import { toNodeListener, type NodeEnv } from './node.js';
 /** What `gyralDevServer` hands the app factory with each freshly loaded module. */
 export interface DevServerContext<S> {
   /**
-   * For `renderPage({ components })` when the Vite config uses `gyralVitePreset({ components })`:
+   * For `renderPage({ components })` when the Vite config uses `gyral({ components })`:
    * the loader and the tags it knows. Undefined otherwise.
    */
   readonly components: ComponentAssets | undefined;
@@ -25,26 +28,45 @@ export interface DevApp {
   readonly fetch: (request: Request, env: NodeEnv) => Response | Promise<Response>;
 }
 
-export interface DevServerOptions<M, S> {
-  /** The server module, from Vite's root (e.g. `/server/app.ts`), loaded per request. */
+export interface DevMiddlewareOptions<M, S> {
+  /** The server module, from Vite's root (e.g. `/server/app.ts`). Vite reloads it after an edit. */
   readonly entry: string;
-  /** Builds the request handler from the module just loaded. */
+  /**
+   * Builds the request handler from the module just loaded: once per module version (Vite gives
+   * a new module after an edit) and set of components, not per request. Keep per-request work
+   * in the handler.
+   */
   readonly app: (module: M, context: DevServerContext<S>) => DevApp;
   /**
    * State that must outlive module reloads (an in-memory database, say): created once, from the
    * first module loaded, and passed to every `app` call.
    */
   readonly state?: (module: M) => S;
-  /** Default: the `PORT` environment variable, else 5173. `0` picks a free port. */
-  readonly port?: number;
-  /** Default: Node's (all interfaces). */
-  readonly host?: string;
   /** The HMR WebSocket's port, so several dev servers can run side by side. Default Vite's. */
   readonly hmrPort?: number;
   /** `toNodeListener`'s `origin`: the public origin when absolute URLs matter. */
   readonly origin?: string;
   /** More Vite settings (root, configFile, plugins, …), merged under the server settings. */
   readonly vite?: InlineConfig;
+}
+
+export interface DevServerOptions<M, S> extends DevMiddlewareOptions<M, S> {
+  /** Default: the `PORT` environment variable, else 5173. `0` picks a free port. */
+  readonly port?: number;
+  /** Default: Node's (all interfaces). */
+  readonly host?: string;
+}
+
+export interface DevMiddleware {
+  /**
+   * A Connect-style handler: Express and Connect take it with `app.use()`, Fastify through
+   * `@fastify/middie`. It answers every request that reaches it (Vite's modules, then the app),
+   * so mount the server's own routes before it.
+   */
+  readonly middleware: (req: IncomingMessage, res: ServerResponse) => void;
+  readonly vite: ViteDevServer;
+  /** Stops Vite. */
+  readonly close: () => Promise<void>;
 }
 
 export interface DevServer {
@@ -99,19 +121,17 @@ document.body.append(new ErrorOverlay(${scriptJson(err)}));
 }
 
 /**
- * Starts the development server of a server-rendered app:
+ * The development server of a server-rendered app, as middleware for a server of its own:
  *
- *   await gyralDevServer({
- *     entry: '/server/app.ts',
- *     app: (mod: typeof import('./app.js'), { components }) => mod.createApp({ components }),
- *   });
+ *   const dev = await gyralDevMiddleware({ entry: '/server/app.ts', app: (mod) => mod.app });
+ *   express().use('/api', api).use(dev.middleware).listen(5173);
  *
  * Client modules, CSS and HMR come from Vite (middleware mode); any other request renders
  * through the app, streamed. A render error answers 500 with Vite's error overlay.
  */
-export async function gyralDevServer<M, S = undefined>(
-  options: DevServerOptions<M, S>,
-): Promise<DevServer> {
+export async function gyralDevMiddleware<M, S = undefined>(
+  options: DevMiddlewareOptions<M, S>,
+): Promise<DevMiddleware> {
   const { createServer: createVite } = await import('vite');
   const viteOptions = options.vite ?? {};
   const vite = await createVite({
@@ -125,6 +145,7 @@ export async function gyralDevServer<M, S = undefined>(
   });
   const components = devComponents(vite);
   let shared: { readonly value: S } | undefined;
+  let built: { readonly module: M; readonly tags: string; readonly app: DevApp } | undefined;
   const listener = toNodeListener(
     async (request, env) => {
       try {
@@ -132,8 +153,13 @@ export async function gyralDevServer<M, S = undefined>(
         shared ??= {
           value: (options.state === undefined ? undefined : options.state(module)) as S,
         };
-        const app = options.app(module, { components: components?.(), state: shared.value });
-        return await app.fetch(request, env);
+        const assets = components?.();
+        const tags = assets === undefined ? '' : [...assets.modules.keys()].join(' ');
+        if (built?.module !== module || built.tags !== tags) {
+          const app = options.app(module, { components: assets, state: shared.value });
+          built = { module, tags, app };
+        }
+        return await built.app.fetch(request, env);
       } catch (error) {
         if (error instanceof Error) vite.ssrFixStacktrace(error);
         console.error(error);
@@ -142,11 +168,32 @@ export async function gyralDevServer<M, S = undefined>(
     },
     options.origin === undefined ? {} : { origin: options.origin },
   );
-  const server = createServer((req, res) => {
-    vite.middlewares(req, res, () => {
-      listener(req, res);
-    });
-  });
+  return {
+    middleware: (req, res) => {
+      vite.middlewares(req, res, () => {
+        listener(req, res);
+      });
+    },
+    vite,
+    close: () => vite.close(),
+  };
+}
+
+/**
+ * Starts the development server of a server-rendered app:
+ *
+ *   await gyralDevServer({
+ *     entry: '/server/app.ts',
+ *     app: (mod: typeof import('./app.js'), { components }) => mod.createApp({ components }),
+ *   });
+ *
+ * `gyralDevMiddleware` on its own HTTP server.
+ */
+export async function gyralDevServer<M, S = undefined>(
+  options: DevServerOptions<M, S>,
+): Promise<DevServer> {
+  const dev = await gyralDevMiddleware(options);
+  const server = createServer(dev.middleware);
   const port = options.port ?? Number(process.env['PORT'] ?? 5173);
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -160,7 +207,7 @@ export async function gyralDevServer<M, S = undefined>(
   return {
     url: `http://${host}:${String(address.port)}/`,
     server,
-    vite,
+    vite: dev.vite,
     close: async () => {
       await new Promise<void>((resolve) => {
         server.close(() => {
@@ -168,7 +215,7 @@ export async function gyralDevServer<M, S = undefined>(
         });
         server.closeAllConnections();
       });
-      await vite.close();
+      await dev.close();
     },
   };
 }

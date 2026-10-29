@@ -90,7 +90,7 @@ export interface ProductionOptions<Env = unknown> {
   readonly distDir: string;
   /**
    * The client entry as named in the Vite manifest. Default `src/entry-client.ts`. A build made
-   * with `gyralVitePreset({ components: true })` may have none: pages then load components
+   * with `gyral({ components: true })` may have none: pages then load components
    * through `components` alone.
    */
   readonly entry?: string;
@@ -139,7 +139,7 @@ export interface AppAssets extends PageAssets {
   readonly clientEntry: string | undefined;
   /**
    * For `renderPage({ components })` when the build was made with
-   * `gyralVitePreset({ components: true })`: each page links exactly the components it rendered.
+   * `gyral({ components: true })`: each page links exactly the components it rendered.
    */
   readonly components: ComponentAssets | undefined;
   /** `modulepreload` and `stylesheets` with `modules` added (cached per list). */

@@ -148,13 +148,66 @@ root, so `event.currentTarget` is that root (the shadow root, or the host for a 
 component), and `event.target` is whatever was hit inside the element (the label's `<span>`,
 an icon).
 
+### `on(event, [filter], parser)`: input typed by its event (0.3.8)
+
+`on('keydown', parser)` types `input.event` from the event's name (`keydown` gives a
+`KeyboardEvent`, `drop` a `DragEvent`, `submit` a `SubmitEvent`) and adds what parsers otherwise
+dig out of the event. Plain parsers keep `IntentInput`; `on()` is a module of its own.
+
+| Field           | Value                                                                                |
+| --------------- | ------------------------------------------------------------------------------------ |
+| `control`       | the `input`, `select`, `textarea` or `button` carrying the intent, typed             |
+| `form`          | that control's form, or the `<form>` carrying the intent                             |
+| `modifiers`     | `{ shift, ctrl, alt, meta }`, all `false` for events without them                    |
+| `files`         | `readonly File[]` from a file input, a drop or a paste; `undefined` for other events |
+| `valueAsNumber` | a number, range, date or time input's value; `undefined` when empty or invalid       |
+| `origin`        | the element the event started on (`composedPath()[0]`), inside shadow roots too      |
+
+A key filter declines other keys the way `undefined` does: they pass outward and keep their
+default action, so Ctrl+R still reloads. `modifiers` is `'none'`, `'any'`, or the ones that
+must be held or not (`{ ctrl: true }`).
+
+```ts
+import { define, html, on } from '@gyral/core';
+
+type Msg =
+  | { readonly _tag: 'Move'; readonly by: number }
+  | { readonly _tag: 'Attach'; readonly files: readonly File[] }
+  | { readonly _tag: 'Volume'; readonly level: number };
+
+export const Board = define<{ readonly at: number }, Msg>()('my-board', {
+  init: () => ({ at: 0 }),
+  intent: {
+    Move: on('keydown', { keys: ['ArrowLeft', 'ArrowRight'], modifiers: 'none' }, (input) => ({
+      _tag: 'Move',
+      by: input.key === 'ArrowLeft' ? -1 : 1,
+    })),
+    Attach: on('change', (input) => ({ _tag: 'Attach', files: input.files ?? [] })),
+    Volume: on('input', (input) => ({ _tag: 'Volume', level: input.valueAsNumber ?? 0 })),
+  },
+  update: {
+    Move: (s, m) => ({ at: s.at + m.by }),
+    Attach: (s) => s,
+    Volume: (s) => s,
+  },
+  view: (s, i) => html`
+    <div tabindex="0" data-intent-keydown=${i.Move}>${s.at}</div>
+    <input type="file" data-intent-change=${i.Attach} />
+    <input type="range" data-intent-input=${i.Volume} />
+  `,
+});
+```
+
+Bind the intent to that event. `gyral/intent-event` (ESLint) reports a binding that fires another
+event, and development throws G0018 when one reaches the parser.
+
 ## Parsers
 
 A parser returns a message, `undefined` (decline the event), or an `IntentRejected` (via
 `form()`/`field()`); it may be async. Validate here so reducers only see valid messages.
 
 ```ts
-import { define, html } from '@gyral/core';
+import { define, html, on } from '@gyral/core';
 
 interface State {
   readonly query: string;
@@ -169,11 +222,12 @@ export const Filters = define<State, Msg>()('my-filters', {
   init: () => ({ query: '', qty: 1 }),
   intent: {
     Typed: ({ value }) => ({ _tag: 'Typed', query: value ?? '' }),
-    // Ignore anything that isn't a whole number in range.
-    Qty: ({ value }) => {
-      const qty = Number(value);
-      return Number.isInteger(qty) && qty >= 1 && qty <= 99 ? { _tag: 'Qty', qty } : undefined;
-    },
+    // A number input: on() reads it as a number. Ignore anything that isn't a whole number in range.
+    Qty: on('input', ({ valueAsNumber: qty }) =>
+      qty !== undefined && Number.isInteger(qty) && qty >= 1 && qty <= 99
+        ? { _tag: 'Qty', qty }
+        : undefined,
+    ),
     // Only the Escape key cancels.
     Cancel: ({ key }) => (key === 'Escape' ? { _tag: 'Cancel' } : undefined),
   },

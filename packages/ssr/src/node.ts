@@ -221,8 +221,11 @@ export function toNodeListener(
 }
 
 export {
+  gyralDevMiddleware,
   gyralDevServer,
   type DevApp,
+  type DevMiddleware,
+  type DevMiddlewareOptions,
   type DevServer,
   type DevServerContext,
   type DevServerOptions,

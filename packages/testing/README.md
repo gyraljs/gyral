@@ -97,11 +97,11 @@ and register it:
 // vitest.config.ts
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import { gyralVitePreset } from '@gyral/core/vite';
+import { gyral } from '@gyral/core/vite';
 import { renderOnServer } from '@gyral/testing/vitest';
 
 export default defineConfig({
-  ...gyralVitePreset(),
+  plugins: [gyral()],
   test: {
     browser: {
       enabled: true,

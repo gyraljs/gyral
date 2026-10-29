@@ -15,7 +15,7 @@ export interface ComponentStyleManifest {
 export interface ComponentStyleManifestOptions {
   /** Application root used by its client build. Its component modules must be SSR-safe. */
   readonly root: string;
-  /** Client output from `gyralVitePreset({ components: true })`, including `.vite` metadata. */
+  /** Client output from `gyral({ components: true })`, including `.vite` metadata. */
   readonly clientDir: string;
   /** Standalone JSON deployment artifact; no component module is needed to read it later. */
   readonly outFile: string;

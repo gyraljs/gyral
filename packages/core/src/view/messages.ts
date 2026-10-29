@@ -24,7 +24,17 @@ export const MESSAGES = {
     'Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from ' +
     '{secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not ' +
     'work in the other. Install one copy: pin @gyral/core to one version with your package ' +
-    "manager's overrides (gyralVitePreset warns when it is installed more than once).",
+    "manager's overrides (gyral() warns when it is installed more than once).",
+  16:
+    '{package} {version} needs @gyral/core {version}, but this app has @gyral/core {core}. ' +
+    "Gyral's packages are released together: install the same version of every @gyral package.",
+  17:
+    '<{tag}> rendered differently with the same state, props and stores, so its view reads ' +
+    'something else, such as Date.now(), a module variable or the DOM. A component renders only ' +
+    'when one of them changes (0.3.8): move what the view reads into state, a prop or a store.',
+  18:
+    'The parser of intent "{intent}" is on("{expected}"), but a "{actual}" event reached it. ' +
+    'Bind the intent to that event (data-intent-{expected}=${…}), or give it a parser of its own.',
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',
@@ -54,10 +64,15 @@ export const MESSAGES = {
   41: '{owner}: driver "{driver}" failed and the command has no onFailure.',
   42: 'gyral: subscription "{name}" failed to unsubscribe',
   43:
-    '{owner}: no driver provides "{driver}". It is a driver token: provide an implementation ' +
-    'by name with provideDrivers(root, { {driver}: … }) or el.drivers. A page provides it ' +
+    '{owner}: no driver provides "{driver}". It is a driver token: provide its implementation ' +
+    'with provideDrivers(root, [token.provide(run)]) or el.drivers. A page provides it ' +
     "before its components' first render: before importing them, or later in the same task " +
     '(no await in between).',
+  44: 'Two drivers named "{name}" in one list of drivers: give each a name of its own, or drop one.',
+  45:
+    'A driver supplied as "{key}" is named "{name}", so commands of the "{name}" driver never use ' +
+    'it. Supply drivers as a list, each under its own name (provideDrivers(root, [driver])), or ' +
+    'make the key match.',
   // Stores
   50:
     '<{tag}> uses store "{store}" without declaring it. Add it to the spec: stores: [{store}], ' +

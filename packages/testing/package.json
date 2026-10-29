@@ -1,6 +1,6 @@
 {
   "name": "@gyral/testing",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Gyral test helpers: pure update stepping, command helpers, fake drivers, virtual time, SSR page mounting, server rendering in Vitest browser tests.",
   "license": "MIT",
   "author": "Mike Zupper",
@@ -14,7 +14,10 @@
     "url": "https://github.com/gyraljs/gyral/issues"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/core.ts",
+    "./dist/core.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./vitest": "./src/vitest.ts"
@@ -43,11 +46,11 @@
     "prepack": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@gyral/core": "workspace:*",
     "@sinonjs/fake-timers": "15.4.0",
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
+    "@gyral/core": "workspace:*",
     "vitest": "^4.1.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
@@ -56,7 +59,8 @@
     }
   },
   "devDependencies": {
+    "@gyral/core": "workspace:*",
     "@valibot/to-json-schema": "1.8.0",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   }
 }

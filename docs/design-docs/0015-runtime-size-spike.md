@@ -207,3 +207,17 @@ supersedes the Effect 4 addendum above and ADR 0002. Branch `release/0.2.0` comb
   by the existing tests. Effect's scheduler is no longer available for future features.
 - **Confirmation:** the combined candidate is benchmarked as one build before release
   (gyral-sug; `gyraljs/benchmarks` branch `exp/release-0.2.0`, `CONFIRMATION.md`).
+
+## Addendum: 0.3.8 size increases, approved by the owner (2026-10-29)
+
+The owner's rule for 0.3.8 (gyral-337): new features are pay-as-you-go where they can be; what
+core itself must carry is measured, and each budget rises by exactly that (measured + 0.05 KiB,
+rounded up to 0.1, `scripts/size-budget.json`), listed here per feature. The owner approved the
+list on 2026-10-29.
+
+| Feature (bead)                                                                     | Cost, gzip                                                                                                                                         | Budgets raised                                                                                                                         |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Core as an exact-version peer (337.5, ADR 0033)                                    | +39 to +44 B per app with one Gyral package; +62 B (routing-view), +74 B (isomorphic); 0 B without                                                 | all chunks: custom-driver 10.8, http-random-user 12.1, isomorphic 18.6, seconds-elapsed 9.6; initial: those four and routing-view 14.7 |
+| Typed driver provision (337.2, ADR 0006 addendum)                                  | -20 to +40 B per example; several shrink (one shared lookup)                                                                                       | all chunks: animated-letters 11.6, register 18.1; initial: animated-letters 11.6                                                       |
+| Render skipping, `each` equality, subscription delivery (337.1, ADR 0018 addendum) | +104 to +148 B in every app (the check before each render; +30 B of it in apps with `each`); +277 B in workload-lab, which also uses subscriptions | 18 all-chunks and 17 initial budgets, +0.1 to +0.2 KiB each (`scripts/size-budget.json`); hello-world 8.6 → 8.7                        |
+| `on()` (337.6, ADR 0001 addendum), opt-in                                          | about +430 B in an app that calls it; 0 B otherwise                                                                                                | bmi-nested 10.0, undo-replay 12.1 (all chunks and initial): both examples now use it (+439 B, +441 B)                                  |

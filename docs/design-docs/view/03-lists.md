@@ -57,6 +57,11 @@ re-renders only when:
 Otherwise the row is skipped: no `row()` call, no template result, no part comparisons. Moving a
 skipped row moves its nodes without re-rendering it.
 
+`each(items, key, row, { pick, equals })` (0.3.8, gyral-337.1) replaces the second comparison with
+`equals(previous, next)` on the picked values, for a `pick` that builds a nested value each
+render. Stable references come first (derive the value in `update`); `equals` is the escape
+hatch, and runs for every row on every render.
+
 `pick` still runs for every row, but it is meant to be trivial (a comparison or a field read).
 In select-row, 998 of 1,000 rows cost one comparison each; only the old and new selection render.
 

@@ -27,6 +27,7 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 ## Packages and layers
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
+Every package below core takes it as a peer at its own exact version (ADR 0033).
 
 | Layer | Package           | Status   | May depend on                                                                                                                                                              |
 | ----- | ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -40,6 +41,7 @@ Dependencies only point **down** this list. Nothing points up or sideways except
 | 2     | `@gyral/effect`   | planned  | core; peer-depends on `effect` (opt-in API)                                                                                                                                |
 | tool  | `create-gyral`    | released | Node builtins only (a CLI that copies `templates/`; the apps depend on Gyral)                                                                                              |
 | tool  | `@gyral/mcp`      | released | `@modelcontextprotocol/sdk`, `zod`; no Gyral imports (a corpus built at build time from the docs snapshot, sources, examples and skill)                                    |
+| tool  | `@gyral/codemod`  | released | `@babel/parser`, `@babel/types`, `magic-string`, `diff`; no Gyral imports (it recognizes Gyral APIs in the source it parses, so it runs on any app)                        |
 | app   | `examples/*`      | —        | any public package entry point, never `src/internal`                                                                                                                       |
 
 Enforced by `eslint.config.js` (import restrictions for core, layer-1 packages and the tools) and `scripts/check-public-api.mjs`.

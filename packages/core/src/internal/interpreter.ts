@@ -1,7 +1,7 @@
 import { DEVTOOLS_ENABLED } from '#devtools';
 import type { AnyDriver, Command, Concurrency } from '../command.js';
 import type { CommandPhase, CommandTrace } from '../devtools-events.js';
-import { providedDriver } from '../drivers-scope.js';
+import { driverNamed, providedDriver } from '../drivers-scope.js';
 import type { FeatureHost } from '../features.js';
 import { unprovided } from './token.js';
 
@@ -227,7 +227,7 @@ export const hostInterpreter = <M>(
   failed: CommandFailure,
 ): Interpreter<M> =>
   makeInterpreter(
-    (driver) => el.drivers[driver.name] ?? providedDriver(el, driver.name) ?? driver,
+    (driver) => driverNamed(el.drivers, driver.name) ?? providedDriver(el, driver.name) ?? driver,
     dispatch,
     trace,
     failed,

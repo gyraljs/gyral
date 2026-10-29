@@ -7,7 +7,7 @@ fix before you write the code.
 
 ## Development setup
 
-You need Node 24+ and pnpm 10 (`corepack enable` picks the version from `package.json`).
+You need Node 24+ and pnpm 12 (`corepack enable` picks the version from `package.json`).
 
 ```sh
 git clone https://github.com/gyraljs/gyral.git
