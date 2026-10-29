@@ -32,6 +32,8 @@ addendum (the third).
 
 ## New APIs
 
+- **Node 26** (LTS since 2026-10-28) is supported beside Node 24: the gate runs on both.
+
 - **`npx @gyral/mcp@0.3.8 skill`** writes the 0.3.8 skill into `.claude/skills/gyral` (and
   `.agents/skills/gyral`); `--check` in CI fails when a copy differs.
 
