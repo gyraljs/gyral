@@ -29,26 +29,26 @@ pnpm add @gyral/ssr
 Import everything a view needs from `@gyral/core`: `html`, `css`, `nothing`, `each`, `raw`,
 `defineHook`, the `invalid` hook, and `prop` for prop declarations.
 
-## Vite and Vitest: `gyralVitePreset()`
+## Vite and Vitest: `gyral()`
 
-Settings every Gyral app needs, shipped as a preset (safe in any config file):
+Gyral's Vite plugins, for a Vite config and each Vitest project (safe in any config file):
 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { gyralVitePreset } from '@gyral/core/vite';
+import { gyral } from '@gyral/core/vite';
 
-export default defineConfig({ ...gyralVitePreset(), build: { manifest: true } });
+export default defineConfig({ plugins: [gyral()], build: { manifest: true } });
 ```
 
 ```ts
-// vitest.config.ts: components run in a real browser (with projects, spread it into each one)
+// vitest.config.ts: components run in a real browser (with projects, add it to each one)
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import { gyralVitePreset } from '@gyral/core/vite';
+import { gyral } from '@gyral/core/vite';
 
 export default defineConfig({
-  ...gyralVitePreset(),
+  plugins: [gyral({ optimize: 'auto' })],
   test: {
     browser: {
       enabled: true,
@@ -60,9 +60,11 @@ export default defineConfig({
 });
 ```
 
-- **`plugins`**: the template compiler (below), `gyral:template-locations`,
-  `gyral:dev-server` and `gyral:one-core`. If your config has plugins of its own, list them
-  all, or the spread is overwritten: `plugins: [...gyralVitePreset().plugins, mine()]`.
+- **`gyral()`** (0.3.8) returns the template compiler (below), `gyral:template-locations`,
+  `gyral:dev-server` and `gyral:one-core`; list your own plugins beside it
+  (`plugins: [gyral(), mine()]`). Its settings come through the plugins' `config` hooks, so
+  nothing needs spreading. `gyralVitePreset()`, the 0.3.7 spelling, still works through 0.3.x:
+  it returns `{ plugins: gyral(options), optimizeDeps }` to spread into a config.
 - **`gyral:template-locations`** (dev server and Vitest only, 0.3.1): tells the development
   runtime where each `html` and `svg` template was written, so template rule errors and
   hydration mismatches name your file, line and column (view/01-templates.md "Source
@@ -78,23 +80,31 @@ export default defineConfig({
   of core"). In the dev server and Vitest it pre-bundles the browser entry points of every
   Gyral package installed for the app (`@gyral/core` with `/compiled`, `/internal`, `/storage`
   and `/indexeddb`; `@gyral/http` with `/testing`, `/sse` and `/websocket`; `@gyral/router`,
-  `@gyral/time`, `@gyral/devtools` and `@gyral/testing`), never the Node-only ones. Packages
+  `@gyral/time`, `@gyral/devtools` and `@gyral/testing`), never the Node-only ones. Since
+  0.3.8 it also pre-bundles your direct dependencies that use a Gyral browser package (a
+  design system, a widget library), each browser entry point in their `exports`. Packages
   linked from source, such as a workspace's, stay unbundled, as Vite serves them. An entry
   your config lists in `optimizeDeps.exclude` is left out.
-- **`optimizeDeps.include`**: your own extra dependencies. If Vite discovers another
-  dependency during the first browser test run and reloads the page ("Vite unexpectedly
-  reloaded a test"), list it: `gyralVitePreset({ optimize: ['some-dependency'] })`. Gyral's
-  packages no longer need listing (0.3.7).
+- **`optimize`**: pre-bundling beyond that. Vite pre-bundles what it finds at startup; a
+  dependency it meets later makes it re-optimize and reload ("Vite unexpectedly reloaded a
+  test" in Vitest). `optimize: 'auto'` (0.3.8) points Vite's startup scan at the modules that
+  define components, and at a Vitest browser project's tests: Vite follows their imports, so
+  everything they use is found up front. Server modules are never scanned. It is on by default
+  when Vite runs as a custom server (`appType: 'custom'`, as `gyralDevServer` and
+  `gyralDevMiddleware` do), where Vite has no HTML page to crawl; elsewhere set it yourself,
+  as in a Vitest browser project. A config's own `optimizeDeps.entries` win;
+  `optimize: false` turns the scan off; a list (`optimize: ['some-dependency']`) adds modules
+  to pre-bundle, beside the default.
 - **`clientOnly: true`** (0.3.1), for apps no server renders:
-  `gyralVitePreset({ clientOnly: true })` adds `gyral:client-only`, which leaves the hydration
+  `gyral({ clientOnly: true })` adds `gyral:client-only`, which leaves the hydration
   code out of the browser bundle (about 1 KiB gzip with Vite's preload helper; hello-world: 8.9
   → 7.9 KiB) and keeps the invoker-command fallback only when a module may use `command`
   intents (`data-intent-on="command"`, a bound `data-intent-on`, `events: ['command']`, or
   Gyral's `raw()`). Only your own source and installed packages that depend on a `@gyral/*`
   package (directly or through their dependencies) are scanned, comments excluded; other
   dependencies never keep it. Server-rendered markup met anyway renders fresh, replacing the
-  server's (development warns). Leave it off for apps with `@gyral/ssr`, and spread the same preset into Vitest so
-  tests match the build (view/07-hydration.md "Client-only builds").
+  server's (development warns). Leave it off for apps with `@gyral/ssr`, and give Vitest the
+  same `gyral({ clientOnly: true })` so tests match the build (view/07-hydration.md "Client-only builds").
 
 ### One copy of core
 
@@ -125,7 +135,7 @@ separately bundled widgets may each carry their own copy on purpose.
 
 ### Coverage
 
-Keep `gyralVitePreset()` in the tested project and include your application source explicitly
+Keep `gyral()` in the tested project and include your application source explicitly
 in Vitest coverage, for example `coverage: { provider: 'v8', include: ['src/**/*.ts'] }`.
 Install `@vitest/coverage-v8` at the same version as Vitest. The development locator preserves
 source maps and authored branch counts; you do not need to remove diagnostics or lower a
@@ -163,7 +173,7 @@ and Vitest keep the runtime template path. In a build it:
   (`pnpm add -D parse5`, an optional peer dependency; build time only). Without it, the build
   prints a one-time notice and keeps the normalizer's own check.
 
-Options: `gyralVitePreset({ compiler: { parse5: false } })` skips the parse5 check;
+Options: `gyral({ compiler: { parse5: false } })` skips the parse5 check;
 `compiler: { sources: ['@gyral/core', 'my-design-system'] }` also compiles templates whose
 `html` comes from a package that re-exports it (that package must also export `compiled`, and
 `compiledSvg` if it re-exports `svg`).
@@ -311,7 +321,7 @@ listed as `css`: pass it as `renderPage({ stylesheets })` to link it (immutable,
 pages, allowed by `style-src 'self'`) instead of inlining it with `styles` on every page.
 
 **Automatic component loading** replaces the client entry for most apps:
-`gyralVitePreset({ components: true })` gives every component defined under `src/` its own
+`gyral({ components: true })` gives every component defined under `src/` its own
 module behind a small loader, and `renderPage({ components })` links exactly the components a
 page rendered (their modules, preloaded, and the loader) after the body; a page that rendered
 none loads no JavaScript. `gyralDevServer` and `productionServer` hand `components` to your app,
@@ -323,9 +333,14 @@ the body never repeats a module, stylesheet or script the head already links. De
 ### Development server
 
 `gyralDevServer({ entry: '/server/app.ts', app })` (`@gyral/ssr/node`) is the development
-server: Vite serves client modules and HMR, and every other request loads your server module
-through Vite and streams its response; `state` keeps in-memory data across reloads, and a
-render error shows Vite's error overlay. See the SSR skill's "Development server".
+server: Vite serves client modules and HMR, and every other request goes to your server
+module, loaded through Vite, and streams its response. Since 0.3.8 `app` builds the handler
+once per module version (Vite loads a new one after an edit) and component set, not per
+request, so keep per-request work inside the handler; `state` keeps in-memory data across
+reloads, and a render error shows Vite's error overlay. `gyralDevMiddleware` (0.3.8) is the
+same as a Connect-style handler for a server of your own: Express and Connect take
+`dev.middleware` with `app.use()`, Fastify through `@fastify/middie`. It answers every request
+that reaches it, so mount your own routes first. See the SSR skill's "Development server".
 
 ### Request layer
 
@@ -355,7 +370,7 @@ import { productionServer } from '@gyral/ssr/static';
 const app = await productionServer({
   distDir: join(process.cwd(), 'dist'),
   staticDir: false, // nothing prerendered: every page renders per request
-  // With gyralVitePreset({ components: true }): each page loads the components it rendered.
+  // With gyral({ components: true }): each page loads the components it rendered.
   // With a client entry instead: scripts: [clientEntry], plus modulepreload and stylesheets.
   createApp: ({ components, stylesheets }) => ({
     fetch: (_request: Request) =>

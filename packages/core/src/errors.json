@@ -44,7 +44,7 @@
   {
     "code": "G0015",
     "group": "Components",
-    "message": "Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from {secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not work in the other. Install one copy: pin @gyral/core to one version with your package manager's overrides (gyralVitePreset warns when it is installed more than once).",
+    "message": "Two copies of @gyral/core run in this page: {first} from {firstUrl}, and {second} from {secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not work in the other. Install one copy: pin @gyral/core to one version with your package manager's overrides (gyral() warns when it is installed more than once).",
     "arguments": ["first", "firstUrl", "second", "secondUrl"],
     "url": "https://gyral.dev/errors/#G0015"
   },

@@ -1,4 +1,4 @@
-// Automatic component loading (`gyralVitePreset({ components })`, ADR 0016 addendum "Automatic
+// Automatic component loading (`gyral({ components })`, ADR 0016 addendum "Automatic
 // component loading"): finds the app's components, adds a loader to the client build that
 // imports a tag's module once the tag is in the page, and writes the manifest
 // `@gyral/ssr/static`'s `componentsFromManifest` reads. ../vite.ts loads it on the plugin's
@@ -71,7 +71,7 @@ interface ComponentsPluginApi {
   readonly tags: () => ReadonlyMap<string, string>;
 }
 
-/** Automatic component loading (`gyralVitePreset({ components })`). */
+/** Automatic component loading (`gyral({ components })`). */
 export function createComponents(options: ComponentsOptions): Plugin {
   const include = options.include ?? ['src'];
   let root = process.cwd();

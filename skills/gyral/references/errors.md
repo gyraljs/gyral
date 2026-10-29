@@ -180,7 +180,7 @@ https://gyral.dev/errors/. The ones agents hit most:
 | G0050         | the view reads a store the spec doesn't list                     | add it to `stores: [...]`                                             |
 | G0053         | a store read during a server render without a scope              | pass the request's stores to `renderPage({ stores })`                 |
 | G0062 / G0063 | hydration mismatch; the component was rendered fresh             | make the view deterministic (no `Date.now()`, locale) — see `ssr.md`  |
-| G0070         | an `html` template reached the browser uncompiled                | build with `gyralVitePreset()`                                        |
+| G0070         | an `html` template reached the browser uncompiled                | build with `gyral()`                                                  |
 | G0073 / G0074 | a reducer / `init` threw (state kept / error view shown)         | fix the throw; handle it with `Errored` or `error` (above)            |
 | G0078         | a component threw during a server render                         | as above; the browser renders it fresh                                |
 | G0079 / G0080 | two subscriptions share a lane / a subscription keeps restarting | give each its own `key` / keep changing data out of its input         |

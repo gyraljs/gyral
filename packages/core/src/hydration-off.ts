@@ -1,4 +1,4 @@
-// `#hydration-loader` in client-only builds (`gyralVitePreset({ clientOnly: true })`,
+// `#hydration-loader` in client-only builds (`gyral({ clientOnly: true })`,
 // gyral-c5d.11, view/07-hydration.md "Client-only builds"): the same exports as
 // hydration-loader.ts, without the hydration walk or its import(), so the bundle has no
 // hydration chunk (and, without other import()s, no preload helper). A server-rendered host
@@ -19,7 +19,7 @@ export const takeSeed = ((host: Element): Seed | undefined => {
     warned = true;
     console.warn(
       `gyral: <${host.localName}> was server-rendered (it has a hydration seed), but this app ` +
-        `is built client-only (gyralVitePreset({ clientOnly: true })), which leaves the ` +
+        `is built client-only (gyral({ clientOnly: true })), which leaves the ` +
         `hydration code out: it renders fresh, replacing the server's markup, and so does every ` +
         `server-rendered host. Drop clientOnly for apps that render on the server ` +
         `(view/07-hydration.md "Client-only builds").`,

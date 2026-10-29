@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gyral-types: writes the element typings gyralVitePreset() writes (gyral-1zd.25), for type
+// gyral-types: writes the element typings gyral() writes (gyral-1zd.25), for type
 // checks that run without Vite (`gyral-types && tsc --noEmit`).
 //   gyral-types [--root <dir>] [--dir <src dir>]... [--out <file>]
 import { resolve } from 'node:path';

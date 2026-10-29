@@ -44,7 +44,7 @@ Compute derived values in plain helper functions of state.
   (`references/ssr.md` "Content-Security-Policy").
 - Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
   (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
-- With `gyralVitePreset()`, `vite build` compiles templates and reports rule errors at build
+- With `gyral()`, `vite build` compiles templates and reports rule errors at build
   time (https://gyral.dev/docs/views/#checked-before-it-runs); dev and tests use the same rules at runtime.
 - `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
   flags `each` rows that read the view's scope (`gyral/each-row-purity`), and warns about

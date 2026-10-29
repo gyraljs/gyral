@@ -236,7 +236,7 @@ export const Loader = define<State, Msg>()('my-loader', {
 
 ## Typing the tag
 
-`gyralVitePreset()` writes `.gyral/elements.d.ts` with an `HTMLElementTagNameMap` entry for
+`gyral()` writes `.gyral/elements.d.ts` with an `HTMLElementTagNameMap` entry for
 every **exported** two-call `define` in `src` (at the start of `vite`, `vite build` and Vitest,
 and again when a file changes), so `document.createElement('my-hello')` and `querySelector`
 return the component's class. Gitignore `.gyral/` and add `".gyral/elements.d.ts"` to tsconfig
@@ -253,7 +253,7 @@ export const Hello = define<Stateless, never>()('my-hello', {
 });
 ```
 
-Options: `gyralVitePreset({ types: { dirs: ['src', 'lib'], out: 'types/elements.d.ts' } })`,
+Options: `gyral({ types: { dirs: ['src', 'lib'], out: 'types/elements.d.ts' } })`,
 or `types: false` to write nothing. Limits: only `export const X = define…()('tag', …)` in code
 is recognised, not one in a comment or a string (a component built some other way keeps a hand-written entry); a component's
 outputs aren't turned into typed events, because an intent parser can't know which element or

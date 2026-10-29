@@ -8,7 +8,8 @@ Two layers, both with Vitest:
 2. **The element, in a real browser** (Vitest browser mode with Playwright, never jsdom):
    mount it, swap drivers for fakes, click and type, assert on the DOM.
 
-Vite/Vitest config: spread `gyralVitePreset()` (from `@gyral/core/vite`) into each project.
+Vite/Vitest config: `plugins: [gyral()]` (from `@gyral/core/vite`) in each project; in a browser
+project, `gyral({ optimize: 'auto' })` pre-bundles what the tests import before they run.
 It pre-bundles Gyral's own packages (0.3.7), so don't list them in `optimize`; list only other
 dependencies Vite discovers mid-run ("Vite unexpectedly reloaded a test").
 
@@ -225,11 +226,11 @@ Register the command (spread the preset into each Vitest project as usual):
 // vitest.config.ts
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import { gyralVitePreset } from '@gyral/core/vite';
+import { gyral } from '@gyral/core/vite';
 import { renderOnServer } from '@gyral/testing/vitest';
 
 export default defineConfig({
-  ...gyralVitePreset(),
+  plugins: [gyral()],
   test: {
     browser: {
       enabled: true,

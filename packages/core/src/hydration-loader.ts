@@ -1,7 +1,7 @@
 // The client's half of seeds and hydration loading (view/07-hydration.md "Loading"), core's
 // `#hydration-loader`: reads a server-rendered host's seed on connect and loads the hydration
 // walk (hydration-client.ts) with import() when the first host that needs it connects.
-// Client-only builds (`gyralVitePreset({ clientOnly: true })`, gyral-c5d.11) resolve
+// Client-only builds (`gyral({ clientOnly: true })`, gyral-c5d.11) resolve
 // `#hydration-loader` to hydration-off.ts instead: no import(), so no hydration chunk.
 import { SEED_ATTRIBUTE, type Seed } from './hydration.js';
 import { hold } from './scheduler.js';

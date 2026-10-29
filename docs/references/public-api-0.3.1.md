@@ -262,9 +262,10 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | ------------------------- | ----- | --------------- | ---------------------------------------------------------- |
 | `ComponentsOptions`       | type  | supporting type |                                                            |
 | `ElementTypesOptions`     | type  | supporting type |                                                            |
+| `gyral`                   | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)       |
 | `GyralViteConfig`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md) |
 | `GyralViteOptions`        | type  | supporting type |                                                            |
-| `gyralVitePreset`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)       |
+| `gyralVitePreset`         | value | documented      | [consumer-setup.md](consumer-setup.md)                     |
 | `TemplateCompilerOptions` | type  | supporting type |                                                            |
 
 ### `@gyral/core/compiled`
@@ -477,18 +478,21 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 
 ### `@gyral/ssr/node`
 
-| Export                | Kind  | Status          | Documented in                                                                        |
-| --------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
-| `DevApp`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
-| `DevServer`           | type  | supporting type |                                                                                      |
-| `DevServerContext`    | type  | supporting type |                                                                                      |
-| `DevServerOptions`    | type  | supporting type |                                                                                      |
-| `FetchHandler`        | type  | supporting type |                                                                                      |
-| `gyralDevServer`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
-| `NodeEnv`             | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
-| `NodeListener`        | type  | supporting type |                                                                                      |
-| `NodeListenerOptions` | type  | supporting type |                                                                                      |
-| `toNodeListener`      | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| Export                 | Kind  | Status          | Documented in                                                                        |
+| ---------------------- | ----- | --------------- | ------------------------------------------------------------------------------------ |
+| `DevApp`               | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `DevMiddleware`        | type  | supporting type |                                                                                      |
+| `DevMiddlewareOptions` | type  | supporting type |                                                                                      |
+| `DevServer`            | type  | supporting type |                                                                                      |
+| `DevServerContext`     | type  | supporting type |                                                                                      |
+| `DevServerOptions`     | type  | supporting type |                                                                                      |
+| `FetchHandler`         | type  | supporting type |                                                                                      |
+| `gyralDevMiddleware`   | value | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `gyralDevServer`       | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
+| `NodeEnv`              | type  | documented      | [skills/gyral/references/ssr.md](../../skills/gyral/references/ssr.md)               |
+| `NodeListener`         | type  | supporting type |                                                                                      |
+| `NodeListenerOptions`  | type  | supporting type |                                                                                      |
+| `toNodeListener`       | value | documented      | [skills/gyral/references/production.md](../../skills/gyral/references/production.md) |
 
 ### `@gyral/testing`
 

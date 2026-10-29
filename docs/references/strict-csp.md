@@ -7,7 +7,7 @@ This recipe uses the build metadata API of
 
 ## Build policy metadata
 
-Build the browser with `gyralVitePreset({ components: true })`. Before deleting `.vite`,
+Build the browser with `gyral({ components: true })`. Before deleting `.vite`,
 call `writeComponentStyleManifest({ root, clientDir, outFile })` from `@gyral/ssr/static`.
 The helper finds discovered and explicitly listed components, bundles their registration
 modules, and executes that bundle in a fresh Node process. Supply application aliases or

@@ -86,8 +86,8 @@ spec)` (two calls): the keys of `intent` are the intent names markup uses. A key
    components have no seed and may hold other values (an Effect `Option`, a `Map`); plain data
    still keeps tests, devtools previews and a later move to SSR simple.
 7. **Import the view layer from `@gyral/core`** (`html`, `css`, `nothing`, `each`, `raw`,
-   `defineHook`, `invalid`). Spread `gyralVitePreset()` (from `@gyral/core/vite`)
-   into the Vite/Vitest config: `vite build` then compiles templates and checks their rules; add
+   `defineHook`, `invalid`). Add `gyral()` (from `@gyral/core/vite`) to the
+   Vite/Vitest config's `plugins`: `vite build` then compiles templates and checks their rules; add
    `gyral.configs.recommended` from `@gyral/core/eslint` to see them in the editor. An app no
    server renders passes `{ clientOnly: true }` to leave the hydration code out (about 1 KiB).
 8. **Lists use `each(items, key, row, pick?)` with pure rows**: a row reads only its
