@@ -53,6 +53,12 @@ Arguments: `tag`, `seconds`.
 
 Arguments: `first`, `firstUrl`, `second`, `secondUrl`.
 
+### G0016
+
+> {package} {version} needs @gyral/core {version}, but this app has @gyral/core {core}. Gyral's packages are released together: install the same version of every @gyral package.
+
+Arguments: `package`, `version`, `core`.
+
 ## Props
 
 ### G0020

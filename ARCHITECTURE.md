@@ -27,6 +27,7 @@ Gyral turns a Model-View-Intent spec into a standard custom element. The loop:
 ## Packages and layers
 
 Dependencies only point **down** this list. Nothing points up or sideways except as noted.
+Every package below core takes it as a peer at its own exact version (ADR 0033).
 
 | Layer | Package           | Status   | May depend on                                                                                                                                                              |
 | ----- | ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

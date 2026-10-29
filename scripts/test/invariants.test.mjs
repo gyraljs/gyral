@@ -1,14 +1,16 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   checkDependencies,
-  checkCoreVersion,
   checkPluginVersion,
   checkReleaseAge,
+  checkVersionConstant,
   checkWorkflow,
   findEffectLeaks,
   findEscapedBackticks,
   relativeLinks,
+  VERSION_FILES,
   workflowTriggers,
 } from '../lib/invariants.mjs';
 
@@ -66,6 +68,38 @@ describe('checkDependencies', () => {
   it('accepts the real core manifest shape', () => {
     const manifest = JSON.parse(readFileSync('packages/core/package.json', 'utf8'));
     expect(checkDependencies('packages/core/package.json', manifest)).toEqual([]);
+  });
+
+  it('takes core as an exact-version peer in every other package', () => {
+    const peer = { name: '@gyral/http', peerDependencies: { '@gyral/core': 'workspace:*' } };
+    expect(checkDependencies('packages/http/package.json', peer)).toEqual([]);
+    const dependency = { name: '@gyral/http', dependencies: { '@gyral/core': 'workspace:*' } };
+    expect(checkDependencies('packages/http/package.json', dependency)).toEqual([
+      expect.stringContaining('0033-core-peer.md'),
+    ]);
+    const range = { name: '@gyral/http', peerDependencies: { '@gyral/core': 'workspace:^' } };
+    expect(checkDependencies('packages/http/package.json', range)).toHaveLength(1);
+    for (const pkg of ['devtools', 'http', 'router', 'ssr', 'testing', 'time']) {
+      const file = `packages/${pkg}/package.json`;
+      expect(checkDependencies(file, JSON.parse(readFileSync(file, 'utf8')))).toEqual([]);
+    }
+  });
+
+  it("checks core's version in every entry point that loads core (G0016)", () => {
+    // Entry points that never import core: Node-only helpers and the Vitest config plugin.
+    const coreFree = ['ssr/./static', 'ssr/./node', 'testing/./vitest'];
+    for (const pkg of ['devtools', 'http', 'router', 'ssr', 'testing', 'time']) {
+      const manifest = JSON.parse(readFileSync(`packages/${pkg}/package.json`, 'utf8'));
+      // Bundlers keep the check only because core.ts is declared as having side effects.
+      expect(manifest.sideEffects).toEqual(
+        expect.arrayContaining(['./src/core.ts', './dist/core.js']),
+      );
+      for (const [entry, source] of Object.entries(manifest.exports)) {
+        if (coreFree.includes(`${pkg}/${entry}`)) continue;
+        const text = readFileSync(join(`packages/${pkg}`, source), 'utf8');
+        expect(text, `${pkg} ${entry}`).toMatch(/^import '\.\/core\.js';$/m);
+      }
+    }
   });
 
   it('allows only optional build-time peers in @gyral/core (vite, parse5, eslint)', () => {
@@ -196,21 +230,27 @@ describe('checkPluginVersion', () => {
   });
 });
 
-describe('checkCoreVersion', () => {
+describe('checkVersionConstant', () => {
+  const file = 'packages/core/src/view/version.ts';
+
   it('accepts a VERSION at the release version', () => {
-    expect(checkCoreVersion("export const VERSION = '0.3.7';\n", '0.3.7')).toEqual([]);
+    expect(checkVersionConstant(file, "export const VERSION = '0.3.7';\n", '0.3.7')).toEqual([]);
   });
 
   it('names a VERSION left at another version, or missing', () => {
-    expect(checkCoreVersion("export const VERSION = '0.3.6';\n", '0.3.7')).toEqual([
-      expect.stringContaining('VERSION is 0.3.6, but the release is 0.3.7'),
+    expect(checkVersionConstant(file, "export const VERSION = '0.3.6';\n", '0.3.7')).toEqual([
+      expect.stringContaining(`${file}: VERSION is 0.3.6, but the release is 0.3.7`),
     ]);
-    expect(checkCoreVersion('', '0.3.7')).toEqual([expect.stringContaining('VERSION is missing')]);
+    expect(checkVersionConstant(file, '', '0.3.7')).toEqual([
+      expect.stringContaining('VERSION is missing'),
+    ]);
   });
 
-  it('holds for the committed source', () => {
+  it("holds for core's and every package's committed source", () => {
     const release = JSON.parse(readFileSync('packages/core/package.json', 'utf8')).version;
-    const source = readFileSync('packages/core/src/view/version.ts', 'utf8');
-    expect(checkCoreVersion(source, release)).toEqual([]);
+    expect(VERSION_FILES).toHaveLength(7);
+    for (const f of VERSION_FILES) {
+      expect(checkVersionConstant(f, readFileSync(f, 'utf8'), release)).toEqual([]);
+    }
   });
 });

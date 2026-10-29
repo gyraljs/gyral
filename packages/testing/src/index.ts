@@ -1,4 +1,5 @@
 // Test helpers for Gyral components (gyral-czi.7). Plain TypeScript; works with any runner.
+import './core.js';
 export { initial, run, step, subscriptionsFor } from './step.js';
 export { stepStore } from './stores.js';
 export type { Ran, RunOptions, StepMessage, Stepped } from './step.js';

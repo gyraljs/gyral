@@ -16,7 +16,9 @@
   "type": "module",
   "sideEffects": [
     "./src/index.ts",
-    "./dist/index.js"
+    "./dist/index.js",
+    "./src/core.ts",
+    "./dist/core.js"
   ],
   "exports": {
     ".": "./src/index.ts",
@@ -51,10 +53,10 @@
     "prepack": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@gyral/core": "workspace:*",
     "@standard-schema/spec": "1.1.0"
   },
   "peerDependencies": {
+    "@gyral/core": "workspace:*",
     "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
@@ -63,6 +65,7 @@
     }
   },
   "devDependencies": {
+    "@gyral/core": "workspace:*",
     "@gyral/testing": "workspace:*",
     "@hono/node-server": "2.1.4",
     "hono": "4.13.13",

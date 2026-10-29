@@ -408,19 +408,20 @@ importers:
   packages/create-gyral: {}
 
   packages/devtools:
-    dependencies:
+    devDependencies:
       '@gyral/core':
         specifier: workspace:*
         version: link:../core
 
   packages/http:
     dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../core
       '@standard-schema/spec':
         specifier: 1.1.0
         version: 1.1.0
+    devDependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/mcp:
     dependencies:
@@ -451,20 +452,20 @@ importers:
         version: link:../time
 
   packages/router:
-    dependencies:
+    devDependencies:
       '@gyral/core':
         specifier: workspace:*
         version: link:../core
 
   packages/ssr:
     dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../core
       '@standard-schema/spec':
         specifier: 1.1.0
         version: 1.1.0
     devDependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
       '@gyral/testing':
         specifier: workspace:*
         version: link:../testing
@@ -480,9 +481,6 @@ importers:
 
   packages/testing:
     dependencies:
-      '@gyral/core':
-        specifier: workspace:*
-        version: link:../core
       '@sinonjs/fake-timers':
         specifier: 15.4.0
         version: 15.4.0
@@ -490,6 +488,9 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
     devDependencies:
+      '@gyral/core':
+        specifier: workspace:*
+        version: link:../core
       '@valibot/to-json-schema':
         specifier: 1.8.0
         version: 1.8.0(valibot@1.5.0(typescript@6.0.3))
@@ -498,11 +499,10 @@ importers:
         version: 5.0.3(@types/node@24.19.1)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/time:
-    dependencies:
+    devDependencies:
       '@gyral/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
       '@gyral/testing':
         specifier: workspace:*
         version: link:../testing

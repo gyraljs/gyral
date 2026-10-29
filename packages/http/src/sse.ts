@@ -1,4 +1,5 @@
 // Native EventSource, with the browser's own reconnection and event IDs (ADR 0029).
+import './core.js';
 import { subscription, type Driver } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 

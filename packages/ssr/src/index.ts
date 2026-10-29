@@ -2,6 +2,7 @@
 // returns web `Response`/`ReadableStream`, so Hono, Deno, Bun or a Service Worker can serve it.
 // Rendering is core's (its internal server entry); this package adds the page shell, chunked
 // output with the request's store scope (ADR 0013), static generation and form actions.
+import './core.js';
 import { type ChildValue } from '@gyral/core';
 import {
   development,

@@ -1,3 +1,4 @@
+import './core.js';
 import { command, type Command, type Head } from '@gyral/core';
 import { router, type AfterNavigation, type RouteLocation, type RouterInput } from './driver.js';
 import { applyHead } from './internal/head.js';

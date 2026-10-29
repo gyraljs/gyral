@@ -3,6 +3,7 @@
 // `errorSchema`, status errors and JSON parsing all behave as in production. Wrong fake data
 // becomes an `HttpDecodeError` (the component's onFailure), never a crash in the view.
 // Lives here, not in @gyral/testing, because layer-1 packages may not import each other.
+import './core.js';
 import type { Concurrency, Driver, DriverContext } from '@gyral/core';
 import { makeHttpDriver, type HeaderSource, type HttpError, type HttpRequest } from './driver.js';
 

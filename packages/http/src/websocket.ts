@@ -1,4 +1,5 @@
 // Explicitly owned native sockets; no offline queue or automatic reconnect (ADR 0029).
+import './core.js';
 import type { Driver } from '@gyral/core';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {

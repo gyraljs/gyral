@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { npxBinProblem, RUN_BY_NAME } from './lib/npx-bin.mjs';
+import { peerFixture } from './lib/peer-fixture.mjs';
 
 const run = promisify(execFile);
 const PUBLINT_TIMEOUT_MS = 120_000;
@@ -98,6 +99,9 @@ async function check(dir) {
   }
   if (JSON.stringify(packed).includes('workspace:'))
     problems.push('workspace: protocol left in package.json');
+  const corePeer = packed.peerDependencies?.['@gyral/core'];
+  if (corePeer !== undefined && corePeer !== packed.version)
+    problems.push(`@gyral/core peer is ${corePeer}, not this release's exact ${packed.version}`);
 
   const npm = JSON.parse(
     (await run('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: dir })).stdout,
@@ -129,11 +133,18 @@ async function check(dir) {
   }
 
   const size = files.filter((f) => f.startsWith('dist/')).length;
-  return { name: manifest.name, problems, summary: `${files.length} files (${size} in dist)` };
+  return {
+    name: manifest.name,
+    tarball,
+    problems,
+    summary: `${files.length} files (${size} in dist)`,
+  };
 }
 
 const dirs = readdirSync('packages').map((pkg) => join('packages', pkg));
 const results = await Promise.all(dirs.map(check));
+const tarballOf = (name) => results.find((r) => r.name === name)?.tarball ?? '';
+const fixture = await peerFixture(tarballOf('@gyral/core'), tarballOf('@gyral/http'));
 rmSync(out, { recursive: true, force: true });
 
 let failed = false;
@@ -147,5 +158,10 @@ for (const { name, problems, summary } of results) {
     failed = true;
     console.error(`FAIL ${name}:\n  ${problems.join('\n  ')}`);
   }
+}
+if (fixture.length === 0) console.log('ok   core as a peer: one copy of core, mismatches reported');
+else {
+  failed = true;
+  console.error(`FAIL core as a peer:\n  ${fixture.join('\n  ')}`);
 }
 process.exit(failed ? 1 : 0);

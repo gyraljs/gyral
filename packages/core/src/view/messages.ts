@@ -25,6 +25,9 @@ export const MESSAGES = {
     '{secondUrl}. A value one copy makes, such as a stylesheet from css or a store, does not ' +
     'work in the other. Install one copy: pin @gyral/core to one version with your package ' +
     "manager's overrides (gyralVitePreset warns when it is installed more than once).",
+  16:
+    '{package} {version} needs @gyral/core {version}, but this app has @gyral/core {core}. ' +
+    "Gyral's packages are released together: install the same version of every @gyral package.",
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',

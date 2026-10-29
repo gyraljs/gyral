@@ -14,7 +14,10 @@
     "url": "https://github.com/gyraljs/gyral/issues"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/core.ts",
+    "./dist/core.js"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing.ts",
@@ -53,7 +56,12 @@
     "prepack": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@gyral/core": "workspace:*",
     "@standard-schema/spec": "1.1.0"
+  },
+  "peerDependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@gyral/core": "workspace:*"
   }
 }

@@ -107,13 +107,17 @@ stylesheet. A second copy has two sources, and the preset covers both (0.3.7):
 - **Dev server and Vitest.** Vite pre-bundles dependencies. One it meets partway through a run
   is bundled again with a copy of core of its own, and Vitest reports a reload. The preset
   pre-bundles Gyral's packages up front (above).
-- **The install.** A library pinned to another version of core, or pnpm resolving different
-  peers for one, installs a second folder. When `@gyral/core` resolves to more than one
-  folder from the app and its dependencies, the preset warns once at startup, in dev and in
-  builds, with each copy's version, folder and the packages that use it (G0015). Pin one
-  version with your package manager (`pnpm.overrides` or pnpm-workspace.yaml `overrides`,
-  npm `overrides`, Yarn `resolutions`) and reinstall. A library should list `@gyral/core` as a
-  peer dependency, so it shares the app's copy.
+- **The install.** Gyral's own packages take core as a peer at their exact version (0.3.8,
+  ADR 0033), so they never install a copy of their own: give every `@gyral/*` package the same
+  version. Another version is reported at install time (pnpm lists the unmet peer, npm stops
+  with ERESOLVE), and the package throws G0016 when it loads in development. A library pinned
+  to another version of core, or pnpm resolving different peers for one, can still install a
+  second folder. When `@gyral/core` resolves to more than one folder from the app and its
+  dependencies, the preset warns once at startup, in dev and in builds, with each copy's
+  version, folder and the packages that use it (G0015). Pin one version with your package
+  manager (`pnpm.overrides` or pnpm-workspace.yaml `overrides`, npm `overrides`, Yarn
+  `resolutions`) and reinstall. A library lists `@gyral/core` as a peer, so it shares the
+  app's copy ([component-libraries.md](component-libraries.md)).
 
 Development builds also warn in the browser when a page runs a second copy (G0015, with both
 versions and the URLs they loaded from). Production builds don't check at run time, because

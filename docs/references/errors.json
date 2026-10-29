@@ -49,6 +49,13 @@
     "url": "https://gyral.dev/errors/#G0015"
   },
   {
+    "code": "G0016",
+    "group": "Components",
+    "message": "{package} {version} needs @gyral/core {version}, but this app has @gyral/core {core}. Gyral's packages are released together: install the same version of every @gyral package.",
+    "arguments": ["package", "version", "core"],
+    "url": "https://gyral.dev/errors/#G0016"
+  },
+  {
     "code": "G0020",
     "group": "Props",
     "message": "<{tag}> prop \"{prop}\" has an asynchronous schema; it must be synchronous.",

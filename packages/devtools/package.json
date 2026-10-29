@@ -16,7 +16,9 @@
   "type": "module",
   "sideEffects": [
     "./src/panel.ts",
-    "./dist/panel.js"
+    "./dist/panel.js",
+    "./src/core.ts",
+    "./dist/core.js"
   ],
   "exports": {
     ".": "./src/index.ts"
@@ -40,7 +42,10 @@
     "build": "node ../../scripts/build-package.mjs",
     "prepack": "node ../../scripts/build-package.mjs"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@gyral/core": "workspace:*"
+  },
+  "devDependencies": {
     "@gyral/core": "workspace:*"
   }
 }

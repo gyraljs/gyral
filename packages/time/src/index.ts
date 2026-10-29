@@ -2,6 +2,7 @@
 // debounces run on a delay-only driver (delay.ts), `every` on the full one (driver.ts); both are
 // named `time`, so tests substitute either by that name, and an app that only delays bundles
 // none of the `every` code (gyral-c5d.15, gyral-1zd.24).
+import './core.js';
 import type { Command } from '@gyral/core';
 import { time } from './driver.js';
 import { timer } from './timer.js';

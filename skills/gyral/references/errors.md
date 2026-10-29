@@ -170,6 +170,7 @@ https://gyral.dev/errors/. The ones agents hit most:
 | G0011         | `data-intent` names an intent the spec doesn't have              | add the `intent` key, or fix the name (use `i.Name`, not a string)    |
 | G0014         | a tag is still undefined 3 s after load (dev builds)             | import the component's module from the entry                          |
 | G0015         | two copies of `@gyral/core` are installed or run in the page     | pin one version with package-manager `overrides`, then reinstall      |
+| G0016         | a `@gyral/*` package of another release than `@gyral/core`       | install the same version of every `@gyral` package                    |
 | G0021 / G0022 | a prop value failed its schema / a required prop is missing      | pass a valid value, or give the prop a `default`                      |
 | G0023         | a prop is named like an element member (`hidden`, `state`)       | rename the property; keep the attribute with `attribute:`             |
 | G0024         | page HTML has a lowercased camelCase prop name (`playerbase`)    | write the prop's kebab-case attribute (`player-base`)                 |
