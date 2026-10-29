@@ -372,6 +372,20 @@ overrides; every lockfile entry resolves from `registry.npmjs.org` with SHA-512 
 uses `file:` or `link:`, and no Lit package is installed. `node scripts/verify-ssr-production.mjs`
 (exact 0.3.8; a 59,874-byte one-file server) passes.
 
+Recorded 0.3.8 follow-ups (2026-10-29): `mcp.gyral.dev` was redeployed with the image built from
+`db8adc5` with `--released-corpus 0.3.8` on `node:24.22.1-trixie-slim` (it passed
+`verify-mcp-proxy.mjs` and `verify-mcp-traefik.mjs` first; registry digest `508ffc77…`);
+`/healthz` reports `"version":"0.3.8"` and corpus `3e170d38…`, and the official MCP client lists
+seven tools and 19 resources, reads `gyral://skill` and gets 0.3.8 answers from `get_api`
+(`gyral`), `search_docs` (G0044) and `scaffold_component`. gyral.dev installs @gyral/* 0.3.8 from
+npm and serves the 0.3.8 docs; `npx @gyral/codemod@0.3.8` moved its own Vite config and two
+scripts to `gyral()`. gyral-rs 0.6.0 (`d73d99f`, for Gyral 0.3.8) published all four crates to
+crates.io through Trusted Publishing (release run 40949740191), after its dependency update to
+two-week-old crates, Rust 1.99.1 and trixie images. docs.rs built all four, and a fresh Cargo
+project on Rust 1.99.1 with `gyral` 0.6.0 and the `axum` feature builds and resolves V8 150.4.0.
+The Rust compatibility fixture now pins gyral-rs `d73d99f`, npm 0.3.8 and Rust 1.99.1, and
+`verify-rust-compatibility.mjs` passes against it (gyral-337).
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
