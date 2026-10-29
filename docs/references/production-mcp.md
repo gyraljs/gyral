@@ -71,7 +71,8 @@ If another proxy fronts nginx, replace the peer policy only after configuring a 
 proxy network; arbitrary Forwarded/X-Forwarded-For headers must not establish client identity.
 
 The Dockerfile pins its Node base image by digest, an exact patch release at least two weeks
-old ([ADR 0032](../design-docs/0032-dependency-updates.md)); `--build-arg NODE_IMAGE=...`
+old, the tag's newest rebuild ([ADR 0032](../design-docs/0032-dependency-updates.md); Node
+24.22.1 under a security exception until 2026-11-03, since this server is public); `--build-arg NODE_IMAGE=...`
 overrides it for one build. Deploy the resulting image by digest, rather than rebuilding a
 mutable tag during rollout. Run as the unprivileged image user with the same
 read-only/capability/resource bounds as the review command. Mount no application checkout,

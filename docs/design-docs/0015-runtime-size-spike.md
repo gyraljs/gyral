@@ -208,12 +208,12 @@ supersedes the Effect 4 addendum above and ADR 0002. Branch `release/0.2.0` comb
 - **Confirmation:** the combined candidate is benchmarked as one build before release
   (gyral-sug; `gyraljs/benchmarks` branch `exp/release-0.2.0`, `CONFIRMATION.md`).
 
-## Addendum: 0.3.8 size increases, for the owner's approval (2026-10-29)
+## Addendum: 0.3.8 size increases, approved by the owner (2026-10-29)
 
 The owner's rule for 0.3.8 (gyral-337): new features are pay-as-you-go where they can be; what
 core itself must carry is measured, and each budget rises by exactly that (measured + 0.05 KiB,
-rounded up to 0.1, `scripts/size-budget.json`), listed here per feature. The owner approves the
-list before the release.
+rounded up to 0.1, `scripts/size-budget.json`), listed here per feature. The owner approved the
+list on 2026-10-29.
 
 | Feature (bead)                                                                     | Cost, gzip                                                                                                                                         | Budgets raised                                                                                                                         |
 | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |

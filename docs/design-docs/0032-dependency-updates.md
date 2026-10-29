@@ -86,3 +86,12 @@ each SHA checked against its tag) and CI's Node 24.22.0 and 26.12.0.
   @babel/types 8.0.8: 2026-11-06. magic-string 1.4.4: 2026-11-09.
 - hono 4.13.14 (examples, @gyral/ssr's tests): 2026-11-08. Transitive: fast-uri 3.1.9:
   2026-11-02; body-parser 2.4.0: 2026-11-05.
+
+## Addendum: container images (owner's decision, 2026-10-29)
+
+For a container image the rule applies to the software it carries, not to the digest: a Node
+patch release (or Rust, or Debian point release) at least two weeks old, pinned by the digest of
+that tag's newest rebuild. Docker Official Images rebuild a tag whenever its Debian base takes
+security updates, so an old digest would keep fixes out. Two images take Node 24.22.1 early as a
+security exception, because they serve HTTP to the public: gyral-shop's and the MCP server's
+(CVE-2026-111497 and the HTTP agent and TLS fixes); the exception ends on 2026-11-03.
