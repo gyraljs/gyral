@@ -174,8 +174,13 @@ describe('driver-list: left as is, and reported', () => {
 });
 
 describe('isTestFile', () => {
-  it('matches *.test.*, *.spec.* and test folders only', () => {
+  it('matches *.test.*, *.spec.*, test setup modules and test folders only', () => {
     expect(isTestFile('src/a.test.ts')).toBe(true);
+    expect(isTestFile('src/test-setup-browser.ts')).toBe(true);
+    expect(isTestFile('vitest.setup.ts')).toBe(true);
+    expect(isTestFile('src/setupTests.js')).toBe(true);
+    expect(isTestFile('src/setup.ts')).toBe(false);
+    expect(isTestFile('src/server-setup.ts')).toBe(false);
     expect(isTestFile('a.spec.mjs')).toBe(true);
     expect(isTestFile('packages/x/test/a.ts')).toBe(true);
     expect(isTestFile('tests/a.ts')).toBe(true);

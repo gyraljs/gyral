@@ -73,8 +73,9 @@ Names are known from `subscription('k', …)`, `defineDriver({ name: 'k', … })
 the module declares `const tok = defineDriver<…>('k')`. It leaves (and reports) a key that isn't
 its driver's name, a driver imported from another module, a spread, a computed key, a record
 with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads `.drivers` elsewhere.
-Test files (`*.test.*`, `*.spec.*`, `test/`, `tests/`, `__tests__/`) keep their records, which
-read well for fakes.
+Test files (`*.test.*`, `*.spec.*`, `test/`, `tests/`, `__tests__/`, and setup modules such as
+`vitest.setup.ts`, `test-setup*.ts` or `setupTests.js`) keep their records, which read well for
+fakes.
 
 **`subscription-token`**: `subscription('feed', fn)` becomes `subscription(feed, fn)` when the
 module declares the token `const feed = defineDriver<I, O, E>('feed')` (or

@@ -93,8 +93,12 @@ const MESSAGES = {
     `roots too ${ON}.`,
 };
 
-/** Test files, where a record of fakes is fine: `*.test.*`, `*.spec.*`, under test/ or tests/. */
-const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$|(^|[\\/])(test|tests|__tests__)[\\/]/;
+/**
+ * Test files, where a record of fakes is fine: `*.test.*`, `*.spec.*`, under test/ or tests/,
+ * and test setup modules (`vitest.setup.ts`, `test-setup-browser.ts`, `setupTests.js`).
+ */
+const TEST_FILE =
+  /\.(test|spec)\.[cm]?[jt]sx?$|(^|[\\/])(test|tests|__tests__)[\\/]|(^|[\\/])((vitest|jest|tests?)[.-]setup|setup[.-]?tests?)\b[^\\/]*$/i;
 const JSON_GLOBAL = new Set(['JSON']);
 
 export const preferBuiltInRule: Rule.RuleModule = {

@@ -167,6 +167,11 @@ subscription('unread', (emit, { input: room }) => feed.subscribe((m) => { if (m.
       { code: `${ROUTER}el.drivers = { router: makeRouter() };`, filename: 'test/app.js' },
       { code: `${ROUTER}el.drivers = { router: makeRouter() };`, filename: 'src/app.spec.ts' },
       { code: `${ROUTER}el.drivers = { router: makeRouter() };`, filename: 'tests/e2e/app.js' },
+      // A test setup module (Vitest's setupFiles) providing fakes.
+      {
+        code: `${ROUTER}provideDrivers(document.body, { router: makeRouter() });`,
+        filename: 'src/test-setup-browser.ts',
+      },
       // Not an object literal, and not a Gyral module.
       { code: `${ROUTER}provideDrivers(document.body, drivers);`, filename: 'src/main.js' },
       { code: 'el.drivers = { http };', filename: 'src/main.js' },
@@ -180,6 +185,11 @@ subscription('unread', (emit, { input: room }) => feed.subscribe((m) => { if (m.
       {
         code: `${ROUTER}const el = document.querySelector('my-app');\nel.drivers = { router: makeRouter() };`,
         filename: 'src/latest.js',
+        errors: [{ messageId: 'driverList' }],
+      },
+      {
+        code: `${ROUTER}provideDrivers(document.body, { router: makeRouter() });`,
+        filename: 'src/server-setup.ts',
         errors: [{ messageId: 'driverList' }],
       },
     ],

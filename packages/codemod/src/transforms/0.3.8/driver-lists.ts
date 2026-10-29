@@ -9,10 +9,15 @@ import { calleeName, resolvesTo, type ModuleFacts } from '../../facts.js';
 import type { Transform } from '../types.js';
 import { CORE, driverOf, isNamed, moduleDrivers, type ModuleDriver } from './drivers.js';
 
-/** `*.test.*`, `*.spec.*`, and files under `test/`, `tests/` or `__tests__/`. */
+/** Test setup modules (Vitest's or Jest's `setupFiles`): `vitest.setup.ts`, `test-setup-browser.ts`, `setupTests.js`. */
+const SETUP = /^(?:(?:vitest|jest|tests?)[.-]setup|setup[.-]?tests?)\b/i;
+
+/** `*.test.*`, `*.spec.*`, test setup modules, and files under `test/`, `tests/` or `__tests__/`. */
 export function isTestFile(path: string): boolean {
   const base = path.slice(path.lastIndexOf('/') + 1);
-  return /\.(test|spec)\./.test(base) || /(^|\/)(test|tests|__tests__)\//.test(path);
+  return (
+    /\.(test|spec)\./.test(base) || SETUP.test(base) || /(^|\/)(test|tests|__tests__)\//.test(path)
+  );
 }
 
 const isDriversKey = (node: Node, computed: boolean): boolean =>
