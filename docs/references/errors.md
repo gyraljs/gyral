@@ -65,6 +65,12 @@ Arguments: `package`, `version`, `core`.
 
 Arguments: `tag`.
 
+### G0018
+
+> The parser of intent "{intent}" is on("{expected}"), but a "{actual}" event reached it. Bind the intent to that event (data-intent-{expected}=${…}), or give it a parser of its own.
+
+Arguments: `intent`, `expected`, `actual`.
+
 ## Props
 
 ### G0020

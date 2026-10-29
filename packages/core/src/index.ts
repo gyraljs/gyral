@@ -16,6 +16,8 @@ export type {
 export { retry } from './retry.js';
 export { subscription } from './subscription.js';
 export type { SubscriptionContext, SubscriptionOptions, Unsubscribe } from './subscription.js';
+export { on } from './on.js';
+export type { EventIntentInput, IntentControl, KeyFilter, Modifiers } from './on.js';
 export { child, outputs } from './children.js';
 export { focus } from './focus.js';
 export { call, type CallInput } from './call.js';

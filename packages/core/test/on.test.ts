@@ -1,0 +1,128 @@
+// on(event, [filter], parser) (gyral-337.6): an intent parser typed by its event, with the
+// control, form, modifiers, files, numeric value and origin in its input, and a key filter that
+// declines other keys without preventing their default action.
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { define, html, on, settled } from '../src/index.js';
+import { collectErrors } from './collect-errors.js';
+
+afterEach(() => {
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+});
+
+type Msg =
+  | { readonly _tag: 'Move'; readonly by: number }
+  | { readonly _tag: 'Level'; readonly level: number | undefined; readonly form: string }
+  | { readonly _tag: 'Attach'; readonly names: readonly string[] }
+  | { readonly _tag: 'Point'; readonly origin: string };
+
+const Panel = define<{ readonly log: readonly Msg[] }, Msg>()('test-on', {
+  init: () => ({ log: [] }),
+  intent: {
+    Move: on('keydown', { keys: ['ArrowLeft', 'ArrowRight'], modifiers: 'none' }, (input) => {
+      expectTypeOf(input.event).toEqualTypeOf<KeyboardEvent>();
+      return { _tag: 'Move', by: input.key === 'ArrowLeft' ? -1 : 1 };
+    }),
+    Level: on('input', (input) => ({
+      _tag: 'Level',
+      level: input.valueAsNumber,
+      form: input.form?.id ?? '',
+    })),
+    Attach: on('change', (input) => ({
+      _tag: 'Attach',
+      names: (input.files ?? []).map((f) => f.name),
+    })),
+    Point: on('click', (input) => ({ _tag: 'Point', origin: input.origin?.localName ?? '' })),
+  },
+  update: {
+    Move: (s, m) => ({ log: [...s.log, m] }),
+    Level: (s, m) => ({ log: [...s.log, m] }),
+    Attach: (s, m) => ({ log: [...s.log, m] }),
+    Point: (s, m) => ({ log: [...s.log, m] }),
+  },
+  view: (_s, i) => html`
+    <div tabindex="0" data-intent-keydown=${i.Move}>grid</div>
+    <form id="mix">
+      <input type="range" min="0" max="10" data-intent-input=${i.Level} />
+      <input type="file" data-intent-change=${i.Attach} />
+    </form>
+    <button type="button" data-intent=${i.Point}><b>bold</b></button>
+  `,
+});
+
+async function mounted(): Promise<InstanceType<typeof Panel>> {
+  const el = new Panel();
+  document.body.append(el);
+  await settled();
+  return el;
+}
+
+const q = (el: Element, selector: string): Element | null | undefined =>
+  el.shadowRoot?.querySelector(selector);
+
+describe('on()', () => {
+  it('parses its keys without modifiers, and passes other keys on with their default', async () => {
+    const el = await mounted();
+    const grid = q(el, 'div') as HTMLElement;
+    const press = (key: string, init: KeyboardEventInit = {}): KeyboardEvent => {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+        ...init,
+      });
+      grid.dispatchEvent(event);
+      return event;
+    };
+    press('ArrowLeft');
+    const reload = press('r', { ctrlKey: true });
+    const shifted = press('ArrowRight', { shiftKey: true });
+    await settled();
+    expect(el.state.log).toEqual([{ _tag: 'Move', by: -1 }]);
+    expect(reload.defaultPrevented).toBe(false);
+    expect(shifted.defaultPrevented).toBe(false);
+  });
+
+  it('gives a numeric value, the form, files and the element the event started on', async () => {
+    const el = await mounted();
+    const range = q(el, 'input[type=range]') as HTMLInputElement;
+    range.value = '7';
+    range.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    const file = q(el, 'input[type=file]') as HTMLInputElement;
+    const files = new DataTransfer();
+    files.items.add(new File(['x'], 'a.txt'));
+    file.files = files.files;
+    file.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    (q(el, 'b') as HTMLElement).click();
+    await settled();
+    expect(el.state.log).toEqual([
+      { _tag: 'Level', level: 7, form: 'mix' },
+      { _tag: 'Attach', names: ['a.txt'] },
+      { _tag: 'Point', origin: 'b' },
+    ]);
+  });
+
+  it('throws G0018 in development when another event reaches it', async () => {
+    const errors = collectErrors();
+    try {
+      const Wrong = define<{ readonly n: number }, { readonly _tag: 'Go' }>()('test-on-wrong', {
+        init: () => ({ n: 0 }),
+        intent: { Go: on('keydown', () => ({ _tag: 'Go' })) },
+        update: { Go: (s) => s },
+        // eslint-disable-next-line gyral/intent-event -- the wrong binding is what this tests
+        view: (_s, i) => html`<button type="button" data-intent=${i.Go}>go</button>`,
+      });
+      const el = new Wrong();
+      document.body.append(el);
+      await settled();
+      el.shadowRoot?.querySelector('button')?.click();
+      await settled();
+      expect(errors.text()).toContain(
+        'The parser of intent "Go" is on("keydown"), but a "click" event reached it',
+      );
+    } finally {
+      errors.stop();
+    }
+  });
+});

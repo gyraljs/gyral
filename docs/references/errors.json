@@ -63,6 +63,13 @@
     "url": "https://gyral.dev/errors/#G0017"
   },
   {
+    "code": "G0018",
+    "group": "Components",
+    "message": "The parser of intent \"{intent}\" is on(\"{expected}\"), but a \"{actual}\" event reached it. Bind the intent to that event (data-intent-{expected}=${…}), or give it a parser of its own.",
+    "arguments": ["intent", "expected", "actual"],
+    "url": "https://gyral.dev/errors/#G0018"
+  },
+  {
     "code": "G0020",
     "group": "Props",
     "message": "<{tag}> prop \"{prop}\" has an asynchronous schema; it must be synchronous.",

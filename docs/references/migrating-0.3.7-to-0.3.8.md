@@ -17,6 +17,9 @@ addendum (the third).
 
 ## New checks and warnings
 
+- **An `on()` parser reached by another event (G0018 in development; `gyral/intent-event` in
+  ESLint's recommended config):** bind the intent to the parser's event.
+
 - **A skipped view that renders differently (G0017, development):** the view reads something
   besides its state, props and stores.
 
@@ -28,6 +31,9 @@ addendum (the third).
   throws, naming both versions; production logs the coded warning.
 
 ## New APIs
+
+- **`on(event, [filter], parser)`**: a parser typed by its event, with `control`, `form`,
+  `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter.
 
 - **`each(items, key, row, { pick, equals })`**: `equals` compares picked values, for a `pick`
   that builds a nested value each render.
@@ -48,6 +54,9 @@ addendum (the third).
   Fastify server of your own.
 
 ## Workarounds you can remove
+
+- `instanceof KeyboardEvent` checks, hand-written modifier filters, `composedPath()[0]`,
+  `Number(input.value)`, `closest('form')` and `files` lookups in parsers: `on()`.
 
 - Hand-written guards against same-state renders (comparing fields before returning new state),
   subscription dedupe (`equals`), microtask batching of a source (`coalesce: 'microtask'`), and

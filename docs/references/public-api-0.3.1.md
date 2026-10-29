@@ -116,6 +116,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `EachOptions`         | type  | supporting type |                                                                                                        |
 | `Errored`             | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ErrorPhase`          | type  | documented      | [design-docs/0024-errors.md](../design-docs/0024-errors.md)                                            |
+| `EventIntentInput`    | type  | supporting type |                                                                                                        |
 | `field`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `fieldErrors`         | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `FieldIssue`          | type  | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
@@ -147,6 +148,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `html`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `Hydrated`            | type  | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
 | `HydrateStrategy`     | type  | supporting type |                                                                                                        |
+| `IntentControl`       | type  | supporting type |                                                                                                        |
 | `IntentInput`         | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `IntentNames`         | type  | documented      | [migrating-0.3.0-to-0.3.1.md](migrating-0.3.0-to-0.3.1.md)                                             |
 | `IntentParser`        | type  | documented      | [skills/gyral/references/anti-patterns.md](../../skills/gyral/references/anti-patterns.md)             |
@@ -156,9 +158,12 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `invalid`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `JsonValue`           | type  | documented      | [design-docs/0019-head-model.md](../design-docs/0019-head-model.md)                                    |
 | `keyed`               | value | documented      | [skills/gyral/references/forms.md](../../skills/gyral/references/forms.md)                             |
+| `KeyFilter`           | type  | supporting type |                                                                                                        |
 | `ListResult`          | type  | documented      | [design-docs/view/03-lists.md](../design-docs/view/03-lists.md)                                        |
+| `Modifiers`           | type  | supporting type |                                                                                                        |
 | `Next`                | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `nothing`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `on`                  | value | documented      | [skills/gyral/references/components.md](../../skills/gyral/references/components.md)                   |
 | `OUTPUT_EVENT`        | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `OutputEvent`         | type  | documented      | [skills/gyral/references/composition.md](../../skills/gyral/references/composition.md)                 |
 | `outputs`             | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |

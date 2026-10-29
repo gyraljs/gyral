@@ -230,3 +230,20 @@ dispatches an equivalent `command` event (with the native event's `command` and 
 properties since gyral-g1r.18; it loads lazily, ADR 0003 tier 3) on the `commandfor` target, so the same markup
 works everywhere. Built-in commands (`show-modal`, `toggle-popover`, …) are left to the browser.
 `invokersSupported()` is exported. Example: `examples/invoker-commands`.
+
+## Addendum: typed intent input, `on()` (0.3.8, gyral-337.6)
+
+Owner's decisions, 2026-10-29 (review recommendation #7). Parsers dug the same things out of the
+event by hand: joystyk has 112 `instanceof KeyboardEvent` checks, 61 games filter modifier
+keys and 26 read `composedPath()[0]`; driftwake writes `Number(value)` 12 times; parsers reach
+for `closest('form')` and `files`.
+
+- **`on(event, [filter], parser)`** is a parser for one event type: `input.event` is typed from
+  the name (`HTMLElementEventMap`), and the input adds `control`, `form`, `modifiers`, `files`,
+  `valueAsNumber` (never `NaN`) and `origin`. Plain parsers keep `IntentInput` unchanged, and
+  `on()` is a module of its own, so apps that don't use it pay nothing.
+- **A key filter** (`keys`, `modifiers: 'none' | 'any' | { ctrl: true }`) declines other events
+  like a synchronous `undefined`: they pass outward with their default action.
+- **The binding is checked twice**: `gyral/intent-event` compares the view's
+  `data-intent-<event>`, static `data-intent-on` and default triggers with the `on()` parsers of
+  the same module, and development throws G0018 when another event reaches an `on()` parser.

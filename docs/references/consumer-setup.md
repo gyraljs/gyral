@@ -200,7 +200,8 @@ export default [
 
 `recommended` turns on `gyral/template` (every `html` template imported from `@gyral/core`)
 and `gyral/each-row-purity` (`each` rows read only their arguments; keys required), both as
-errors, and `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as
+errors, `gyral/intent-event` (an `on('event')` parser bound to another event; 0.3.8) as an
+error, and `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as
 a warning. If your templates come from a package that re-exports `html` (a design system), give
 the rules the same `sources` list as the Vite preset:
 
@@ -218,6 +219,7 @@ export default [
       'gyral/template': ['error', { sources }],
       'gyral/each-row-purity': ['error', { sources }],
       'gyral/unused-intent': ['warn', { sources }],
+      'gyral/intent-event': ['error', { sources }],
     },
   },
 ];
