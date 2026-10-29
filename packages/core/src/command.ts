@@ -134,6 +134,12 @@ export function defineDriver<I, O, E = unknown>(spec: Driver<I, O, E>): Driver<I
 export function defineDriver<I, O, E = unknown>(
   spec: DriverToken<E> | string,
 ): TokenDriver<I, O, E>;
+// Last, so `ReturnType<typeof defineDriver<I, O>>` (which reads the last overload) stays the
+// `Driver` it was before tokens could provide themselves.
+export function defineDriver<I, O, E = unknown>(
+  // eslint-disable-next-line @typescript-eslint/unified-signatures -- kept apart for ReturnType
+  spec: Driver<I, O, E> | DriverToken<E> | string,
+): Driver<I, O, E>;
 export function defineDriver<I, O, E = unknown>(
   spec: Driver<I, O, E> | DriverToken<E> | string,
 ): Driver<I, O, E> {

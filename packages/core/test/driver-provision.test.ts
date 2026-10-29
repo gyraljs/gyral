@@ -50,6 +50,16 @@ describe('token.provide(run)', () => {
     // @ts-expect-error -- run must take the token's input (string) and give its output (string)
     shout.provide((n: number) => n);
   });
+
+  it('keeps ReturnType<typeof defineDriver<I, O>> a Driver, which a driver with run fits', () => {
+    expectTypeOf<ReturnType<typeof defineDriver<string, string>>>().toEqualTypeOf<
+      Driver<string, string>
+    >();
+    const fields: { readonly shout: ReturnType<typeof defineDriver<string, string>> } = {
+      shout: defineDriver<string, string>({ name: 'shout', run: (text) => text }),
+    };
+    expect(fields.shout.name).toBe('shout');
+  });
 });
 
 describe('a list of drivers', () => {
