@@ -429,7 +429,8 @@ export function gyral(options: GyralViteOptions = {}): Plugin[] {
 }
 
 /**
- * The 0.3.7 spelling of `gyral()`, kept through 0.3.x: spread it into a Vite config,
+ * `gyral()` as a config to spread, kept through 0.3.x for existing configs (the 0.3.8 codemod
+ * rewrites them to `gyral()`):
  *
  *   export default defineConfig({ ...gyralVitePreset(), build: { … } });
  *

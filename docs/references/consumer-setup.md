@@ -11,8 +11,9 @@ Production recipes: [strict CSP](strict-csp.md), [Node composition](node-product
 
 ## Install
 
-Gyral runs on both Node LTS lines, 24 and 26 (0.3.8): its gate runs on each, and the
-packages' `engines` say `>=24`. Browsers follow the Baseline policy (ADR 0003).
+Gyral runs on both Node LTS lines, 24 and 26 (0.3.8): its gate runs on each. The runtime
+packages declare no `engines`; `@gyral/mcp` and `create-gyral` need Node 22.12 or later, and
+`@gyral/codemod` 22.18+ or 24.11+. Browsers follow the Baseline policy (ADR 0003).
 
 ```sh
 pnpm add @gyral/core

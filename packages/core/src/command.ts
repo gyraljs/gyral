@@ -135,11 +135,13 @@ export function defineDriver<I, O, E = unknown>(
   spec: DriverToken<E> | string,
 ): TokenDriver<I, O, E>;
 // Last, so `ReturnType<typeof defineDriver<I, O>>` (which reads the last overload) stays the
-// `Driver` it was before tokens could provide themselves.
+// `Driver` it was before tokens could provide themselves. The directive sits outside the
+// signature, which the API pages render as written.
+/* eslint-disable @typescript-eslint/unified-signatures -- kept apart for ReturnType */
 export function defineDriver<I, O, E = unknown>(
-  // eslint-disable-next-line @typescript-eslint/unified-signatures -- kept apart for ReturnType
   spec: Driver<I, O, E> | DriverToken<E> | string,
 ): Driver<I, O, E>;
+/* eslint-enable @typescript-eslint/unified-signatures */
 export function defineDriver<I, O, E = unknown>(
   spec: Driver<I, O, E> | DriverToken<E> | string,
 ): Driver<I, O, E> {
