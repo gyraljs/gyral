@@ -74,6 +74,7 @@ First run needs `pnpm exec playwright install chromium`.
 | View layer: templates, render, SSR, hydration | [0018-view-layer.md](docs/design-docs/0018-view-layer.md) + [view/](docs/design-docs/view/README.md) |
 | Browser APIs, CSS features                    | [0003-browser-baseline.md](docs/design-docs/0003-browser-baseline.md)                                |
 | CI, GitHub Actions                            | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                                                |
+| Dependencies, lockfiles, Dependabot           | [0032-dependency-updates.md](docs/design-docs/0032-dependency-updates.md)                            |
 | Repo docs, lint rules, this file              | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md)                          |
 | Why Gyral differs from Cycle.js               | [lessons-from-cyclejs.md](docs/design-docs/lessons-from-cyclejs.md)                                  |
 

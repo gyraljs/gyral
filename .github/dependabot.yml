@@ -1,11 +1,14 @@
 # Dependabot opens update PRs; it adds no Actions triggers (ADR 0004). Run `pnpm check`
-# locally on a Dependabot branch before merging.
+# locally on a Dependabot branch before merging. Every ecosystem waits until a version is two
+# weeks old (ADR 0032).
 version: 2
 updates:
   - package-ecosystem: npm # pnpm workspace (pnpm-lock.yaml)
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 5
     # Groups take minor and patch bumps only: a major arrives as its own PR, so one breaking
     # bump can't hold back the safe ones.
@@ -24,6 +27,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
     groups:
       actions:
         patterns: ['*']
