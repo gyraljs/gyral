@@ -39,6 +39,7 @@
 | Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                  |
 | Importing another renderer's `html` (`lit`, etc.) in Gyral components             | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
 | `attr=${x ?? nothing}`                                                            | `attr=${x}`: `null`/`undefined` remove the attribute                    |
+| `showModal()`, `.focus()` in a driver, `instanceof KeyboardEvent` in a parser     | `?modal`, `focus()`, `on()`: the built-in `gyral/prefer-built-in` names |
 | jsdom/happy-dom tests                                                             | Vitest browser mode, plus DOM-free `step`/`run` tests                   |
 | Blanket `:not(:defined) { visibility: hidden }` in SSR apps                       | scope it to client-rendered tags only                                   |
 
@@ -66,4 +67,4 @@
 | Custom error stays on a field                                      | `invalid()` got the same array again                                                                             | keep `fieldErrors()` results in state; clear them on submit                                  |
 | `aria-labelledby` id not found from a component                    | ids don't cross shadow roots                                                                                     | the `labelledBy` hook recipe (view.md "Naming a component's form from the page")             |
 | A store change doesn't re-render                                   | the component doesn't list the store                                                                             | add it to `spec.stores` and read it with `ctx.read(store)`                                   |
-| Link clicks reload the page in an SPA                              | link capture is off by default                                                                                   | `provideDrivers(document.body, { router: makeRouter({ captureLinks: true }) })` at the entry |
+| Link clicks reload the page in an SPA                              | link capture is off by default                                                                                   | `provideDrivers(document.body, [makeRouter({ captureLinks: true })])` at your entry (a list) |

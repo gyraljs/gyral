@@ -34,6 +34,10 @@ describe('gyral/intent-event', () => {
       component(
         '(s, i) => html`<button data-intent=${i.Go}></button><p data-intent-on=${s.on} data-intent=${i.Move}></p>`',
       ),
+      // A quoted data-intent-on lists several events: each one counts, not only the first; one
+      // bound in part can't be read.
+      component('(s, i) => html`<p data-intent=${i.Move} data-intent-on="keyup keydown"></p>`'),
+      component('(s, i) => html`<p data-intent=${i.Move} data-intent-on="click ${s.on}"></p>`'),
     ],
     invalid: [
       {

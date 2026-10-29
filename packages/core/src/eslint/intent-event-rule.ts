@@ -12,7 +12,7 @@ import { isGyral, OPTIONS_SCHEMA, type Node } from './imports.js';
 const HOLE = '\uE000';
 
 /** The intent name a hole's expression names: `i.Name`, `i['Name']` or `'Name'`. */
-function intentName(expression: Node | undefined): string | undefined {
+export function intentName(expression: Node | undefined): string | undefined {
   if (expression?.type === 'Literal' && typeof expression.value === 'string')
     return expression.value;
   if (expression?.type !== 'MemberExpression') return undefined;
@@ -23,13 +23,16 @@ function intentName(expression: Node | undefined): string | undefined {
     : undefined;
 }
 
-const attribute = (tag: string, name: string): string | undefined =>
-  new RegExp(`\\s${name}=["']?([^"'\\s>]*)`, 'i').exec(tag)?.[1];
+/** A static attribute's value; a quoted one runs to its closing quote (`data-intent-on="a b"`). */
+function attribute(tag: string, name: string): string | undefined {
+  const m = new RegExp(`\\s${name}=(?:"([^"]*)"|'([^']*)'|([^"'\\s>]*))`, 'i').exec(tag);
+  return m === null ? undefined : (m[1] ?? m[2] ?? m[3]);
+}
 
 /** The events that fire `data-intent` on the element `tag` (its source text), or undefined. */
-function triggers(tag: string): readonly string[] | undefined {
-  if (/\sdata-intent-on=["']?\uE000/.test(tag)) return undefined; // bound: unknown here
+export function triggers(tag: string): readonly string[] | undefined {
   const on = attribute(tag, 'data-intent-on');
+  if (on?.includes(HOLE) === true) return undefined; // bound, in whole or part: unknown here
   if (on !== undefined) return on.split(/\s+/).filter(Boolean);
   const name = /^<([\w-]+)/.exec(tag)?.[1]?.toLowerCase() ?? '';
   const type = (attribute(tag, 'type') ?? '').toLowerCase();

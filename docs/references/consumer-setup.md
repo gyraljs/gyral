@@ -204,9 +204,14 @@ export default [
 `recommended` turns on `gyral/template` (every `html` template imported from `@gyral/core`)
 and `gyral/each-row-purity` (`each` rows read only their arguments; keys required), both as
 errors, `gyral/intent-event` (an `on('event')` parser bound to another event; 0.3.8) as an
-error, and `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as
-a warning. If your templates come from a package that re-exports `html` (a design system), give
-the rules the same `sources` list as the Vite preset:
+error, `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as a
+warning, and `gyral/prefer-built-in` (0.3.8) as warnings, each naming the built-in to use: a
+dialog opened with `showModal()` (`?modal`), `.focus()` in a driver (`focus(selector)`),
+`JSON.parse` of an attribute or prop (`prop.json()`), a subscription that drops repeats by hand
+(`equals`), a record of drivers outside tests (a list), and a parser that checks the event's
+type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`). If your templates come
+from a package that re-exports `html` (a design system), give the rules the same `sources` list
+as the Vite preset:
 
 ```js
 // eslint.config.js
@@ -223,6 +228,7 @@ export default [
       'gyral/each-row-purity': ['error', { sources }],
       'gyral/unused-intent': ['warn', { sources }],
       'gyral/intent-event': ['error', { sources }],
+      'gyral/prefer-built-in': ['warn', { sources }],
     },
   },
 ];

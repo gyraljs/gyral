@@ -38,14 +38,16 @@ export function sourcesOf(context: Rule.RuleContext): readonly string[] {
     : DEFAULT_SOURCES;
 }
 
-function isSource(context: Rule.RuleContext, specifier: string): boolean {
+/** Whether `specifier` names a template source (or one of core's own modules, by relative path). */
+export function isSource(context: Rule.RuleContext, specifier: string): boolean {
   if (sourcesOf(context).includes(specifier)) return true;
   if (!specifier.startsWith('.')) return false;
   return CORE_MODULES.includes(resolve(dirname(context.filename), specifier));
 }
 
 /** typescript-eslint's `import type` marker (not in ESTree). */
-const typeOnly = (node: object): boolean => 'importKind' in node && node.importKind === 'type';
+export const typeOnly = (node: object): boolean =>
+  'importKind' in node && node.importKind === 'type';
 
 export function findVariable(scope: Scope.Scope | null, name: string): Scope.Variable | undefined {
   for (let s = scope; s !== null; s = s.upper) {
