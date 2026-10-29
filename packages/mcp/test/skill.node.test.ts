@@ -1,0 +1,99 @@
+// `gyral-mcp skill` (gyral-337.4): writes the bundled Gyral skill into an app's agent folders for
+// the app's installed @gyral/core version, and `--check` fails when a copy differs.
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { parseArgs, SKILL_USAGE } from '../src/cli-args.js';
+import { syncSkill } from '../src/skill-cli.js';
+import type { Corpus } from '../src/types.js';
+
+const corpus = {
+  version: '0.3.8',
+  skill: [
+    { path: 'SKILL.md', content: '# Gyral\n' },
+    { path: 'references/intent.md', content: '# Intent\n' },
+  ],
+} as unknown as Corpus;
+
+const apps: string[] = [];
+afterEach(() => {
+  for (const app of apps.splice(0)) rmSync(app, { recursive: true, force: true });
+});
+
+/** An app with @gyral/core `version` installed. */
+function app(version = '0.3.8'): string {
+  const dir = mkdtempSync(join(tmpdir(), 'gyral-skill-'));
+  apps.push(dir);
+  mkdirSync(join(dir, 'node_modules/@gyral/core'), { recursive: true });
+  writeFileSync(join(dir, 'node_modules/@gyral/core/package.json'), JSON.stringify({ version }));
+  return dir;
+}
+
+const run = (project: string, check = false, dirs: string[] = []) =>
+  syncSkill(corpus, { project, dirs, check });
+
+describe('gyral-mcp skill', () => {
+  it('writes the skill to .claude/skills/gyral, and then checks it', () => {
+    const dir = app();
+    expect(run(dir).ok).toBe(true);
+    expect(readFileSync(join(dir, '.claude/skills/gyral/references/intent.md'), 'utf8')).toBe(
+      '# Intent\n',
+    );
+    expect(run(dir, true)).toEqual({
+      ok: true,
+      lines: ['.claude/skills/gyral: the Gyral 0.3.8 skill'],
+    });
+  });
+
+  it('fails the check for a changed, missing or stale file, and a write fixes it', () => {
+    const dir = app();
+    run(dir);
+    writeFileSync(join(dir, '.claude/skills/gyral/SKILL.md'), '# edited\n');
+    writeFileSync(join(dir, '.claude/skills/gyral/references/old.md'), 'gone\n');
+    const result = run(dir, true);
+    expect(result.ok).toBe(false);
+    expect(result.lines.join('\n')).toContain('.claude/skills/gyral/SKILL.md differs');
+    expect(result.lines.join('\n')).toContain('references/old.md is not in the skill');
+    expect(result.lines.at(-1)).toBe('Run `npx @gyral/mcp@0.3.8 skill` to update.');
+    expect(run(dir).lines).toEqual([
+      '.claude/skills/gyral: the Gyral 0.3.8 skill (1 written, 1 removed)',
+    ]);
+    expect(existsSync(join(dir, '.claude/skills/gyral/references/old.md'))).toBe(false);
+    expect(run(dir, true).ok).toBe(true);
+  });
+
+  it('keeps .agents/skills/gyral too when it exists, or exactly the --dir folders', () => {
+    const dir = app();
+    mkdirSync(join(dir, '.agents/skills/gyral'), { recursive: true });
+    run(dir);
+    expect(readFileSync(join(dir, '.agents/skills/gyral/SKILL.md'), 'utf8')).toBe('# Gyral\n');
+    const other = app();
+    run(other, false, ['docs/agents/gyral']);
+    expect(existsSync(join(other, 'docs/agents/gyral/SKILL.md'))).toBe(true);
+    expect(existsSync(join(other, '.claude'))).toBe(false);
+  });
+
+  it("refuses another release's core, naming the command that has its skill", () => {
+    const dir = app('0.3.9');
+    expect(run(dir)).toEqual({
+      ok: false,
+      lines: [
+        `@gyral/core 0.3.9 is installed in ${dir}, but this is the skill of Gyral 0.3.8. Run \`npx @gyral/mcp@0.3.9 skill\`.`,
+      ],
+    });
+    expect(existsSync(join(dir, '.claude'))).toBe(false);
+  });
+
+  it('parses its arguments', () => {
+    expect(parseArgs(['skill'])).toEqual({ kind: 'skill', check: false, dirs: [] });
+    expect(parseArgs(['skill', '--check', '--dir', 'a', '--dir', 'b'])).toEqual({
+      kind: 'skill',
+      check: true,
+      dirs: ['a', 'b'],
+    });
+    expect(parseArgs(['skill', '--help'])).toEqual({ kind: 'help', text: SKILL_USAGE });
+    expect(parseArgs(['help', 'skill'])).toEqual({ kind: 'help', text: SKILL_USAGE });
+    expect(parseArgs(['skill', '--dir'])).toMatchObject({ kind: 'error' });
+  });
+});

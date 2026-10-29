@@ -32,6 +32,9 @@ addendum (the third).
 
 ## New APIs
 
+- **`npx @gyral/mcp@0.3.8 skill`** writes the 0.3.8 skill into `.claude/skills/gyral` (and
+  `.agents/skills/gyral`); `--check` in CI fails when a copy differs.
+
 - **`on(event, [filter], parser)`**: a parser typed by its event, with `control`, `form`,
   `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter.
 
@@ -54,6 +57,9 @@ addendum (the third).
   Fastify server of your own.
 
 ## Workarounds you can remove
+
+- Hand-copied skills pinned by hash (gyral-rs's `skills.lock.json`): `npx @gyral/mcp skill
+--check`.
 
 - `instanceof KeyboardEvent` checks, hand-written modifier filters, `composedPath()[0]`,
   `Number(input.value)`, `closest('form')` and `files` lookups in parsers: `on()`.
