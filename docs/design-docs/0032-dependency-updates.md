@@ -79,7 +79,8 @@ each SHA checked against its tag) and CI's Node 24.22.0 and 26.12.0.
 - Vite 8.3.5: 2026-11-04. It deprecates `rollupOptions`; rename the repo's own uses to
   `rolldownOptions` with it.
 - pnpm 12.15.0: 2026-11-04.
-- eslint 10.13.0: 2026-10-30. postcss-styled-syntax 0.7.4: 2026-10-29, 18:16 UTC.
+- eslint 10.13.0: 2026-10-30. (postcss-styled-syntax 0.7.4 turned two weeks old at 18:16 UTC
+  on 2026-10-29 and came in that evening; the CSS lint passes on it.)
   stylelint-plugin-use-baseline 1.4.8 and postcss 8.5.31: 2026-11-01. typescript-eslint
   8.72.0: 2026-11-02. @types/node 26.6.6: 2026-11-11.
 - Published packages' dependencies: @modelcontextprotocol/sdk 1.32.2, @babel/parser and
