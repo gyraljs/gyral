@@ -89,15 +89,18 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    published version, so a page written after the release reaches the package only with the
    next one (0.3.3 shipped without its own upgrade page; gyral-ttk). Build that branch and take
    the snapshot from its output, on a gyral branch. Build it with
-   `GYRAL_DOCS_VERSION=X.Y.Z GYRAL_ERRORS_JSON=../gyral/packages/core/src/errors.json pnpm build`
-   so the llms files name the new release and the errors page lists its codes, then run
+   `GYRAL_DOCS_VERSION=X.Y.Z GYRAL_ERRORS_JSON=../gyral/packages/core/src/errors.json GYRAL_PACKAGES_DIR=../gyral/packages pnpm build`
+   so the llms files name the new release, the errors page lists its codes and the API pages
+   render this checkout's declarations, not the previous release's from npm (gyral-ns9), then run
    `pnpm mcp:refresh --from ../gyral.dev/dist`
    (a relative path is resolved from where you run pnpm; the directory must hold `llms.txt` and
    `llms-full.txt`). Review and commit the diff, then run `pnpm version-packages`
    (`changeset version`, then the skill plugin's version in `.claude-plugin/marketplace.json`
    set to the release, which `pnpm invariants` checks). Plain
    `pnpm mcp:refresh` reads the live site, which is right only when the site already describes
-   this release. It consumes the changesets, bumps every
+   this release. Once the changesets are consumed, `pnpm check` fails unless the snapshot names
+   this release and its API pages carry this checkout's doc comments
+   (packages/mcp/test/snapshot-api.node.test.ts). It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
    `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
    "unreleased (next release)" markers on features this release ships: they are in package
