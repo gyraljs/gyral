@@ -10,7 +10,7 @@ export const CONDITIONS = ['gyral-docs', 'gyral-assisted', 'react-docs', 'svelte
 export const TASKS = ['feature', 'bug', 'form'];
 export const FRAMEWORKS = ['gyral', 'react', 'svelte'];
 export const PROTOCOL = 'v3';
-export const GYRAL_VERSION = '0.3.7';
+export const GYRAL_VERSION = '0.3.8';
 /** Precreated, empty mountpoint for generated build output (see sandbox.mjs). */
 export const GENERATED_DIR = '.gyral';
 export const sha256 = (value) => createHash('sha256').update(value).digest('hex');
