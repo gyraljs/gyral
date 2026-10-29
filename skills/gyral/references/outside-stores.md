@@ -74,8 +74,14 @@ export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter
 - `await settled()` doesn't wait for subscriptions to end (they don't), but it waits for values
   already on their way: a store that notifies in a microtask, a watcher that re-arms in one.
   No `await Promise.resolve()` loops in tests.
-- Many values per frame (market data, sensors) into a non-trivial view: list the message in
-  `renderOnFrame` (components.md).
+- What reaches the component (0.3.8): `select` maps each value first (a slice of a store's
+  state), `equals` drops a value equal to the last one delivered (`equals: Object.is` for a
+  store that hands out the same object when nothing changed), and `coalesce: 'microtask'` or
+  `'frame'` delivers only the latest value per microtask or animation frame. By default every
+  value is delivered. With a token, everything is inferred:
+  `subscription(feed, (emit) => store.subscribe(() => emit(store.getState())), { select: (s) => s.count, equals: Object.is })`.
+- Many values per frame (market data, sensors) into a non-trivial view: `coalesce: 'frame'`, or
+  list the message in `renderOnFrame` (components.md).
 
 ## A store per page, provided by name
 

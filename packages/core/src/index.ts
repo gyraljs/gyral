@@ -98,6 +98,7 @@ export { css, defineHook, each, html, keyed, nothing, raw, svg } from './view/in
 export type {
   ChildValue,
   CssValue,
+  EachOptions,
   HookAttributes,
   HookResult,
   HookSpec,

@@ -360,3 +360,29 @@ Decision:
   batching and ordering (measured on the form examples).
 
 Tested in `core/test/hook-order.test.ts`.
+
+## Addendum: render skipping, `each` equality, subscription delivery (0.3.8, gyral-337.1)
+
+Owner's decisions, 2026-10-29 (review recommendation #2). Six projects avoided wasted renders by
+hand: joystyk deduplicated subscription output in 10 places, containment compared 12 fields,
+sabacc batched per microtask, enterprise-ui wrote `equals: sameJson` 15 times, and
+football-pool-tracker's race chart re-rendered 220 rows because its `pick` rebuilt an array.
+
+- **A host renders only when what its view reads changed** (view/04 "Marking"): its state, a
+  declared prop or a declared store's value, compared with `Object.is` against its last render
+  that succeeded. The old objection (gyral-8af, 2026-10-11: every message renders, so a refused
+  edit stays in its control) no longer holds: under the live form-state rule (view/02) such a
+  render writes nothing, so skipping it changes nothing on screen. React bails out on equal
+  state the same way. A view that reads anything else stops refreshing on unrelated messages:
+  a behavior change, listed first in the release notes, for views that already broke "views are
+  pure". Development re-runs skipped views (every one up to 50 per flush, then a window that
+  moves each flush) and warns once per component when one differs (G0017).
+- **`each(items, key, row, { pick, equals })`**: `equals` replaces the one-level comparison of
+  picked values (view/03 "Row skipping"). Stable references first; `equals` is the escape hatch.
+- **`subscription(…, { select, equals, coalesce })`**: `select` maps each value, `equals` drops
+  one equal to the last delivered, `coalesce: 'microtask' | 'frame'` delivers the latest per
+  microtask or frame. The default stays "every value", as RxJS's `distinctUntilChanged` is
+  opt-in: a source that emits one mutated object twice would otherwise go quiet.
+
+Store selectors (a store change rendering only the components whose slice changed) stay review
+item #21; a store whose value didn't change already renders nothing.

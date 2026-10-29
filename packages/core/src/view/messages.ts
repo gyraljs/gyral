@@ -28,6 +28,10 @@ export const MESSAGES = {
   16:
     '{package} {version} needs @gyral/core {version}, but this app has @gyral/core {core}. ' +
     "Gyral's packages are released together: install the same version of every @gyral package.",
+  17:
+    '<{tag}> rendered differently with the same state, props and stores, so its view reads ' +
+    'something else, such as Date.now(), a module variable or the DOM. A component renders only ' +
+    'when one of them changes (0.3.8): move what the view reads into state, a prop or a store.',
   // Props
   20: '<{tag}> prop "{prop}" has an asynchronous schema; it must be synchronous.',
   21: '<{tag}> prop "{prop}" got an invalid value from {source}, so it is treated as missing: {issues}',

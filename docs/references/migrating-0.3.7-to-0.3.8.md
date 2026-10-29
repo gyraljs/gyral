@@ -6,14 +6,19 @@ new checks, then workarounds you can remove.
 
 ## Behavior changes
 
-| Change                                                                              | Before 0.3.8                                                                                                  | What to do                                                                                                                                                                         |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Gyral's packages take `@gyral/core` as a peer at their exact version (337.5)        | Each listed core as a dependency, so a package of another version than the app's core installed a second core | Give every `@gyral/*` package the same version. pnpm now reports a mismatch at install time; npm stops with ERESOLVE. Overrides that only kept Gyral's packages on one core can go |
-| `gyralDevServer`'s `app` builds the handler once per server-module version (337.12) | It ran on every request                                                                                       | Nothing for most apps: per-request work belongs in the handler. Drop a cache of your own around `app`, such as starwars.run's per-module site cache                                |
+| Change                                                                                               | Before 0.3.8                                                                                                  | What to do                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A component renders only when its state, a declared prop or a declared store's value changes (337.1) | Every message rendered the view, even when `update` returned the same state; that render wrote nothing        | Nothing for a pure view. A view that reads anything else (`Date.now()`, a module variable, the DOM) stops refreshing on unrelated messages: move that into state, a prop or a store. Development warns once per component (G0017) |
+| Gyral's packages take `@gyral/core` as a peer at their exact version (337.5)                         | Each listed core as a dependency, so a package of another version than the app's core installed a second core | Give every `@gyral/*` package the same version. pnpm now reports a mismatch at install time; npm stops with ERESOLVE. Overrides that only kept Gyral's packages on one core can go                                                |
+| `gyralDevServer`'s `app` builds the handler once per server-module version (337.12)                  | It ran on every request                                                                                       | Nothing for most apps: per-request work belongs in the handler. Drop a cache of your own around `app`, such as starwars.run's per-module site cache                                                                               |
 
-Details: ADR 0033 (the first), ADR 0016's 0.3.8 addendum (the second).
+Details: ADR 0018's render-skipping addendum (the first), ADR 0033 (the second), ADR 0016's 0.3.8
+addendum (the third).
 
 ## New checks and warnings
+
+- **A skipped view that renders differently (G0017, development):** the view reads something
+  besides its state, props and stores.
 
 - **Driver lists and records (G0044, G0045; development):** two drivers of one name in a list
   throw; a record key that isn't its driver's name warns, since commands of that driver never
@@ -23,6 +28,11 @@ Details: ADR 0033 (the first), ADR 0016's 0.3.8 addendum (the second).
   throws, naming both versions; production logs the coded warning.
 
 ## New APIs
+
+- **`each(items, key, row, { pick, equals })`**: `equals` compares picked values, for a `pick`
+  that builds a nested value each render.
+- **`subscription(…, { select, equals, coalesce })`**: map each value, drop repeats, deliver the
+  latest per microtask or frame.
 
 - **`token.provide(run)` and `subscription(token, …)`**, with drivers supplied as a list:
   `provideDrivers(root, [session.provide(run), subscription(feed, listen)])`. The name comes from
@@ -38,6 +48,10 @@ Details: ADR 0033 (the first), ADR 0016's 0.3.8 addendum (the second).
   Fastify server of your own.
 
 ## Workarounds you can remove
+
+- Hand-written guards against same-state renders (comparing fields before returning new state),
+  subscription dedupe (`equals`), microtask batching of a source (`coalesce: 'microtask'`), and
+  `JSON.stringify` equality for `each` picks (`equals`, after making references stable).
 
 - Helpers that wrap a token and its implementation (gymtime's and containment's `implement`),
   and name-keyed records that repeat a token's name: `token.provide(run)` in a list.

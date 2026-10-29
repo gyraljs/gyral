@@ -82,7 +82,7 @@ export function samePick(a: unknown, b: unknown): boolean {
 
 export function updateRow(row: ChildPart, item: unknown, l: ListResult): void {
   const picked = l.pick === undefined ? undefined : l.pick(item);
-  if (item === row.item && samePick(picked, row.picked)) return;
+  if (item === row.item && (l.equals ?? samePick)(row.picked, picked)) return;
   row.item = item;
   row.picked = picked;
   row.commit(l.row(item, picked));

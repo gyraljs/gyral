@@ -113,6 +113,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `DriverOverrides`     | type  | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md)                         |
 | `DriverToken`         | type  | supporting type |                                                                                                        |
 | `each`                | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
+| `EachOptions`         | type  | supporting type |                                                                                                        |
 | `Errored`             | type  | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |
 | `ErrorPhase`          | type  | documented      | [design-docs/0024-errors.md](../design-docs/0024-errors.md)                                            |
 | `field`               | value | documented      | [skills/gyral/SKILL.md](../../skills/gyral/SKILL.md)                                                   |

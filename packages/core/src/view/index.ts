@@ -28,10 +28,10 @@ export type {
 } from './normalize/types.js';
 
 export { hydrate } from './render/hydrate.js';
-export { render, renderBatch } from './render/render.js';
+export { recheckView, render, renderBatch } from './render/render.js';
 export type { Markup, SeenMarkup } from './render/seen.js';
 export { HydrationMismatch } from './render/mismatch.js';
-export { each } from './render/list.js';
+export { each, type EachOptions } from './render/list.js';
 export { keyed } from './render/keyed.js';
 export { raw } from './render/raw.js';
 export { nothing, type ChildValue, type ListResult, type RawResult } from './render/values.js';

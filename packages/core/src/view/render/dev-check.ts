@@ -32,9 +32,34 @@ export const ROW_CHECKS = 200;
 let budget = ROW_CHECKS;
 const warned = new WeakSet<object>();
 
+/**
+ * Skipped renders re-checked per flush (gyral-337.1): every one up to this many, then a
+ * window that moves along the flush's order from one flush to the next.
+ */
+export const VIEW_CHECKS = 50;
+let views = { budget: VIEW_CHECKS, now: 0, before: 0, round: 0 };
+
 /** Called at the start of each flush, or of a `render` call outside one. */
 export function resetRowChecks(): void {
   budget = ROW_CHECKS;
+  views = { budget: VIEW_CHECKS, now: 0, before: views.now, round: views.round + 1 };
+}
+
+/**
+ * Development: whether to re-run the view of a host whose render was skipped (its state, props
+ * and stores unchanged) and compare it with what is committed. Every skipped render while the
+ * flush's budget lasts; when the last flush skipped more, a window of VIEW_CHECKS of them that
+ * moves each flush, so every host is checked within a few flushes.
+ */
+export function checkSkippedView(): boolean {
+  const k = views.now++;
+  if (views.budget <= 0) return false;
+  const n = views.before;
+  if (n > VIEW_CHECKS && k < n && (k - ((views.round * VIEW_CHECKS) % n) + n) % n >= VIEW_CHECKS) {
+    return false;
+  }
+  views.budget--;
+  return true;
 }
 
 /** Keys are unique strings or numbers. Guarded here too: the lazy hydration chunk calls it. */
@@ -130,7 +155,7 @@ function sameList(list: List, l: ListResult): boolean {
     return (
       row.item === item &&
       Object.is(row.key, l.key(item)) &&
-      samePick(row.picked, l.pick === undefined ? undefined : l.pick(item))
+      (l.equals ?? samePick)(row.picked, l.pick === undefined ? undefined : l.pick(item))
     );
   });
 }

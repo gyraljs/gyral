@@ -4,6 +4,14 @@
 layer). It is a pure function: no event handlers, no `this`, no fetching, no reading the DOM.
 Compute derived values in plain helper functions of state.
 
+**A component renders only when its state, a declared prop or a declared store's value changes**
+(0.3.8). A message whose `update` returns the same state renders nothing, so return `s` itself
+for a no-op, not `{ ...s }`. A view that reads anything else (`Date.now()`, `Math.random()`, a
+module variable, the DOM) stops refreshing on unrelated messages: put the time in state (an
+`every` subscription), the random value in state, the outside value in a prop or a store.
+Development re-runs skipped views and warns once per component when one renders differently
+(G0017).
+
 ## Template rules
 
 | Need                              | Write                                                                |
@@ -60,7 +68,8 @@ export default [{ files: ['src/**/*.ts'], ...gyral.configs.recommended }];
 ## Lists: `each` with pure rows
 
 `each(items, key, row, pick?)` is the only keyed list. A row re-renders only when its item
-object or its `pick` result changes, so **a row may read only its parameters, module-level
+object or its `pick` result changes (`Object.is`, or for arrays and plain objects the same entries,
+one level), so **a row may read only its parameters, module-level
 bindings and imports**. Intent names come from a module-level `const i = intentsOf<typeof C>()`
 (the same names component `C`'s view gets as `i`; a row that uses it declares its return type,
 `TemplateResult`, or the row and `C`'s type infer each other); anything else from the view's scope (`s`, `ctx`) goes through
@@ -127,6 +136,12 @@ export const Todos = define<State, Msg>()('my-todos', {
   `,
 });
 ```
+
+A `pick` that builds a nested value each render (`() => ({ columns, season })` with `columns`
+recomputed in the view) defeats the comparison, and every row re-renders. First make the
+reference stable: derive `columns` in `update` and keep it in state. Where that can't be,
+`each(items, key, row, { pick, equals })` compares picked values with your `equals` instead
+(0.3.8); keep it cheap, since it runs for every row on every render.
 
 ### `.map` or `each`?
 

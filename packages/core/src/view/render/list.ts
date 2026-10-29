@@ -58,6 +58,18 @@ export function createRows(
   part.parent().insertBefore(frag, end);
 }
 
+/** `each(items, key, row, { pick, equals })`: what a row reads beside its item, and its comparison. */
+export interface EachOptions<T, P> {
+  /** What the row reads beside its item (a selection, a mode): runs for every row. */
+  readonly pick: (item: T) => P;
+  /**
+   * Whether two picked values render the same row, replacing the default (`Object.is`, or for
+   * arrays and plain objects the same entries, one level). Make the picked references stable
+   * first (derive them in `update`); this is the escape hatch.
+   */
+  readonly equals?: (prev: P, next: P) => boolean;
+}
+
 /**
  * A keyed list. `key` must give each item a unique string or number; `row`
  * must depend only on its arguments: a row re-renders only when its item object or its `pick`
@@ -72,13 +84,13 @@ export function each<T, P>(
   items: readonly T[],
   key: (item: T) => string | number,
   row: (item: T, picked: P) => ChildValue,
-  pick: (item: T) => P,
+  pick: ((item: T) => P) | EachOptions<T, P>,
 ): ListResult;
 export function each<T, P>(
   items: readonly T[],
   key: (item: T) => string | number,
   row: (item: T, picked: P) => ChildValue,
-  pick?: (item: T) => P,
+  pick?: ((item: T) => P) | EachOptions<T, P>,
 ): ListResult {
   if (DEV && typeof key !== 'function') {
     throw new TypeError(
@@ -86,12 +98,14 @@ export function each<T, P>(
         'each(items, (x) => x.id, Row) (docs/design-docs/view/03-lists.md "Keys", rule 9).',
     );
   }
+  const options = typeof pick === 'object' ? pick : undefined;
   return {
     [EACH]: commitList,
     items,
     key: key as (item: unknown) => unknown,
     row: row as (item: unknown, picked: unknown) => unknown,
-    pick: pick as ((item: unknown) => unknown) | undefined,
+    pick: (options === undefined ? pick : options.pick) as ((item: unknown) => unknown) | undefined,
+    equals: options?.equals as ((prev: unknown, next: unknown) => boolean) | undefined,
   };
 }
 
