@@ -56,8 +56,8 @@ those folders that the skill no longer has are removed.
 
 Options:
   --check         Write nothing; exit 1 when a folder's copy differs (for CI)
-  --dir <folder>  A folder to keep, relative to the app (repeatable). Default:
-                  .claude/skills/gyral, and .agents/skills/gyral when it exists
+  --dir <folder>  A folder to keep, absolute or relative to the app (repeatable).
+                  Default: .claude/skills/gyral, and .agents/skills/gyral when it exists
   -h, --help      Show this help
 `;
 

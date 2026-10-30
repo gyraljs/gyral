@@ -147,7 +147,8 @@ Any other argument is an error.
 
 `npx @gyral/mcp@<version> skill`, run in an app with that `@gyral/core` version installed, writes
 the skill (`SKILL.md` and its references) to `.claude/skills/gyral`, and to `.agents/skills/gyral`
-when that folder exists (`--dir <folder>` names others), removing files the skill no longer has.
+when that folder exists (`--dir <folder>` names others: relative to the app, or absolute, such as
+a user-level `~/.claude/skills/gyral`), removing files the skill no longer has.
 `--check` writes nothing and exits 1 when a copy differs: run it in CI so the agents working on
 the app read the guidance for the Gyral version it runs. The version must match, because each
 release's skill describes that release.

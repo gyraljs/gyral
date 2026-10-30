@@ -4,13 +4,13 @@
 // CI. It replaces hand-copied skills pinned by hash. @gyral/mcp's version is always core's, so
 // the app's installed @gyral/core must be this release: `npx @gyral/mcp@<version> skill`.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { Corpus } from './types.js';
 
 export interface SkillOptions {
   /** The app's folder (default: the current directory). */
   readonly project: string;
-  /** Skill folders to write, relative to the project; default `.claude/skills/gyral`, and `.agents/skills/gyral` when it exists. */
+  /** Skill folders to write, absolute or relative to the project; default `.claude/skills/gyral`, and `.agents/skills/gyral` when it exists. */
   readonly dirs: readonly string[];
   readonly check: boolean;
 }
@@ -50,6 +50,13 @@ export function skillDirs(options: SkillOptions): string[] {
   return existsSync(join(options.project, AGENTS)) ? [DEFAULT, AGENTS] : [DEFAULT];
 }
 
+/** A folder as printed: relative to the project when inside it, else in full (gyral-vbm). */
+function shown(project: string, root: string): string {
+  const path = relative(resolve(project), root);
+  const outside = path === '' || /^\.\.(?:[\\/]|$)/.test(path) || isAbsolute(path);
+  return outside ? root : path.split('\\').join('/');
+}
+
 /** Writes (or with `check`, compares) the skill in each folder. */
 export function syncSkill(corpus: Corpus, options: SkillOptions): SkillResult {
   const installed = installedCore(options.project);
@@ -68,8 +75,9 @@ export function syncSkill(corpus: Corpus, options: SkillOptions): SkillResult {
   }
   const lines: string[] = [];
   let ok = true;
-  for (const dir of skillDirs(options)) {
-    const root = join(options.project, dir);
+  for (const folder of skillDirs(options)) {
+    const root = resolve(options.project, folder);
+    const dir = shown(options.project, root);
     const want = new Map(corpus.skill.map((f) => [f.path, f.content]));
     const have = filesIn(root);
     const changed = [...want].filter(([path, text]) => {

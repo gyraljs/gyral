@@ -74,6 +74,21 @@ describe('gyral-mcp skill', () => {
     expect(existsSync(join(other, '.claude'))).toBe(false);
   });
 
+  // gyral-vbm: an absolute --dir (a user-level copy) was joined onto the project.
+  it('writes an absolute --dir where it points, and names it in full', () => {
+    const dir = app();
+    const user = app();
+    const target = join(user, '.claude/skills/gyral');
+    expect(run(dir, false, [target]).lines).toEqual([
+      `${target}: the Gyral 0.3.8 skill (2 written, 0 removed)`,
+    ]);
+    expect(readFileSync(join(target, 'SKILL.md'), 'utf8')).toBe('# Gyral\n');
+    expect(existsSync(join(dir, user))).toBe(false);
+    expect(run(dir, true, [target]).lines).toEqual([`${target}: the Gyral 0.3.8 skill`]);
+    // A folder in the project prints relative to it, however it was given.
+    expect(run(dir, false, [join(dir, 'agents/gyral/')]).lines[0]).toMatch(/^agents\/gyral: /);
+  });
+
   it("refuses another release's core, naming the command that has its skill", () => {
     const dir = app('0.3.9');
     expect(run(dir)).toEqual({
