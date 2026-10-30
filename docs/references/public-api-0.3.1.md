@@ -266,6 +266,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `isSecretField`          | value | internal |               |
 | `jsonHazard`             | value | internal |               |
 | `LIGHT_ATTRIBUTE`        | value | internal |               |
+| `ON_EVENT`               | value | internal |               |
 | `requireCore`            | value | internal |               |
 | `resetDocumentStores`    | value | internal |               |
 | `runInit`                | value | internal |               |
@@ -541,6 +542,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `MountSsrOptions`     | type  | supporting type |                                                                                |
 | `outputsIn`           | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md) |
 | `parse`               | value | documented      | [skills/gyral/references/errors.md](../../skills/gyral/references/errors.md)   |
+| `ParseInput`          | type  | supporting type |                                                                                |
 | `ParseOptions`        | type  | supporting type |                                                                                |
 | `Ran`                 | type  | supporting type |                                                                                |
 | `reject`              | value | documented      | [skills/gyral/references/testing.md](../../skills/gyral/references/testing.md) |

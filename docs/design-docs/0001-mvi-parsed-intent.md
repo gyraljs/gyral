@@ -247,3 +247,12 @@ for `closest('form')` and `files`.
 - **The binding is checked twice**: `gyral/intent-event` compares the view's
   `data-intent-<event>`, static `data-intent-on` and default triggers with the `on()` parsers of
   the same module, and development throws G0018 when another event reaches an `on()` parser.
+- **Tests without a DOM (0.3.9, gyral-cd0).** `@gyral/testing`'s `parse()` runs `on()` parsers
+  in Node, where apps test their models. `on()` feature-detects the DOM classes it checks
+  (`typeof HTMLInputElement === 'function'`), accepts an input without a target and an event
+  without `composedPath()` (those fields are then `undefined`; `valueAsNumber` reads `value`), and
+  its key filter reads the input's `key` before `event.key`. An `on()` parser carries its event
+  type under an internal symbol (`ON_EVENT`, `@gyral/core/internal`), so `parse()` creates an
+  event of that type, with `key` and the `modifiers` the test names. In the browser the intent
+  layer always gives a target, a dispatched event and `key` copied from it, so nothing changes
+  there.

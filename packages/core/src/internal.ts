@@ -23,6 +23,7 @@ export { resetDocumentStores, STORES_ELEMENT } from './store-scope.js';
 export { DRIVERS_ELEMENT } from './drivers-scope.js';
 export { jsonHazard } from './json-safety.js';
 export { LIGHT_ATTRIBUTE } from './light-dom.js';
+export { ON_EVENT } from './on.js';
 export { HydrationMismatch } from './view/index.js';
 export { DEVTOOLS_GLOBAL } from './devtools-events.js';
 export type {
