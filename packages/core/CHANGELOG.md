@@ -1,5 +1,102 @@
 # @gyral/core
 
+## 0.3.9
+
+0.3.9 fixes what migrating the apps to 0.3.8 found (epic gyral-vge). The first entry changes
+what a working app sees in development: apps that install Gyral from npm now get its development
+checks in `vite dev` and browser tests, so warnings and errors you hadn't seen can appear, each
+saying what to change. The next two change behaviour too: the dev server renders an edited
+component's new code, and `ctx.props` keeps its identity while no prop changes.
+[Behavior changes in 0.3.9](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/migrating-0.3.8-to-0.3.9.md)
+lists each with what to do, then the fixed checks and the workarounds you can remove.
+
+### Patch Changes
+
+- 9f424b5: Apps that install `@gyral/core` from npm now run its development build in `vite dev` and in
+  Vitest's browser mode (gyral-3pv). Until now Vite's dependency optimizer pre-bundled core's
+  production modules there, so none of Gyral's development checks ran (G0017, duplicate keys,
+  impure `each` rows, template rules, prop checks) and messages printed as codes. Expect warnings
+  and errors you hadn't seen; some throw, so a browser test that passed can fail, naming what to
+  fix. Gyral's own examples and Node-environment tests were not affected.
+
+  `gyral()` (and `gyralVitePreset()`) now gives the optimizer the environment's resolve
+  conditions in serve mode: your `resolve.conditions`, or Vite's defaults with `development`.
+  Production builds are unchanged. Remove an
+  `optimizeDeps.rolldownOptions.resolve.conditionNames` workaround; one of your own still wins.
+
+- 2bdaed3: `gyralDevServer` and `gyralDevMiddleware` now server-render an edited component on the next
+  request (gyral-ejc). Before, an edit to a component module, or to a module it imports (a labels
+  file), showed only after a restart: Vite ran the module again, but the server kept the first
+  `define()` of each tag. The dev server now lets a later definition replace the spec, and the
+  server renderer rebuilds that component, with its styles and CSP hashes. Production servers,
+  tests and scripts keep the first definition, as before.
+
+- 014eec6: `ctx.props` is now the same object while no declared prop's value changes, and a new one when
+  one does (gyral-bn7). It was a new object on every read, so an `each()` pick that captured it,
+  such as `(day) => ({ day, props })`, never equalled the last one: every row re-rendered on
+  every render, and development warned G0017 about pure views. If your code mutated `ctx.props`,
+  copy it first. Components with props bundle about 30 B (gzip) more.
+
+  G0017's development message now says where the view differs: in its template, or in the
+  innermost `each(…, Row)` or `keyed(…)` that does. When that list's pick returned a new object
+  for the same item, it says to pick the fields the row reads or to pass
+  `each(items, key, row, { pick, equals })`.
+
+- 1c8ef8c: G0017 no longer warns about pure views that build their values anew each render (gyral-nyy).
+  The development recheck of a skipped view now compares what the view renders, not object
+  identities: `each(s.items.map(…), …)`, `keyed(key, html…)`, `.data=${{ n: s.n }}` and
+  `.items=${s.items.slice()}` match what they rendered before. An `each` row whose item or pick
+  changed is rendered again and compared; plain objects and arrays compare by value (deeply,
+  bounded). A `Date`, `Set` or class instance built in the view still compares by reference, and
+  a view that reads `Date.now()`, a module variable or the DOM still warns. Development only:
+  production builds are unchanged.
+
+- 4e9f962: Development messages now name their code: each coded one ends with its code and errors-page link, such
+  as ` (G0017: https://gyral.dev/errors/#G0017)`, as production's `Gyral G0017 …` already did
+  (gyral-99d). A test that matches a development message exactly (`toBe`, `toEqual`) needs the
+  suffix, or can match with `toContain`. G0063's text ends with a period instead of a colon, and
+  the build-time warning about a second copy of core (G0015) ends the same way. Production
+  messages are unchanged.
+
+- 26b3782: `parse()` from `@gyral/testing` now runs `on()` parsers without a DOM, so a Node test
+  (Vitest's `node` environment) can test them (gyral-cd0). Before, `parse(C, 'Key', { key: 'Enter' })`
+  on an `on('keydown', { keys: ['Enter'] }, …)` parser threw (G0018 for its `intent` event,
+  `HTMLInputElement is not defined`, or a `TypeError` on the missing target) or quietly returned
+  `undefined`. Now:
+
+  - the event `parse()` creates has the type the `on()` parser declares and carries `key`;
+  - the new `modifiers` field names the keys held: `parse(C, 'Save', { key: 's', modifiers: { ctrl: true } })`.
+    It applies only to that event: with an `event` of your own, set `ctrlKey` and the rest on it
+    (`parse()` throws when it gets both);
+  - `on()`'s key filter reads the input's `key` before `event.key`;
+  - with no target, `valueAsNumber` reads `value`, and `control`, `form` and `origin` are `undefined`.
+    DOM classes are feature-detected, and an event without `composedPath()` is accepted.
+
+  In the browser, `on()` behaves as before.
+
+- 74b5c5a: `optimize: 'auto'` now also scans the client build's inputs and the modules in
+  `components.modules` (gyral-5zi). Before, setting `optimizeDeps.entries` replaced Vite's own
+  start point, `build.rollupOptions.input` (or `rolldownOptions.input`, or `input`), and the
+  component scan can't see a component defined through a wrapper. A package imported only by the
+  client entry or such a module was found mid-run: the dev server reloaded ("new dependencies
+  found") and Vitest printed "Vite unexpectedly reloaded a test". If your config appends those
+  modules to `optimizeDeps.entries` after `gyral()` as a workaround (gyral-shop's
+  `scanEntries()`), you can remove it.
+
+- b2c15d1: `gyral/prefer-built-in` warns about `.focus()` in a driver only when the element is reached
+  through a component's shadow or render root (`x.shadowRoot.querySelector(s).focus()`, or a
+  local name for that root), which the `focus(selector)` command replaces (gyral-um2). Before, it
+  warned about every `.focus()` in a driver, also on a page element outside any component
+  (`document.querySelector`, `getElementById`) or one the driver is handed, which `focus()` can't
+  reach: it searches only the component's own root. Such drivers no longer warn; drop any
+  `eslint-disable` you added for them.
+
+- 7547000: The docs say two costs plainly (gyral-crt). `subscription(…, { coalesce: 'microtask' | 'frame' })`
+  delays the first value too, by a microtask or a frame, so nothing arrives in the same turn as
+  `emit`: a driver's unit test that checks right after `emit` awaits one first. And `on()` is a
+  module of its own, about 0.43 KiB gzip, paid once per app on its first use; the
+  `gyral/prefer-built-in` warnings that suggest it now say so, so an app weighing bytes can decide.
+
 ## 0.3.8
 
 0.3.8 delivers the "Now" items of the 2026-10-28 ecosystem review and a full dependency update.
