@@ -10,7 +10,9 @@ for a no-op, not `{ ...s }`. A view that reads anything else (`Date.now()`, `Mat
 module variable, the DOM) stops refreshing on unrelated messages: put the time in state (an
 `every` subscription), the random value in state, the outside value in a prop or a store.
 Development re-runs skipped views and warns once per component when one renders differently
-(G0017).
+(G0017). It compares what they render, so values built anew each render are fine when they are
+equal: rebuilt `each()` items, `keyed()`, a fresh `{ … }` or array in a property binding (0.3.9).
+A `Date`, `Set` or class instance built in the view compares by reference: keep it in state.
 
 ## Template rules
 

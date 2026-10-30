@@ -11,6 +11,14 @@ notice come first, each with what to do; then new checks, then workarounds you c
 
 Details: ADR 0018's 0.3.9 addendum.
 
+## Fixed checks
+
+- **G0017 on pure views (gyral-nyy):** a skipped view is compared with what it rendered by
+  value, not identity. Views that build values anew each render no longer warn:
+  `each(s.items.map(…), …)`, `keyed(key, html…)`, `.data=${{ n: s.n }}`,
+  `.items=${s.items.slice()}`. A `Date`, `Set` or class instance built in the view still
+  compares by reference; reading `Date.now()`, a module variable or the DOM still warns.
+
 ## Workarounds you can remove
 
 - `optimizeDeps: { rolldownOptions: { resolve: { conditionNames: […] } } }` in a Vite or Vitest

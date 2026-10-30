@@ -1,8 +1,11 @@
-// Development checks for lists (view/03-lists.md "Keys", "Rows must be pure"). Keys must be
-// unique strings or numbers. Skipped rows are re-evaluated and compared with what is committed
-// (template, by id or identity, and values, recursively); a difference warns once per row
-// function. At most 200 rows are checked per flush (per render call outside one), rotating
-// through each list. Only reached under `if (DEV)`.
+// Development checks for lists (view/03-lists.md "Keys", "Rows must be pure") and skipped
+// views (view/04 "Marking", G0017). Keys must be unique strings or numbers. Skipped rows are
+// re-evaluated and compared with what is committed (template, by id or identity, and values,
+// recursively); a difference warns once per row function. At most 200 rows are checked per
+// flush (per render call outside one), rotating through each list. Values compare by what they
+// render, never by identity (gyral-nyy): plain objects and arrays by value (`sameValue`), and a
+// list row whose item or pick changed is rendered again and compared. Only reached under
+// `if (DEV)`.
 import { DEV } from '#view-dev';
 import { isTemplateResult, templateOf } from '../template.js';
 import {
@@ -21,7 +24,7 @@ import {
 } from './attr-parts.js';
 import { ChildPart, EMPTY, INSTANCE, ITEMS, LIST, RAW, TEXT } from './child-part.js';
 import type { RawRange } from './raw.js';
-import { hookSpec, sameArgs, type HookResult } from './hooks.js';
+import { hookSpec, type HookResult } from './hooks.js';
 import type { Instance } from './instance.js';
 import { samePick, type List } from './rows.js';
 import { isList, rawHtml, type ListResult } from './values.js';
@@ -37,12 +40,18 @@ const warned = new WeakSet<object>();
  * window that moves along the flush's order from one flush to the next.
  */
 export const VIEW_CHECKS = 50;
-let views = { budget: VIEW_CHECKS, now: 0, before: 0, round: 0 };
+/**
+ * List rows the comparison renders again per flush, where the item or pick changed (sameList);
+ * past them, a row counts as unchanged: unchecked, never a false warning.
+ */
+export const VIEW_ROWS = 1000;
+let views = { budget: VIEW_CHECKS, now: 0, before: 0, round: 0, rows: VIEW_ROWS };
 
 /** Called at the start of each flush, or of a `render` call outside one. */
 export function resetRowChecks(): void {
   budget = ROW_CHECKS;
-  views = { budget: VIEW_CHECKS, now: 0, before: views.now, round: views.round + 1 };
+  const round = views.round + 1;
+  views = { budget: VIEW_CHECKS, now: 0, before: views.now, round, rows: VIEW_ROWS };
 }
 
 /**
@@ -127,7 +136,7 @@ function samePart(p: Part, values: readonly unknown[]): boolean {
   const v = values[part.at];
   switch (part.kind) {
     case MULTI:
-      return (part.pieces ?? []).every((piece, i) => Object.is(piece, values[part.at + i]));
+      return (part.pieces ?? []).every((piece, i) => sameValue(piece, values[part.at + i]));
     case BOOL:
     case CHECKED:
     case STATE:
@@ -139,23 +148,63 @@ function samePart(p: Part, values: readonly unknown[]): boolean {
     case HOOK: {
       const spec = hookSpec(v);
       if (spec === undefined) return part.spec === null;
-      return spec === part.spec && sameArgs((v as HookResult).args, part.args);
+      return spec === part.spec && sameValue((v as HookResult).args, part.args);
     }
     default:
       // ATTR, PROP and VALUE keep the raw committed value.
-      return Object.is(part.value, v);
+      return sameValue(part.value, v);
   }
 }
 
+/**
+ * Whether `l` renders what `list` shows: the same keys in order, and each row the same. A row
+ * whose item and pick are unchanged would be skipped (the row check covers it); any other row
+ * is rendered again and compared, so items rebuilt in the view, or a `keyed()` template, are
+ * the same when they render the same.
+ */
 function sameList(list: List, l: ListResult): boolean {
   const rows = list.rows;
   if (rows.length !== l.items.length) return false;
   return rows.every((row, i) => {
     const item = l.items[i];
-    return (
-      row.item === item &&
-      Object.is(row.key, l.key(item)) &&
-      (l.equals ?? samePick)(row.picked, l.pick === undefined ? undefined : l.pick(item))
-    );
+    if (!Object.is(row.key, l.key(item))) return false;
+    const picked = l.pick === undefined ? undefined : l.pick(item);
+    if (row.item === item && (l.equals ?? samePick)(row.picked, picked)) return true;
+    if (views.rows <= 0) return true;
+    views.rows--;
+    return sameChild(row, l.row(item, picked));
   });
+}
+
+/** Entries `sameValue` compares per value, and how deep; past either, the rest count as equal. */
+const DATA_ENTRIES = 1000;
+const DATA_DEPTH = 16;
+
+const isData = (value: unknown): value is Readonly<Record<string, unknown>> => {
+  if (typeof value !== 'object' || value === null) return false;
+  const proto = Object.getPrototypeOf(value) as unknown;
+  return Array.isArray(value) || proto === Object.prototype || proto === null;
+};
+
+/**
+ * Whether two bound values render the same: `Object.is`, or for plain objects and arrays the
+ * same keys with values compared the same way, so a fresh `{ n: s.n }` or `s.items.slice()`
+ * matches what it replaced. Bounded (DATA_ENTRIES, DATA_DEPTH): past the bound, unchecked
+ * values count as equal. Anything else (a Date, a Map, a class instance) by `Object.is`.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  let left = DATA_ENTRIES;
+  const same = (x: unknown, y: unknown, depth: number): boolean => {
+    if (Object.is(x, y)) return true;
+    if (!isData(x) || !isData(y) || Array.isArray(x) !== Array.isArray(y)) return false;
+    if (depth >= DATA_DEPTH) return true;
+    const keys = Object.keys(x);
+    if (keys.length !== Object.keys(y).length) return false;
+    for (const k of keys) {
+      if (--left < 0) return true;
+      if (!Object.hasOwn(y, k) || !same(x[k], y[k], depth + 1)) return false;
+    }
+    return true;
+  };
+  return same(a, b, 0);
 }

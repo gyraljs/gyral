@@ -407,3 +407,15 @@ that G0017 fired on pure views.
   win, and `vite build` is untouched. `pack:check` installs the packed core in a throwaway app
   and checks that the dev pre-bundle carries the development checks and production builds
   don't (scripts/lib/dev-prebundle-fixture.mjs).
+- **G0017 compares what a view renders, never identities** (gyral-nyy). Its recheck required
+  each `each` row's item to be the committed object (`row.item === item`) and compared bound
+  values with `Object.is`, so a pure view warned when it built values anew each render:
+  `each(s.items.map(…))`, `keyed(key, html…)` (a one-row `each` whose item is a fresh
+  template), `.data=${{ n: s.n }}`, `.items=${s.items.slice()}`, a hook's `[...errors]`. Now
+  a row whose item or pick changed is rendered again and compared like any child value (as the
+  row check already did for skipped rows), and attribute, property, value and hook values
+  compare plain objects and arrays by value, deeply but bounded (1,000 entries, 16 levels;
+  past the bound, equal). Other objects (a `Date`, a `Set`, a class instance) still compare
+  with `Object.is`: the view builds them anew, and a child sees a new value. The real render
+  is unchanged: it still writes a new object to the property. Reading `Date.now()`, a module
+  variable or the DOM still warns (core/test/view-recheck.test.ts).

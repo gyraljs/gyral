@@ -24,7 +24,12 @@ update maps or completion promises.
   control back, change the model (02 "Putting a control back"). The first render, hydration,
   the render after an error view and the render after a disconnect that disposed element
   hooks always run. Development re-runs skipped views, up to `VIEW_CHECKS` (50) per flush, and
-  warns once per component when one differs from what is committed (G0017).
+  warns once per component when one differs from what is committed (G0017). The comparison is
+  by what the view renders, never by identity (0.3.9, gyral-nyy): bound values compare plain
+  objects and arrays by value (bounded: past 1,000 entries or 16 levels the rest counts as
+  equal) and anything else with `Object.is`; an `each` row whose item or pick changed is
+  rendered again and compared (up to `VIEW_ROWS`, 1,000 per flush), so items rebuilt in the
+  view and `keyed()`'s fresh template match what they replaced.
 - A host that isn't connected isn't rendered; it renders when it reconnects.
 - Each host records its **depth** (number of Gyral host ancestors in the composed tree) when it
   connects. Sorting by depth needs no DOM queries.
