@@ -31,7 +31,10 @@ must cost nothing in production and almost nothing in development when no panel 
   same names as no-ops, signatures tied with `typeof`). Every call site is guarded by
   `if (DEVTOOLS_ENABLED)`, a literal `false` in the production module, so bundlers drop the
   call sites and the module. Vite resolves `development` in dev and Vitest, `production` in
-  `vite build`; other tools get the safe default (off).
+  `vite build`; other tools get the safe default (off). Vite's dependency optimizer resolves a
+  pre-bundled package's `#…` imports without Vite's conditions, so until 0.3.9 an installed
+  core's dev pre-bundle got the off module; `gyral()` now names the conditions for it
+  (gyral-3pv, ADR 0018's 0.3.9 addendum).
 - Measured with `pnpm size` before and after: counter 150.2 KiB min / 49.3 KiB gzip both
   times; the largest change across all examples was +0.1 KiB (a few `void 0` arguments). A
   production build contains neither the global name nor the listener code.

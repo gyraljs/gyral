@@ -59,16 +59,19 @@ export interface ServerComponent {
 const components = new Map<string, ServerComponent>();
 let version = 0;
 
-/** Records a component. A tag registered twice keeps its first entry, as `customElements` does. */
-export function registerServerComponent(component: ServerComponent): void {
-  if (components.has(component.tag)) return;
+/**
+ * Records a component. A tag registered twice keeps its first entry, as `customElements` does,
+ * unless `replace` is set: a development server's edited component replaces its entry.
+ */
+export function registerServerComponent(component: ServerComponent, replace = false): void {
+  if (!replace && components.has(component.tag)) return;
   components.set(component.tag, component);
   version++;
 }
 
 /**
- * Changes whenever the registry does (a component, and so its CSS, is added): caches derived
- * from the registry (the CSP header of `@gyral/ssr`'s `renderPage`) key on it.
+ * Changes whenever the registry does (a component, and so its CSS, is added or replaced): caches
+ * derived from the registry (the CSP header of `@gyral/ssr`'s `renderPage`) key on it.
  */
 export const serverRegistryVersion = (): number => version;
 

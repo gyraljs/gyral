@@ -1,8 +1,9 @@
-// Diagnostic text (gyral-c5d.13): the full message in development, a code and the docs URL in
-// production, so production bundles carry no message table. Every error and warning core can
-// raise in production goes through `message()` (or, for a hydration mismatch, which keeps its
-// sentence, `docsLink()`); development-only checks keep their own text behind `DEV`. The codes
-// and texts are in messages.ts.
+// Diagnostic text (gyral-c5d.13): the full message in development, ending with its code and
+// docs URL (gyral-99d), and in production the code and the docs URL alone, so production bundles
+// carry no message table. Every error and warning core can raise in production goes through
+// `message()` (or, for a hydration mismatch, which keeps its sentence, `docsLink()`);
+// development-only checks keep their own text behind `DEV`. The codes and texts are in
+// messages.ts.
 import { DEV } from '#view-dev';
 import { MESSAGES } from './messages.js';
 import { VERSION } from './version.js';
@@ -26,22 +27,27 @@ function fullText(code: MessageCode, args: readonly unknown[]): string {
   });
 }
 
+/** ` (G0062: https://gyral.dev/errors/#G0062)`: how every coded development message ends. */
+const named = (id: string): string => ` (${id}: ${ERRORS_URL}${id})`;
+
 /**
- * `Gyral G0062 https://gyral.dev/errors/#G0062`, for a message that keeps a sentence of its own
- * in production (a hydration mismatch names the node in words) and points to the docs there.
+ * How a message that keeps a sentence of its own (a hydration mismatch names the node in
+ * words) names its code: in development the end of every coded message, ` (G0062: <URL>)`;
+ * in production `Gyral G0062 https://gyral.dev/errors/#G0062`, pointing to the docs.
  */
 export const docsLink = (code: MessageCode): string => {
   const id = codeName(code);
-  return `Gyral ${id} ${ERRORS_URL}${id}`;
+  return DEV ? named(id) : `Gyral ${id} ${ERRORS_URL}${id}`;
 };
 
 /**
- * The text of diagnostic `code` with its arguments: in development the full message, in
- * production `Gyral G0010 <args…> https://gyral.dev/errors/#G0010`.
+ * The text of diagnostic `code` with its arguments: in development the full message, then
+ * ` (G0010: https://gyral.dev/errors/#G0010)`; in production
+ * `Gyral G0010 <args…> https://gyral.dev/errors/#G0010`.
  */
 export function message(code: MessageCode, ...args: readonly unknown[]): string {
-  if (DEV) return fullText(code, args);
   const id = codeName(code);
+  if (DEV) return fullText(code, args) + named(id);
   return [`Gyral ${id}`, ...args, ERRORS_URL + id].join(' ');
 }
 

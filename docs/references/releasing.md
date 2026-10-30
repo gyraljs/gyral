@@ -386,6 +386,20 @@ project on Rust 1.99.1 with `gyral` 0.6.0 and the `axum` feature builds and reso
 The Rust compatibility fixture now pins gyral-rs `d73d99f`, npm 0.3.8 and Rust 1.99.1, and
 `verify-rust-compatibility.mjs` passes against it (gyral-337).
 
+Recorded 0.3.9 candidate checks (2026-10-30, epic gyral-vge): `pnpm check` passes on Node
+24.22.0 and on 26.12.0 (350 test files, 2314 tests, one skipped; 21 bundles within budget, with
+nested-folders at 10.9 KiB under ADR 0015's approved 0.3.9 addendum). `pnpm smoke:prod` passes.
+`verify:install` passes with ten tarballs, all Node-loadable entries, native SSR output and
+`npx --no-install @gyral/mcp`; no extra peers and no Lit package are installed. Both
+`verify:create` templates typecheck, build and pass their tests (basic 22.2 KiB JS, 8.4 KiB gzip;
+SSR 34.9 KiB JS, 14.3 KiB gzip). `pack:check` now pre-bundles the packed core with Vite's
+optimizer and requires its development modules there (gyral-3pv). The `@gyral/mcp` docs snapshot
+comes from the gyral.dev `release/0.3.9-docs` build. Before the release, packed 0.3.9 tarballs ran
+the gates of gyral-shop, starwars.run, football-pool-tracker and gymtime on their 0.3.8 branches
+with no regression; the G0017 false positives they listed are gone, the 0.3.9-removable
+workarounds come out, and an edited component shows on the next dev-server request with core
+installed from the tarball. Vite's part of gyral-3pv is reported upstream as vitejs/vite#23946.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

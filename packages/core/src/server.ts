@@ -30,6 +30,7 @@ export { styleHash, styleHashSync };
  */
 export const development: boolean = DEV;
 export { StoreRegistry, withStoreScope } from './store-scope.js';
+export { replaceDefinitions } from './server-specs.js';
 
 function prepare(): void {
   registerServerProvider(storesProvider);

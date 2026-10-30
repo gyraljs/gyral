@@ -121,6 +121,7 @@ export function elementClass<S, M extends Tagged, P>(
       {
         el: this,
         tag,
+        // The same object while every prop is (props.ts readProps).
         props: () => (names.length > 0 ? props.readProps(this.#values, table) : {}),
         root: () => this.#root,
         invalidate: (onFrame) => {

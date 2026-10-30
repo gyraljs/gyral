@@ -1,5 +1,29 @@
 # @gyral/mcp
 
+## 0.3.9
+
+### Patch Changes
+
+- 928fd67: The docs and the bundled skill no longer overstate render skipping (gyral-4rp). It helps only
+  when `update` returns the same state: a message that carries a new object each time (a game's
+  HUD snapshot, a sensor reading) still renders. Keep a compare that stops a high-rate source from
+  sending messages, in the driver or as the subscription's `equals` and `select`; the 0.3.8 notes
+  had listed one such compare as a workaround to remove.
+- 640a85a: `gyral-mcp skill --dir <folder>` writes an absolute folder where it points (gyral-vbm). Before,
+  `--dir ~/.claude/skills/gyral` was joined onto the app's folder, so a user-level copy landed in a
+  nested folder inside the project instead. Folders inside the app print relative to it; others
+  print in full.
+- 93859c4: `gyral-mcp skill` keeps the files an owner puts beside a vendored or user-level copy of the skill
+  (gyral-337.18). Before, it removed them, and `--check` failed on them. Kept and never compared, at
+  the top of each folder: `LICENSE` (or `LICENCE`), `NOTICE`, `COPYING`, `PINNED` and `SOURCE` (or
+  `SOURCES`), each with any extension or suffix (`NOTICE.txt`, `PINNED.txt`, `SOURCE-gyral.md`).
+  Any other file the skill doesn't ship is still removed.
+
+  Each copy also gets a `VERSION` file naming its release and the source it came from
+  (`https://github.com/gyraljs/gyral/tree/v<version>/skills/gyral`), which `--check` compares like
+  the skill's other files, so a pin note is no longer needed. The first `skill` run after
+  upgrading writes it, and `--check` fails until then.
+
 ## 0.3.8
 
 ### Patch Changes

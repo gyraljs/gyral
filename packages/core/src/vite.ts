@@ -342,17 +342,18 @@ type TagMap = typeof import('./compiler/tag-map.js');
  * entry points and the app's Gyral libraries in dev, runs `optimize`, and warns when
  * @gyral/core is installed more than once. The `'auto'` scan starts at the modules that define
  * components, found the way element typings find them (./compiler/tag-map.ts), under
- * `components.include`, else `types.dirs`, else `src`.
+ * `components.include`, else `types.dirs`, else `src`, and at those `components.modules` lists.
  */
 function gyralOneCore(options: GyralViteOptions): Plugin {
   const oneCore = requireCompiler('one-core') as typeof import('./compiler/one-core.js');
   const tagMap = requireCompiler('tag-map') as TagMap;
-  const { components, types, optimize } = options;
-  const dirs = (typeof components === 'object' ? components.include : undefined) ??
-    (types === false ? undefined : types?.dirs) ?? ['src'];
+  const { types, optimize } = options;
+  const listed = typeof options.components === 'object' ? options.components : {};
+  const dirs = listed.include ?? (types === false ? undefined : types?.dirs) ?? ['src'];
   return oneCore.oneCorePlugin({
     ...(optimize === undefined ? {} : { optimize }),
     components: (root) => tagMap.discoverComponents(root, dirs).map((found) => found.file),
+    modules: Object.values(listed.modules ?? {}),
   });
 }
 
@@ -366,10 +367,11 @@ export interface GyralViteOptions {
    * Pre-bundling in dev, so Vite doesn't discover a dependency mid-run and reload. Gyral's
    * installed browser entry points, and those of the app's dependencies that use Gyral, are
    * always pre-bundled. A list adds more modules. `'auto'` points Vite's startup scan at the
-   * modules that define components (and, in a Vitest browser project, at its tests), so every
-   * dependency they import is pre-bundled up front; it is the default when Vite runs as a
-   * custom server (`appType: 'custom'`, as gyralDevServer does) and the config sets no
-   * `optimizeDeps.entries`. `false` turns that scan off.
+   * modules that define components (found, or listed in `components.modules`), at the client
+   * build's inputs and HTML pages (where Vite's own scan starts) and, in a Vitest browser
+   * project, at its tests, so every dependency they import is pre-bundled up front. It is the
+   * default when Vite runs as a custom server (`appType: 'custom'`, as gyralDevServer does)
+   * and the config sets no `optimizeDeps.entries`. `false` turns that scan off.
    */
   readonly optimize?: readonly string[] | 'auto' | false;
   /** Template compiler options (`vite build` only). */

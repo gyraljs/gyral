@@ -363,10 +363,19 @@ Tested in `core/test/hook-order.test.ts`.
 
 ## Addendum: render skipping, `each` equality, subscription delivery (0.3.8, gyral-337.1)
 
-Owner's decisions, 2026-10-29 (review recommendation #2). Six projects avoided wasted renders by
-hand: joystyk deduplicated subscription output in 10 places, containment compared 12 fields,
-sabacc batched per microtask, enterprise-ui wrote `equals: sameJson` 15 times, and
-football-pool-tracker's race chart re-rendered 220 rows because its `pick` rebuilt an array.
+Owner's decisions, 2026-10-29 (review recommendation #2). Projects avoided wasted renders by
+hand: joystyk deduplicated subscription output in 10 places, sabacc batched per microtask, and
+enterprise-ui wrote `equals: sameJson` 15 times.
+
+Correction (0.3.9, gyral-4rp): this addendum first also counted containment's 12-field compare
+and football-pool-tracker's race chart among the workarounds 0.3.8 removes. It removes neither.
+Render skipping helps only when `update` returns the same state. Containment compares 12 fields
+of its HUD snapshot before sending a message: every HUD message carries a new
+object, so state changes by identity and the view can't skip. Without the compare, 20 s of play
+sends 1,202 HUD messages instead of 21. Deduping a high-rate source still belongs in the driver,
+or in a subscription's `equals` and `select`. The race chart's 220 re-rendered rows (its `pick`
+rebuilt an array) describe football's state before its own fix, fpt-ygm.14, which keeps the plot
+in the model; 0.3.8 removed no workaround there.
 
 - **A host renders only when what its view reads changed** (view/04 "Marking"): its state, a
   declared prop or a declared store's value, compared with `Object.is` against its last render
@@ -381,8 +390,54 @@ football-pool-tracker's race chart re-rendered 220 rows because its `pick` rebui
   picked values (view/03 "Row skipping"). Stable references first; `equals` is the escape hatch.
 - **`subscription(…, { select, equals, coalesce })`**: `select` maps each value, `equals` drops
   one equal to the last delivered, `coalesce: 'microtask' | 'frame'` delivers the latest per
-  microtask or frame. The default stays "every value", as RxJS's `distinctUntilChanged` is
+  microtask or frame, the first value included (so it never arrives in `emit`'s turn). The default stays "every value", as RxJS's `distinctUntilChanged` is
   opt-in: a source that emits one mutated object twice would otherwise go quiet.
 
 Store selectors (a store change rendering only the components whose slice changed) stay review
 item #21; a store whose value didn't change already renders nothing.
+
+## Addendum: development checks in apps that install core (0.3.9)
+
+Migrating apps to 0.3.8 (epic gyral-vge) showed that no app installing Gyral from npm had ever
+run its development checks in the dev server or Vitest's browser mode, and, once they ran,
+that G0017 fired on pure views.
+
+- **The dev pre-bundle is core's development build** (gyral-3pv). Vite 8's dependency
+  optimizer resolves a pre-bundled package's bare imports with Vite's resolver, under the
+  environment's conditions, but leaves its subpath imports (core's `#view-dev`, `#devtools`)
+  to rolldown's resolver, which knows no `development`. The pre-bundle of an installed core
+  therefore got `dev-off.js` and `devtools-off.js`: no checks, coded messages. Node's own
+  resolver (Node-environment tests) and the workspace's examples (core served as source,
+  unbundled) did get `development`, so the gate never saw it. `gyral()`'s one-core plugin now
+  sets `optimizeDeps.rolldownOptions.resolve.conditionNames` in serve mode to the
+  environment's conditions (the app's `resolve.conditions` or Vite's defaults,
+  `development|production` read as Vite reads it), in a `post` `configEnvironment` hook so
+  conditions other plugins add (`gyral-client-only`) are in; an app's own `conditionNames`
+  win, and `vite build` is untouched. `pack:check` installs the packed core in a throwaway app
+  and checks that the dev pre-bundle carries the development checks and production builds
+  don't (scripts/lib/dev-prebundle-fixture.mjs).
+- **G0017 compares what a view renders, never identities** (gyral-nyy). Its recheck required
+  each `each` row's item to be the committed object (`row.item === item`) and compared bound
+  values with `Object.is`, so a pure view warned when it built values anew each render:
+  `each(s.items.map(…))`, `keyed(key, html…)` (a one-row `each` whose item is a fresh
+  template), `.data=${{ n: s.n }}`, `.items=${s.items.slice()}`, a hook's `[...errors]`. Now
+  a row whose item or pick changed is rendered again and compared like any child value (as the
+  row check already did for skipped rows), and attribute, property, value and hook values
+  compare plain objects and arrays by value, deeply but bounded (1,000 entries, 16 levels;
+  past the bound, equal). Other objects (a `Date`, a `Set`, a class instance) still compare
+  with `Object.is`: the view builds them anew, and a child sees a new value. The real render
+  is unchanged: it still writes a new object to the property. Reading `Date.now()`, a module
+  variable or the DOM still warns (core/test/view-recheck.test.ts).
+- **`ctx.props` is a stable reference** (gyral-bn7, ADR 0007's 0.3.9 addendum): the same object
+  while no declared prop's value changes, so a pick that captures it lets rows skip.
+- **G0017 says where** (gyral-bn7): "It differs in its template", or in the innermost `each`
+  list that differs, named by its row function (`each(…, Day)`, `keyed(…)`); when that list's
+  row has the same item and another pick, the pick is the cause, and the message says to pick
+  the fields the row reads or pass `each(items, key, row, { pick, equals })`. The message also
+  names the other way a pure view differs: a value built anew each render that compares by
+  reference (a `Date`, a `Set`, a class instance).
+- **Development messages name their code** (gyral-99d): only production printed
+  `Gyral G0017 …`, so a development warning gave nothing to search for or link to. Every
+  `message(code, …)` now ends with ` (G0017: https://gyral.dev/errors/#G0017)` in development,
+  and `docsLink(code)` gives the same ending there (the hydration mismatch, G0062, which keeps
+  its own sentence). Production text and size are unchanged; errors.md says both forms.

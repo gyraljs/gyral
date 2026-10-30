@@ -88,12 +88,21 @@ export default defineConfig({
   0.3.8 it also pre-bundles your direct dependencies that use a Gyral browser package (a
   design system, a widget library), each browser entry point in their `exports`. Packages
   linked from source, such as a workspace's, stay unbundled, as Vite serves them. An entry
-  your config lists in `optimizeDeps.exclude` is left out.
+  your config lists in `optimizeDeps.exclude` is left out. Since 0.3.9 it also gives Vite's
+  dependency optimizer the environment's resolve conditions (your `resolve.conditions`, or
+  Vite's defaults with `development`), so the pre-bundle of an installed core is its
+  development build, with every development check. Vite's optimizer resolves a package's own
+  `#…` imports without them, so before 0.3.9 an app that installed Gyral from npm ran the dev
+  server and Vitest's browser mode on core's production build: no development checks, and
+  coded messages. An `optimizeDeps.rolldownOptions.resolve.conditionNames` of your own wins.
 - **`optimize`**: pre-bundling beyond that. Vite pre-bundles what it finds at startup; a
   dependency it meets later makes it re-optimize and reload ("Vite unexpectedly reloaded a
   test" in Vitest). `optimize: 'auto'` (0.3.8) points Vite's startup scan at the modules that
   define components, and at a Vitest browser project's tests: Vite follows their imports, so
-  everything they use is found up front. Server modules are never scanned. It is on by default
+  everything they use is found up front. Since 0.3.9 it also scans the modules
+  `components.modules` lists and the client build's inputs (`build.rollupOptions.input`, or
+  `rolldownOptions`, or `input`), where Vite's own scan starts. Server modules are never
+  scanned. It is on by default
   when Vite runs as a custom server (`appType: 'custom'`, as `gyralDevServer` and
   `gyralDevMiddleware` do), where Vite has no HTML page to crawl; elsewhere set it yourself,
   as in a Vitest browser project. A config's own `optimizeDeps.entries` win;
@@ -208,10 +217,13 @@ and `gyral/each-row-purity` (`each` rows read only their arguments; keys require
 errors, `gyral/intent-event` (an `on('event')` parser bound to another event; 0.3.8) as an
 error, `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as a
 warning, and `gyral/prefer-built-in` (0.3.8) as warnings, each naming the built-in to use: a
-dialog opened with `showModal()` (`?modal`), `.focus()` in a driver (`focus(selector)`),
+dialog opened with `showModal()` (`?modal`), `.focus()` in a driver on an element inside a
+component's shadow root (`focus(selector)`; a page element outside any component is the
+driver's to focus, since 0.3.9),
 `JSON.parse` of an attribute or prop (`prop.json()`), a subscription that drops repeats by hand
 (`equals`), a record of drivers outside tests (a list), and a parser that checks the event's
-type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`). If your templates come
+type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`, a module of its own: about
+0.43 KiB gzip, paid once per app on its first use). If your templates come
 from a package that re-exports `html` (a design system), give the rules the same `sources` list
 as the Vite preset:
 
@@ -347,9 +359,11 @@ the body never repeats a module, stylesheet or script the head already links. De
 
 `gyralDevServer({ entry: '/server/app.ts', app })` (`@gyral/ssr/node`) is the development
 server: Vite serves client modules and HMR, and every other request goes to your server
-module, loaded through Vite, and streams its response. Since 0.3.8 `app` builds the handler
-once per module version (Vite loads a new one after an edit) and component set, not per
-request, so keep per-request work inside the handler; `state` keeps in-memory data across
+module, loaded through Vite, and streams its response. An edit shows on the next request, a
+component's too (0.3.9: Vite runs the edited module again, and its `define()` replaces the spec
+the server renders; before, the first definition stayed until a restart). Since 0.3.8 `app`
+builds the handler once per module version (Vite loads a new one after an edit) and component
+set, not per request, so keep per-request work inside the handler; `state` keeps in-memory data across
 reloads, and a render error shows Vite's error overlay. `gyralDevMiddleware` (0.3.8) is the
 same as a Connect-style handler for a server of your own: Express and Connect take
 `dev.middleware` with `app.use()`, Fastify through `@fastify/middie`. It answers every request

@@ -7,7 +7,7 @@ import type MagicString from 'magic-string';
 import { endOf, keyName, lineOf, startOf, walk } from '../../ast.js';
 import { calleeName, resolvesTo, type ModuleFacts } from '../../facts.js';
 import type { Transform } from '../types.js';
-import { CORE, driverOf, isNamed, moduleDrivers, type ModuleDriver } from './drivers.js';
+import { CORE, driverOf, isDriver, isNamed, moduleDrivers, type ModuleDriver } from './drivers.js';
 
 /** Test setup modules (Vitest's or Jest's `setupFiles`): `vitest.setup.ts`, `test-setup-browser.ts`, `setupTests.js`. */
 const SETUP = /^(?:(?:vitest|jest|tests?)[.-]setup|setup[.-]?tests?)\b/i;
@@ -77,6 +77,30 @@ function problem(
   return undefined;
 }
 
+/**
+ * Records of drivers the rewrite doesn't reach (gyral-0dj): built in a function and returned,
+ * passed in options (`defineStore({ drivers: { … } })`), kept in a const. Each property is a
+ * plain driver; what reads the record isn't known here, so it is reported, never changed.
+ */
+function looseRecords(
+  program: Node,
+  facts: ModuleFacts,
+  drivers: ReadonlyMap<string, ModuleDriver>,
+  seen: ReadonlySet<Node>,
+): ObjectExpression[] {
+  const found: ObjectExpression[] = [];
+  walk(program, ({ node, ancestors }) => {
+    if (node.type !== 'ObjectExpression' || seen.has(node) || node.properties.length === 0) return;
+    const all = node.properties.every(
+      (prop) =>
+        prop.type === 'ObjectProperty' &&
+        isDriver(prop.value, facts, drivers, [...ancestors, node, prop]),
+    );
+    if (all) found.push(node);
+  });
+  return found;
+}
+
 /** `{ a: x, b }` → `[x, b]`: the braces become brackets and each `key: ` goes. */
 function toList(record: ObjectExpression, code: string, edit: MagicString): void {
   const start = startOf(record);
@@ -104,6 +128,7 @@ export const driverLists: Transform = {
     'provideDrivers(x, { … }) and el.drivers = { … } → lists, when each key is its driver name',
   run({ path, code, ast, facts, edit, report }) {
     const records: Candidate[] = [];
+    const seen = new Set<Node>();
     walk(ast.program, ({ node, ancestors }) => {
       let value: Node | undefined;
       let assignment = false;
@@ -113,6 +138,7 @@ export const driverLists: Transform = {
           value?.type === 'ObjectExpression' &&
           !resolvesTo(facts, node.callee, ancestors, CORE, 'provideDrivers')
         ) {
+          seen.add(value);
           report(
             node,
             "driver record left as is: `provideDrivers` here isn't provably @gyral/core's",
@@ -130,21 +156,30 @@ export const driverLists: Transform = {
       }
       if (value?.type === 'TSAsExpression' || value?.type === 'TSSatisfiesExpression') {
         if (value.expression.type === 'ObjectExpression') {
+          seen.add(value.expression);
           report(value, 'driver record left as is: it has a type assertion; change it by hand');
         }
       } else if (value?.type === 'ObjectExpression') {
+        seen.add(value);
         records.push({ record: value, ancestors: [...ancestors, node], assignment });
       }
     });
     const first = records[0];
-    if (first === undefined) return;
-    if (isTestFile(path)) {
+    if (first !== undefined && isTestFile(path)) {
       const count =
         records.length === 1 ? 'a driver record' : `${String(records.length)} driver records`;
       report(first.record, `${count} left as is: test file (records stay idiomatic for fakes)`);
-      return;
     }
+    if (isTestFile(path)) return;
     const drivers = moduleDrivers(ast.program, facts);
+    for (const record of looseRecords(ast.program, facts, drivers, seen)) {
+      report(
+        record,
+        "driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here; " +
+          'if it is provided elsewhere, a list avoids keys that differ from driver names (G0045), ' +
+          'but keep the record if code reads drivers from it by key',
+      );
+    }
     const read = records.some((r) => r.assignment) ? driversRead(ast.program) : undefined;
     for (const candidate of records) {
       const { record, assignment } = candidate;

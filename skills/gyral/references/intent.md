@@ -152,7 +152,8 @@ an icon).
 
 `on('keydown', parser)` types `input.event` from the event's name (`keydown` gives a
 `KeyboardEvent`, `drop` a `DragEvent`, `submit` a `SubmitEvent`) and adds what parsers otherwise
-dig out of the event. Plain parsers keep `IntentInput`; `on()` is a module of its own.
+dig out of the event. Plain parsers keep `IntentInput`; `on()` is a module of its own, about
+0.43 KiB gzip, paid once per app on its first use: a plain parser costs nothing extra.
 
 | Field           | Value                                                                                |
 | --------------- | ------------------------------------------------------------------------------------ |

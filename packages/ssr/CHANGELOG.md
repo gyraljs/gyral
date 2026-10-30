@@ -1,5 +1,26 @@
 # @gyral/ssr
 
+## 0.3.9
+
+### Patch Changes
+
+- 2bdaed3: `gyralDevServer` and `gyralDevMiddleware` now server-render an edited component on the next
+  request (gyral-ejc). Before, an edit to a component module, or to a module it imports (a labels
+  file), showed only after a restart: Vite ran the module again, but the server kept the first
+  `define()` of each tag. The dev server now lets a later definition replace the spec, and the
+  server renderer rebuilds that component, with its styles and CSP hashes. Production servers,
+  tests and scripts keep the first definition, as before.
+- Updated dependencies [7547000]
+- Updated dependencies [4e9f962]
+- Updated dependencies [9f424b5]
+- Updated dependencies [2bdaed3]
+- Updated dependencies [1c8ef8c]
+- Updated dependencies [26b3782]
+- Updated dependencies [74b5c5a]
+- Updated dependencies [b2c15d1]
+- Updated dependencies [014eec6]
+  - @gyral/core@0.3.9
+
 ## 0.3.8
 
 ### Patch Changes

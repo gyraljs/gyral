@@ -14,6 +14,16 @@ export interface TransformContext {
   readonly report: (node: Node, reason: string) => void;
 }
 
+/** One release's transforms, and the release they migrate from. */
+export interface Release {
+  /**
+   * The oldest @gyral/core the transforms read: a module whose package's core is older is left
+   * as is, and reported (../core-version.ts), since it must first be migrated this far.
+   */
+  readonly from: string;
+  readonly transforms: readonly Transform[];
+}
+
 export interface Transform {
   /** Short id shown in the report, e.g. `vite-plugin`. */
   readonly id: string;

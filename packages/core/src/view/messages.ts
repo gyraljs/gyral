@@ -1,6 +1,7 @@
 // Core's diagnostics, by code (gyral-c5d.13, docs/references/errors.md). Development
-// builds print the full text, production builds `Gyral G0010 <arguments…> <docs URL>`
-// (message.ts), so this table stays out of production bundles. `{name}` placeholders take the
+// builds print the full text and ` (G0010: <docs URL>)`, production builds
+// `Gyral G0010 <arguments…> <docs URL>` (message.ts), so this table stays out of production
+// bundles. `{name}` placeholders take the
 // call's arguments in order of first appearance; a name used twice repeats its argument.
 // docs/references/errors.md and errors.json are generated from this table (`node
 // scripts/errors.mjs`); `pnpm invariants` checks that they are current, that codes are unique
@@ -30,8 +31,10 @@ export const MESSAGES = {
     "Gyral's packages are released together: install the same version of every @gyral package.",
   17:
     '<{tag}> rendered differently with the same state, props and stores, so its view reads ' +
-    'something else, such as Date.now(), a module variable or the DOM. A component renders only ' +
-    'when one of them changes (0.3.8): move what the view reads into state, a prop or a store.',
+    'something else, such as Date.now(), a module variable or the DOM, or builds a value anew ' +
+    'each render that is compared by reference (a Date, a Set, a class instance). It differs ' +
+    '{where}. A component renders only when one of them changes (0.3.8): move what the view ' +
+    'reads into state, a prop or a store.',
   18:
     'The parser of intent "{intent}" is on("{expected}"), but a "{actual}" event reached it. ' +
     'Bind the intent to that event (data-intent-{expected}=${…}), or give it a parser of its own.',
@@ -94,7 +97,7 @@ export const MESSAGES = {
     "HTML differs from the first client render: a view that isn't deterministic (Date.now(), " +
     'locale), a third party that changed the DOM before scripts ran, or a stale cached page ' +
     '(https://gyral.dev/docs/server-rendering/#mismatches).',
-  63: '<{tag}> was rendered fresh after a hydration mismatch:',
+  63: '<{tag}> was rendered fresh after a hydration mismatch.',
   // Templates
   69:
     '<{element}> ?{binding} does nothing: this build left the dialog and popover code out, ' +

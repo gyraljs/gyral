@@ -221,3 +221,14 @@ list on 2026-10-29.
 | Typed driver provision (337.2, ADR 0006 addendum)                                  | -20 to +40 B per example; several shrink (one shared lookup)                                                                                       | all chunks: animated-letters 11.6, register 18.1; initial: animated-letters 11.6                                                       |
 | Render skipping, `each` equality, subscription delivery (337.1, ADR 0018 addendum) | +104 to +148 B in every app (the check before each render; +30 B of it in apps with `each`); +277 B in workload-lab, which also uses subscriptions | 18 all-chunks and 17 initial budgets, +0.1 to +0.2 KiB each (`scripts/size-budget.json`); hello-world 8.6 → 8.7                        |
 | `on()` (337.6, ADR 0001 addendum), opt-in                                          | about +430 B in an app that calls it; 0 B otherwise                                                                                                | bmi-nested 10.0, undo-replay 12.1 (all chunks and initial): both examples now use it (+439 B, +441 B)                                  |
+
+## Addendum: 0.3.9 size increase, approved by the owner (2026-10-30)
+
+Same rule as 0.3.8: measured + 0.05 KiB, rounded up to 0.1. The other 0.3.9 fixes add nothing to
+production bundles (the development checks and diagnostics stay out of them, the tooling fixes are
+build- and Node-side), except `on()`'s DOM-free guards: +67 B in bmi-nested and +77 B in undo-replay,
+both within budget.
+
+| Fix (bead)                                          | Cost, gzip                                                                                           | Budgets raised                                          |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Stable `ctx.props` (gyral-bn7, ADR 0007/0018 notes) | +21 to +34 B in the six examples with props (smallest of four implementations measured); 0 B without | nested-folders 10.9 (all chunks and initial), from 10.8 |

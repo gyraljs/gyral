@@ -7,7 +7,7 @@
 // `hydrate(value, root)` (hydrate.ts) makes the same root part from server DOM instead (07).
 import { DEV } from '#view-dev';
 import { ChildPart } from './child-part.js';
-import { checkSkippedView, resetRowChecks, sameChild } from './dev-check.js';
+import { checkSkippedView, resetRowChecks, viewDifference } from './dev-check.js';
 import { message } from '../message.js';
 import { dropHooks, endHooks, hookMark, runHooks, startHooks } from './hooks.js';
 import { listenFor, type SeenMarkup } from './seen.js';
@@ -77,15 +77,15 @@ export function recheckView(root: Node, tag: string, view: () => ChildValue): vo
   if (!DEV) return;
   const part = roots.get(root);
   if (part === undefined || impure.has(tag) || !checkSkippedView()) return;
-  let same: boolean;
+  let where: string | undefined;
   try {
-    same = sameChild(part, view());
+    where = viewDifference(part, view());
   } catch {
-    same = false;
+    where = 'when its view runs again: it threw';
   }
-  if (same) return;
+  if (where === undefined) return;
   impure.add(tag);
-  console.warn(message(17, tag));
+  console.warn(message(17, tag, where));
 }
 
 /** Hydration (hydrate.ts): `part`, built over server DOM, is `root`'s part from now on. */

@@ -20,7 +20,8 @@ addendum (the third).
 - **An `on()` parser reached by another event (G0018 in development; `gyral/intent-event` in
   ESLint's recommended config):** bind the intent to the parser's event.
 - **Hand-written built-ins (`gyral/prefer-built-in`, warnings in ESLint's recommended config):**
-  `showModal()` (use `?modal`), `.focus()` in a driver (`focus()`), `JSON.parse` of an attribute
+  `showModal()` (use `?modal`), `.focus()` in a driver on an element in a component's shadow
+  root (`focus()`; since 0.3.9 a page element is left alone), `JSON.parse` of an attribute
   or prop (`prop.json()`), subscription dedupe (`equals`), driver records outside tests (a list),
   and parsers that check the event type, modifiers, `Number(value)` or `composedPath()[0]`
   (`on()`). Each warning names the built-in.
@@ -43,12 +44,14 @@ addendum (the third).
   `.agents/skills/gyral`); `--check` in CI fails when a copy differs.
 
 - **`on(event, [filter], parser)`**: a parser typed by its event, with `control`, `form`,
-  `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter.
+  `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter. It is a module of its
+  own, about 0.43 KiB gzip, paid once per app on its first use.
 
 - **`each(items, key, row, { pick, equals })`**: `equals` compares picked values, for a `pick`
   that builds a nested value each render.
 - **`subscription(…, { select, equals, coalesce })`**: map each value, drop repeats, deliver the
-  latest per microtask or frame.
+  latest per microtask or frame. `coalesce` delays the first value too, by a microtask or a
+  frame, so a driver's unit test that checks right after `emit` awaits one first (sabacc's did).
 
 - **`token.provide(run)` and `subscription(token, …)`**, with drivers supplied as a list:
   `provideDrivers(root, [session.provide(run), subscription(feed, listen)])`. The name comes from
@@ -74,9 +77,15 @@ addendum (the third).
 - `instanceof KeyboardEvent` checks, hand-written modifier filters, `composedPath()[0]`,
   `Number(input.value)`, `closest('form')` and `files` lookups in parsers: `on()`.
 
-- Hand-written guards against same-state renders (comparing fields before returning new state),
-  subscription dedupe (`equals`), microtask batching of a source (`coalesce: 'microtask'`), and
-  `JSON.stringify` equality for `each` picks (`equals`, after making references stable).
+- Hand-written subscription dedupe (`equals`, with `select` for a slice), microtask batching of a
+  source (`coalesce: 'microtask'`), and `JSON.stringify` equality for `each` picks (`equals`,
+  after making references stable).
+- Keep a compare that stops a high-rate source from sending messages, such as containment's
+  12-field check of its HUD snapshot before it sends one (corrected in 0.3.9, gyral-4rp). Render
+  skipping helps only when `update` returns the same state; a message that carries a new object
+  changes state by identity, so the view renders. Without the compare, 20 s of containment's
+  play sends 1,202 HUD messages instead of 21. Deduping such a source belongs in the driver, or
+  in the subscription's `equals` and `select`.
 
 - Helpers that wrap a token and its implementation (gymtime's and containment's `implement`),
   and name-keyed records that repeat a token's name: `token.provide(run)` in a list.

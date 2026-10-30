@@ -99,3 +99,15 @@ kebab-case attributes (Stencil's and Vue's convention; Lit and FAST use lower ca
 attribute name on a custom element, and development warns at a host's first connect about a
 lowercased camelCase prop name in a page's HTML (G0024). Overrides such as `attribute:
 'playerbase'` keep working; templates write the attribute in lower case.
+
+## Addendum: `ctx.props` is a stable reference (gyral-bn7, 0.3.9)
+
+`ctx.props` was a new object on every read (`readProps` built one each call), so anything that
+captured it never equalled its last value: an `each()` pick such as `(day) => ({ day, props })`
+re-rendered every row on every render (gymtime's calendar, inbox and planner), and, with
+development checks on (gyral-3pv), G0017 fired on pure views. It is now the host's previous
+object while every declared prop's value is the same (`Object.is`, after defaults), and a new
+one when one changes, so `PropsChanged`'s `props` and `prev` stay distinct. The last object is
+kept per host (a `WeakMap` by the host's values), in the props feature, so components without
+props pay nothing; theirs stays a fresh empty object, which nothing can usefully capture.
+Measured: 21–34 B gzip in the six examples with props, 0 elsewhere (ADR 0018's 0.3.9 addendum).

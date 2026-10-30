@@ -11,15 +11,17 @@
 //   other peers for it). The plugin reads the installed manifests, and warns once per app, in
 //   dev and builds, when @gyral/core resolves to more than one folder.
 // `optimize: 'auto'` (the default for a custom server: Vite then has no HTML to crawl) also
-// points Vite's startup scan at the modules that define components and at browser tests, so
-// every other dependency they import is pre-bundled at startup instead of mid-run.
+// points Vite's startup scan at the modules that define components (found, or listed in
+// `components.modules`), at browser tests, and at the client build's inputs, where Vite's own
+// scan starts, so every other dependency they import is pre-bundled at startup, not mid-run.
 // In development browsers, core itself warns when a page runs a second copy (view/message.ts).
+// The pre-bundle must also be core's development build (gyral-3pv): see prebundleConditions.
 // Node built-ins only, so ../vite.ts loads it with Node's require, from TypeScript source too
 // (which is why it repeats scope.ts's package lookup instead of importing it, and why
 // vite.ts hands it the component scan).
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import type { Plugin, UserConfig } from 'vite';
+import type { ConfigEnv, EnvironmentOptions, Plugin, UserConfig } from 'vite';
 
 /**
  * Gyral's browser entry points, by package. Never the node-only ones (/vite, /eslint,
@@ -35,7 +37,8 @@ const BROWSER_ENTRIES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const CORE = '@gyral/core';
-const DOCS = 'https://gyral.dev/errors/#G0015';
+/** How a coded message ends in development (view/message.ts `docsLink`), here in Node. */
+const CODE = ' (G0015: https://gyral.dev/errors/#G0015)';
 
 interface Manifest {
   readonly name?: unknown;
@@ -196,11 +199,11 @@ function twoCopies(root: string, copies: readonly CoreCopy[]): string {
   );
   return [
     `gyral: @gyral/core is installed more than once, so the app can run two copies, and a value`,
-    `one copy makes (a stylesheet from css, a store) fails in another (G0015, ${DOCS}):`,
+    `one copy makes (a stylesheet from css, a store) fails in another:`,
     ...lines,
     `Install one copy: pin @gyral/core to one version with your package manager's overrides`,
     `(pnpm or npm \`overrides\`, Yarn \`resolutions\`), then reinstall. Libraries that list it`,
-    `as a peer dependency share the app's copy.`,
+    `as a peer dependency share the app's copy.${CODE}`,
   ].join('\n');
 }
 
@@ -213,17 +216,47 @@ export interface OneCoreOptions {
   readonly optimize?: readonly string[] | 'auto' | false;
   /** The files that define components under the app's source folders (./tag-map.ts). */
   readonly components?: (root: string) => readonly string[];
+  /** `components.modules`: modules (relative to the root) defining components the scan misses. */
+  readonly modules?: readonly string[];
 }
 
 /** Vitest's default test files, for a browser project that names none. */
 const VITEST_INCLUDE = ['**/*.{test,spec}.?(c|m)[jt]s?(x)'];
 
+type Input = string | readonly string[] | Readonly<Record<string, string>>;
+interface Inputs {
+  readonly input?: Input;
+  readonly build?: {
+    readonly rollupOptions?: { readonly input?: Input };
+    readonly rolldownOptions?: { readonly input?: Input };
+  };
+}
+
+const isFile = (file: string): boolean =>
+  statSync(file, { throwIfNoEntry: false })?.isFile() ?? false;
+
+/**
+ * The client build's inputs that are files (not a virtual module or a package name), absolute:
+ * where Vite's own scan starts, which `entries` replaces (gyral-5zi).
+ */
+function inputFiles(config: UserConfig, root: string): string[] {
+  const options: readonly (Inputs | undefined)[] = [config, config.environments?.client];
+  return options
+    .flatMap((o) => [o?.input, o?.build?.rolldownOptions?.input, o?.build?.rollupOptions?.input])
+    .flatMap((input) =>
+      input === undefined ? [] : typeof input === 'string' ? [input] : Object.values(input),
+    )
+    .map((input) => resolve(root, input))
+    .filter(isFile);
+}
+
 /**
  * `optimizeDeps.entries` for `optimize: 'auto'`, which is the default when Vite runs as a custom
  * server (`appType: 'custom'`: gyralDevServer, middleware mode), or undefined to keep Vite's
- * HTML crawl. An app's own `entries` win. The scan starts at the modules that define components
- * (browser code by definition: server modules are never scanned) and a Vitest browser
- * project's tests; Vite follows their imports.
+ * HTML crawl. An app's own `entries` win. The scan starts where Vite's would (HTML pages, the
+ * client build's inputs), at the modules that define components (browser code by definition:
+ * server modules are never scanned) and at a Vitest browser project's tests; Vite follows their
+ * imports.
  */
 function scanEntries(
   config: UserConfig,
@@ -234,13 +267,48 @@ function scanEntries(
   if (options.optimize !== 'auto' && config.appType !== 'custom') return undefined;
   const test = (config as { test?: { include?: string[]; browser?: { enabled?: boolean } } }).test;
   const tests = test?.browser?.enabled === true ? (test.include ?? VITEST_INCLUDE) : [];
-  const files = (options.components?.(root) ?? []).map((file) => relative(root, file));
-  return ['**/*.html', ...new Set(files), ...tests];
+  const modules = (options.modules ?? []).map((file) => resolve(root, file));
+  const files = [...inputFiles(config, root), ...(options.components?.(root) ?? []), ...modules];
+  const globs = files.map((file) => relative(root, file).split(sep).join('/'));
+  return ['**/*.html', ...new Set(globs), ...tests];
+}
+
+/** Vite 8's default resolve conditions, as vite.ts names them (server ones without browser). */
+const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
+const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
+
+/**
+ * The dependency optimizer's resolve conditions in serve mode (the dev server, Vitest), for
+ * environment `name` (gyral-3pv). Vite's optimizer resolves a pre-bundled package's bare imports
+ * with Vite's resolver, under the environment's conditions, but leaves the package's subpath
+ * imports (core's `#view-dev`, `#devtools`) to rolldown's own resolver, which knows no
+ * `development`: the pre-bundle of an installed core got its production modules, so apps that
+ * install it from npm ran without development checks. Rolldown gets the environment's own
+ * conditions (the app's `resolve.conditions`, or Vite's defaults), with `development|production`
+ * read as Vite reads it; it adds `import` or `require` itself. An app's own `conditionNames`
+ * win. A `post` hook, so conditions other plugins add (`gyral-client-only`) are in. Reported
+ * upstream as vitejs/vite#23946; drop this once Vite resolves `#` imports with its conditions.
+ */
+function prebundleConditions(
+  name: string,
+  config: EnvironmentOptions,
+  env: ConfigEnv & { isSsrTargetWebworker?: boolean },
+): EnvironmentOptions | undefined {
+  if (env.command !== 'serve') return undefined;
+  if (config.optimizeDeps?.rolldownOptions?.resolve?.conditionNames !== undefined) return undefined;
+  const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
+  const client = consumer === 'client' || env.isSsrTargetWebworker === true;
+  // Vite reads it the same way (process.env.NODE_ENV is settled before this hook runs).
+  const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development';
+  const conditions = config.resolve?.conditions ?? (client ? CLIENT_CONDITIONS : SERVER_CONDITIONS);
+  const conditionNames = conditions.map((c) => (c === 'development|production' ? mode : c));
+  return { optimizeDeps: { rolldownOptions: { resolve: { conditionNames } } } };
 }
 
 /**
  * gyral()'s pre-bundling plugin: Gyral's browser entries and the app's Gyral libraries in dev,
- * the app's `optimize` list, the `'auto'` scan; and the warning about a second copy of core.
+ * the app's `optimize` list, the `'auto'` scan, the optimizer's conditions; and the warning
+ * about a second copy of core.
  */
 export function oneCorePlugin(options: OneCoreOptions = {}): Plugin {
   return {
@@ -260,6 +328,7 @@ export function oneCorePlugin(options: OneCoreOptions = {}): Plugin {
       if (include.length === 0 && entries === undefined) return undefined;
       return { optimizeDeps: { include, ...(entries === undefined ? {} : { entries }) } };
     },
+    configEnvironment: { order: 'post', handler: prebundleConditions },
     configResolved(config) {
       if (warned.has(config.root)) return;
       warned.add(config.root);

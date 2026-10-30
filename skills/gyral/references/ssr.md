@@ -482,7 +482,8 @@ createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).liste
 
 `gyralDevServer` (from `@gyral/ssr/node`, Vite loaded on first use) is the whole dev server:
 Vite serves client modules, CSS and HMR; every other request goes to the server module, loaded
-through Vite (edits show at once), and streams the app's response. `app` builds the handler
+through Vite (edits show at once, components' too since 0.3.9: an edited component module's
+define() replaces the spec the server renders), and streams the app's response. `app` builds the handler
 once per module version and component set, not per request: keep per-request work inside the
 handler, and drop any cache of your own around it (0.3.8). `state` is created once from the
 first module, so in-memory data survives reloads; a render error answers 500 with Vite's error

@@ -32,7 +32,7 @@ it('warns once, at connect, about an attribute HTML lowercased from a camelCase 
   expect(String(warn.mock.calls[0]?.[0])).toBe(
     '<test-lc-card> has a "playerbase" attribute, which no prop reads: HTML lowercases ' +
       'attribute names, and prop playerBase reads "player-base". Write player-base="…", or set ' +
-      'the property (el.playerBase = …).',
+      'the property (el.playerBase = …). (G0024: https://gyral.dev/errors/#G0024)',
   );
   el.remove();
   document.body.append(el); // a reconnect: no second warning

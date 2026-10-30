@@ -303,8 +303,25 @@ Owner's decisions, 2026-10-29 (review recommendation #4):
 'custom'`), where there is no HTML page for Vite's default crawl, and opt-in elsewhere,
   since it replaces that crawl and costs startup time in large repos; an app's own `entries`
   win. It replaces hand-written import walkers such as gyral-shop's `vite.deps.ts`.
+  0.3.9 (gyral-5zi): setting `entries` replaces Vite's own start points, the client build's
+  inputs, and the component scan can't see a module defined through a wrapper. So `'auto'`
+  also lists the client build's inputs that are files, and every module in
+  `components.modules`; otherwise an import made only there was found mid-run.
 - **The dev server builds the app once per server-module version and component set**, not per
   request: `ssrLoadModule` returns the same module until an edit, so the cached handler is
   current. starwars.run's hand-written per-module cache goes away. **`gyralDevMiddleware`** is
   the same without the HTTP server: a Connect-style handler for Express, Connect or Fastify
   (`@fastify/middie`) that answers every request reaching it.
+
+## Addendum: edited components in the dev server (0.3.9, gyral-ejc)
+
+After an edit to a component module (or to a module it imports), Vite runs it again and its
+`define()` records a new spec, but the server kept the first definition of each tag, as
+`customElements` does, so the page showed the old component until a restart (starwars.run's
+labels). Outside the browser the first definition still wins, except that `gyralDevMiddleware`
+calls `replaceDefinitions()` from `@gyral/core/internal/server` before it loads the app. It loads
+that module through Vite, since the core the app's modules use is the one Vite resolves for them
+(the source when linked, else Node's copy). From then on a later `define()` replaces the
+recorded spec, and the next render rebuilds that tag's registry entry and bumps
+`registryVersion()`, so `renderPage`'s CSP hashes follow the new styles. Production servers never
+call it.
