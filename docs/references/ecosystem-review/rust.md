@@ -47,7 +47,7 @@ Matching Gyral browser assets then hydrate the component HTML.
 
 | Boundary                  | Inspected contract                                                                                                                |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Distribution              | Four crates on crates.io (`gyral` front door, `gyral-axum`, `gyral-renderer`, `gyral-renderer-domain`); 0.6.0 accepts Gyral 0.3.8 |
+| Distribution              | Four crates on crates.io (`gyral` front door, `gyral-axum`, `gyral-renderer`, `gyral-renderer-domain`); 0.7.0 accepts Gyral 0.3.9 |
 | JavaScript packages       | Exact npm core/SSR 0.3.1, registry integrity and matching server/client build manifests                                           |
 | Supported embedded target | Linux x86_64 GNU, Rust 1.99.0/edition 2024, deno_core 0.412.0, V8 150.4.0                                                         |
 | ABI                       | Version 1, `gyralBundleVersion = 1`, `gyralRender({ page, props })` returns HTML string or Promise                                |
