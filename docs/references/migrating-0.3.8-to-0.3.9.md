@@ -26,8 +26,9 @@ Details: ADR 0018's 0.3.9 addendum.
   returned a new object for the same item, it says to pick the fields the row reads or pass
   `each(items, key, row, { pick, equals })`.
 
-- **Development messages name their code (gyral-99d):** each ends with
-  ` (G0017: https://gyral.dev/errors/#G0017)`, as production's `Gyral G0017 …` does. Tests that
+- **Development messages name their code (gyral-99d):** each coded message ends with
+  ` (G0017: https://gyral.dev/errors/#G0017)`, as production's `Gyral G0017 …` does; uncoded
+  `gyral:` notices (such as a server-rendered element no client module defines) don't. Tests that
   match a development message exactly (`toBe`, `toEqual`) need the suffix, or match with
   `toContain`.
 

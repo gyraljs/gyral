@@ -175,8 +175,9 @@ export const driverLists: Transform = {
     for (const record of looseRecords(ast.program, facts, drivers, seen)) {
       report(
         record,
-        "driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here, so " +
-          "the codemod can't tell what reads it; if nothing reads it by key, make it a list",
+        "driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here; " +
+          'if it is provided elsewhere, a list avoids keys that differ from driver names (G0045), ' +
+          'but keep the record if code reads drivers from it by key',
       );
     }
     const read = records.some((r) => r.assignment) ? driversRead(ast.program) : undefined;

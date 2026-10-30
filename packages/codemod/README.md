@@ -82,8 +82,9 @@ its driver's name, a driver imported from another module (naming that module), a
 computed key, a record with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads
 `.drivers` elsewhere. It also reports a record of drivers it doesn't rewrite, whose readers it
 can't see: one built in a function and returned (`return { feed: subscription(feed, …) }`),
-passed in options (`defineStore({ drivers: { … } })`) or to another function. Make it a list by
-hand if nothing reads it by key.
+passed in options (`defineStore({ drivers: { … } })`) or to another function. If it ends up
+provided and nothing reads it by key, a list is safer (G0045); a record that code reads by key,
+such as a set of fakes a test helper looks up, stays a record.
 Test files (`*.test.*`, `*.spec.*`, `test/`, `tests/`, `__tests__/`, and setup modules such as
 `vitest.setup.ts`, `test-setup*.ts` or `setupTests.js`) keep their records, which read well for
 fakes.
