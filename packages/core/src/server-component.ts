@@ -20,7 +20,7 @@ import {
   reportInvalid,
   type PropTable,
 } from './props.js';
-import { recordedSpecs } from './server-specs.js';
+import { recordedSpecs, type RecordedSpec } from './server-specs.js';
 import { serverScopeFor, StoreRegistry } from './store-scope.js';
 import type { AnyStore, StoreRef } from './store.js';
 import type { ComponentSpec, Ctx, IntentNames, Tagged } from './types.js';
@@ -137,15 +137,24 @@ export function serverComponent<S, M extends Tagged, P>(
   };
 }
 
+/** The spec each registered entry was built from, to see which ones a later define() replaced. */
+const builtFrom = new Map<string, RecordedSpec>();
+
 /**
  * Registers every spec define() recorded outside the browser (and not registered yet) in
- * view/'s server registry. `@gyral/core/internal/server` calls it before each render; client code never
- * imports this module.
+ * view/'s server registry, and rebuilds the entry of a spec a later define() replaced (the dev
+ * server's edited component, `replaceDefinitions()`). `@gyral/core/internal/server` calls it
+ * before each render; client code never imports this module.
  */
 export function registerRecordedSpecs(): void {
   for (const [tag, spec] of recordedSpecs()) {
-    if (registered(tag) !== undefined) continue;
+    const built = builtFrom.get(tag);
+    if (built === spec) continue;
+    // A tag registered by other means than a recorded spec keeps its entry.
+    if (built === undefined && registered(tag) !== undefined) continue;
+    builtFrom.set(tag, spec);
     // Sound: define() recorded exactly this tag's ComponentSpec.
-    registerServerComponent(serverComponent(tag, spec as ComponentSpec<unknown, Tagged, object>));
+    const entry = serverComponent(tag, spec as ComponentSpec<unknown, Tagged, object>);
+    registerServerComponent(entry, built !== undefined);
   }
 }

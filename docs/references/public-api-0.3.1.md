@@ -234,6 +234,7 @@ A second pass (gyral-1zd.24) removed what apps rarely used or could write in a f
 | `registryVersion`     | value | internal |               |
 | `render`              | value | internal |               |
 | `renderToString`      | value | internal |               |
+| `replaceDefinitions`  | value | internal |               |
 | `ServerRenderOptions` | type  | internal |               |
 | `StoreRegistry`       | value | internal |               |
 | `styleHash`           | value | internal |               |

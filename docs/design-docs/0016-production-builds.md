@@ -308,3 +308,16 @@ Owner's decisions, 2026-10-29 (review recommendation #4):
   current. starwars.run's hand-written per-module cache goes away. **`gyralDevMiddleware`** is
   the same without the HTTP server: a Connect-style handler for Express, Connect or Fastify
   (`@fastify/middie`) that answers every request reaching it.
+
+## Addendum: edited components in the dev server (0.3.9, gyral-ejc)
+
+After an edit to a component module (or to a module it imports), Vite runs it again and its
+`define()` records a new spec, but the server kept the first definition of each tag, as
+`customElements` does, so the page showed the old component until a restart (starwars.run's
+labels). Outside the browser the first definition still wins, except that `gyralDevMiddleware`
+calls `replaceDefinitions()` from `@gyral/core/internal/server` before it loads the app. It loads
+that module through Vite, since the core the app's modules use is the one Vite resolves for them
+(the source when linked, else Node's copy). From then on a later `define()` replaces the
+recorded spec, and the next render rebuilds that tag's registry entry and bumps
+`registryVersion()`, so `renderPage`'s CSP hashes follow the new styles. Production servers never
+call it.
