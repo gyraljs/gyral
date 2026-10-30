@@ -60,8 +60,9 @@ interface Lookup {
 function moduleDriver(name: string, { facts, known, ancestors }: Lookup): ModuleDriver | string {
   const driver = known.get(name);
   if (driver === undefined) {
-    return facts.imports.has(name)
-      ? `\`${name}\` is imported, so its driver name isn't known in this module`
+    const imported = facts.imports.get(name);
+    return imported !== undefined
+      ? `\`${name}\` is imported from ${imported.source}, so its driver name isn't known in this module`
       : `the name of the driver \`${name}\` isn't known here`;
   }
   return shadowed(name, ancestors) ? `\`${name}\` here isn't the module's \`${name}\`` : driver;
@@ -114,6 +115,31 @@ export function driverOf(
   return {
     reason: `the name of the driver ${called === undefined ? '' : `\`${called}(…)\` `}isn't known here`,
   };
+}
+
+/**
+ * Whether `node` is plainly a driver, whatever its name: a call of core's `subscription` or
+ * `defineDriver` or of `fakeDriver`, `token.provide(…)` on a token declared or imported here,
+ * or a module driver. Finds driver records the codemod doesn't rewrite (gyral-0dj).
+ */
+export function isDriver(
+  node: Node,
+  facts: ModuleFacts,
+  known: ReadonlyMap<string, ModuleDriver>,
+  ancestors: readonly Node[],
+): boolean {
+  if (node.type === 'Identifier') return known.has(node.name);
+  if (node.type !== 'CallExpression') return false;
+  const { callee } = node;
+  if (callee.type === 'MemberExpression' && callee.object.type === 'Identifier') {
+    const { name } = callee.object;
+    return calleeName(callee) === 'provide' && (known.has(name) || facts.imports.has(name));
+  }
+  return (
+    resolvesTo(facts, callee, ancestors, CORE, 'subscription') ||
+    resolvesTo(facts, callee, ancestors, CORE, 'defineDriver') ||
+    resolvesTo(facts, callee, ancestors, TESTING, 'fakeDriver')
+  );
 }
 
 /**

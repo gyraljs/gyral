@@ -7,8 +7,10 @@
 // only on the shape the built-in replaces as is.
 // - showModal: `.showModal()` in a module that imports Gyral (a template source) → `?modal`.
 // - focus: `.focus()` in a driver's implementation, the `run` of `defineDriver({ run })` or a
-//   function passed to `token.provide()` → the `focus(selector)` command. A window's `focus()`
-//   (a popup's) is left alone: the command can't do that.
+//   function passed to `token.provide()`, on an element reached through a component's shadow or
+//   render root → the `focus(selector)` command, which searches that root. A page element
+//   (`document.querySelector`, `getElementById`), one the driver is handed, and a window (a
+//   popup's) are left alone: the command can't reach them (gyral-um2).
 // - jsonProp: `JSON.parse` of the element's own attribute (`this.getAttribute(…)`,
 //   `this.dataset.x`, an `attributeChangedCallback` value) or of a prop (`props.x`,
 //   `ctx.props.x`) → `prop.json(schema)`. Other elements' attributes (the intent's target, a
@@ -35,6 +37,7 @@ import {
   enclosing,
   guardsEmit,
   isAttributeOrProp,
+  inComponentRoot,
   isGlobal,
   isWindow,
   localFunction,
@@ -47,7 +50,8 @@ import {
   type Subscription,
 } from './prefer-built-in-shapes.js';
 
-const ON = '(ADR 0001 "typed intent input")';
+const ON =
+  '(ADR 0001 "typed intent input"; on() is its own module, about 0.43 KiB gzip once per app)';
 
 const MESSAGES = {
   showModal:
@@ -56,10 +60,11 @@ const MESSAGES = {
     'model too), and Gyral calls showModal() and close() as the state changes ' +
     '(view/02-bindings.md "Dialogs and popovers").',
   focus:
-    ".focus() in a driver reaches into a component's DOM, which drivers have no access to, and " +
-    "can run before the target renders: return focus(selector) from @gyral/core in the reducer's " +
-    "commands instead; it focuses the first match in the component's own root once the update " +
-    'has rendered (ADR 0006 "Focus as a command").',
+    ".focus() in a driver reaches into a component's DOM through its shadow root, which drivers " +
+    'have no access to, and can run before the target renders: return focus(selector) from ' +
+    "@gyral/core in the reducer's commands instead; it focuses the first match in the " +
+    "component's own root once the update has rendered. Focusing a page element outside any " +
+    'component stays the driver\'s job (ADR 0006 "Focus as a command").',
   jsonProp:
     'JSON.parse of an attribute or prop is a hand-written prop.json(): declare the prop as ' +
     'prop.json(schema) (any Standard Schema, or a type guard) and read it from ctx.props; Gyral ' +
@@ -175,7 +180,12 @@ export const preferBuiltInRule: Rule.RuleModule = {
           if (name === 'provide' && gyralModule && args.length === 1)
             addDriver(localFunction(context, args[0]));
           else if (name === 'showModal' && gyralModule) report(node, 'showModal');
-          else if (name === 'focus' && !isWindow(context, object)) focusCalls.push(node);
+          else if (
+            name === 'focus' &&
+            !isWindow(context, object) &&
+            inComponentRoot(context, object)
+          )
+            focusCalls.push(node);
           else if (
             name === 'parse' &&
             gyralModule &&

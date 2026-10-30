@@ -303,6 +303,10 @@ Owner's decisions, 2026-10-29 (review recommendation #4):
 'custom'`), where there is no HTML page for Vite's default crawl, and opt-in elsewhere,
   since it replaces that crawl and costs startup time in large repos; an app's own `entries`
   win. It replaces hand-written import walkers such as gyral-shop's `vite.deps.ts`.
+  0.3.9 (gyral-5zi): setting `entries` replaces Vite's own start points, the client build's
+  inputs, and the component scan can't see a module defined through a wrapper. So `'auto'`
+  also lists the client build's inputs that are files, and every module in
+  `components.modules`; otherwise an import made only there was found mid-run.
 - **The dev server builds the app once per server-module version and component set**, not per
   request: `ssrLoadModule` returns the same module until an edit, so the cached handler is
   current. starwars.run's hand-written per-module cache goes away. **`gyralDevMiddleware`** is

@@ -11,13 +11,14 @@
 //   other peers for it). The plugin reads the installed manifests, and warns once per app, in
 //   dev and builds, when @gyral/core resolves to more than one folder.
 // `optimize: 'auto'` (the default for a custom server: Vite then has no HTML to crawl) also
-// points Vite's startup scan at the modules that define components and at browser tests, so
-// every other dependency they import is pre-bundled at startup instead of mid-run.
+// points Vite's startup scan at the modules that define components (found, or listed in
+// `components.modules`), at browser tests, and at the client build's inputs, where Vite's own
+// scan starts, so every other dependency they import is pre-bundled at startup, not mid-run.
 // In development browsers, core itself warns when a page runs a second copy (view/message.ts).
 // Node built-ins only, so ../vite.ts loads it with Node's require, from TypeScript source too
 // (which is why it repeats scope.ts's package lookup instead of importing it, and why
 // vite.ts hands it the component scan).
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import type { Plugin, UserConfig } from 'vite';
 
@@ -213,17 +214,47 @@ export interface OneCoreOptions {
   readonly optimize?: readonly string[] | 'auto' | false;
   /** The files that define components under the app's source folders (./tag-map.ts). */
   readonly components?: (root: string) => readonly string[];
+  /** `components.modules`: modules (relative to the root) defining components the scan misses. */
+  readonly modules?: readonly string[];
 }
 
 /** Vitest's default test files, for a browser project that names none. */
 const VITEST_INCLUDE = ['**/*.{test,spec}.?(c|m)[jt]s?(x)'];
 
+type Input = string | readonly string[] | Readonly<Record<string, string>>;
+interface Inputs {
+  readonly input?: Input;
+  readonly build?: {
+    readonly rollupOptions?: { readonly input?: Input };
+    readonly rolldownOptions?: { readonly input?: Input };
+  };
+}
+
+const isFile = (file: string): boolean =>
+  statSync(file, { throwIfNoEntry: false })?.isFile() ?? false;
+
+/**
+ * The client build's inputs that are files (not a virtual module or a package name), absolute:
+ * where Vite's own scan starts, which `entries` replaces (gyral-5zi).
+ */
+function inputFiles(config: UserConfig, root: string): string[] {
+  const options: readonly (Inputs | undefined)[] = [config, config.environments?.client];
+  return options
+    .flatMap((o) => [o?.input, o?.build?.rolldownOptions?.input, o?.build?.rollupOptions?.input])
+    .flatMap((input) =>
+      input === undefined ? [] : typeof input === 'string' ? [input] : Object.values(input),
+    )
+    .map((input) => resolve(root, input))
+    .filter(isFile);
+}
+
 /**
  * `optimizeDeps.entries` for `optimize: 'auto'`, which is the default when Vite runs as a custom
  * server (`appType: 'custom'`: gyralDevServer, middleware mode), or undefined to keep Vite's
- * HTML crawl. An app's own `entries` win. The scan starts at the modules that define components
- * (browser code by definition: server modules are never scanned) and a Vitest browser
- * project's tests; Vite follows their imports.
+ * HTML crawl. An app's own `entries` win. The scan starts where Vite's would (HTML pages, the
+ * client build's inputs), at the modules that define components (browser code by definition:
+ * server modules are never scanned) and at a Vitest browser project's tests; Vite follows their
+ * imports.
  */
 function scanEntries(
   config: UserConfig,
@@ -234,8 +265,10 @@ function scanEntries(
   if (options.optimize !== 'auto' && config.appType !== 'custom') return undefined;
   const test = (config as { test?: { include?: string[]; browser?: { enabled?: boolean } } }).test;
   const tests = test?.browser?.enabled === true ? (test.include ?? VITEST_INCLUDE) : [];
-  const files = (options.components?.(root) ?? []).map((file) => relative(root, file));
-  return ['**/*.html', ...new Set(files), ...tests];
+  const modules = (options.modules ?? []).map((file) => resolve(root, file));
+  const files = [...inputFiles(config, root), ...(options.components?.(root) ?? []), ...modules];
+  const globs = files.map((file) => relative(root, file).split(sep).join('/'));
+  return ['**/*.html', ...new Set(globs), ...tests];
 }
 
 /**

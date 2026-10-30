@@ -6,7 +6,9 @@ Compute derived values in plain helper functions of state.
 
 **A component renders only when its state, a declared prop or a declared store's value changes**
 (0.3.8). A message whose `update` returns the same state renders nothing, so return `s` itself
-for a no-op, not `{ ...s }`. A view that reads anything else (`Date.now()`, `Math.random()`, a
+for a no-op, not `{ ...s }`. A message that carries a new object (a game's HUD snapshot, a
+sensor reading) changes state by identity and renders: drop repeats at the source, with the
+subscription's `equals` and `select` or in the driver. A view that reads anything else (`Date.now()`, `Math.random()`, a
 module variable, the DOM) stops refreshing on unrelated messages: put the time in state (an
 `every` subscription), the random value in state, the outside value in a prop or a store.
 Development re-runs skipped views and warns once per component when one renders differently

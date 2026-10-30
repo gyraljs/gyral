@@ -241,7 +241,9 @@ for `closest('form')` and `files`.
 - **`on(event, [filter], parser)`** is a parser for one event type: `input.event` is typed from
   the name (`HTMLElementEventMap`), and the input adds `control`, `form`, `modifiers`, `files`,
   `valueAsNumber` (never `NaN`) and `origin`. Plain parsers keep `IntentInput` unchanged, and
-  `on()` is a module of its own, so apps that don't use it pay nothing.
+  `on()` is a module of its own, so apps that don't use it pay nothing. An app that does pays
+  about 0.43 KiB gzip once, on its first use, however many parsers use it (ADR 0015 measured
+  +439 and +441 B), so an app weighing bytes can decide (gyral-crt).
 - **A key filter** (`keys`, `modifiers: 'none' | 'any' | { ctrl: true }`) declines other events
   like a synchronous `undefined`: they pass outward with their default action.
 - **The binding is checked twice**: `gyral/intent-event` compares the view's

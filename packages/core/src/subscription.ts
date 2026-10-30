@@ -26,7 +26,9 @@ export interface SubscriptionContext<I> {
  * Driver options a subscription may set. `concurrency` defaults to `'switch'`. What reaches the
  * component: `select` maps each emitted value first, `equals` drops a value equal
  * to the last one delivered (`Object.is` is a common choice), and `coalesce` delivers only the
- * latest value per microtask or animation frame. By default every emitted value is delivered.
+ * latest value per microtask or animation frame, the first one too: with `coalesce`, nothing
+ * arrives in the same turn as `emit`, so a test awaits a microtask (or a frame) before checking.
+ * By default every emitted value is delivered, synchronously.
  */
 export interface SubscriptionOptions<E, V = never, O = V> {
   readonly concurrency?: Concurrency;

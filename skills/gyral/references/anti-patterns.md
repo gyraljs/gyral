@@ -39,7 +39,8 @@
 | Fetching in a component during SSR                                                | load in the request handler; pass props or store seeds                  |
 | Importing another renderer's `html` (`lit`, etc.) in Gyral components             | import `html`, `css`, `each`, hooks from `@gyral/core`                  |
 | `attr=${x ?? nothing}`                                                            | `attr=${x}`: `null`/`undefined` remove the attribute                    |
-| `showModal()`, `.focus()` in a driver, `instanceof KeyboardEvent` in a parser     | `?modal`, `focus()`, `on()`: the built-in `gyral/prefer-built-in` names |
+| `showModal()`, `instanceof KeyboardEvent` in a parser                             | `?modal`, `on()`: the built-in `gyral/prefer-built-in` names            |
+| `.focus()` in a driver, on an element in a component's shadow root                | `focus(selector)`; a page element outside components is the driver's    |
 | jsdom/happy-dom tests                                                             | Vitest browser mode, plus DOM-free `step`/`run` tests                   |
 | Blanket `:not(:defined) { visibility: hidden }` in SSR apps                       | scope it to client-rendered tags only                                   |
 

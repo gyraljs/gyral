@@ -20,9 +20,12 @@ const list = (items: readonly string[]): string =>
   `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
 
 export function usage(): string {
-  const releases = Object.entries(RELEASES).flatMap(([release, transforms]) =>
+  const releases = Object.entries(RELEASES).flatMap(([release, { transforms }]) =>
     transforms.map((t, i) => `  ${(i === 0 ? release : '').padEnd(7)}${t.summary}`),
   );
+  const froms = Object.entries(RELEASES)
+    .map(([release, { from }]) => `${release}'s: ${from}`)
+    .join(', ');
   return `Usage: npx @gyral/codemod <release> [paths…] [options]
 
 Rewrites a Gyral app's source for a release's API changes wherever the rewrite is provably
@@ -40,8 +43,9 @@ Options:
   -h, --help     show this help
   -v, --version  show the version
 
-It writes only into a clean git working tree, so \`git diff\` shows what it changed.
-Running it again changes nothing.`;
+It runs before or after you install the release, and leaves a package whose @gyral/core is
+older than the release it migrates from (${froms}). It writes only into a clean git
+working tree, so \`git diff\` shows what it changed. Running it again changes nothing.`;
 }
 
 export function parse(argv: readonly string[]): Parsed {

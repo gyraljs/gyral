@@ -24,7 +24,13 @@ git diff                          # review what it changed
   so `git diff` shows exactly what it changed and `git checkout .` undoes it. `--force` writes
   anyway, also outside a git repository. `--dry` never writes, so it runs on any tree.
 - Running it a second time changes nothing.
-- It exits 0 when it ran, whatever it found; the report goes to stdout.
+- It runs before or after you install the release. Each release's transforms rewrite the API
+  of the release they migrate from (0.3.8's: 0.3.7), so it leaves a package whose `@gyral/core`
+  is older than that, and reports it once if any of its modules had something to rewrite:
+  "left as is: this package's @gyral/core is 0.3.0 (installed), and the 0.3.8 rewrites start
+  from 0.3.7: migrate it to 0.3.7 first". The package is the module's nearest `package.json`;
+  its core is the one Node finds from there, else the lowest version its declared range allows
+  (`^0.3.0` counts as 0.3.0). A module whose core it can't tell is rewritten.
 - It parses with [@babel/parser](https://babel.dev/docs/babel-parser) and edits text ranges,
   so code it doesn't touch keeps its formatting. It never loads your app's TypeScript, and it
   imports no Gyral package, so it works whatever Gyral version the app has installed.
@@ -72,8 +78,12 @@ el.drivers = [fakeDriver('log')];
 Names are known from `subscription('k', …)`, `defineDriver({ name: 'k', … })`,
 `fakeDriver('k', …)`, and `tok.provide(…)`, `subscription(tok, …)` or `fakeDriver(tok, …)` where
 the module declares `const tok = defineDriver<…>('k')`. It leaves (and reports) a key that isn't
-its driver's name, a driver imported from another module, a spread, a computed key, a record
-with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads `.drivers` elsewhere.
+its driver's name, a driver imported from another module (naming that module), a spread, a
+computed key, a record with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads
+`.drivers` elsewhere. It also reports a record of drivers it doesn't rewrite, whose readers it
+can't see: one built in a function and returned (`return { feed: subscription(feed, …) }`),
+passed in options (`defineStore({ drivers: { … } })`) or to another function. Make it a list by
+hand if nothing reads it by key.
 Test files (`*.test.*`, `*.spec.*`, `test/`, `tests/`, `__tests__/`, and setup modules such as
 `vitest.setup.ts`, `test-setup*.ts` or `setupTests.js`) keep their records, which read well for
 fakes.
@@ -83,7 +93,10 @@ module declares the token `const feed = defineDriver<I, O, E>('feed')` (or
 `defineDriver({ name: 'feed' })` without `run`), so the subscription is typed by it. It leaves
 (and reports) a call with type arguments (the two forms order them differently), a token that
 sets `concurrency` or `toError` (the subscription would adopt them), a token declared after
-the call or re-declared around it, and two tokens of one name.
+the call or re-declared around it, and two tokens of one name. A name with no token in the
+module stays as it is, a documented form, unless the module imports a binding of that name, or
+a token of that name is in scope where the rewrite can't pass it (inside a function, or declared
+with `let`): those are reported, to pass the token by hand.
 
 ## Programmatic use
 

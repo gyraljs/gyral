@@ -27,7 +27,7 @@ export interface FileResult {
  * release.
  */
 export function transformSource(release: string, code: string, file: string): FileResult {
-  const transforms = RELEASES[release];
+  const transforms = RELEASES[release]?.transforms;
   if (transforms === undefined) throw new Error(`no transforms for release ${release}`);
   const parsed = parseModule(code, file);
   if (!parsed.ok) {

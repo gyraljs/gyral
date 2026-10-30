@@ -60,7 +60,10 @@ describe('subscription-token: shadowing', () => {
 });
 
 describe('subscription-token: left as is', () => {
-  it('names without a token here, and calls that are not subscription()', () => {
+  // gyral-0dj: a token declared in another module was left without a word (peerweave). A string
+  // name with its own implementation is a documented form, so only a name that this module
+  // imports, or a token of that name in scope that the rewrite can't pass, is reported.
+  it('reports a name imported or declared out of reach, and leaves the documented form', () => {
     expect(
       expectUnchanged(source`
         import { defineDriver, subscription } from '@gyral/core';
@@ -72,8 +75,19 @@ describe('subscription-token: left as is', () => {
         export const b = subscription('news', listen);
         export const c = subscription('impl', listen);
         export const d = other('feed', listen);
+        export function make() {
+          const lane = defineDriver<void, string>({ name: 'lane' });
+          return [lane, subscription('lane', listen)];
+        }
+        let clock = defineDriver<void, number>('clock');
+        export const e = subscription('clock', tick);
+        export const f = () => subscription('lane', listen);
       `),
-    ).toEqual([]);
+    ).toEqual([
+      "6 [subscription-token] `cart` is imported from ./tokens.js, so whether it's the token for 'cart' isn't known in this module; if it is, pass it: subscription(cart, …)",
+      "12 [subscription-token] token `lane` (line 11) is declared inside a function or with `let`, where the codemod doesn't pass it; pass it by hand: subscription(lane, …)",
+      "15 [subscription-token] token `clock` (line 14) is declared inside a function or with `let`, where the codemod doesn't pass it; pass it by hand: subscription(clock, …)",
+    ]);
   });
 
   it('reports type arguments, policies, ordering, duplicates and foreign subscription()', () => {
