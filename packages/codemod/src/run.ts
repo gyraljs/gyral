@@ -1,8 +1,10 @@
 /// <reference types="node" />
 // A whole run: check the working tree, read every module under the paths, transform it, keep it
-// formatted with the app's Prettier, then write it (or diff it, with `dry`).
+// formatted with the app's Prettier, then write it (or diff it, with `dry`). A module whose
+// package has an older @gyral/core than the release is left, and reported (./core-version.ts).
 import { readFile, writeFile } from 'node:fs/promises';
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff';
+import { coreVersions, olderThan, type CoreVersion } from './core-version.js';
 import { collectFiles, displayPath } from './files.js';
 import { keepFormatted, loadPrettier, type Prettier } from './format.js';
 import { workingTreeProblem } from './git.js';
@@ -67,6 +69,18 @@ function safely(release: string, code: string, file: string): FileResult {
   }
 }
 
+/** The finding for a module whose package's @gyral/core is older than `release`. */
+function tooOld(file: string, core: CoreVersion, release: string, cwd: string): Finding {
+  const manifest = displayPath(core.manifest, cwd);
+  const where = core.installed
+    ? `installed for ${manifest}`
+    : `declared in ${manifest}, not installed`;
+  const reason =
+    `left as is: this package's @gyral/core is ${core.version} (${where}), and the ${release} ` +
+    `rewrites need ${release}. Upgrade it, then run the codemod again`;
+  return { file, line: 0, transform: 'core-version', reason };
+}
+
 /** Runs a release's transforms over every module under `paths`. */
 export async function runCodemod(options: CodemodOptions): Promise<CodemodResult> {
   const { release, paths = ['.'], cwd = process.cwd(), dry = false, force = false } = options;
@@ -94,9 +108,16 @@ export async function runCodemod(options: CodemodOptions): Promise<CodemodResult
   const findings: Finding[] = [];
   let diff = '';
   let prettier: Promise<Prettier | undefined> | undefined;
+  const coreOf = coreVersions();
   for (const absolute of files) {
     const file = displayPath(absolute, cwd);
     const result = safely(release, await readFile(absolute, 'utf8'), file);
+    const core = coreOf(absolute);
+    if (core !== undefined && olderThan(core, release)) {
+      const candidates = result.after !== result.before || result.findings.length > 0;
+      if (candidates) findings.push(tooOld(file, core, release, cwd));
+      continue;
+    }
     findings.push(...result.findings);
     if (result.after === result.before) continue;
     prettier ??= loadPrettier(cwd);

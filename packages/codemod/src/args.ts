@@ -40,8 +40,9 @@ Options:
   -h, --help     show this help
   -v, --version  show the version
 
-It writes only into a clean git working tree, so \`git diff\` shows what it changed.
-Running it again changes nothing.`;
+Upgrade and install the release's @gyral/* packages first: it leaves a module whose package
+has an older @gyral/core. It writes only into a clean git working tree, so \`git diff\` shows
+what it changed. Running it again changes nothing.`;
 }
 
 export function parse(argv: readonly string[]): Parsed {
