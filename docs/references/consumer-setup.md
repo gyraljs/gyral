@@ -216,7 +216,8 @@ component's shadow root (`focus(selector)`; a page element outside any component
 driver's to focus, since 0.3.9),
 `JSON.parse` of an attribute or prop (`prop.json()`), a subscription that drops repeats by hand
 (`equals`), a record of drivers outside tests (a list), and a parser that checks the event's
-type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`). If your templates come
+type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`, a module of its own: about
+0.43 KiB gzip, paid once per app on its first use). If your templates come
 from a package that re-exports `html` (a design system), give the rules the same `sources` list
 as the Vite preset:
 

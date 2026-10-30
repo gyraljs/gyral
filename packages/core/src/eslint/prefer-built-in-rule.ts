@@ -50,7 +50,8 @@ import {
   type Subscription,
 } from './prefer-built-in-shapes.js';
 
-const ON = '(ADR 0001 "typed intent input")';
+const ON =
+  '(ADR 0001 "typed intent input"; on() is its own module, about 0.43 KiB gzip once per app)';
 
 const MESSAGES = {
   showModal:

@@ -44,12 +44,14 @@ addendum (the third).
   `.agents/skills/gyral`); `--check` in CI fails when a copy differs.
 
 - **`on(event, [filter], parser)`**: a parser typed by its event, with `control`, `form`,
-  `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter.
+  `modifiers`, `files`, `valueAsNumber` and `origin`, and a key filter. It is a module of its
+  own, about 0.43 KiB gzip, paid once per app on its first use.
 
 - **`each(items, key, row, { pick, equals })`**: `equals` compares picked values, for a `pick`
   that builds a nested value each render.
 - **`subscription(…, { select, equals, coalesce })`**: map each value, drop repeats, deliver the
-  latest per microtask or frame.
+  latest per microtask or frame. `coalesce` delays the first value too, by a microtask or a
+  frame, so a driver's unit test that checks right after `emit` awaits one first (sabacc's did).
 
 - **`token.provide(run)` and `subscription(token, …)`**, with drivers supplied as a list:
   `provideDrivers(root, [session.provide(run), subscription(feed, listen)])`. The name comes from

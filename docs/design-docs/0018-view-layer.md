@@ -390,7 +390,7 @@ in the model; 0.3.8 removed no workaround there.
   picked values (view/03 "Row skipping"). Stable references first; `equals` is the escape hatch.
 - **`subscription(…, { select, equals, coalesce })`**: `select` maps each value, `equals` drops
   one equal to the last delivered, `coalesce: 'microtask' | 'frame'` delivers the latest per
-  microtask or frame. The default stays "every value", as RxJS's `distinctUntilChanged` is
+  microtask or frame, the first value included (so it never arrives in `emit`'s turn). The default stays "every value", as RxJS's `distinctUntilChanged` is
   opt-in: a source that emits one mutated object twice would otherwise go quiet.
 
 Store selectors (a store change rendering only the components whose slice changed) stay review

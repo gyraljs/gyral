@@ -77,8 +77,9 @@ export const Counter = define<{ readonly n: number }, Msg>()('my-outside-counter
 - What reaches the component (0.3.8): `select` maps each value first (a slice of a store's
   state), `equals` drops a value equal to the last one delivered (`equals: Object.is` for a
   store that hands out the same object when nothing changed), and `coalesce: 'microtask'` or
-  `'frame'` delivers only the latest value per microtask or animation frame. By default every
-  value is delivered. With a token, everything is inferred:
+  `'frame'` delivers only the latest value per microtask or animation frame, the first one too:
+  nothing arrives in the same turn as `emit`, so a test awaits a microtask (or a frame) before
+  checking. By default every value is delivered, synchronously. With a token, everything is inferred:
   `subscription(feed, (emit) => store.subscribe(() => emit(store.getState())), { select: (s) => s.count, equals: Object.is })`.
 - Many values per frame (market data, sensors) into a non-trivial view: `coalesce: 'frame'`, or
   list the message in `renderOnFrame` (components.md).
