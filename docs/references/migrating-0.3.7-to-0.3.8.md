@@ -76,9 +76,15 @@ addendum (the third).
 - `instanceof KeyboardEvent` checks, hand-written modifier filters, `composedPath()[0]`,
   `Number(input.value)`, `closest('form')` and `files` lookups in parsers: `on()`.
 
-- Hand-written guards against same-state renders (comparing fields before returning new state),
-  subscription dedupe (`equals`), microtask batching of a source (`coalesce: 'microtask'`), and
-  `JSON.stringify` equality for `each` picks (`equals`, after making references stable).
+- Hand-written subscription dedupe (`equals`, with `select` for a slice), microtask batching of a
+  source (`coalesce: 'microtask'`), and `JSON.stringify` equality for `each` picks (`equals`,
+  after making references stable).
+- Keep a compare that stops a high-rate source from sending messages, such as containment's
+  12-field check of its HUD snapshot before it sends one (corrected in 0.3.9, gyral-4rp). Render
+  skipping helps only when `update` returns the same state; a message that carries a new object
+  changes state by identity, so the view renders. Without the compare, 20 s of containment's
+  play sends 1,202 HUD messages instead of 21. Deduping such a source belongs in the driver, or
+  in the subscription's `equals` and `select`.
 
 - Helpers that wrap a token and its implementation (gymtime's and containment's `implement`),
   and name-keyed records that repeat a token's name: `token.provide(run)` in a list.

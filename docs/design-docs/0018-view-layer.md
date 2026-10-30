@@ -363,10 +363,19 @@ Tested in `core/test/hook-order.test.ts`.
 
 ## Addendum: render skipping, `each` equality, subscription delivery (0.3.8, gyral-337.1)
 
-Owner's decisions, 2026-10-29 (review recommendation #2). Six projects avoided wasted renders by
-hand: joystyk deduplicated subscription output in 10 places, containment compared 12 fields,
-sabacc batched per microtask, enterprise-ui wrote `equals: sameJson` 15 times, and
-football-pool-tracker's race chart re-rendered 220 rows because its `pick` rebuilt an array.
+Owner's decisions, 2026-10-29 (review recommendation #2). Projects avoided wasted renders by
+hand: joystyk deduplicated subscription output in 10 places, sabacc batched per microtask, and
+enterprise-ui wrote `equals: sameJson` 15 times.
+
+Correction (0.3.9, gyral-4rp): this addendum first also counted containment's 12-field compare
+and football-pool-tracker's race chart among the workarounds 0.3.8 removes. It removes neither.
+Render skipping helps only when `update` returns the same state. Containment compares 12 fields
+of its HUD snapshot before sending a message: every HUD message carries a new
+object, so state changes by identity and the view can't skip. Without the compare, 20 s of play
+sends 1,202 HUD messages instead of 21. Deduping a high-rate source still belongs in the driver,
+or in a subscription's `equals` and `select`. The race chart's 220 re-rendered rows (its `pick`
+rebuilt an array) describe football's state before its own fix, fpt-ygm.14, which keeps the plot
+in the model; 0.3.8 removed no workaround there.
 
 - **A host renders only when what its view reads changed** (view/04 "Marking"): its state, a
   declared prop or a declared store's value, compared with `Object.is` against its last render
