@@ -50,9 +50,12 @@ Options:
 
 export const SKILL_USAGE = `Usage: gyral-mcp skill [--check] [--dir <folder>]...
 
-Write the Gyral skill (SKILL.md and its references) into this app's agent folders, for the
-@gyral/core version the app has installed: run \`npx @gyral/mcp@<that version> skill\`. Files in
-those folders that the skill no longer has are removed.
+Write the Gyral skill (SKILL.md, its references, and a VERSION file naming the release and its
+source) into this app's agent folders, for the @gyral/core version the app has installed: run
+\`npx @gyral/mcp@<that version> skill\`. Files in those folders that the skill no longer has are
+removed, except the owner's files at the top of a folder, which are kept and never compared:
+LICENSE, LICENCE, NOTICE, COPYING, PINNED and SOURCE or SOURCES, each with any extension or
+suffix (NOTICE.txt, SOURCE-gyral.md).
 
 Options:
   --check         Write nothing; exit 1 when a folder's copy differs (for CI)

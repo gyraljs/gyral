@@ -80,13 +80,52 @@ describe('gyral-mcp skill', () => {
     const user = app();
     const target = join(user, '.claude/skills/gyral');
     expect(run(dir, false, [target]).lines).toEqual([
-      `${target}: the Gyral 0.3.8 skill (2 written, 0 removed)`,
+      `${target}: the Gyral 0.3.8 skill (3 written, 0 removed)`,
     ]);
     expect(readFileSync(join(target, 'SKILL.md'), 'utf8')).toBe('# Gyral\n');
     expect(existsSync(join(dir, user))).toBe(false);
     expect(run(dir, true, [target]).lines).toEqual([`${target}: the Gyral 0.3.8 skill`]);
     // A folder in the project prints relative to it, however it was given.
     expect(run(dir, false, [join(dir, 'agents/gyral/')]).lines[0]).toMatch(/^agents\/gyral: /);
+  });
+
+  // gyral-337.18: the files an owner keeps beside a vendored or user-level copy.
+  it("keeps the owner's LICENSE, NOTICE, PINNED and SOURCE files beside the skill", () => {
+    const dir = app();
+    const skill = join(dir, '.claude/skills/gyral');
+    mkdirSync(join(skill, 'references'), { recursive: true });
+    const owner = ['LICENSE', 'NOTICE', 'PINNED.txt', 'SOURCE-gyral.md', 'COPYING.md'];
+    for (const name of owner) writeFileSync(join(skill, name), 'mine\n');
+    writeFileSync(join(skill, 'references/LICENSE'), 'not beside the skill\n');
+    writeFileSync(join(skill, 'notes.md'), 'not an owner file\n');
+    expect(run(dir).lines).toEqual([
+      '.claude/skills/gyral: the Gyral 0.3.8 skill (3 written, 2 removed; kept COPYING.md, LICENSE, NOTICE, PINNED.txt, SOURCE-gyral.md)',
+    ]);
+    for (const name of owner) expect(readFileSync(join(skill, name), 'utf8')).toBe('mine\n');
+    expect(existsSync(join(skill, 'references/LICENSE'))).toBe(false);
+    expect(existsSync(join(skill, 'notes.md'))).toBe(false);
+    expect(run(dir, true)).toEqual({
+      ok: true,
+      lines: [
+        '.claude/skills/gyral: the Gyral 0.3.8 skill (kept COPYING.md, LICENSE, NOTICE, PINNED.txt, SOURCE-gyral.md)',
+      ],
+    });
+  });
+
+  it('writes a VERSION file naming the release and its source, which --check compares', () => {
+    const dir = app();
+    run(dir);
+    expect(readFileSync(join(dir, '.claude/skills/gyral/VERSION'), 'utf8')).toBe(
+      [
+        '0.3.8',
+        '',
+        'The Gyral 0.3.8 skill, from https://github.com/gyraljs/gyral/tree/v0.3.8/skills/gyral',
+        'Written by `npx @gyral/mcp@0.3.8 skill`; its `--check` fails when this folder differs.',
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(join(dir, '.claude/skills/gyral/VERSION'), '0.3.7\n');
+    expect(run(dir, true).lines[0]).toBe('.claude/skills/gyral/VERSION differs');
   });
 
   it("refuses another release's core, naming the command that has its skill", () => {

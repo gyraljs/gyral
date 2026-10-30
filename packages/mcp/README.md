@@ -153,6 +153,15 @@ a user-level `~/.claude/skills/gyral`), removing files the skill no longer has.
 the app read the guidance for the Gyral version it runs. The version must match, because each
 release's skill describes that release.
 
+Each copy gets a `VERSION` file (0.3.9) naming its release and the source it came from
+(`https://github.com/gyraljs/gyral/tree/v<version>/skills/gyral`), which `--check` compares like
+the skill's other files, so a copy needs no pin note of its own. Files the owner keeps at the
+top of a vendored or user-level copy are never compared or removed: `LICENSE` (or `LICENCE`),
+`NOTICE`, `COPYING`, `PINNED` and `SOURCE` (or `SOURCES`), each with any extension or suffix
+(`NOTICE.txt`, `PINNED.txt`, `SOURCE-gyral.md`). The skill is MIT-licensed, so a vendored copy
+carries Gyral's `LICENSE` and `NOTICE`. Any other file there that the skill doesn't ship is
+removed, and fails `--check`.
+
 ## Embedding
 
 To run the server inside another process, as the CLI does:
