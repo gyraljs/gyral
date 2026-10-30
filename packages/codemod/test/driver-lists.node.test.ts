@@ -39,9 +39,7 @@ describe('driver-list: rewrites', () => {
       el.drivers = [defineDriver({ name: 'now', run: () => 1 })];
       provideDrivers(root, []);
     `);
-    expect(findings).toEqual([
-      "13 [subscription-token] no token named 'ticks' is declared in this module; if another module declares it, import it and pass it: subscription(token, …)",
-    ]);
+    expect(findings).toEqual([]);
   });
 
   it('works with a namespace import of @gyral/core', () => {

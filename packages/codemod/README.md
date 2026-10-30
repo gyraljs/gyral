@@ -94,8 +94,9 @@ module declares the token `const feed = defineDriver<I, O, E>('feed')` (or
 (and reports) a call with type arguments (the two forms order them differently), a token that
 sets `concurrency` or `toError` (the subscription would adopt them), a token declared after
 the call or re-declared around it, and two tokens of one name. A name with no token in the
-module is reported too, since its token may be declared in another one: pass it by hand,
-imported.
+module stays as it is, a documented form, unless the module imports a binding of that name, or
+a token of that name is in scope where the rewrite can't pass it (inside a function, or declared
+with `let`): those are reported, to pass the token by hand.
 
 ## Programmatic use
 
