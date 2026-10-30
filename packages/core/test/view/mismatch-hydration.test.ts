@@ -157,6 +157,10 @@ describe('a host whose server DOM does not match', () => {
     expect(reported).toMatch(/hydration mismatch in <test-mm-light>/);
     if (DEV) {
       expect(collected.errors[0]?.phase).toBe('view'); // thrown, reported for the host (ADR 0024)
+      // The explanation, then the code and docs URL, as every coded message (gyral-99d).
+      expect(String(collected.errors[0]?.cause)).toMatch(
+        /#mismatches\)\. \(G0062: https:\/\/gyral\.dev\/errors\/#G0062\)$/,
+      );
       expect(bad?.shadowRoot?.querySelector('a')).not.toBeNull(); // left as the server wrote it
     } else {
       expect(collected.errors).toEqual([]);

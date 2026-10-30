@@ -43,7 +43,7 @@ async function g0017(C: CustomElementConstructor, between = (): void => undefine
   }
   return warn.mock.calls
     .map((call) => String(call[0]))
-    .filter((t) => t.includes('rendered differently'));
+    .filter((t) => t.includes(' (G0017: https://gyral.dev/errors/#G0017)'));
 }
 
 // The child the parent below passes a fresh array to.

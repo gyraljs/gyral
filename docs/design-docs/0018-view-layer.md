@@ -427,3 +427,8 @@ that G0017 fired on pure views.
   the fields the row reads or pass `each(items, key, row, { pick, equals })`. The message also
   names the other way a pure view differs: a value built anew each render that compares by
   reference (a `Date`, a `Set`, a class instance).
+- **Development messages name their code** (gyral-99d): only production printed
+  `Gyral G0017 …`, so a development warning gave nothing to search for or link to. Every
+  `message(code, …)` now ends with ` (G0017: https://gyral.dev/errors/#G0017)` in development,
+  and `docsLink(code)` gives the same ending there (the hydration mismatch, G0062, which keeps
+  its own sentence). Production text and size are unchanged; errors.md says both forms.

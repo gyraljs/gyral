@@ -160,7 +160,8 @@ that makes a component fail on purpose, collect the failures with `collectErrors
 
 ## Codes you will meet
 
-Development builds print the full sentence; production prints
+Development builds print the full sentence, ending with its code and link
+(`… (G0010: https://gyral.dev/errors/#G0010)`, 0.3.9); production prints
 `Gyral G0010 <arguments…> https://gyral.dev/errors/#G0010`. The full list is at
 https://gyral.dev/errors/. The ones agents hit most:
 
@@ -171,7 +172,7 @@ https://gyral.dev/errors/. The ones agents hit most:
 | G0014         | a tag is still undefined 3 s after load (dev builds)             | import the component's module from the entry                              |
 | G0015         | two copies of `@gyral/core` are installed or run in the page     | pin one version with package-manager `overrides`, then reinstall          |
 | G0016         | a `@gyral/*` package of another release than `@gyral/core`       | install the same version of every `@gyral` package                        |
-| G0017         | a skipped view rendered differently (dev builds)                 | the view reads outside state, props and stores: move that into state      |
+| G0017         | a skipped view rendered differently (dev builds); says where     | the view reads outside state, props and stores: move that into state      |
 | G0018         | an `on('event')` parser reached by another event                 | bind `data-intent-<event>`, or give the intent a parser of its own        |
 | G0021 / G0022 | a prop value failed its schema / a required prop is missing      | pass a valid value, or give the prop a `default`                          |
 | G0023         | a prop is named like an element member (`hidden`, `state`)       | rename the property; keep the attribute with `attribute:`                 |

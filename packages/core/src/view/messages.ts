@@ -1,6 +1,7 @@
 // Core's diagnostics, by code (gyral-c5d.13, docs/references/errors.md). Development
-// builds print the full text, production builds `Gyral G0010 <arguments…> <docs URL>`
-// (message.ts), so this table stays out of production bundles. `{name}` placeholders take the
+// builds print the full text and ` (G0010: <docs URL>)`, production builds
+// `Gyral G0010 <arguments…> <docs URL>` (message.ts), so this table stays out of production
+// bundles. `{name}` placeholders take the
 // call's arguments in order of first appearance; a name used twice repeats its argument.
 // docs/references/errors.md and errors.json are generated from this table (`node
 // scripts/errors.mjs`); `pnpm invariants` checks that they are current, that codes are unique
@@ -96,7 +97,7 @@ export const MESSAGES = {
     "HTML differs from the first client render: a view that isn't deterministic (Date.now(), " +
     'locale), a third party that changed the DOM before scripts ran, or a stale cached page ' +
     '(https://gyral.dev/docs/server-rendering/#mismatches).',
-  63: '<{tag}> was rendered fresh after a hydration mismatch:',
+  63: '<{tag}> was rendered fresh after a hydration mismatch.',
   // Templates
   69:
     '<{element}> ?{binding} does nothing: this build left the dialog and popover code out, ' +

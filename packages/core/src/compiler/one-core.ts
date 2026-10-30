@@ -36,7 +36,8 @@ const BROWSER_ENTRIES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const CORE = '@gyral/core';
-const DOCS = 'https://gyral.dev/errors/#G0015';
+/** How a coded message ends in development (view/message.ts `docsLink`), here in Node. */
+const CODE = ' (G0015: https://gyral.dev/errors/#G0015)';
 
 interface Manifest {
   readonly name?: unknown;
@@ -197,11 +198,11 @@ function twoCopies(root: string, copies: readonly CoreCopy[]): string {
   );
   return [
     `gyral: @gyral/core is installed more than once, so the app can run two copies, and a value`,
-    `one copy makes (a stylesheet from css, a store) fails in another (G0015, ${DOCS}):`,
+    `one copy makes (a stylesheet from css, a store) fails in another:`,
     ...lines,
     `Install one copy: pin @gyral/core to one version with your package manager's overrides`,
     `(pnpm or npm \`overrides\`, Yarn \`resolutions\`), then reinstall. Libraries that list it`,
-    `as a peer dependency share the app's copy.`,
+    `as a peer dependency share the app's copy.${CODE}`,
   ].join('\n');
 }
 

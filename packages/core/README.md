@@ -67,7 +67,9 @@ consumer setup guide (packages, Vite preset, template compiler):
 
 ## Diagnostic codes
 
-Production builds print codes such as `Gyral G0010 my-cart Increment`. The full table (code,
+Development builds print each message in full, ending with its code and link:
+`… (G0010: https://gyral.dev/errors/#G0010)`. Production builds print codes such as
+`Gyral G0010 my-cart Increment`. The full table (code,
 group, message, arguments, link) ships with the package as `@gyral/core/errors.json`, for tools
 and docs sites: `import errors from '@gyral/core/errors.json' with { type: 'json' };`. The
 same table, rendered: <https://gyral.dev/errors/>.

@@ -83,6 +83,9 @@ describe('focus() command (gyral-czi.28)', () => {
     } finally {
       console.warn = original;
     }
-    expect(warnings).toEqual(['<test-focus> focus(".missing") matched no focusable element.']);
+    expect(warnings).toEqual([
+      '<test-focus> focus(".missing") matched no focusable element.' +
+        ' (G0013: https://gyral.dev/errors/#G0013)',
+    ]);
   });
 });

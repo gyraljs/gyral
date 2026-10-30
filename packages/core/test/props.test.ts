@@ -167,7 +167,9 @@ describe('honest prop types (ADR 0007 addendum)', () => {
     } finally {
       console.warn = original;
     }
-    expect(warnings).toEqual(['<test-badge> is missing required prop(s): label.']);
+    expect(warnings).toEqual([
+      '<test-badge> is missing required prop(s): label. (G0022: https://gyral.dev/errors/#G0022)',
+    ]);
   });
 
   it('rejects declarations that leave an always-present prop unguaranteed (types)', () => {

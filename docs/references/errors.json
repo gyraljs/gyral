@@ -247,7 +247,7 @@
   {
     "code": "G0063",
     "group": "Hydration",
-    "message": "<{tag}> was rendered fresh after a hydration mismatch:",
+    "message": "<{tag}> was rendered fresh after a hydration mismatch.",
     "arguments": ["tag"],
     "url": "https://gyral.dev/errors/#G0063"
   },
