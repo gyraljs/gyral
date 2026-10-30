@@ -400,6 +400,19 @@ with no regression; the G0017 false positives they listed are gone, the 0.3.9-re
 workarounds come out, and an edited component shows on the next dev-server request with core
 installed from the tarball. Vite's part of gyral-3pv is reported upstream as vitejs/vite#23946.
 
+Recorded 0.3.9 registry checks (2026-10-30, step 6): all ten packages serve 0.3.9 as `latest`
+with SLSA v1 provenance (release run 41047535041, tag `v0.3.9` at `17f7dc3`; the GitHub release opens with
+the behavior changes), and each sibling package peers on `@gyral/core` 0.3.9 exactly.
+`npx -y @gyral/mcp@0.3.9` answers `initialize` over stdio as `gyral 0.3.9` with eight tools;
+`get_api` returns `parse` with `modifiers`, and `search_docs` finds the Node testing of `on()`
+parsers. `npx -y @gyral/codemod@0.3.9 --version` prints 0.3.9. `npm create gyral@0.3.9` generated
+both templates in fresh directories on Node 24.22.0, and npm installed them; each app's
+`typecheck`, `build` and `test` pass (basic 22.8 kB JS, 8.7 kB gzip; SSR counter chunk 25.8 kB).
+Both manifests depend on `^0.3.9` with no overrides; every lockfile entry resolves from
+`registry.npmjs.org` with SHA-512 integrity, none uses `file:` or `link:`, and no Lit package is
+installed. `node scripts/verify-ssr-production.mjs` (exact 0.3.9; a 60,063-byte one-file server)
+passes.
+
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips
