@@ -63,6 +63,10 @@ function libraryApp(): string {
     'src/card.ts':
       "import { define } from '@gyral/core';\nexport const Card = define()('app-card', {});\n",
     'src/util.ts': 'export const answer = 42;\n',
+    // Defined through a wrapper, which the component scan can't see: components.modules names it.
+    'src/forms.ts':
+      "import { defineForm } from './define-form.js';\nexport const F = defineForm('app-form');\n",
+    'src/client/entry.ts': "import 'left-pad';\n", // the client build's input
     'src/server/app.ts': "import { Hono } from 'hono';\nexport const app = new Hono();\n",
   });
   symlinkSync(join(root, 'checkout/linked-widgets'), join(root, 'node_modules/linked-widgets'));
@@ -140,6 +144,34 @@ it("adds a Vitest browser project's tests to the auto scan", async () => {
   const test = { include: ['test/browser/**/*.test.ts'], browser: { enabled: true } };
   const { entries } = await optimizeDeps(libraryApp(), { optimize: 'auto' }, { test });
   expect(entries).toEqual(['**/*.html', 'src/card.ts', 'test/browser/**/*.test.ts']);
+});
+
+// gyral-5zi: Vite's own scan starts at the client build's input, but entries replace it; and a
+// component defined through a wrapper is only in components.modules. Both were missed, so their
+// imports were found mid-run (a reload, "Vite unexpectedly reloaded a test").
+it("adds components.modules and the client's build inputs to the auto scan", async () => {
+  const root = libraryApp();
+  const modules = { 'app-form': 'src/forms.ts', 'app-reset-form': './src/forms.ts' };
+  const scan = async (config: InlineConfig): Promise<readonly string[] | undefined> =>
+    (await optimizeDeps(root, { optimize: 'auto', components: { modules } }, config)).entries;
+  expect(await scan({})).toEqual(['**/*.html', 'src/card.ts', 'src/forms.ts']);
+  const rollup = { build: { rollupOptions: { input: 'src/client/entry.ts' } } };
+  expect(await scan(rollup)).toEqual([
+    '**/*.html',
+    'src/client/entry.ts',
+    'src/card.ts',
+    'src/forms.ts',
+  ]);
+  // An object input, absolute paths, and ids that aren't files (a virtual module, a package).
+  const input = { main: join(root, 'src/client/entry.ts'), loader: 'virtual:x', pkg: 'left-pad' };
+  const rolldown = { appType: 'custom', build: { rolldownOptions: { input } } } as const;
+  expect(await scan(rolldown)).toEqual([
+    '**/*.html',
+    'src/client/entry.ts',
+    'src/card.ts',
+    'src/forms.ts',
+  ]);
+  expect(await scan({ input: ['./src/client/entry.ts'] })).toContain('src/client/entry.ts');
 });
 
 it('keeps gyralVitePreset() as the spread-in spelling of gyral()', () => {

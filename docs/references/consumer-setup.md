@@ -93,7 +93,10 @@ export default defineConfig({
   dependency it meets later makes it re-optimize and reload ("Vite unexpectedly reloaded a
   test" in Vitest). `optimize: 'auto'` (0.3.8) points Vite's startup scan at the modules that
   define components, and at a Vitest browser project's tests: Vite follows their imports, so
-  everything they use is found up front. Server modules are never scanned. It is on by default
+  everything they use is found up front. Since 0.3.9 it also scans the modules
+  `components.modules` lists and the client build's inputs (`build.rollupOptions.input`, or
+  `rolldownOptions`, or `input`), where Vite's own scan starts. Server modules are never
+  scanned. It is on by default
   when Vite runs as a custom server (`appType: 'custom'`, as `gyralDevServer` and
   `gyralDevMiddleware` do), where Vite has no HTML page to crawl; elsewhere set it yourself,
   as in a Vitest browser project. A config's own `optimizeDeps.entries` win;
