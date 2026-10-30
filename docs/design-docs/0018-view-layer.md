@@ -386,3 +386,24 @@ football-pool-tracker's race chart re-rendered 220 rows because its `pick` rebui
 
 Store selectors (a store change rendering only the components whose slice changed) stay review
 item #21; a store whose value didn't change already renders nothing.
+
+## Addendum: development checks in apps that install core (0.3.9)
+
+Migrating apps to 0.3.8 (epic gyral-vge) showed that no app installing Gyral from npm had ever
+run its development checks in the dev server or Vitest's browser mode, and, once they ran,
+that G0017 fired on pure views.
+
+- **The dev pre-bundle is core's development build** (gyral-3pv). Vite 8's dependency
+  optimizer resolves a pre-bundled package's bare imports with Vite's resolver, under the
+  environment's conditions, but leaves its subpath imports (core's `#view-dev`, `#devtools`)
+  to rolldown's resolver, which knows no `development`. The pre-bundle of an installed core
+  therefore got `dev-off.js` and `devtools-off.js`: no checks, coded messages. Node's own
+  resolver (Node-environment tests) and the workspace's examples (core served as source,
+  unbundled) did get `development`, so the gate never saw it. `gyral()`'s one-core plugin now
+  sets `optimizeDeps.rolldownOptions.resolve.conditionNames` in serve mode to the
+  environment's conditions (the app's `resolve.conditions` or Vite's defaults,
+  `development|production` read as Vite reads it), in a `post` `configEnvironment` hook so
+  conditions other plugins add (`gyral-client-only`) are in; an app's own `conditionNames`
+  win, and `vite build` is untouched. `pack:check` installs the packed core in a throwaway app
+  and checks that the dev pre-bundle carries the development checks and production builds
+  don't (scripts/lib/dev-prebundle-fixture.mjs).

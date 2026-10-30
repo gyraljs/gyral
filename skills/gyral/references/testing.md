@@ -11,7 +11,10 @@ Two layers, both with Vitest:
 Vite/Vitest config: `plugins: [gyral()]` (from `@gyral/core/vite`) in each project; in a browser
 project, `gyral({ optimize: 'auto' })` pre-bundles what the tests import before they run.
 It pre-bundles Gyral's own packages (0.3.7), so don't list them in `optimize`; list only other
-dependencies Vite discovers mid-run ("Vite unexpectedly reloaded a test").
+dependencies Vite discovers mid-run ("Vite unexpectedly reloaded a test"). Since 0.3.9 that
+pre-bundle is core's development build, so browser tests run Gyral's development checks (G0017,
+duplicate keys, impure rows, template rules) and print messages in full; drop an
+`optimizeDeps.rolldownOptions.resolve.conditionNames` workaround.
 
 ## Model tests
 
