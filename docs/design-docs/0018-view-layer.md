@@ -419,3 +419,11 @@ that G0017 fired on pure views.
   with `Object.is`: the view builds them anew, and a child sees a new value. The real render
   is unchanged: it still writes a new object to the property. Reading `Date.now()`, a module
   variable or the DOM still warns (core/test/view-recheck.test.ts).
+- **`ctx.props` is a stable reference** (gyral-bn7, ADR 0007's 0.3.9 addendum): the same object
+  while no declared prop's value changes, so a pick that captures it lets rows skip.
+- **G0017 says where** (gyral-bn7): "It differs in its template", or in the innermost `each`
+  list that differs, named by its row function (`each(…, Day)`, `keyed(…)`); when that list's
+  row has the same item and another pick, the pick is the cause, and the message says to pick
+  the fields the row reads or pass `each(items, key, row, { pick, equals })`. The message also
+  names the other way a pure view differs: a value built anew each render that compares by
+  reference (a `Date`, a `Set`, a class instance).

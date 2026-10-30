@@ -18,6 +18,17 @@ Details: ADR 0018's 0.3.9 addendum.
   `each(s.items.map(…), …)`, `keyed(key, html…)`, `.data=${{ n: s.n }}`,
   `.items=${s.items.slice()}`. A `Date`, `Set` or class instance built in the view still
   compares by reference; reading `Date.now()`, a module variable or the DOM still warns.
+- **G0017 says where (gyral-bn7):** "It differs in its template", or in `each(…, Row)` (the
+  innermost list that differs, by its row function) or `keyed(…)`. When that list's pick
+  returned a new object for the same item, it says to pick the fields the row reads or pass
+  `each(items, key, row, { pick, equals })`.
+
+## Fixed
+
+- **`ctx.props` is a stable reference (gyral-bn7):** the same object while no declared prop's
+  value changes, a new one when one does. A pick that captures it (`(day) => ({ day, props })`)
+  no longer re-renders every row on every render. Code that relied on a new object per read
+  (mutating it) must copy it first.
 
 ## Workarounds you can remove
 

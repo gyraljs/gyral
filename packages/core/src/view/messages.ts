@@ -30,8 +30,10 @@ export const MESSAGES = {
     "Gyral's packages are released together: install the same version of every @gyral package.",
   17:
     '<{tag}> rendered differently with the same state, props and stores, so its view reads ' +
-    'something else, such as Date.now(), a module variable or the DOM. A component renders only ' +
-    'when one of them changes (0.3.8): move what the view reads into state, a prop or a store.',
+    'something else, such as Date.now(), a module variable or the DOM, or builds a value anew ' +
+    'each render that is compared by reference (a Date, a Set, a class instance). It differs ' +
+    '{where}. A component renders only when one of them changes (0.3.8): move what the view ' +
+    'reads into state, a prop or a store.',
   18:
     'The parser of intent "{intent}" is on("{expected}"), but a "{actual}" event reached it. ' +
     'Bind the intent to that event (data-intent-{expected}=${…}), or give it a parser of its own.',

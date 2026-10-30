@@ -164,17 +164,47 @@ function samePart(p: Part, values: readonly unknown[]): boolean {
  */
 function sameList(list: List, l: ListResult): boolean {
   const rows = list.rows;
-  if (rows.length !== l.items.length) return false;
+  if (rows.length !== l.items.length) return differs(l, false);
   return rows.every((row, i) => {
     const item = l.items[i];
-    if (!Object.is(row.key, l.key(item))) return false;
+    if (!Object.is(row.key, l.key(item))) return differs(l, false);
     const picked = l.pick === undefined ? undefined : l.pick(item);
-    if (row.item === item && (l.equals ?? samePick)(row.picked, picked)) return true;
+    const same = (l.equals ?? samePick)(row.picked, picked);
+    if (row.item === item && same) return true;
     if (views.rows <= 0) return true;
     views.rows--;
-    return sameChild(row, l.row(item, picked));
+    // The same item with another pick: the pick is why the row rendered again.
+    return sameChild(row, l.row(item, picked)) || differs(l, row.item === item);
   });
 }
+
+/** The innermost list `viewDifference` found to differ, for G0017's message. */
+let where: string | undefined;
+
+/** Notes that `l` differs (`pick`: because its pick changed), unless a list inside it did. */
+function differs(l: ListResult, pick: boolean): false {
+  const name = l.row.name;
+  const list =
+    name === 'keyedValue' ? 'keyed(…)' : name === '' ? 'an each() list' : `each(…, ${name})`;
+  where ??= pick
+    ? `in ${list}, whose pick returns a different object each render: pick the fields the row ` +
+      'reads, or pass each(items, key, row, { pick, equals })'
+    : `in ${list}`;
+  return false;
+}
+
+/**
+ * G0017 (render.ts `recheckView`): undefined when `value` renders what `part` shows, else
+ * where it differs for the message: in the innermost list that does, named by its row
+ * function, with what to do when that list's pick changed (gyral-bn7), or in the template.
+ */
+export function viewDifference(part: ChildPart, value: unknown): string | undefined {
+  where = undefined;
+  return sameChild(part, value) ? undefined : found();
+}
+
+/** Read after the comparison set it (a call, so TypeScript doesn't keep `undefined`). */
+const found = (): string => where ?? 'in its template';
 
 /** Entries `sameValue` compares per value, and how deep; past either, the rest count as equal. */
 const DATA_ENTRIES = 1000;

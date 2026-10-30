@@ -174,3 +174,50 @@ describe('a view that reads something else still warns', () => {
     expect(await g0017(C)).toHaveLength(1);
   });
 });
+
+// Module-level rows, so G0017 can name their lists. Label reads a module variable on purpose.
+const outside = { n: 0 };
+const Label = (o: { readonly label: string }) => html`<i>${o.label}${outside.n}</i>`;
+const Stamp = (t: number, picked: { readonly when: Date }) =>
+  html`<time .date=${picked.when}>${t}</time>`;
+
+describe('G0017 says where the view differs', () => {
+  const bump = (): void => {
+    outside.n += 1;
+  };
+
+  it('in its template', async () => {
+    const C = component('recheck-where-template', {}, () => html`<p>${outside.n}</p>`);
+    const [text] = await g0017(C, bump);
+    expect(text).toContain('<recheck-where-template> rendered differently');
+    expect(text).toContain('It differs in its template.');
+  });
+
+  it('in the innermost list that differs, by its row function', async () => {
+    const C = component('recheck-where-list', { items: ['a'] }, (s) =>
+      each(
+        s.items.map((label) => ({ label })),
+        (o) => o.label,
+        Label,
+      ),
+    );
+    const [text] = await g0017(C, bump);
+    expect(text).toContain('It differs in each(…, Label).');
+  });
+
+  it('in a list whose pick changed identity, with what to do (gyral-bn7)', async () => {
+    const C = component('recheck-where-pick', { days: [1, 2], t: 0 }, (s) =>
+      each(
+        s.days,
+        (d) => d,
+        Stamp,
+        () => ({ when: new Date(s.t) }),
+      ),
+    );
+    const [text] = await g0017(C);
+    expect(text).toContain(
+      'It differs in each(…, Stamp), whose pick returns a different object each render: pick ' +
+        'the fields the row reads, or pass each(items, key, row, { pick, equals }).',
+    );
+  });
+});

@@ -140,7 +140,8 @@ export const Todos = define<State, Msg>()('my-todos', {
 ```
 
 A `pick` that builds a nested value each render (`() => ({ columns, season })` with `columns`
-recomputed in the view) defeats the comparison, and every row re-renders. First make the
+recomputed in the view) defeats the comparison, and every row re-renders. `ctx.props` is a
+stable reference (0.3.9): the same object until a prop changes, so `() => ({ props })` is fine. First make the
 reference stable: derive `columns` in `update` and keep it in state. Where that can't be,
 `each(items, key, row, { pick, equals })` compares picked values with your `equals` instead
 (0.3.8); keep it cheap, since it runs for every row on every render.
