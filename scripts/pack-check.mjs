@@ -1,13 +1,16 @@
 // pnpm pack:check — packs every package the way `pnpm publish` will (prepack build, publishConfig
 // applied, workspace:* rewritten) and checks each tarball with publint, @arethetypeswrong/cli and
 // content assertions. `npm pack --dry-run` must agree on the file list, so the `files` allowlist
-// means the same thing to both tools.
+// means the same thing to both tools. Fixtures then install the packed core: as an exact-version
+// peer (lib/peer-fixture.mjs), and in an app whose dev server pre-bundles it, which must get its
+// development build (lib/dev-prebundle-fixture.mjs).
 import { execFile, spawn } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { npxBinProblem, RUN_BY_NAME } from './lib/npx-bin.mjs';
+import { devPrebundleFixture } from './lib/dev-prebundle-fixture.mjs';
 import { peerFixture } from './lib/peer-fixture.mjs';
 
 const run = promisify(execFile);
@@ -145,6 +148,7 @@ const dirs = readdirSync('packages').map((pkg) => join('packages', pkg));
 const results = await Promise.all(dirs.map(check));
 const tarballOf = (name) => results.find((r) => r.name === name)?.tarball ?? '';
 const fixture = await peerFixture(tarballOf('@gyral/core'), tarballOf('@gyral/http'));
+const devChecks = await devPrebundleFixture(tarballOf('@gyral/core'));
 rmSync(out, { recursive: true, force: true });
 
 let failed = false;
@@ -163,5 +167,11 @@ if (fixture.length === 0) console.log('ok   core as a peer: one copy of core, mi
 else {
   failed = true;
   console.error(`FAIL core as a peer:\n  ${fixture.join('\n  ')}`);
+}
+if (devChecks.length === 0) {
+  console.log('ok   installed core: development checks in the dev pre-bundle, none in builds');
+} else {
+  failed = true;
+  console.error(`FAIL installed core's development checks:\n  ${devChecks.join('\n  ')}`);
 }
 process.exit(failed ? 1 : 0);

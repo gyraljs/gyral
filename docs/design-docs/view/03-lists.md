@@ -92,7 +92,8 @@ Two guards:
    the second argument." A helper function declared beside the row is followed instead of
    flagged: calling it is fine when it, too, reads only those.
 2. **Development check:** after each commit, rows are re-evaluated anyway and their results
-   compared with what is committed (template, by id or identity, and values, recursively). A
+   compared with what is committed (template, by id or identity, and values, recursively: plain
+   objects and arrays by value, since 0.3.9, anything else with `Object.is`; 04 "Marking"). A
    difference warns once per row function: "… depends on something not passed through `item`
    or `pick`" (`view/render/dev-check.ts`). It catches what the lint can't see, such as a
    helper reading changing module state. At most 200 rows are checked per flush (per `render`

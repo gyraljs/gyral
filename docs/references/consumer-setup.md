@@ -88,7 +88,13 @@ export default defineConfig({
   0.3.8 it also pre-bundles your direct dependencies that use a Gyral browser package (a
   design system, a widget library), each browser entry point in their `exports`. Packages
   linked from source, such as a workspace's, stay unbundled, as Vite serves them. An entry
-  your config lists in `optimizeDeps.exclude` is left out.
+  your config lists in `optimizeDeps.exclude` is left out. Since 0.3.9 it also gives Vite's
+  dependency optimizer the environment's resolve conditions (your `resolve.conditions`, or
+  Vite's defaults with `development`), so the pre-bundle of an installed core is its
+  development build, with every development check. Vite's optimizer resolves a package's own
+  `#…` imports without them, so before 0.3.9 an app that installed Gyral from npm ran the dev
+  server and Vitest's browser mode on core's production build: no development checks, and
+  coded messages. An `optimizeDeps.rolldownOptions.resolve.conditionNames` of your own wins.
 - **`optimize`**: pre-bundling beyond that. Vite pre-bundles what it finds at startup; a
   dependency it meets later makes it re-optimize and reload ("Vite unexpectedly reloaded a
   test" in Vitest). `optimize: 'auto'` (0.3.8) points Vite's startup scan at the modules that

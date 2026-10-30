@@ -74,9 +74,9 @@ describe('call()', () => {
     const { errors } = collected;
     expect(errors.map((e) => e.phase)).toEqual(['command', 'command', 'command']);
     expect(errors.map((e) => e.message)).toEqual([
-      '<test-call-host> call("#nope", "bump") failed',
-      '<test-call-host> call("test-call-counter", "nope") failed',
-      '<test-call-host> call("test-call-counter", "boom") failed',
+      '<test-call-host> call("#nope", "bump") failed (G0085: https://gyral.dev/errors/#G0085)',
+      '<test-call-host> call("test-call-counter", "nope") failed (G0085: https://gyral.dev/errors/#G0085)',
+      '<test-call-host> call("test-call-counter", "boom") failed (G0085: https://gyral.dev/errors/#G0085)',
     ]);
     expect(String(errors[0]?.cause)).toMatch(/no element matches #nope/);
     expect(errors[1]?.cause).toBeInstanceOf(TypeError); // nope is not a function

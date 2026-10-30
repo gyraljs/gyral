@@ -141,13 +141,23 @@ export function sameData(a: unknown, b: unknown): boolean {
   );
 }
 
-/** The declared props as components see them: `default` fills missing values. */
+/** Each host's last `readProps` result, by its values. */
+const lastProps = new WeakMap<Bag, Bag>();
+
+/**
+ * The declared props as components see them: `default` fills missing values. The host's last
+ * result comes back while every value is the same (gyral-bn7): ctx.props is a stable reference,
+ * so a `pick` or a comparison that captures it holds across renders.
+ */
 export function readProps(values: Bag, table: PropTable): Bag {
   const out: Record<string, unknown> = {};
   for (const [name, def] of Object.entries(table)) {
     const value = values[name];
     out[name] = value === undefined ? def.default : value;
   }
+  const last = lastProps.get(values);
+  if (last && Object.keys(out).every((name) => Object.is(out[name], last[name]))) return last;
+  lastProps.set(values, out);
   return out;
 }
 

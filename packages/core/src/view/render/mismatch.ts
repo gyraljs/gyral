@@ -51,14 +51,15 @@ export function mismatch(
       : typeof found === 'string'
         ? found
         : describe(found);
-  // G0062 (messages.ts), whose explanation only development carries.
+  // G0062 (messages.ts), whose explanation only development carries; both end with its code.
   throw new HydrationMismatch(
     `gyral: hydration mismatch in ${host}${loc === undefined ? '' : ` (template at ${loc})`} ` +
       `at ${pathOf(where, root)}: expected ${expected}, found ${what}. ` +
       (DEV
         ? "The server's HTML differs from the first client render: a view that isn't " +
           'deterministic (Date.now(), locale), a third party that changed the DOM before ' +
-          'scripts ran, or a stale cached page (https://gyral.dev/docs/server-rendering/#mismatches).'
+          'scripts ran, or a stale cached page (https://gyral.dev/docs/server-rendering/#mismatches).' +
+          docsLink(62)
         : docsLink(62)),
   );
 }

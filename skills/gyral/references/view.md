@@ -12,7 +12,9 @@ subscription's `equals` and `select` or in the driver. A view that reads anythin
 module variable, the DOM) stops refreshing on unrelated messages: put the time in state (an
 `every` subscription), the random value in state, the outside value in a prop or a store.
 Development re-runs skipped views and warns once per component when one renders differently
-(G0017).
+(G0017). It compares what they render, so values built anew each render are fine when they are
+equal: rebuilt `each()` items, `keyed()`, a fresh `{ … }` or array in a property binding (0.3.9).
+A `Date`, `Set` or class instance built in the view compares by reference: keep it in state.
 
 ## Template rules
 
@@ -140,7 +142,8 @@ export const Todos = define<State, Msg>()('my-todos', {
 ```
 
 A `pick` that builds a nested value each render (`() => ({ columns, season })` with `columns`
-recomputed in the view) defeats the comparison, and every row re-renders. First make the
+recomputed in the view) defeats the comparison, and every row re-renders. `ctx.props` is a
+stable reference (0.3.9): the same object until a prop changes, so `() => ({ props })` is fine. First make the
 reference stable: derive `columns` in `update` and keep it in state. Where that can't be,
 `each(items, key, row, { pick, equals })` compares picked values with your `equals` instead
 (0.3.8); keep it cheap, since it runs for every row on every render.

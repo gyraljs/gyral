@@ -15,12 +15,13 @@
 // `components.modules`), at browser tests, and at the client build's inputs, where Vite's own
 // scan starts, so every other dependency they import is pre-bundled at startup, not mid-run.
 // In development browsers, core itself warns when a page runs a second copy (view/message.ts).
+// The pre-bundle must also be core's development build (gyral-3pv): see prebundleConditions.
 // Node built-ins only, so ../vite.ts loads it with Node's require, from TypeScript source too
 // (which is why it repeats scope.ts's package lookup instead of importing it, and why
 // vite.ts hands it the component scan).
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import type { Plugin, UserConfig } from 'vite';
+import type { ConfigEnv, EnvironmentOptions, Plugin, UserConfig } from 'vite';
 
 /**
  * Gyral's browser entry points, by package. Never the node-only ones (/vite, /eslint,
@@ -36,7 +37,8 @@ const BROWSER_ENTRIES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const CORE = '@gyral/core';
-const DOCS = 'https://gyral.dev/errors/#G0015';
+/** How a coded message ends in development (view/message.ts `docsLink`), here in Node. */
+const CODE = ' (G0015: https://gyral.dev/errors/#G0015)';
 
 interface Manifest {
   readonly name?: unknown;
@@ -197,11 +199,11 @@ function twoCopies(root: string, copies: readonly CoreCopy[]): string {
   );
   return [
     `gyral: @gyral/core is installed more than once, so the app can run two copies, and a value`,
-    `one copy makes (a stylesheet from css, a store) fails in another (G0015, ${DOCS}):`,
+    `one copy makes (a stylesheet from css, a store) fails in another:`,
     ...lines,
     `Install one copy: pin @gyral/core to one version with your package manager's overrides`,
     `(pnpm or npm \`overrides\`, Yarn \`resolutions\`), then reinstall. Libraries that list it`,
-    `as a peer dependency share the app's copy.`,
+    `as a peer dependency share the app's copy.${CODE}`,
   ].join('\n');
 }
 
@@ -271,9 +273,41 @@ function scanEntries(
   return ['**/*.html', ...new Set(globs), ...tests];
 }
 
+/** Vite 8's default resolve conditions, as vite.ts names them (server ones without browser). */
+const CLIENT_CONDITIONS: readonly string[] = ['module', 'browser', 'development|production'];
+const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|production'];
+
+/**
+ * The dependency optimizer's resolve conditions in serve mode (the dev server, Vitest), for
+ * environment `name` (gyral-3pv). Vite's optimizer resolves a pre-bundled package's bare imports
+ * with Vite's resolver, under the environment's conditions, but leaves the package's subpath
+ * imports (core's `#view-dev`, `#devtools`) to rolldown's own resolver, which knows no
+ * `development`: the pre-bundle of an installed core got its production modules, so apps that
+ * install it from npm ran without development checks. Rolldown gets the environment's own
+ * conditions (the app's `resolve.conditions`, or Vite's defaults), with `development|production`
+ * read as Vite reads it; it adds `import` or `require` itself. An app's own `conditionNames`
+ * win. A `post` hook, so conditions other plugins add (`gyral-client-only`) are in.
+ */
+function prebundleConditions(
+  name: string,
+  config: EnvironmentOptions,
+  env: ConfigEnv & { isSsrTargetWebworker?: boolean },
+): EnvironmentOptions | undefined {
+  if (env.command !== 'serve') return undefined;
+  if (config.optimizeDeps?.rolldownOptions?.resolve?.conditionNames !== undefined) return undefined;
+  const consumer = config.consumer ?? (name === 'client' ? 'client' : 'server');
+  const client = consumer === 'client' || env.isSsrTargetWebworker === true;
+  // Vite reads it the same way (process.env.NODE_ENV is settled before this hook runs).
+  const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development';
+  const conditions = config.resolve?.conditions ?? (client ? CLIENT_CONDITIONS : SERVER_CONDITIONS);
+  const conditionNames = conditions.map((c) => (c === 'development|production' ? mode : c));
+  return { optimizeDeps: { rolldownOptions: { resolve: { conditionNames } } } };
+}
+
 /**
  * gyral()'s pre-bundling plugin: Gyral's browser entries and the app's Gyral libraries in dev,
- * the app's `optimize` list, the `'auto'` scan; and the warning about a second copy of core.
+ * the app's `optimize` list, the `'auto'` scan, the optimizer's conditions; and the warning
+ * about a second copy of core.
  */
 export function oneCorePlugin(options: OneCoreOptions = {}): Plugin {
   return {
@@ -293,6 +327,7 @@ export function oneCorePlugin(options: OneCoreOptions = {}): Plugin {
       if (include.length === 0 && entries === undefined) return undefined;
       return { optimizeDeps: { include, ...(entries === undefined ? {} : { entries }) } };
     },
+    configEnvironment: { order: 'post', handler: prebundleConditions },
     configResolved(config) {
       if (warned.has(config.root)) return;
       warned.add(config.root);

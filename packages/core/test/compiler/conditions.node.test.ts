@@ -44,3 +44,54 @@ describe('gyral-compiled condition', () => {
     expect(envs['ssr']).toEqual([...SERVER_CONDITIONS]);
   });
 });
+
+// The dependency optimizer (gyral-3pv): Vite's resolver handles a pre-bundled package's bare
+// imports, but its subpath imports (core's `#view-dev`, `#devtools`) reach rolldown's own
+// resolver, which uses `optimizeDeps.rolldownOptions.resolve.conditionNames`. gyral() names the
+// environment's conditions there in serve mode, so an installed core's pre-bundle gets its
+// development modules (scripts/lib/dev-prebundle-fixture.mjs checks the packed core).
+const optimizer = async (
+  command: 'build' | 'serve',
+  extra: object = {},
+  options: Parameters<typeof gyralVitePreset>[0] = {},
+): Promise<Record<string, readonly string[] | undefined>> => {
+  const config = await resolveConfig(
+    { configFile: false, logLevel: 'silent', ...gyralVitePreset(options), ...extra },
+    command,
+  );
+  return Object.fromEntries(
+    Object.entries(config.environments).map(([name, env]) => [
+      name,
+      env.optimizeDeps.rolldownOptions?.resolve?.conditionNames,
+    ]),
+  );
+};
+
+describe("the dependency optimizer's conditions", () => {
+  it("are the environment's, with development, in serve mode (dev server, Vitest)", async () => {
+    const envs = await optimizer('serve');
+    expect(envs['client']).toEqual(['module', 'browser', 'development']);
+    expect(envs['ssr']).toEqual(['module', 'node', 'development']);
+  });
+
+  it("follow the app's own resolve conditions", async () => {
+    const envs = await optimizer('serve', { resolve: { conditions: ['module', 'production'] } });
+    expect(envs['client']).toEqual(['module', 'production']);
+  });
+
+  it('include the client-only condition when the app is client-only', async () => {
+    const envs = await optimizer('serve', {}, { clientOnly: true });
+    expect(envs['client']).toEqual(['module', 'browser', 'development', 'gyral-client-only']);
+  });
+
+  it("keep the app's own conditionNames", async () => {
+    const own = { rolldownOptions: { resolve: { conditionNames: ['mine'] } } };
+    const envs = await optimizer('serve', { optimizeDeps: own });
+    expect(envs['client']).toEqual(['mine']);
+  });
+
+  it('are left alone by `vite build`', async () => {
+    const envs = await optimizer('build');
+    expect(envs['client']).toBeUndefined();
+  });
+});
