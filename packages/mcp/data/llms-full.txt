@@ -1,4 +1,4 @@
-# Gyral 0.3.8: complete documentation
+# Gyral 0.3.9: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -261,7 +261,7 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
 - Working with a coding agent? Connect it to Gyral's MCP server and skill:
   [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 - Upgrading an existing app? [Versioning and stability](https://gyral.dev/docs/versioning/) explains how to move
-  to 0.3.8 safely.
+  to 0.3.9 safely.
 
 ---
 
@@ -274,7 +274,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.8, and the site tests each one in a browser when it builds.
+0.3.9, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -873,7 +873,7 @@ Any other client that speaks Streamable HTTP: add a server with the URL
 The hosted server has every tool except `check_snippet`, which needs your project's
 TypeScript and packages. It can run an older `@gyral/mcp` than the latest release; its
 `initialize` response and `https://mcp.gyral.dev/healthz` report the version it serves. This
-page describes the tools as `@gyral/mcp` 0.3.8 provides them.
+page describes the tools as `@gyral/mcp` 0.3.9 provides them.
 
 ## The local MCP server
 
@@ -961,7 +961,7 @@ GYRAL_MCP_PUBLIC_ORIGIN=http://127.0.0.1:3000 npx -y @gyral/mcp http
 
 It is configured by environment variables only; `gyral-mcp http --help` lists them. Put it
 behind TLS, and pin the package version you deploy. The
-[package README](https://github.com/gyraljs/gyral/blob/v0.3.8/packages/mcp/README.md#public-hosting)
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.9/packages/mcp/README.md#public-hosting)
 has the details.
 
 ## The agent skill
@@ -986,19 +986,27 @@ write it. Run it from the app's directory, with the version of `@gyral/core` the
 installed:
 
 ```sh
-npx @gyral/mcp@0.3.8 skill           # write the skill into the project
-npx @gyral/mcp@0.3.8 skill --check   # in CI: fail when a copy differs
+npx @gyral/mcp@0.3.9 skill           # write the skill into the project
+npx @gyral/mcp@0.3.9 skill --check   # in CI: fail when a copy differs
 ```
 
 `skill` writes `SKILL.md` and its references to `.claude/skills/gyral`, and to
-`.agents/skills/gyral` when that folder exists (`--dir <folder>` names others), and removes files
-the skill no longer has. The version must match the installed `@gyral/core`, because each
-release's skill describes that release; it says which command to run when it doesn't. With
-`--check` it writes nothing and exits 1 when a copy differs, so a CI job catches a skill left
-behind by an upgrade.
+`.agents/skills/gyral` when that folder exists. `--dir <folder>` names others, relative to the app
+or absolute, such as a user-level `~/.claude/skills/gyral`. The version must match the installed
+`@gyral/core`, because each release's skill describes that release; it says which command to run
+when it doesn't. With `--check` it writes nothing and exits 1 when a copy differs, so a CI job
+catches a skill left behind by an upgrade.
+
+Each copy gets a `VERSION` file naming its release and the source it came from
+(`https://github.com/gyraljs/gyral/tree/v0.3.9/skills/gyral`), which `--check` compares like the
+skill's other files, so a vendored copy needs no note of its own saying which release it is.
+`skill` removes files the skill doesn't ship, except the ones an owner keeps at the top of a copy:
+`LICENSE` (or `LICENCE`), `NOTICE`, `COPYING`, `PINNED` and `SOURCE` (or `SOURCES`), with any
+extension or suffix (`NOTICE.txt`, `SOURCE-gyral.md`). Those are never compared. The skill is
+MIT-licensed, so a vendored copy carries Gyral's `LICENSE` and `NOTICE`.
 
 Other agents: copy
-[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.8/skills/gyral) into the agent's
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.9/skills/gyral) into the agent's
 skills or rules folder, or point it at `SKILL.md`.
 
 ## Docs for agents
@@ -1135,7 +1143,9 @@ export const Badge = define<Stateless, never, Props>()('my-badge', {
 ```
 
 - **Read props as context.** Every reducer and the view get `{ props }` as their last argument.
-  Don't copy props into state just to read them.
+  Don't copy props into state just to read them. `props` is the same object until a declared
+  prop's value changes, so a list row's [`pick`](https://gyral.dev/docs/views/#lists) may pass it on. Copy it
+  before you change anything in it.
 - **`required: true`** is a promise from the parent. A missing value logs one warning per
   instance at first render.
 - **`default`** is used whenever the element's own value is missing.
@@ -1775,8 +1785,11 @@ export const Board = define<{ readonly at: number }, Msg>()('my-board', {
 Bind the intent to the parser's event, with `data-intent-<event>` or `data-intent-on`, or rely on
 the element's own trigger. In development, a parser that another event reaches throws
 ([G0018](https://gyral.dev/errors/#G0018)), and the `gyral/intent-event` lint rule reports such a binding in your
-editor. Plain parsers keep `IntentInput`, and `on()` is a module of its own: an app that never
-calls it doesn't bundle it.
+editor. Plain parsers keep `IntentInput`, and `on()` is a module of its own, about 0.43 KiB gzip,
+paid once per app on its first use however many parsers use it: an app that never calls it
+doesn't bundle it. Test an `on()` parser without a DOM with `parse()` from `@gyral/testing`,
+which creates an event of the parser's type ([on() parsers in
+Node](https://gyral.dev/docs/testing/#on-parsers-in-node)).
 
 ## Parse, don't validate
 
@@ -2790,7 +2803,9 @@ rules runs in three places, with the same messages:
   leaves out two checks, on component tag names and custom-element attribute names, to stay
   small), naming where the template is written:
   `at src/cart.ts:12:5`. Under Vite, `gyral()` gives the exact file, line and column; elsewhere
-  they come from the stack trace. Hydration mismatches name it too.
+  they come from the stack trace. Hydration mismatches name it too. `gyral()` also has Vite
+  pre-bundle the development build of `@gyral/core`, so `vite dev` and Vitest's browser mode run
+  these checks in an app that installs Gyral from npm.
 - **ESLint**, in your editor, with `@gyral/core/eslint`:
 
 ```js
@@ -2929,7 +2944,8 @@ A `pick` that builds a nested value on every render, such as `() => ({ columns, 
 reference stable first: compute `columns` in `update` and keep it in state. Where that can't be
 done, pass options instead of a function, `each(items, key, row, { pick, equals })`, and `equals`
 compares the picked values in place of the one-level check. Keep it cheap: it runs for every row
-on every render.
+on every render. The view's `props` is already stable: it stays the same object until a declared
+prop's value changes, so a pick that passes it on, `(day) => ({ day, props })`, lets rows skip.
 
 - Keys are unique strings or numbers. A duplicate key is an error in development.
 - The ESLint rule `gyral/each-row-purity` names any variable a row reads from the view and
@@ -3589,8 +3605,11 @@ Reducers run as soon as a message arrives; the DOM updates in a microtask, once 
 messages that arrived together, parents before children. A component renders only when what its
 view reads has changed: its state, a declared prop or a declared store's value, each compared
 with `Object.is` against its last render. A message whose reducer returns the same state renders
-nothing, so a reducer with nothing to change returns `s` itself, not a copy. Element hooks then run, children
-before parents. In a test, `await settled()` waits
+nothing, so a reducer with nothing to change returns `s` itself, not a copy. A message that
+carries a new object each time, such as a sensor reading or a game's score snapshot, changes
+state by identity and renders even when its values are the same: drop repeats at the source, in
+the driver or with a [subscription's](https://gyral.dev/docs/outside-state/#subscription) `equals` and `select`.
+Element hooks then run, children before parents. In a test, `await settled()` waits
 until every component has rendered and messages have stopped arriving. See
 [Testing](https://gyral.dev/docs/testing/).
 
@@ -3603,6 +3622,15 @@ put it in state through a [command](https://gyral.dev/docs/effects/) first: a vi
 module variable or the DOM shows a stale value, because messages that change nothing it reads
 don't render it. In development, Gyral renders skipped views again to check, and warns once per
 component when one comes out different ([G0017](https://gyral.dev/errors/#G0017)).
+
+The check compares what the view renders, not object identities: plain objects and arrays
+compare by value. So a view may build values anew on every render when they come out equal:
+`each(s.items.map(…), …)`, `keyed(key, html…)`, `.data=${{ n: s.n }}` or
+`.items=${s.items.slice()}`. A `Date`, a `Set` or a class instance built in the view compares by
+reference, so it differs every time: keep it in state. The warning says where the view differs:
+in its template, or in the innermost `each(…, Row)` or `keyed(…)` that does. When that list's
+`pick` returned a new object for the same item, it says to pick only the fields the row reads,
+or to pass `each(items, key, row, { pick, equals })`.
 
 ---
 
@@ -5160,9 +5188,15 @@ window.addEventListener('error', (event) => {
 });
 ```
 
-Production builds report the same errors with short messages; the codes are explained on the
-[error codes](https://gyral.dev/errors/) page. For your own tooling, the same table (code, group, message,
-arguments, link) ships with the package as `@gyral/core/errors.json`:
+Development builds print each diagnostic in full, ending with its code and a link to its entry
+on the [error codes](https://gyral.dev/errors/) page: `… (G0010: https://gyral.dev/errors/#G0010)`. Production
+builds report the same errors with short messages:
+`Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010`. A test that matches a development
+message exactly (`toBe`, `toEqual`) includes that ending, or matches with `toContain`. Uncoded
+`gyral:` notices, such as a server-rendered element no client module defines, carry no code.
+
+For your own tooling, the same table (code, group, message, arguments, link) ships with the
+package as `@gyral/core/errors.json`:
 
 ```ts
 import table from '@gyral/core/errors.json' with { type: 'json' };
@@ -5239,9 +5273,10 @@ In a model test, `step()` accepts `Errored`, so you can test that reducer withou
 
 Start with the production diagnostic code, for example `Gyral G0010`. The
 [diagnostics reference](https://gyral.dev/errors/) expands it into the cause and a suggested fix. A development
-build includes the explanation; the [devtools panel](https://gyral.dev/docs/devtools/) shows the message,
-previous/next state, component and command lane around the failure. Inspect the underlying
-`GyralError.cause` without putting private user data into shared logs.
+build prints the full explanation, ending with the same code; the
+[devtools panel](https://gyral.dev/docs/devtools/) shows the message, previous/next state, component and command
+lane around the failure. Inspect the underlying `GyralError.cause` without putting private user
+data into shared logs.
 
 Distinguish three outcomes:
 
@@ -5929,7 +5964,9 @@ input are checked against them ([below](#a-store-per-page-provided-by-a-token)).
   each value first (a slice of a store's state), `equals` drops a value equal to the last one
   delivered (`equals: Object.is` for a store that hands out the same object when nothing
   changed), and `coalesce: 'microtask'` or `'frame'` delivers only the latest value per
-  microtask or animation frame. For a token `count = defineDriver<undefined, number>('count')`,
+  microtask or animation frame, the first one too: nothing arrives in the same turn as `emit`,
+  so a test awaits a microtask (or a frame) before it checks. Without `coalesce`, each value is
+  delivered at once. For a token `count = defineDriver<undefined, number>('count')`,
   `subscription(count, (emit) => store.subscribe(() => emit(store.getState())), { select: (s) => s.count, equals: Object.is })`
   delivers the store's `count` only when it changes.
 
@@ -5937,6 +5974,11 @@ For many values per frame (market data, sensors) into a view that takes real wor
 `coalesce: 'frame'` delivers only the latest one per animation frame. When the reducers need
 every value, list the message in the component's `renderOnFrame` instead: each message still
 reaches `update`, and the component renders once per frame.
+
+A component renders only when its state changes, but a value that is a new object each time
+(a sensor reading, a game's score snapshot) changes state by identity, so every one renders,
+even when its fields are the same. Drop repeats before they become messages: compare in the
+driver, or give the subscription an `equals` (with a `select` for the fields the view shows).
 
 ## Moves and reconnects
 
@@ -6469,7 +6511,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.8/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.9/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -6491,11 +6533,11 @@ With `clientOnly: true` the browser bundle carries no hydration code: no seed re
 hydration chunk, and when your app has no other `import()`, Vite's preload helper goes too. The
 fallback for [invoker commands](https://gyral.dev/docs/intent/#invoker-commands) stays only when a module may make
 a component listen for `command` intents ([what the build reads](#what-the-build-reads)).
-Measured on Gyral's examples (gzip, 0.3.8):
+Measured on Gyral's examples (gzip, 0.3.9):
 
 | App         | Default: first load | Default: all chunks | `clientOnly: true` |
 | ----------- | ------------------- | ------------------- | ------------------ |
-| hello-world | 9.70 KiB            | 12.14 KiB           | 8.60 KiB           |
+| hello-world | 9.69 KiB            | 12.14 KiB           | 8.60 KiB           |
 
 "First load" is what a page downloads before any lazy `import()`; in these examples a
 client-only build has nothing lazy left, so its first load is all of it.
@@ -6905,8 +6947,9 @@ to ship either, see [Deploying](https://gyral.dev/docs/deploying/).
 ## Development server
 
 `gyralDevServer()` from `@gyral/ssr/node` runs Vite in middleware mode, loads your server module
-through Vite (so edits show up), streams each response, and shows Vite's error overlay when a
-render throws:
+through Vite, streams each response, and shows Vite's error overlay when a render throws. An
+edit shows on the next request, a component's too: Vite runs the edited module again, and its
+`define()` replaces the spec the server renders, with its styles and CSP hashes:
 
 ```ts
 // scripts/dev.ts
@@ -6924,11 +6967,13 @@ console.log(`Listening on ${dev.url}`);
 after an edit) and set of components, not on every request, so keep per-request work inside the
 handler; a cache of your own around `app` isn't needed. `state` keeps a value, such as an
 in-memory database, across those reloads. Vite runs as a custom server here, so `gyral()`'s
-[`optimize: 'auto'`](https://gyral.dev/docs/packages/#the-vite-plugins) is on: it pre-bundles what your
-components import when the server starts.
+[`optimize: 'auto'`](https://gyral.dev/docs/packages/#the-vite-plugins) is on: when the server starts, it
+pre-bundles what your components, your client build's inputs and the modules listed in
+`components.modules` import.
 
 To run the same development server inside a Node server of your own, `gyralDevMiddleware()`
-takes the same options without `port` and `host` and returns `{ middleware, vite, close }`.
+takes the same options without `port` and `host` and returns `{ middleware, vite, close }`. It
+renders edited components on the next request too.
 Express and Connect take `middleware` with `app.use()`, and Fastify through `@fastify/middie`.
 It answers every request that reaches it, Vite's modules first and then your app, so mount your
 own routes before it.
@@ -7562,7 +7607,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -7748,7 +7793,7 @@ rendered, and hydrate in the browser. `gyral-rs` runs your app's own Gyral serve
 embedded V8 inside the Rust process. Node builds the bundles; the running server doesn't need
 it.
 
-`gyral-rs` is **experimental**. Version 0.6 accepts bundles built with Gyral **0.3.8** exactly,
+`gyral-rs` is **experimental**. Version 0.7 accepts bundles built with Gyral **0.3.9** exactly,
 and its tested target is Linux x86_64 (GNU) with Rust 1.99. Each `gyral-rs` minor accepts one
 Gyral release, so check its [changelog](https://github.com/gyraljs/gyral-rs/blob/main/CHANGELOG.md)
 before you upgrade Gyral in a Rust-served app.
@@ -8095,6 +8140,12 @@ For rendering, events and focus, test the real element in a real browser. Gyral'
 pre-bundle what your components and tests import before the first test runs, so Vitest doesn't
 reload the page partway through a run.
 
+`gyral()` also has Vite pre-bundle the development build of `@gyral/core`, so browser tests run
+Gyral's development checks (a [view that reads something else](https://gyral.dev/docs/views/#pure-means-repeatable),
+duplicate keys, impure rows, template rules, prop checks) and print each message in full. Some
+checks throw, such as a duplicate key or a broken template rule: the test fails with a message
+that names what to change.
+
 Gyral renders on a schedule: reducers run as soon as a message arrives, and the DOM updates in a
 microtask, once for every message that arrived together. **`await settled()`** from
 `@gyral/core` waits until every component on the page has rendered its latest state, including
@@ -8257,6 +8308,60 @@ it('steps with the arrows of its orientation', () => {
   expect(parse(FolderList, 'Step', { key: 'ArrowDown', event }, horizontal)).toBeUndefined();
 });
 ```
+
+### on() parsers in Node
+
+`parse()` needs no DOM for [`on()` parsers](https://gyral.dev/docs/intent/#parsers-typed-by-their-event) either,
+so they run in a Node test. The event it creates has the type the parser declares (`keydown` for
+`on('keydown', …)`) and carries `key`, so key filters work, and `modifiers` names the keys held
+(`{ ctrl: true }`; the others are up). Without a target, `valueAsNumber` reads `value`, and
+`control`, `form` and `origin` are `undefined`:
+
+```ts
+// src/note-editor.ts
+import { define, html, on } from '@gyral/core';
+
+export type Msg =
+  { readonly _tag: 'Save' } | { readonly _tag: 'Zoom'; readonly level: number | undefined };
+
+export const NoteEditor = define<{ readonly saves: number }, Msg>()('my-note-editor', {
+  init: () => ({ saves: 0 }),
+  intent: {
+    Save: on('keydown', { keys: ['s'], modifiers: { ctrl: true } }, () => ({ _tag: 'Save' })),
+    Zoom: on('input', (input) => ({ _tag: 'Zoom', level: input.valueAsNumber })),
+  },
+  update: { Save: (s) => ({ saves: s.saves + 1 }), Zoom: (s) => s },
+  view: (s, i) => html`
+    <label for="note">Note</label>
+    <textarea id="note" data-intent-keydown=${i.Save}></textarea>
+    <label for="zoom">Zoom</label>
+    <input id="zoom" type="range" data-intent-input=${i.Zoom} />
+    <output for="note">Saved ${s.saves} times</output>
+  `,
+});
+```
+
+```ts
+// src/note-editor.node.test.ts
+import { expect, it } from 'vitest';
+import { parse } from '@gyral/testing';
+import { NoteEditor } from './note-editor.js';
+
+it('saves on Ctrl+S only', () => {
+  expect(parse(NoteEditor, 'Save', { key: 's', modifiers: { ctrl: true } })).toEqual({
+    _tag: 'Save',
+  });
+  expect(parse(NoteEditor, 'Save', { key: 's' })).toBeUndefined(); // declined: Ctrl is up
+});
+
+it('reads the slider as a number', () => {
+  expect(parse(NoteEditor, 'Zoom', { value: '150' })).toEqual({ _tag: 'Zoom', level: 150 });
+});
+```
+
+`modifiers` applies only to the event `parse()` creates. To pass an `event` of your own, to read
+its `defaultPrevented` afterwards, say, set `ctrlKey` and the other modifier keys on it: `parse()`
+throws when it gets both.
 
 ## Fake drivers and commands
 
@@ -8576,10 +8681,10 @@ region with a real heading and keyboard-operable controls, in light and dark.
 ## Free in production
 
 The instrumentation lives in `@gyral/core`, behind a package-internal import with a
-`development` condition. Vite resolves that condition in the dev server and in Vitest, and the
-production one in `vite build`, where every call site is guarded by a constant `false`. The
-bundler drops the call sites and the module: a production build contains neither the hook nor
-its event code.
+`development` condition. Vite resolves that condition in the dev server and in Vitest (`gyral()`
+passes it to the dependency pre-bundle of an installed `@gyral/core` too), and the production one
+in `vite build`, where every call site is guarded by a constant `false`. The bundler drops the
+call sites and the module: a production build contains neither the hook nor its event code.
 
 With other bundlers, set the `development` resolve condition in development builds to get events.
 Without it you get the safe default: no events.
@@ -8797,7 +8902,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/platform-spikes-2026-10-11.md)
 records the results, fixtures and limits.
 
 ## Server rendering in another framework
@@ -9154,7 +9259,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.8/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.9/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page; the recipe is application code, not a Gyral
 export.
 
@@ -9246,15 +9351,20 @@ Reducers run immediately. One scheduler batches DOM work in a microtask, renders
 before children, and runs focus and other post-render work after the commit. A component
 renders only when its state, a declared prop or a declared store's value has changed since its
 last render, so a message whose reducer returns the same state costs no render: return `s`
-itself when nothing changes, not a copy. When a view does render, unchanged binding values do
-not rewrite the DOM. Keep views pure and deterministic: a view that reads anything else shows
-stale values, and development warns about it ([G0017](https://gyral.dev/errors/#G0017)).
+itself when nothing changes, not a copy. That helps only when `update` returns the same state:
+a message that carries a new object each time (a sensor reading, a game's score snapshot)
+renders on every arrival. For a high-rate source, drop repeats before they become messages, in
+the driver or with the subscription's `equals` and `select`. When a view does render, unchanged
+binding values do not rewrite the DOM. Keep views pure and deterministic: a view that reads
+anything else shows stale values, and development warns about it, naming where the view
+differs ([G0017](https://gyral.dev/errors/#G0017)).
 
 Use `each(items, key, row, pick?)` for lists that insert, remove or reorder items. It skips a
 row when its item reference and picked inputs are unchanged. Preserve unchanged objects in
 your reducers and put changing external row inputs in `pick`; do not capture outer view state
 in the row function. A `pick` that returns a new nested value every render defeats the check;
-make its references stable, or compare with `each(items, key, row, { pick, equals })`.
+make its references stable, or compare with `each(items, key, row, { pick, equals })`. The
+view's `props` is stable already: the same object until a declared prop's value changes.
 Development checks and the row-purity lint help detect mistakes. See
 [Views](https://gyral.dev/docs/views/#lists) and [Update](https://gyral.dev/docs/update/).
 
@@ -9315,7 +9425,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All ten
-packages are released together with the same version number (0.3.8), are ES modules with
+packages are released together with the same version number (0.3.9), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -9344,7 +9454,7 @@ Apps that do not import them carry no storage driver code.
 | `@gyral/testing`  | `step`, `run`, `viewOf`, `subscriptionsFor`, `outputsIn`, `mount`, `parse`, fake drivers, virtual time, `mountSsr` and `hydrated`. `@gyral/testing/vitest` renders server markup for browser tests.                                                                                    |
 | `@gyral/devtools` | The in-page devtools panel, for development builds.                                                                                                                                                                                                                                    |
 | `@gyral/mcp`      | An MCP server for coding agents: it searches these docs, looks up exact API signatures, reads the examples, scaffolds components and typechecks snippets against your project. Hosted at `https://mcp.gyral.dev/mcp`.                                                                  |
-| `@gyral/codemod`  | Rewrites an app's source for a release's API changes, `npx @gyral/codemod 0.3.8`, and lists what it leaves for you. Run it with `npx`; there is nothing to install.                                                                                                                    |
+| `@gyral/codemod`  | Rewrites an app's source for a release's API changes, such as 0.3.8's with `npx @gyral/codemod 0.3.8`, and lists what it leaves for you. Run it with `npx`; there is nothing to install.                                                                                               |
 
 ```sh
 npm install @gyral/http @gyral/router @gyral/time
@@ -9426,11 +9536,16 @@ export default defineConfig({
 - **Pre-bundling.** The dev server and Vitest pre-bundle the browser entry points of every
   Gyral package installed for the app, and of your direct dependencies that use Gyral (a design
   system, a widget library), all together, so they never load a second copy of `@gyral/core`
-  partway through a run. `gyral()` also warns once when `@gyral/core` is installed more than once
+  partway through a run. The pre-bundle is core's development build, with every development
+  check and full messages: `gyral()` gives Vite's dependency optimizer the environment's resolve
+  conditions (your `resolve.conditions`, or Vite's defaults with `development`), and an
+  `optimizeDeps.rolldownOptions.resolve.conditionNames` of your own wins. Production builds are
+  unaffected. `gyral()` also warns once when `@gyral/core` is installed more than once
   ([G0015](https://gyral.dev/errors/#G0015)): pin one version with your package manager's overrides.
-- **`optimize: 'auto'`** points Vite's startup scan at the modules that define components, and
-  at a Vitest browser project's tests, so Vite finds everything they import before the first
-  page or test loads instead of reloading partway through. It is on by default when Vite runs as
+- **`optimize: 'auto'`** points Vite's startup scan at the modules that define components, the
+  modules listed in `components.modules`, the client build's inputs and a Vitest browser
+  project's tests, so Vite finds everything they import before the first page or test loads
+  instead of reloading partway through. It is on by default when Vite runs as
   a custom server (`appType: 'custom'`, as the [development server](https://gyral.dev/docs/server-rendering/#development-server)
   does); set it yourself in a Vitest browser project. A list adds dependencies to pre-bundle,
   `gyral({ optimize: ['some-dep'] })`, and `optimize: false` turns the scan off.
@@ -9467,10 +9582,12 @@ export default [{ files: ['src/**/*.ts'], ...gyral.configs.recommended }];
 [`on()` parser](https://gyral.dev/docs/intent/#parsers-typed-by-their-event) bound to another event) as errors,
 and `gyral/unused-intent` and `gyral/prefer-built-in` as warnings. `gyral/prefer-built-in` finds
 hand-written versions of what Gyral has built in and names the built-in: a dialog opened with
-`showModal()` (`?modal`), `.focus()` in a driver (the `focus()` command), `JSON.parse` of an
-attribute or prop (`prop.json()`), a subscription that drops repeated values by hand (`equals`),
-a record of drivers outside tests (a list), and a parser that checks the event's type, modifier
-keys, `Number(value)` of a number input or `composedPath()[0]` (`on()`). It works without Vite.
+`showModal()` (`?modal`), `.focus()` in a driver on an element reached through a component's
+`shadowRoot` or `renderRoot` (the `focus()` command; a page element outside any component stays
+the driver's to focus), `JSON.parse` of an attribute or prop (`prop.json()`), a subscription
+that drops repeated values by hand (`equals`), a record of drivers outside tests (a list), and a
+parser that checks the event's type, modifier keys, `Number(value)` of a number input or
+`composedPath()[0]` (`on()`, about 0.43 KiB gzip once per app). It works without Vite.
 See [Views](https://gyral.dev/docs/views/#checked-before-it-runs) for what the template rules catch.
 
 ## Publishing a component library
@@ -9482,14 +9599,14 @@ version you develop against:
 
 ```json
 {
-  "peerDependencies": { "@gyral/core": "^0.3.8" },
-  "devDependencies": { "@gyral/core": "0.3.8" }
+  "peerDependencies": { "@gyral/core": "^0.3.9" },
+  "devDependencies": { "@gyral/core": "0.3.9" }
 }
 ```
 
 - **A peer, never a dependency.** A dependency pinned to one version installs a second core
   whenever the app has another one ([G0015](https://gyral.dev/errors/#G0015)); a peer uses the app's.
-- **A caret range**: `^0.3.8` is 0.3.8 up to, but not including, 0.4.0. Its lower bound is the
+- **A caret range**: `^0.3.9` is 0.3.9 up to, but not including, 0.4.0. Its lower bound is the
   oldest core you test against. Gyral's own packages pin core exactly because they use its
   internals; a library uses the public API, so any core in the range works. Other Gyral packages
   the library imports, such as `@gyral/http`, are caret peers too.
@@ -9502,7 +9619,7 @@ version you develop against:
   installed package that lists `@gyral/core`, as a peer too, for the features its components
   use ([what the build reads](https://gyral.dev/docs/rendering-modes/#what-the-build-reads)).
 - **Test against the range**: run the library's tests with the lowest core its range allows and
-  with the newest. `npx @gyral/mcp@0.3.8 skill --check` in its CI keeps the
+  with the newest. `npx @gyral/mcp@0.3.9 skill --check` in its CI keeps the
   [agent skill](https://gyral.dev/docs/coding-agents/#the-agent-skill) it carries on the version it develops
   against.
 
@@ -9516,13 +9633,13 @@ cancellation, concurrency lanes and retries.
 Apps ship only the features they use. `each`, `raw`, hooks, commands, stores and the prop builders
 register themselves when your code first calls them, so an app that never calls one doesn't
 bundle it, and the hydration code is a separate chunk that only server-rendered pages fetch.
-Measured on Gyral's examples at 0.3.8 (KiB gzip, production builds with `gyral()`):
+Measured on Gyral's examples at 0.3.9 (KiB gzip, production builds with `gyral()`):
 
 | App                      | First load | All chunks |
 | ------------------------ | ---------- | ---------- |
 | hello-world              | 9.7        | 12.1       |
 | hello-world, client-only | 8.6        | 8.6        |
-| isomorphic (SSR)         | 15.6       | 18.6       |
+| isomorphic (SSR)         | 15.6       | 18.7       |
 | no-js-first (SSR, forms) | 20.0       | 20.1       |
 
 "First load" is the entry chunk and what it imports statically: what a page downloads before any
@@ -9531,7 +9648,8 @@ lazy `import()`. The no-js-first example loads its components
 load counts what a page with every component preloads, the hydration chunk included. Builds leave
 out view transitions, the frame lane and custom states unless a module names their spec field (the
 build reads your code and the packages that depend on Gyral; see [what the build
-reads](https://gyral.dev/docs/rendering-modes/#what-the-build-reads)), `on()` is bundled only by apps that call it,
+reads](https://gyral.dev/docs/rendering-modes/#what-the-build-reads)), `on()` (about 0.43 KiB) is bundled only by
+apps that call it,
 and production builds print short
 [error codes](https://gyral.dev/errors/) instead of messages. [Error handling](https://gyral.dev/docs/error-handling/), which every
 app carries, costs about 0.75 KiB. The client-only row is the same app built with
@@ -9646,7 +9764,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -9664,7 +9782,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9698,8 +9816,8 @@ interchangeable dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.8/docs/references/public-api-0.3.1.md)
-records the public boundary of 0.3.8: every entry and what it exports.
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/public-api-0.3.1.md)
+records the public boundary of 0.3.9: every entry and what it exports.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version: keep every
 `@gyral/*` package your app installs on that one version. Gyral's packages take `@gyral/core` as a
@@ -9710,7 +9828,7 @@ of core throws [G0016](https://gyral.dev/errors/#G0016) in development. The
 
 ## Releases
 
-These guides describe **0.3.8**, the `latest` version on npm. Every package is published
+These guides describe **0.3.9**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -9719,7 +9837,7 @@ Deploy server output and client assets from the same build: stale HTML with new 
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
 Breaking changes wait for a new minor version, and that release gets an upgrade guide in these
-docs. On an older 0.3.x release? Install 0.3.8 and read the
+docs. On an older 0.3.x release? Install 0.3.9 and read the
 [core changelog](https://github.com/gyraljs/gyral/blob/main/packages/core/CHANGELOG.md).
 
 ## Upgrade with evidence
@@ -9727,25 +9845,30 @@ docs. On an older 0.3.x release? Install 0.3.8 and read the
 1. Read the changelogs for every release between yours and the target, and the upgrade guide
    when the target is a new minor version.
 2. Update packages together and install from the lockfile.
-3. Commit, then run `npx @gyral/codemod 0.3.8` from the app's directory. It moves code to
-   0.3.8's APIs wherever it can prove the rewrite safe: a spread-in `gyralVitePreset()` becomes
-   `plugins: [gyral()]`,
-   driver records outside tests become [lists](https://gyral.dev/docs/effects/#substituting-drivers), and
+3. Commit, then run `npx @gyral/codemod 0.3.8` from the app's directory, before or after you
+   install. It moves code from 0.3.7's APIs to the current ones wherever it can prove the
+   rewrite safe: a spread-in `gyralVitePreset()` becomes `plugins: [gyral()]`, driver records
+   outside tests become [lists](https://gyral.dev/docs/effects/#substituting-drivers), and
    `subscription('feed', …)` becomes `subscription(feed, …)` where the module declares the
-   `feed` token. It lists every candidate it leaves, with `file:line` and the reason, and only
-   writes into a clean git working tree (`--dry` prints the diff instead), so `git diff` shows
-   what it did.
+   `feed` token. An app on 0.3.8 has nothing to rewrite. A package whose `@gyral/core` is older
+   than 0.3.7 is left as it is, and reported once if it has code to rewrite: migrate it to 0.3.7
+   first. The codemod lists every candidate it leaves, with `file:line` and the reason, among
+   them driver records it can't follow (returned from a function, passed in
+   `defineStore({ drivers })` options) and `subscription('feed', …)` where `feed` is imported
+   from another module. It only writes into a clean git working tree (`--dry` prints the diff
+   instead), so `git diff` shows what it did.
 4. Run ESLint with `gyral.configs.recommended` from `@gyral/core/eslint`. `gyral/prefer-built-in`
    names code that a built-in replaces, such as a parser that checks modifier keys by hand
    (`on()`), and `gyral/intent-event` an `on()` parser bound to another event
    ([the rules](https://gyral.dev/docs/packages/#the-eslint-plugin)).
-5. Run typechecking, component/browser tests and the production build. In development, a view
-   that reads something besides its state, props and stores warns ([G0017](https://gyral.dev/errors/#G0017)),
+5. Run typechecking, component/browser tests and the production build. `vite dev` and browser
+   tests run Gyral's development checks, and some throw, naming what to change. A view that
+   reads something besides its state, props and stores warns ([G0017](https://gyral.dev/errors/#G0017)),
    because Gyral skips renders whose inputs are unchanged.
 6. Test server/client hydration, edited forms, routing and the production CSP if your app
    uses them. Check payload size for the pages whose loading matters.
 7. Update the agent skill your project carries:
-   `npx @gyral/mcp@0.3.8 skill` ([coding agents](https://gyral.dev/docs/coding-agents/#the-agent-skill)).
+   `npx @gyral/mcp@0.3.9 skill` ([coding agents](https://gyral.dev/docs/coding-agents/#the-agent-skill)).
 
 The generated [API reference](https://gyral.dev/docs/api/) describes the packages installed for this site's
 build. Consult the changelog for the exact version your app runs:
@@ -9764,7 +9887,7 @@ behavior. The repository's `pnpm check` is its release-quality gate.
 
 Source: https://gyral.dev/errors/
 
-Development builds of `@gyral/core` print each diagnostic in full. Production builds print a short line instead, so the message texts stay out of your bundle: `Gyral`, the code, the message’s arguments in order, and a link to this page.
+Development builds of `@gyral/core` print each diagnostic in full, ending with its code and a link to this page: `… (G0010: https://gyral.dev/errors/#G0010)`. Production builds print a short line instead, so the message texts stay out of your bundle: `Gyral`, the code, the message’s arguments in order, and the link.
 
 ```text
 Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
@@ -9772,7 +9895,7 @@ Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 
 Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.8, the version this site is built with; codes are never reused.
+The codes and messages are read from `@gyral/core` 0.3.9, the version this site is built with; codes are never reused.
 
 ## Components
 
@@ -9875,14 +9998,14 @@ A Gyral package (`@gyral/http`, `router`, `time`, `ssr`, `testing` or `devtools`
 ### G0017
 
 ```text
-<{tag}> rendered differently with the same state, props and stores, so its view reads something else, such as Date.now(), a module variable or the DOM. A component renders only when one of them changes (0.3.8): move what the view reads into state, a prop or a store.
+<{tag}> rendered differently with the same state, props and stores, so its view reads something else, such as Date.now(), a module variable or the DOM, or builds a value anew each render that is compared by reference (a Date, a Set, a class instance). It differs {where}. A component renders only when one of them changes (0.3.8): move what the view reads into state, a prop or a store.
 ```
 
-Arguments: `tag`.
+Arguments: `tag`, `where`.
 
-Development only: a component renders only when its state, a declared prop or a declared store’s value changes, and this one rendered differently when Gyral rendered a skipped view again to check it. So its view reads something else, such as `Date.now()`, `Math.random()`, a module variable or the DOM, and on the page it shows a stale value until one of its inputs changes. Development checks up to 50 skipped views per render pass (a different 50 each pass when more are skipped, so every component is checked within a few passes) and warns once per component.
+Development only: a component renders only when its state, a declared prop or a declared store’s value changes, and this one rendered differently when Gyral rendered a skipped view again to check it. So its view reads something else, such as `Date.now()`, `Math.random()`, a module variable or the DOM, and on the page it shows a stale value until one of its inputs changes. The check compares what the view renders, plain objects and arrays by value, so values a view builds anew each render match when they are equal; a `Date`, a `Set` or a class instance built in the view compares by reference, so it differs every time. `where` says where the view differs: `in its template`, or in the innermost `each(…, Row)` or `keyed(…)` that does, named by its row function. When that list’s `pick` returned a new object for the same item, the message says so. Development checks up to 50 skipped views per render pass (a different 50 each pass when more are skipped, so every component is checked within a few passes) and warns once per component.
 
-**Fix:** Move what the view reads into state (the time from an `every` subscription, a random value from a command), a prop or a store, so that a change to it renders the component ([Pure means repeatable](https://gyral.dev/docs/views/#pure-means-repeatable)).
+**Fix:** Move what the view reads into state (the time from an `every` subscription, a random value from a command, a `Date` built from a timestamp), a prop or a store, so that a change to it renders the component ([Pure means repeatable](https://gyral.dev/docs/views/#pure-means-repeatable)). When the message names a list’s `pick`, pick only the fields the row reads, or pass `each(items, key, row, { pick, equals })`.
 
 ### G0018
 
@@ -10202,19 +10325,19 @@ gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found
 
 Arguments: `host`, `path`, `expected`, `found`.
 
-The server’s HTML differs from the first client render, so the component can’t be hydrated in place. Development throws `HydrationMismatch`, naming the template’s file and line; production keeps the sentence (the component, the DOM path, what was expected and found), ends it with this code, and renders the component fresh (G0063).
+The server’s HTML differs from the first client render, so the component can’t be hydrated in place. Development throws `HydrationMismatch`, naming the template’s file and line; production keeps the sentence (the component, the DOM path, what was expected and found) and renders the component fresh (G0063). Both end the sentence with this code and its link.
 
 **Fix:** Make the view render the same on both sides: no `Date.now()`, random numbers or locale-dependent formatting in `view` (put them in state through a command). Also rule out a browser extension or script that changed the DOM before hydration, and a stale cached page.
 
 ### G0063
 
 ```text
-<{tag}> was rendered fresh after a hydration mismatch:
+<{tag}> was rendered fresh after a hydration mismatch.
 ```
 
 Arguments: `tag`.
 
-Production only: after a hydration mismatch (G0062, which follows in the same warning), Gyral cleared this component and rendered it fresh. The rest of the page stays hydrated, but this component flashes and redoes the server’s work.
+Production only: after a hydration mismatch, Gyral cleared this component and rendered it fresh. The warning prints this code with the component’s tag, then the mismatch’s own sentence, which ends with G0062. The rest of the page stays hydrated, but this component flashes and redoes the server’s work.
 
 **Fix:** Fix the mismatch the warning describes; reproducing it in development gives the full message and the template’s location.
 
@@ -12293,7 +12416,9 @@ interface SubscriptionOptions<E, V = never, O = V> {
 Driver options a subscription may set. `concurrency` defaults to `'switch'`. What reaches the
 component: `select` maps each emitted value first, `equals` drops a value equal
 to the last one delivered (`Object.is` is a common choice), and `coalesce` delivers only the
-latest value per microtask or animation frame. By default every emitted value is delivered.
+latest value per microtask or animation frame, the first one too: with `coalesce`, nothing
+arrives in the same turn as `emit`, so a test awaits a microtask (or a frame) before checking.
+By default every emitted value is delivered, synchronously.
 
 #### `Tagged`
 
@@ -12769,10 +12894,11 @@ interface GyralViteOptions {
    * Pre-bundling in dev, so Vite doesn't discover a dependency mid-run and reload. Gyral's
    * installed browser entry points, and those of the app's dependencies that use Gyral, are
    * always pre-bundled. A list adds more modules. `'auto'` points Vite's startup scan at the
-   * modules that define components (and, in a Vitest browser project, at its tests), so every
-   * dependency they import is pre-bundled up front; it is the default when Vite runs as a
-   * custom server (`appType: 'custom'`, as gyralDevServer does) and the config sets no
-   * `optimizeDeps.entries`. `false` turns that scan off.
+   * modules that define components (found, or listed in `components.modules`), at the client
+   * build's inputs and HTML pages (where Vite's own scan starts) and, in a Vitest browser
+   * project, at its tests, so every dependency they import is pre-bundled up front. It is the
+   * default when Vite runs as a custom server (`appType: 'custom'`, as gyralDevServer does)
+   * and the config sets no `optimizeDeps.entries`. `false` turns that scan off.
    */
   readonly optimize?: readonly string[] | 'auto' | false;
   /** Template compiler options (`vite build` only). */
@@ -14931,7 +15057,7 @@ Generated from the package's type declarations. Entry points: [`@gyral/testing`]
 | [`mount`](#testing-mount) | Creates `component` (a class from `define()` or a registered tag name), sets `props`, `attrs`, `drivers` and `stores`, appends it, and waits for its first render. |
 | [`mountSsr`](#testing-mountssr) | Mounts server output: a full document (head + body) or a body fragment. |
 | [`outputsIn`](#testing-outputsin) | The outputs the commands send to the parent component (`emit`, `outputs<O>()`), in order. |
-| [`parse`](#testing-parse) | Runs the parser of intent `name` with `input` (only the fields the parser reads are needed: `{ value: '3' }`, `{ key: 'Enter' }`, `{ detail }`). |
+| [`parse`](#testing-parse) | Runs the parser of intent `name` with `input` (only the fields the parser reads are needed: `{ value: '3' }`, `{ key: 'Enter', modifiers: { ctrl: true } }`, `{ detail }`). |
 | [`reject`](#testing-reject) | The message a command produces if its driver fails with `error` (already typed, i.e. |
 | [`resetDocumentStores`](#testing-resetdocumentstores) | Tests only: forget the document default so each test starts clean. |
 | [`resolve`](#testing-resolve) | The message a command produces if its driver succeeds with `output`. |
@@ -15109,14 +15235,15 @@ The outputs, typed by the union you name: `outputsIn<Out>(commands)`.
 function parse<S, M extends Tagged, P, N extends string, K extends N>(
   component: SpecOf<S, M, P, N>,
   name: K,
-  input: Partial<IntentInput> = {},
+  input: ParseInput = {},
   options: ParseOptions<NoInfer<S>, NoInfer<P>> = {},
 ): Parsed<M, K> | IntentRejected | undefined | Promise<Parsed<M, K> | IntentRejected | undefined>
 ```
 
 Runs the parser of intent `name` with `input` (only the fields the parser reads are needed:
-`{ value: '3' }`, `{ key: 'Enter' }`, `{ detail }`). Returns what the parser returns: a
-message, an `IntentRejected`, `undefined` (ignored or declined), or a promise of one.
+`{ value: '3' }`, `{ key: 'Enter', modifiers: { ctrl: true } }`, `{ detail }`). Returns what
+the parser returns: a message, an `IntentRejected`, `undefined` (ignored or declined), or a
+promise of one.
 
 #### `reject`
 
@@ -15241,6 +15368,7 @@ You rarely write most of these yourself: TypeScript infers them from the functio
 | [`MountedSsr`](#testing-mountedssr) |  |
 | [`MountOptions`](#testing-mountoptions) |  |
 | [`MountSsrOptions`](#testing-mountssroptions) |  |
+| [`ParseInput`](#testing-parseinput) | What `parse` passes the parser: the fields it reads, and the modifier keys held. |
 | [`ParseOptions`](#testing-parseoptions) | What `parse` passes the parser besides the input. |
 | [`Ran`](#testing-ran) |  |
 | [`RunOptions`](#testing-runoptions) |  |
@@ -15414,6 +15542,20 @@ interface MountSsrOptions {
 }
 ```
 
+
+#### `ParseInput`
+
+```ts
+interface ParseInput extends Partial<IntentInput> {
+  /**
+   * Modifier keys held (`{ ctrl: true }`; the others are up), set as `ctrlKey` and so on on the
+   * event `parse` creates. Your own `event` carries its own.
+   */
+  readonly modifiers?: Partial<Modifiers>;
+}
+```
+
+What `parse` passes the parser: the fields it reads, and the modifier keys held.
 
 #### `ParseOptions`
 
@@ -15787,7 +15929,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.8/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.9/docs/design-docs).
 
 ## The platform is the framework
 
