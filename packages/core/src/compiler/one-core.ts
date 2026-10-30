@@ -286,7 +286,8 @@ const SERVER_CONDITIONS: readonly string[] = ['module', 'node', 'development|pro
  * install it from npm ran without development checks. Rolldown gets the environment's own
  * conditions (the app's `resolve.conditions`, or Vite's defaults), with `development|production`
  * read as Vite reads it; it adds `import` or `require` itself. An app's own `conditionNames`
- * win. A `post` hook, so conditions other plugins add (`gyral-client-only`) are in.
+ * win. A `post` hook, so conditions other plugins add (`gyral-client-only`) are in. Reported
+ * upstream as vitejs/vite#23946; drop this once Vite resolves `#` imports with its conditions.
  */
 function prebundleConditions(
   name: string,
