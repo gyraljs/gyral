@@ -86,13 +86,50 @@ describe('search model', () => {
 - Stores: `stepStore(store, state, msg)`; `store.instance(initial?)` gives a fresh instance to
   pass in `stores`; `inputsFor(commands, store)` lists the messages a reducer `send()`s to it.
 - Calling a parser directly: `parse(Component, 'Intent', input, { props, state, stores })`
-  builds the `ctx` for you (no casts).
+  builds the `ctx` for you (no casts), in Node too, `on()` parsers included (below).
 - Calling a pure view in Node: `viewOf(Component, state, { props, stores })` supplies its
   named intents and context. Render it with `renderToString` from `@gyral/ssr`, passing
   `{ dev: false }` for stable HTML rather than stripping development markers with a regex.
   This tests the pure projection; use the browser for hooks, focus, validity and hydration.
 - Pure update functions make property tests easy with fast-check: generate messages, run
   `step`, assert invariants on the state.
+
+### Parsers, without a DOM
+
+`parse()` runs `on()` parsers in Node (Vitest's `node` environment, no browser project). The
+event it creates has the type the parser declares (`keydown` for `on('keydown', …)`) and carries
+`key`; `modifiers` names the keys held (`{ ctrl: true }`; the others are up). With no target,
+`valueAsNumber` reads `value`, and `control`, `form` and `origin` are `undefined`. To pass an
+`event` of your own (to check `defaultPrevented`, say), set `ctrlKey` and the rest on it:
+`modifiers` applies only to the event `parse()` creates.
+
+```ts
+import { expect, it } from 'vitest';
+import { define, html, on } from '@gyral/core';
+import { parse } from '@gyral/testing';
+
+type Msg =
+  { readonly _tag: 'Save' } | { readonly _tag: 'Volume'; readonly level: number | undefined };
+
+const Editor = define<{ readonly saves: number }, Msg>()('test-editor', {
+  init: () => ({ saves: 0 }),
+  intent: {
+    Save: on('keydown', { keys: ['s'], modifiers: { ctrl: true } }, () => ({ _tag: 'Save' })),
+    Volume: on('input', (input) => ({ _tag: 'Volume', level: input.valueAsNumber })),
+  },
+  update: { Save: (s) => ({ saves: s.saves + 1 }), Volume: (s) => s },
+  view: (_s, i) => html`
+    <textarea data-intent-keydown=${i.Save}></textarea>
+    <input type="range" data-intent-input=${i.Volume} />
+  `,
+});
+
+it('parses on() parsers without a DOM', () => {
+  expect(parse(Editor, 'Save', { key: 's', modifiers: { ctrl: true } })).toEqual({ _tag: 'Save' });
+  expect(parse(Editor, 'Save', { key: 's' })).toBeUndefined(); // declined: Ctrl is up
+  expect(parse(Editor, 'Volume', { value: '7' })).toEqual({ _tag: 'Volume', level: 7 });
+});
+```
 
 ## Element tests (browser)
 
@@ -194,7 +231,8 @@ it('loads the user when clicked', async () => {
   without a DOM or casts: the input needs only the fields the parser reads, `state` defaults to
   the initial state, and the result is typed by the parser (a message, `IntentRejected`, or
   `undefined` when it ignores or declines the event). Use it for parsers whose decision depends
-  on props or state (which keys a listbox takes over, when Tab leaves a grid).
+  on props or state (which keys a listbox takes over, when Tab leaves a grid), and for `on()`
+  parsers, with `{ key, modifiers }` ("Parsers, without a DOM" above).
 - Without `mount`, dispatch input events as the browser does: set `input.value`, then
   `input.dispatchEvent(new Event('input', { bubbles: true, composed: true }))`.
 

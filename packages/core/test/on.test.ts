@@ -126,3 +126,71 @@ describe('on()', () => {
     }
   });
 });
+
+// gyral-cd0 made on() run without a DOM (DOM classes feature-detected, a missing target and
+// composedPath() tolerated, the key read from the input): in the browser nothing changes.
+type FieldMsg =
+  | {
+      readonly _tag: 'Typed';
+      readonly n: number | undefined;
+      readonly control: string;
+      readonly form: string;
+      readonly origin: string;
+    }
+  | { readonly _tag: 'Sent'; readonly form: string; readonly control: boolean }
+  | { readonly _tag: 'Saved'; readonly ctrl: boolean };
+
+const Fields = define<{ readonly log: readonly FieldMsg[] }, FieldMsg>()('test-on-fields', {
+  init: () => ({ log: [] }),
+  intent: {
+    Typed: on('input', (input) => ({
+      _tag: 'Typed',
+      n: input.valueAsNumber,
+      control: input.control?.localName ?? '',
+      form: input.form?.id ?? '',
+      origin: input.origin?.localName ?? '',
+    })),
+    Sent: on('submit', (input) => ({
+      _tag: 'Sent',
+      form: input.form?.id ?? '',
+      control: input.control !== undefined,
+    })),
+    Saved: on('keydown', { keys: ['s'], modifiers: { ctrl: true } }, (input) => ({
+      _tag: 'Saved',
+      ctrl: input.modifiers.ctrl,
+    })),
+  },
+  update: {
+    Typed: (s, m) => ({ log: [...s.log, m] }),
+    Sent: (s, m) => ({ log: [...s.log, m] }),
+    Saved: (s, m) => ({ log: [...s.log, m] }),
+  },
+  view: (_s, i) => html`
+    <form id="note" data-intent-submit=${i.Sent}>
+      <input name="t" data-intent-input=${i.Typed} data-intent-keydown=${i.Saved} />
+      <button>Send</button>
+    </form>
+  `,
+});
+
+describe('on() in the browser', () => {
+  it('keeps a text input non-numeric, and reads the form, control, origin and key', async () => {
+    const el = new Fields();
+    document.body.append(el);
+    await settled();
+    const text = q(el, 'input') as HTMLInputElement;
+    text.value = '7';
+    text.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    for (const ctrlKey of [false, true]) {
+      const init = { key: 's', ctrlKey, bubbles: true, composed: true, cancelable: true };
+      text.dispatchEvent(new KeyboardEvent('keydown', init));
+    }
+    (q(el, 'form') as HTMLFormElement).requestSubmit();
+    await settled();
+    expect(el.state.log).toEqual([
+      { _tag: 'Typed', n: undefined, control: 'input', form: 'note', origin: 'input' },
+      { _tag: 'Saved', ctrl: true },
+      { _tag: 'Sent', form: 'note', control: false },
+    ]);
+  });
+});

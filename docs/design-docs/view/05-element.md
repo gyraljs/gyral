@@ -534,6 +534,12 @@ it: custom states today, form association later.
   `ISLAND_ATTRIBUTE`) from `view/attributes.ts`; a test checks they match the client's.
   `@gyral/core/internal/server` calls `registerRecordedSpecs()` before each render; it registers only
   specs not registered yet.
+- A tag defined again without a DOM keeps its first spec, as `customElements` does, until
+  `replaceDefinitions()` (`@gyral/core/internal/server`, gyral-ejc). `gyralDevServer` calls it,
+  because Vite runs an edited component module again: from then on a later definition replaces
+  the recorded spec, and `registerRecordedSpecs()` rebuilds that tag's entry
+  (`registerServerComponent(c, true)` replaces it and bumps the registry version, so CSP caches
+  refresh).
 
 ## Native primitives
 

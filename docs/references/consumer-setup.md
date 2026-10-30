@@ -347,9 +347,11 @@ the body never repeats a module, stylesheet or script the head already links. De
 
 `gyralDevServer({ entry: '/server/app.ts', app })` (`@gyral/ssr/node`) is the development
 server: Vite serves client modules and HMR, and every other request goes to your server
-module, loaded through Vite, and streams its response. Since 0.3.8 `app` builds the handler
-once per module version (Vite loads a new one after an edit) and component set, not per
-request, so keep per-request work inside the handler; `state` keeps in-memory data across
+module, loaded through Vite, and streams its response. An edit shows on the next request, a
+component's too (0.3.9: Vite runs the edited module again, and its `define()` replaces the spec
+the server renders; before, the first definition stayed until a restart). Since 0.3.8 `app`
+builds the handler once per module version (Vite loads a new one after an edit) and component
+set, not per request, so keep per-request work inside the handler; `state` keeps in-memory data across
 reloads, and a render error shows Vite's error overlay. `gyralDevMiddleware` (0.3.8) is the
 same as a Connect-style handler for a server of your own: Express and Connect take
 `dev.middleware` with `app.use()`, Fastify through `@fastify/middie`. It answers every request

@@ -48,6 +48,41 @@ expect(parse(Search, 'Key', { key: 'Escape' }, { state: { open: true } })).toEqu
 });
 ```
 
+`parse` needs no DOM, so `on()` parsers run in a Node test too. The event it creates has the
+type the parser declares (`keydown` for `on('keydown', …)`) and carries `key`; `modifiers` names
+the keys held (`{ ctrl: true }`; the others are up). With no target, `valueAsNumber` reads
+`value`, and `control`, `form` and `origin` are `undefined`. To pass an `event` of your own (to
+check `defaultPrevented`, say), set `ctrlKey` and the rest on it: `modifiers` applies only to the
+event `parse` creates.
+
+```ts
+import { expect, it } from 'vitest';
+import { define, html, on } from '@gyral/core';
+import { parse } from '@gyral/testing';
+
+type Msg =
+  { readonly _tag: 'Save' } | { readonly _tag: 'Volume'; readonly level: number | undefined };
+
+const Editor = define<{ readonly saves: number }, Msg>()('test-editor', {
+  init: () => ({ saves: 0 }),
+  intent: {
+    Save: on('keydown', { keys: ['s'], modifiers: { ctrl: true } }, () => ({ _tag: 'Save' })),
+    Volume: on('input', (input) => ({ _tag: 'Volume', level: input.valueAsNumber })),
+  },
+  update: { Save: (s) => ({ saves: s.saves + 1 }), Volume: (s) => s },
+  view: (_s, i) => html`
+    <textarea data-intent-keydown=${i.Save}></textarea>
+    <input type="range" data-intent-input=${i.Volume} />
+  `,
+});
+
+it('parses on() parsers without a DOM', () => {
+  expect(parse(Editor, 'Save', { key: 's', modifiers: { ctrl: true } })).toEqual({ _tag: 'Save' });
+  expect(parse(Editor, 'Save', { key: 's' })).toBeUndefined(); // declined: Ctrl is up
+  expect(parse(Editor, 'Volume', { value: '7' })).toEqual({ _tag: 'Volume', level: 7 });
+});
+```
+
 Without `mount`, append the element, dispatch events, then `await settled()` (from
 `@gyral/core`) before you check the DOM: it
 waits until every component has rendered and messages have stopped arriving (streams that

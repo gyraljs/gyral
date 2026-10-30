@@ -1,11 +1,11 @@
 /// <reference types="node" />
 // `gyralDevServer` (ADR 0016 addendum "Development server"): the development server every SSR
 // app used to write by hand. Vite serves client modules in middleware mode; every other request
-// is server-rendered by the app module, which Vite reloads after an edit (edits show at once),
-// streamed through `toNodeListener`. The app is built once per module version and component
-// set, not per request (gyral-337.12). `gyralDevMiddleware` is the same without the HTTP
-// server, for an Express, Connect or Fastify app of its own. Exported from `@gyral/ssr/node`;
-// Vite loads on first use.
+// is server-rendered by the app module, which Vite reloads after an edit (edits show at once,
+// components' too: a later define() replaces the spec, gyral-ejc), streamed through
+// `toNodeListener`. The app is built once per module version and component set, not per request
+// (gyral-337.12). `gyralDevMiddleware` is the same without the HTTP server, for an Express,
+// Connect or Fastify app of its own. Exported from `@gyral/ssr/node`; Vite loads on first use.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { InlineConfig, ViteDevServer } from 'vite';
@@ -100,6 +100,19 @@ function devComponents(vite: ViteDevServer): (() => ComponentAssets) | undefined
   });
 }
 
+/**
+ * Lets a later define() of a tag replace its spec in the core the app's modules use (gyral-ejc):
+ * Vite runs an edited component module again, and the next render must use its new spec. That
+ * core is the one Vite loads for them (inlined when linked, else Node's), so it is loaded through
+ * Vite, not imported here.
+ */
+async function replaceDefinitions(vite: ViteDevServer): Promise<void> {
+  const core = (await vite.ssrLoadModule('@gyral/core/internal/server')) as {
+    readonly replaceDefinitions?: () => void;
+  };
+  core.replaceDefinitions?.();
+}
+
 /** A JSON value safe inside `<script>`. */
 const scriptJson = (value: unknown): string => JSON.stringify(value).replace(/</g, '\\u003c');
 
@@ -144,11 +157,16 @@ export async function gyralDevMiddleware<M, S = undefined>(
     },
   });
   const components = devComponents(vite);
+  let replacing = false;
   let shared: { readonly value: S } | undefined;
   let built: { readonly module: M; readonly tags: string; readonly app: DevApp } | undefined;
   const listener = toNodeListener(
     async (request, env) => {
       try {
+        if (!replacing) {
+          await replaceDefinitions(vite); // idempotent: two first requests may both call it
+          replacing = true;
+        }
         const module = (await vite.ssrLoadModule(options.entry)) as M;
         shared ??= {
           value: (options.state === undefined ? undefined : options.state(module)) as S,

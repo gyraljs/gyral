@@ -7,10 +7,22 @@
 export type RecordedSpec = object;
 
 const specs = new Map<string, RecordedSpec>();
+let replacing = false;
 
-/** define() without a DOM: remember `spec` under `tag` (first definition wins). */
+/**
+ * define() without a DOM: remember `spec` under `tag`. The first definition wins, as with
+ * `customElements`, except after `replaceDefinitions()`.
+ */
 export function recordSpec(tag: string, spec: RecordedSpec): void {
-  if (!specs.has(tag)) specs.set(tag, spec);
+  if (replacing || !specs.has(tag)) specs.set(tag, spec);
+}
+
+/**
+ * From now on a later define() of a tag replaces its spec (gyral-ejc). `gyralDevServer` calls
+ * it: Vite runs an edited component module again, and its define() carries the new spec.
+ */
+export function replaceDefinitions(): void {
+  replacing = true;
 }
 
 /** Every recorded spec, by tag. */
