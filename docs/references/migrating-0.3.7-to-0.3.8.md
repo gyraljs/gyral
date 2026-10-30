@@ -20,7 +20,8 @@ addendum (the third).
 - **An `on()` parser reached by another event (G0018 in development; `gyral/intent-event` in
   ESLint's recommended config):** bind the intent to the parser's event.
 - **Hand-written built-ins (`gyral/prefer-built-in`, warnings in ESLint's recommended config):**
-  `showModal()` (use `?modal`), `.focus()` in a driver (`focus()`), `JSON.parse` of an attribute
+  `showModal()` (use `?modal`), `.focus()` in a driver on an element in a component's shadow
+  root (`focus()`; since 0.3.9 a page element is left alone), `JSON.parse` of an attribute
   or prop (`prop.json()`), subscription dedupe (`equals`), driver records outside tests (a list),
   and parsers that check the event type, modifiers, `Number(value)` or `composedPath()[0]`
   (`on()`). Each warning names the built-in.

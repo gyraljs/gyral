@@ -46,6 +46,9 @@ describe('gyral/prefer-built-in', () => {
     ],
   });
 
+  // gyral-um2: focus(selector) searches the component's own root, so only a driver that reaches
+  // into one (through a shadow or render root) is doing by hand what the command does. A page
+  // element (document.querySelector, getElementById), or one the driver is handed, is its own.
   tester.run('focus', preferBuiltInRule, {
     valid: [
       // Outside a driver: a hook, a plain function.
@@ -53,22 +56,30 @@ describe('gyral/prefer-built-in', () => {
       // A window's focus (a popup's, a frame's), which focus(selector) can't do.
       `${IMPORT}defineDriver({ name: 'popup', run: (url) => { const popup = window.open(url); popup.focus(); window.focus(); frame.contentWindow.focus(); } });`,
       // Not Gyral's defineDriver, and provide() in a module without Gyral (Vue's app.provide).
-      "import { defineDriver } from 'elsewhere';\ndefineDriver({ run: (s) => document.querySelector(s).focus() });",
-      'app.provide((s) => document.querySelector(s).focus());',
+      "import { defineDriver } from 'elsewhere';\ndefineDriver({ run: (s) => document.querySelector(s).shadowRoot.querySelector('input').focus() });",
+      "app.provide((s) => document.querySelector('x-a').shadowRoot.querySelector(s).focus());",
+      // Page lookups: elements outside any component, which focus(selector) can't reach.
+      `${IMPORT}defineDriver({ name: 'focus', run: (selector) => { document.querySelector(selector)?.focus(); } });`,
+      `${IMPORT}defineDriver({ name: 'main', run(id) { requestAnimationFrame(() => document.getElementById(id).focus()); } });`,
+      `${IMPORT}const field = defineDriver('field');\nexport const live = field.provide((s) => { const el = document.querySelector(s); el.focus({ preventScroll: true }); });`,
+      // An element the driver is handed, found by the intent in the page's root (football's
+      // pool-find-me row and pool-me-invite heading).
+      `${IMPORT}const jumpTo = defineDriver({ name: 'jump', run: (row) => { row.scrollIntoView({ block: 'center' }); row.focus({ preventScroll: true }); } });`,
+      `${IMPORT}defineDriver({ name: 'heading', run: ({ heading }) => heading.focus() });`,
     ],
     invalid: [
       {
-        code: `${IMPORT}defineDriver({ name: 'focus', run: (selector) => { document.querySelector(selector)?.focus(); } });`,
+        code: `${IMPORT}defineDriver({ name: 'focus', run: (selector) => { document.querySelector('app-shell')?.shadowRoot?.querySelector(selector)?.focus(); } });`,
         errors: [{ messageId: 'focus' }],
       },
       {
-        // A method, focusing in a nested callback.
-        code: `${IMPORT}defineDriver({ name: 'focus', run(id) { requestAnimationFrame(() => document.getElementById(id).focus()); } });`,
+        // A method, focusing in a nested callback, through a local name for the root.
+        code: `${IMPORT}defineDriver({ name: 'focus', run(id) { const root = document.querySelector('x-form').shadowRoot; requestAnimationFrame(() => root.getElementById(id).focus()); } });`,
         errors: [{ messageId: 'focus' }],
       },
       {
-        // token.provide(run), and a run bound in the module.
-        code: `${IMPORT}const field = defineDriver('field');\nexport const live = field.provide((s) => { document.querySelector(s).focus({ preventScroll: true }); });\nfunction run(s) { document.querySelector(s).focus(); }\ndefineDriver({ name: 'f', run });`,
+        // token.provide(run), a render root, and a run bound in the module.
+        code: `${IMPORT}const field = defineDriver('field');\nexport const live = field.provide((s) => { host.renderRoot.querySelector(s).focus({ preventScroll: true }); });\nfunction run(s) { const input = el.shadowRoot.querySelector(s); input.focus(); }\ndefineDriver({ name: 'f', run });`,
         errors: [{ messageId: 'focus' }, { messageId: 'focus' }],
       },
     ],

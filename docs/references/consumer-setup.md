@@ -211,7 +211,9 @@ and `gyral/each-row-purity` (`each` rows read only their arguments; keys require
 errors, `gyral/intent-event` (an `on('event')` parser bound to another event; 0.3.8) as an
 error, `gyral/unused-intent` (an intent parser no template in the module names; 0.3.1) as a
 warning, and `gyral/prefer-built-in` (0.3.8) as warnings, each naming the built-in to use: a
-dialog opened with `showModal()` (`?modal`), `.focus()` in a driver (`focus(selector)`),
+dialog opened with `showModal()` (`?modal`), `.focus()` in a driver on an element inside a
+component's shadow root (`focus(selector)`; a page element outside any component is the
+driver's to focus, since 0.3.9),
 `JSON.parse` of an attribute or prop (`prop.json()`), a subscription that drops repeats by hand
 (`equals`), a record of drivers outside tests (a list), and a parser that checks the event's
 type, modifier keys, `Number(value)` or `composedPath()[0]` (`on()`). If your templates come

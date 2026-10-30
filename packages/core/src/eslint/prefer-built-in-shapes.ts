@@ -108,6 +108,30 @@ export function enclosing<V>(node: Node, map: ReadonlyMap<Node, V>): V | undefin
   return undefined;
 }
 
+const ROOTS = new Set(['shadowRoot', 'renderRoot']);
+
+/**
+ * Whether `node` is reached through a component's shadow or render root (`x.shadowRoot`,
+ * `host.renderRoot.querySelector(s)`, or a local name for one): what focus(selector) searches.
+ * A page lookup (`document.querySelector`) or an element the driver is handed is not (gyral-um2).
+ */
+export function inComponentRoot(context: Rule.RuleContext, node: Node, depth = 0): boolean {
+  const n = unwrap(node);
+  if (depth > 8) return false;
+  if (n.type === 'MemberExpression') {
+    const name = memberName(n);
+    return (
+      (name !== undefined && ROOTS.has(name)) ||
+      inComponentRoot(context, n.object as Node, depth + 1)
+    );
+  }
+  if (n.type === 'CallExpression') return inComponentRoot(context, n.callee as Node, depth + 1);
+  if (n.type !== 'Identifier') return false;
+  const def = findVariable(context.sourceCode.getScope(n), n.name)?.defs[0];
+  const init = def?.type === 'Variable' ? (def.node.init as Node | null) : null;
+  return init !== null && inComponentRoot(context, init, depth + 1);
+}
+
 const WINDOWS = new Set(['window', 'self', 'globalThis', 'top', 'parent', 'opener', 'frames']);
 const OPEN = new Set(['open']);
 
