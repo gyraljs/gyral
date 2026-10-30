@@ -1,7 +1,8 @@
 /// <reference types="node" />
 // A whole run: check the working tree, read every module under the paths, transform it, keep it
-// formatted with the app's Prettier, then write it (or diff it, with `dry`). A module whose
-// package has an older @gyral/core than the release is left, and reported (./core-version.ts).
+// formatted with the app's Prettier, then write it (or diff it, with `dry`). A package whose
+// @gyral/core is older than the release migrates from is left, and reported once
+// (./core-version.ts).
 import { readFile, writeFile } from 'node:fs/promises';
 import { createTwoFilesPatch, FILE_HEADERS_ONLY } from 'diff';
 import { coreVersions, olderThan, type CoreVersion } from './core-version.js';
@@ -69,22 +70,30 @@ function safely(release: string, code: string, file: string): FileResult {
   }
 }
 
-/** The finding for a module whose package's @gyral/core is older than `release`. */
-function tooOld(file: string, core: CoreVersion, release: string, cwd: string): Finding {
-  const manifest = displayPath(core.manifest, cwd);
-  const where = core.installed
-    ? `installed for ${manifest}`
-    : `declared in ${manifest}, not installed`;
+/** A package left as is, and how many of its modules had something to rewrite. */
+interface Skipped {
+  readonly core: CoreVersion;
+  modules: number;
+}
+
+/**
+ * The one finding for a package whose @gyral/core is older than `from`, the version the
+ * release's transforms migrate from (gyral-w2j), named by its package.json.
+ */
+function tooOld(release: string, from: string, { core, modules }: Skipped, cwd: string): Finding {
+  const where = core.installed ? 'installed' : 'declared, not installed';
+  const count = modules === 1 ? '1 module' : `${String(modules)} modules`;
   const reason =
     `left as is: this package's @gyral/core is ${core.version} (${where}), and the ${release} ` +
-    `rewrites need ${release}. Upgrade it, then run the codemod again`;
-  return { file, line: 0, transform: 'core-version', reason };
+    `rewrites start from ${from}: migrate it to ${from} first (${count} to rewrite)`;
+  return { file: displayPath(core.manifest, cwd), line: 0, transform: 'core-version', reason };
 }
 
 /** Runs a release's transforms over every module under `paths`. */
 export async function runCodemod(options: CodemodOptions): Promise<CodemodResult> {
   const { release, paths = ['.'], cwd = process.cwd(), dry = false, force = false } = options;
-  if (RELEASES[release] === undefined) {
+  const from = RELEASES[release]?.from;
+  if (from === undefined) {
     return {
       ok: false,
       error: `no transforms for release "${release}" (known: ${releases.join(', ')})`,
@@ -109,13 +118,17 @@ export async function runCodemod(options: CodemodOptions): Promise<CodemodResult
   let diff = '';
   let prettier: Promise<Prettier | undefined> | undefined;
   const coreOf = coreVersions();
+  const skipped = new Map<string, Skipped>();
   for (const absolute of files) {
     const file = displayPath(absolute, cwd);
     const result = safely(release, await readFile(absolute, 'utf8'), file);
     const core = coreOf(absolute);
-    if (core !== undefined && olderThan(core, release)) {
-      const candidates = result.after !== result.before || result.findings.length > 0;
-      if (candidates) findings.push(tooOld(file, core, release, cwd));
+    if (core !== undefined && olderThan(core, from)) {
+      if (result.after !== result.before || result.findings.length > 0) {
+        const entry = skipped.get(core.manifest) ?? { core, modules: 0 };
+        entry.modules += 1;
+        skipped.set(core.manifest, entry);
+      }
       continue;
     }
     findings.push(...result.findings);
@@ -128,5 +141,6 @@ export async function runCodemod(options: CodemodOptions): Promise<CodemodResult
     if (dry) diff += unifiedDiff(file, result.before, after);
     else await writeFile(absolute, after);
   }
+  for (const entry of skipped.values()) findings.push(tooOld(release, from, entry, cwd));
   return { ok: true, files: files.length, changed, unformatted, findings, diff };
 }

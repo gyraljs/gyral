@@ -9,8 +9,7 @@ code only where it can prove the rewrite safe, and lists every candidate it leav
 
 ## Usage
 
-Upgrade the app's `@gyral/*` packages to the release and install them, commit your work, then
-run it from the app's directory:
+Commit your work first, then run it from the app's directory:
 
 ```sh
 npx @gyral/codemod 0.3.8          # rewrite every module under .
@@ -25,13 +24,13 @@ git diff                          # review what it changed
   so `git diff` shows exactly what it changed and `git checkout .` undoes it. `--force` writes
   anyway, also outside a git repository. `--dry` never writes, so it runs on any tree.
 - Running it a second time changes nothing.
-- It leaves a module whose package has an older `@gyral/core` than the release, because the
-  rewrites use that release's API (0.3.8's `gyral()` doesn't exist in 0.3.0), and reports each
-  one that had something to rewrite: "left as is: this package's @gyral/core is 0.3.0". The
-  package is the module's nearest `package.json`; its core is the one Node finds from there,
-  else the lowest version its declared range allows (`^0.3.7` counts as 0.3.7). A module
-  whose core it can't tell is rewritten.
-- It exits 0 when it ran, whatever it found; the report goes to stdout.
+- It runs before or after you install the release. Each release's transforms rewrite the API
+  of the release they migrate from (0.3.8's: 0.3.7), so it leaves a package whose `@gyral/core`
+  is older than that, and reports it once if any of its modules had something to rewrite:
+  "left as is: this package's @gyral/core is 0.3.0 (installed), and the 0.3.8 rewrites start
+  from 0.3.7: migrate it to 0.3.7 first". The package is the module's nearest `package.json`;
+  its core is the one Node finds from there, else the lowest version its declared range allows
+  (`^0.3.0` counts as 0.3.0). A module whose core it can't tell is rewritten.
 - It parses with [@babel/parser](https://babel.dev/docs/babel-parser) and edits text ranges,
   so code it doesn't touch keeps its formatting. It never loads your app's TypeScript, and it
   imports no Gyral package, so it works whatever Gyral version the app has installed.

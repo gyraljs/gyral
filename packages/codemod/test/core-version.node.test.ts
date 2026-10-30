@@ -1,7 +1,8 @@
 /// <reference types="node" />
-// gyral-w2j: a release's rewrites use that release's API (gyral() is new in 0.3.8), so the
-// codemod leaves, and reports, the modules of a package whose @gyral/core is older: found from
-// the module's nearest package.json, installed first, else declared.
+// gyral-w2j: a release's transforms rewrite the API of the release they migrate from (0.3.8's:
+// 0.3.7's gyralVitePreset() into gyral(), which 0.3.0 doesn't export), so the codemod leaves, and
+// reports once, a package whose @gyral/core is older than that: found from the module's nearest
+// package.json, installed first, else declared. 0.3.7 and 0.3.8 are both rewritten.
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -45,51 +46,58 @@ async function dry(): Promise<{ changed: readonly string[]; findings: readonly s
   return { changed: result.changed, findings };
 }
 
-it('leaves the modules of a package whose installed @gyral/core is older, and says why', async () => {
+it('rewrites a package on 0.3.7 or 0.3.8, and leaves an older one, reported once', async () => {
   await write({
     'old/package.json': manifest('0.3.0'),
     'old/node_modules/@gyral/core/package.json': installed('0.3.0'),
     'old/vite.config.ts': VITE_CONFIG,
-    'old/src/util.ts': UTIL, // nothing to rewrite, so nothing to report
+    'old/site/vite.config.ts': VITE_CONFIG,
+    'old/src/util.ts': UTIL, // nothing to rewrite
+    'from/package.json': manifest('0.3.7'),
+    'from/node_modules/@gyral/core/package.json': installed('0.3.7'),
+    'from/vite.config.ts': VITE_CONFIG,
     'new/package.json': manifest('0.3.8'),
     'new/node_modules/@gyral/core/package.json': installed('0.3.8'),
     'new/vite.config.ts': VITE_CONFIG,
+    'quiet/package.json': manifest('0.3.0'),
+    'quiet/src/util.ts': UTIL, // an old package with nothing to rewrite isn't reported
   });
   expect(await dry()).toEqual({
-    changed: ['new/vite.config.ts'],
+    changed: ['from/vite.config.ts', 'new/vite.config.ts'],
     findings: [
-      "old/vite.config.ts [core-version] left as is: this package's @gyral/core is 0.3.0 " +
-        '(installed for old/package.json), and the 0.3.8 rewrites need 0.3.8. Upgrade it, ' +
-        'then run the codemod again',
+      "old/package.json [core-version] left as is: this package's @gyral/core is 0.3.0 " +
+        '(installed), and the 0.3.8 rewrites start from 0.3.7: migrate it to 0.3.7 first ' +
+        '(2 modules to rewrite)',
     ],
   });
 });
 
 it('reads the installed version first, then the declared one, and the lookup Node does', async () => {
   await write({
-    // Declared ^0.3.0, installed 0.3.8: what runs is 0.3.8.
+    // Declared ^0.3.0, installed 0.3.7: what runs is 0.3.7.
     'ranged/package.json': manifest('^0.3.0'),
-    'ranged/node_modules/@gyral/core/package.json': installed('0.3.8'),
+    'ranged/node_modules/@gyral/core/package.json': installed('0.3.7'),
     'ranged/vite.config.ts': VITE_CONFIG,
     // Nothing installed yet: the lowest version the declared range allows.
     'fresh/package.json': manifest('~0.3.7'),
     'fresh/vite.config.ts': VITE_CONFIG,
+    'stale/package.json': manifest('^0.3.0'),
+    'stale/vite.config.ts': VITE_CONFIG,
     // A workspace package declaring nothing, with core installed (hoisted) at the root.
     'mono/package.json': manifest(),
-    'mono/node_modules/@gyral/core/package.json': installed('0.3.7'),
+    'mono/node_modules/@gyral/core/package.json': installed('0.3.6'),
     'mono/packages/site/package.json': manifest(),
     'mono/packages/site/vite.config.ts': VITE_CONFIG,
   });
   const { changed, findings } = await dry();
-  expect(changed).toEqual(['ranged/vite.config.ts']);
+  expect(changed).toEqual(['fresh/vite.config.ts', 'ranged/vite.config.ts']);
   expect(findings).toEqual([
-    "fresh/vite.config.ts [core-version] left as is: this package's @gyral/core is ~0.3.7 " +
-      '(declared in fresh/package.json, not installed), and the 0.3.8 rewrites need 0.3.8. ' +
-      'Upgrade it, then run the codemod again',
-    "mono/packages/site/vite.config.ts [core-version] left as is: this package's @gyral/core " +
-      'is 0.3.7 (installed for mono/packages/site/package.json), and the 0.3.8 rewrites need ' +
-      '0.3.8. ' +
-      'Upgrade it, then run the codemod again',
+    "mono/packages/site/package.json [core-version] left as is: this package's @gyral/core is " +
+      '0.3.6 (installed), and the 0.3.8 rewrites start from 0.3.7: migrate it to 0.3.7 first ' +
+      '(1 module to rewrite)',
+    "stale/package.json [core-version] left as is: this package's @gyral/core is ^0.3.0 " +
+      '(declared, not installed), and the 0.3.8 rewrites start from 0.3.7: migrate it to 0.3.7 ' +
+      'first (1 module to rewrite)',
   ]);
 });
 

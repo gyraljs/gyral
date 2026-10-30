@@ -63,8 +63,7 @@ addendum (the third).
 - **`gyral()`** (`@gyral/core/vite`): `plugins: [gyral(), mine()]` replaces
   `...gyralVitePreset()` and the hand-merged `...preset.plugins`; the preset still works through
   0.3.x. `npx @gyral/codemod 0.3.8` rewrites both where it can prove the result the same, and
-  lists the rest. Run it after installing 0.3.8: since 0.3.9 it leaves, and reports, the modules
-  of a package whose `@gyral/core` is older than the release.
+  lists the rest.
 - **`optimize: 'auto'`**: pre-bundles what the modules defining components import, and a
   Vitest browser project's tests, at startup. On by default for a custom server (`gyralDevServer`).
 - **`gyralDevMiddleware`** (`@gyral/ssr/node`): the dev server inside an Express, Connect or

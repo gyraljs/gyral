@@ -1,8 +1,9 @@
 /// <reference types="node" />
-// The @gyral/core a module runs with (gyral-w2j). A release's rewrites use that release's API
-// (0.3.8's `gyral()` doesn't exist in 0.3.0), so a module in a package whose core is older is
-// left as is. The package is the module's nearest package.json; its core is the one Node finds
-// from there (installed), else the lowest version its declared range allows; unknown otherwise.
+// The @gyral/core a module runs with (gyral-w2j). A release's transforms rewrite the API of the
+// release they migrate from (0.3.8's turn 0.3.7's `gyralVitePreset()` into `gyral()`), so a
+// package whose core is older than that is left as is: it must first be migrated that far. The
+// package is the module's nearest package.json; its core is the one Node finds from there
+// (installed), else the lowest version its declared range allows; unknown otherwise.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -78,9 +79,9 @@ export function coreVersions(): (file: string) => CoreVersion | undefined {
   return (file) => lookup(dirname(file));
 }
 
-/** Whether `core` is older than `release` (`x.y.z`). */
-export function olderThan(core: CoreVersion, release: string): boolean {
-  const target = lowestOf(release) ?? [];
+/** Whether `core` is older than `version` (`x.y.z`). */
+export function olderThan(core: CoreVersion, version: string): boolean {
+  const target = lowestOf(version) ?? [];
   for (const [i, part] of core.lowest.entries()) {
     const other = target[i] ?? 0;
     if (part !== other) return part < other;
