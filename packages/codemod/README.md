@@ -79,8 +79,12 @@ el.drivers = [fakeDriver('log')];
 Names are known from `subscription('k', …)`, `defineDriver({ name: 'k', … })`,
 `fakeDriver('k', …)`, and `tok.provide(…)`, `subscription(tok, …)` or `fakeDriver(tok, …)` where
 the module declares `const tok = defineDriver<…>('k')`. It leaves (and reports) a key that isn't
-its driver's name, a driver imported from another module, a spread, a computed key, a record
-with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads `.drivers` elsewhere.
+its driver's name, a driver imported from another module (naming that module), a spread, a
+computed key, a record with `as` or `satisfies`, and `el.drivers = { … }` in a file that reads
+`.drivers` elsewhere. It also reports a record of drivers it doesn't rewrite, whose readers it
+can't see: one built in a function and returned (`return { feed: subscription(feed, …) }`),
+passed in options (`defineStore({ drivers: { … } })`) or to another function. Make it a list by
+hand if nothing reads it by key.
 Test files (`*.test.*`, `*.spec.*`, `test/`, `tests/`, `__tests__/`, and setup modules such as
 `vitest.setup.ts`, `test-setup*.ts` or `setupTests.js`) keep their records, which read well for
 fakes.
@@ -90,7 +94,9 @@ module declares the token `const feed = defineDriver<I, O, E>('feed')` (or
 `defineDriver({ name: 'feed' })` without `run`), so the subscription is typed by it. It leaves
 (and reports) a call with type arguments (the two forms order them differently), a token that
 sets `concurrency` or `toError` (the subscription would adopt them), a token declared after
-the call or re-declared around it, and two tokens of one name.
+the call or re-declared around it, and two tokens of one name. A name with no token in the
+module is reported too, since its token may be declared in another one: pass it by hand,
+imported.
 
 ## Programmatic use
 

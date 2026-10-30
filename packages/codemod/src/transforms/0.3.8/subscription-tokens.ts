@@ -1,10 +1,20 @@
 // subscription('feed', listen) → subscription(feed, listen), when this module declares the
 // token `const feed = defineDriver<…>('feed')`: the subscription is then typed by the token.
+// A name with no token here is reported: its token may be declared in another module.
 import { endOf, startOf, stringValue, walk } from '../../ast.js';
 import { calleeName, resolvesTo } from '../../facts.js';
 import { shadowed } from '../../scope.js';
 import type { Transform } from '../types.js';
 import { CORE, moduleDrivers, type ModuleDriver } from './drivers.js';
+
+/** Why `subscription('name', …)` keeps its string when no token of that name is declared here. */
+function elsewhere(name: string, source: string | undefined): string {
+  return source === undefined
+    ? `no token named '${name}' is declared in this module; if another module declares it, ` +
+        'import it and pass it: subscription(token, …)'
+    : `\`${name}\` is imported from ${source}, so whether it's the token for '${name}' isn't ` +
+        `known in this module; if it is, pass it: subscription(${name}, …)`;
+}
 
 export const subscriptionTokens: Transform = {
   id: 'subscription-token',
@@ -14,13 +24,19 @@ export const subscriptionTokens: Transform = {
     for (const driver of moduleDrivers(ast.program, facts).values()) {
       if (driver.token) tokens.set(driver.name, [...(tokens.get(driver.name) ?? []), driver]);
     }
-    if (tokens.size === 0) return;
     walk(ast.program, ({ node, ancestors }) => {
       if (node.type !== 'CallExpression') return;
       const first = node.arguments[0];
       const name = stringValue(first);
-      const candidates = name === undefined ? undefined : tokens.get(name);
-      if (first === undefined || name === undefined || candidates === undefined) return;
+      if (first === undefined || name === undefined) return;
+      const candidates = tokens.get(name);
+      if (candidates === undefined) {
+        // Its token may be declared in another module (gyral-0dj): say so, never guess.
+        if (resolvesTo(facts, node.callee, ancestors, CORE, 'subscription')) {
+          report(node, elsewhere(name, facts.imports.get(name)?.source));
+        }
+        return;
+      }
       if (!resolvesTo(facts, node.callee, ancestors, CORE, 'subscription')) {
         if (calleeName(node.callee) === 'subscription') {
           report(

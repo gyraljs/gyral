@@ -39,7 +39,9 @@ describe('driver-list: rewrites', () => {
       el.drivers = [defineDriver({ name: 'now', run: () => 1 })];
       provideDrivers(root, []);
     `);
-    expect(findings).toEqual([]);
+    expect(findings).toEqual([
+      "13 [subscription-token] no token named 'ticks' is declared in this module; if another module declares it, import it and pass it: subscription(token, …)",
+    ]);
   });
 
   it('works with a namespace import of @gyral/core', () => {
@@ -72,12 +74,42 @@ describe('driver-list: left as is, and reported', () => {
     expect(findings).toEqual([
       "6 [driver-list] driver record left as is: key 'news' isn't its driver's name 'feed' (commands never use this entry, G0045)",
       "7 [driver-list] driver record left as is: entry 'router': the name of the driver `makeRouter(…)` isn't known here",
-      "8 [driver-list] driver record left as is: entry 'session': `session` is imported, so its driver name isn't known in this module",
+      "8 [driver-list] driver record left as is: entry 'session': `session` is imported from ./tokens.js, so its driver name isn't known in this module",
       "9 [driver-list] driver record left as is: it spreads another record, whose drivers aren't known here",
       "10 [driver-list] driver record left as is: entry 'feed' is a method",
       "11 [driver-list] driver record left as is: key 'feed' appears twice",
       '12 [driver-list] driver record left as is: it has a computed key',
     ]);
+  });
+
+  // gyral-0dj: a record built away from provideDrivers (peerweave's bindRuntime) went unreported.
+  it('driver records the codemod does not rewrite: built elsewhere, or in options', () => {
+    const findings = expectUnchanged(source`
+      import { defineDriver, defineStore, subscription } from '@gyral/core';
+      import { session } from './tokens.js';
+
+      const feed = defineDriver<void, string>('feed');
+      export function bindRuntime(runtime: Runtime) {
+        return {
+          session: session.provide((input) => runtime.call(input)),
+          feed: subscription(feed, (emit) => runtime.onFeed(emit)),
+        };
+      }
+      export const store = defineStore({ drivers: { feed: feed.provide(run) } });
+      const config = { port: 8080, routes: { home: '/' } };
+      const plain = { a: container.provide(x), b: 1 };
+    `);
+    expect(findings).toEqual([
+      "6 [driver-list] driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here, so the codemod can't tell what reads it; if nothing reads it by key, make it a list",
+      "11 [driver-list] driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here, so the codemod can't tell what reads it; if nothing reads it by key, make it a list",
+    ]);
+    // Test files keep their records, wherever they are.
+    expect(
+      expectUnchanged(
+        "import { fakeDriver } from '@gyral/testing';\nmount(el, { drivers: { a: fakeDriver('a') } });\n",
+        'src/a.test.ts',
+      ),
+    ).toEqual([]);
   });
 
   it('records with a type assertion, and a provideDrivers that is not core’s', () => {
@@ -96,6 +128,7 @@ describe('driver-list: left as is, and reported', () => {
     expect(findings).toEqual([
       '5 [driver-list] driver record left as is: it has a type assertion; change it by hand',
       '6 [driver-list] driver record left as is: it has a type assertion; change it by hand',
+      "7 [driver-list] driver record left as is: it isn't passed to provideDrivers or set as `.drivers` here, so the codemod can't tell what reads it; if nothing reads it by key, make it a list",
       "9 [driver-list] driver record left as is: `provideDrivers` here isn't provably @gyral/core's",
     ]);
   });

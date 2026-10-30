@@ -60,7 +60,8 @@ describe('subscription-token: shadowing', () => {
 });
 
 describe('subscription-token: left as is', () => {
-  it('names without a token here, and calls that are not subscription()', () => {
+  // gyral-0dj: a token declared in another module was left without a word (peerweave).
+  it('reports names without a token here, and leaves calls that are not subscription()', () => {
     expect(
       expectUnchanged(source`
         import { defineDriver, subscription } from '@gyral/core';
@@ -73,7 +74,16 @@ describe('subscription-token: left as is', () => {
         export const c = subscription('impl', listen);
         export const d = other('feed', listen);
       `),
-    ).toEqual([]);
+    ).toEqual([
+      "6 [subscription-token] `cart` is imported from ./tokens.js, so whether it's the token for 'cart' isn't known in this module; if it is, pass it: subscription(cart, …)",
+      "7 [subscription-token] no token named 'news' is declared in this module; if another module declares it, import it and pass it: subscription(token, …)",
+      "8 [subscription-token] no token named 'impl' is declared in this module; if another module declares it, import it and pass it: subscription(token, …)",
+    ]);
+    expect(
+      expectUnchanged("import { subscription } from '@gyral/core';\nsubscription('feed', f);\n"),
+    ).toEqual([
+      "2 [subscription-token] no token named 'feed' is declared in this module; if another module declares it, import it and pass it: subscription(token, …)",
+    ]);
   });
 
   it('reports type arguments, policies, ordering, duplicates and foreign subscription()', () => {
