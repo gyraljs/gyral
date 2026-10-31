@@ -54,6 +54,7 @@ plugin list. The import becomes `gyral` (it keeps `gyralVitePreset` while a use 
 | `defineConfig(gyralVitePreset(o))`                                              | `defineConfig({ plugins: [gyral(o)] })`                |
 | `{ ...gyralVitePreset(o), build }` (no `plugins` key)                           | `{ plugins: [gyral(o)], build }`                       |
 | `gyralVitePreset(o).plugins`                                                    | `gyral(o)`                                             |
+| `...(gyralVitePreset(o).plugins ?? [])` (or `\|\| []`)                          | `...gyral(o)`: it always returns an array              |
 | `const p = gyralVitePreset(o)` … `plugins: [...p.plugins]`, `...p.optimizeDeps` | `plugins: [gyral(o)]`, the declaration and spread gone |
 
 It leaves (and reports) a preset spread into an object that has its own `plugins`, or after an

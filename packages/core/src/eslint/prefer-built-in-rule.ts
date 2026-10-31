@@ -13,8 +13,10 @@
 //   popup's) are left alone: the command can't reach them (gyral-um2).
 // - jsonProp: `JSON.parse` of the element's own attribute (`this.getAttribute(…)`,
 //   `this.dataset.x`, an `attributeChangedCallback` value) or of a prop (`props.x`,
-//   `ctx.props.x`) → `prop.json(schema)`. Other elements' attributes (the intent's target, a
-//   hook's element, a `<meta>`) carry view data, not props, so they are left alone.
+//   `ctx.props.x`, or a spec function's props parameter by position, whatever its name:
+//   prefer-built-in-props.ts, gyral-bt4) → `prop.json(schema)`. Other elements' attributes (the
+//   intent's target, a hook's element, a `<meta>`) carry view data, not props, so they are left
+//   alone.
 // - subscriptionEquals: in `subscription()`'s subscribe callback, an `if` that compares a value
 //   with a remembered one (a variable or member the callback reassigns) and guards `emit` →
 //   `{ equals }`. Comparisons with constants filter rather than dedupe; skipped with `equals`.
@@ -32,6 +34,7 @@ import {
   type Candidate,
   type Parser,
 } from './prefer-built-in-intent.js';
+import { collectPropParams } from './prefer-built-in-props.js';
 import {
   comparesRemembered,
   enclosing,
@@ -47,6 +50,7 @@ import {
   walk,
   within,
   type Fn,
+  type PropParams,
   type Subscription,
 } from './prefer-built-in-shapes.js';
 
@@ -130,6 +134,8 @@ export const preferBuiltInRule: Rule.RuleModule = {
     const parsers = new Map<Node, Parser>();
     const candidates: Candidate[] = [];
     const bindings: Binding[] = [];
+    const jsonParses: { readonly call: Node; readonly arg: Node }[] = [];
+    const propParams: PropParams = { bags: new Set(), values: new Set() };
     const addDriver = (fn: Fn | undefined): void => {
       if (fn !== undefined) drivers.set(fn, true);
     };
@@ -155,7 +161,10 @@ export const preferBuiltInRule: Rule.RuleModule = {
         const callee = node.callee as Node;
         const args = node.arguments as Node[];
         if (callee.type === 'CallExpression' && isGyral(context, callee.callee as Node, 'define')) {
-          if (args[1] !== undefined) collectParsers(context, args[1], parsers);
+          if (args[1] !== undefined) {
+            collectParsers(context, args[1], parsers);
+            collectPropParams(context, args[1], propParams);
+          }
         } else if (isGyral(context, callee, 'defineDriver')) {
           addDriver(localFunction(context, property(args[0], 'run')));
         } else if (isGyral(context, callee, 'subscription')) {
@@ -189,11 +198,10 @@ export const preferBuiltInRule: Rule.RuleModule = {
           else if (
             name === 'parse' &&
             gyralModule &&
+            args[0] !== undefined &&
             isGlobal(context, unwrap(object), JSON_GLOBAL)
-          ) {
-            if (args[0] !== undefined && isAttributeOrProp(context, args[0]))
-              report(node, 'jsonProp');
-          }
+          )
+            jsonParses.push({ call: node, arg: args[0] }); // after every spec's props are known
         }
       },
       AssignmentExpression(node) {
@@ -221,6 +229,9 @@ export const preferBuiltInRule: Rule.RuleModule = {
       },
       'Program:exit'() {
         for (const call of focusCalls) if (enclosing(call, drivers)) report(call, 'focus');
+        for (const { call, arg } of jsonParses) {
+          if (isAttributeOrProp(context, arg, propParams)) report(call, 'jsonProp');
+        }
         for (const { fn, emits } of subscriptions) {
           const assigned = new Set<string>();
           walk(context, fn, (n) => {

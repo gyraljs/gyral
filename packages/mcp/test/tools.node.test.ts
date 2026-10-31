@@ -11,6 +11,25 @@ import type { Corpus } from '../src/types.js';
 
 let corpus: Corpus;
 
+/** A page whose words appear inside others (`trusted`) and as camelCase parts. */
+const PAGE = [
+  '# A',
+  '',
+  'Source: https://x/a/',
+  '',
+  '## Types',
+  '',
+  'Trusted Types keep trusted markup trusted; entrust it, distrust the rest.',
+  '',
+  '## Servers',
+  '',
+  'Rust renders the page.',
+  '',
+  '## Props',
+  '',
+  'A `PropsChanged` message arrives after an update.',
+].join('\n');
+
 // Building the corpus is CPU-bound (several seconds when the suite runs in parallel).
 beforeAll(() => {
   corpus = buildCorpus(parseLlmsFull);
@@ -57,6 +76,20 @@ describe('docs', () => {
       'https://gyral.dev/docs/effects/#concurrency-lanes',
     );
     expect(searchDocs(corpus.docs, 'the and', 5)).toEqual([]);
+  });
+
+  // gyral-99t: "rust" matched inside "trusted", so Trusted Types ranked above the Rust guide.
+  it('matches terms at word starts: prefixes and camelCase words, not inside a word', () => {
+    const rust = searchDocs(corpus.docs, 'rust', 8);
+    expect(rust[0]?.url).toMatch(/^https:\/\/gyral\.dev\/docs\/rust-servers\//);
+    expect(rust.map((h) => h.url).join('\n')).not.toMatch(/trusted/);
+    // A prefix still finds the longer word (hydrat → hydration), and a camelCase part its name.
+    expect(searchDocs(corpus.docs, 'hydrat', 3).map((h) => h.url)).toContain(
+      'https://gyral.dev/docs/server-rendering/#lazy-hydration',
+    );
+    const [changed] = searchDocs(parseLlmsFull(PAGE), 'changed', 1);
+    expect(changed?.url).toBe('https://x/a/#props');
+    expect(searchDocs(parseLlmsFull(PAGE), 'rust', 1)[0]?.url).toBe('https://x/a/#servers');
   });
 
   it('reads a page by name, path or URL, and one section by anchor', () => {

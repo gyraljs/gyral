@@ -157,9 +157,25 @@ export function isWindow(context: Rule.RuleContext, node: Node): boolean {
   );
 }
 
+/** The declaring identifiers of a spec's props parameters (prefer-built-in-props.ts). */
+export interface PropParams {
+  /** Bags of props, whose members are props: `p` in `(p) => …`, `rest` in `({ ...rest })`. */
+  readonly bags: Set<Node>;
+  /** Props on their own: `a` in `({ a }) => …`. */
+  readonly values: Set<Node>;
+}
+
 /** Whether `node` reads the element's own attribute (`this.getAttribute`) or a prop. */
-export function isAttributeOrProp(context: Rule.RuleContext, node: Node): boolean {
+export function isAttributeOrProp(
+  context: Rule.RuleContext,
+  node: Node,
+  params: PropParams,
+): boolean {
   const n = operand(node);
+  const declared = (id: Node): Node | undefined =>
+    id.type === 'Identifier'
+      ? (findVariable(context.sourceCode.getScope(id), id.name)?.defs[0]?.name as Node | undefined)
+      : undefined;
   if (n.type === 'CallExpression') {
     const callee = unwrap(n.callee as Node);
     return (
@@ -169,6 +185,8 @@ export function isAttributeOrProp(context: Rule.RuleContext, node: Node): boolea
     );
   }
   if (n.type === 'Identifier') {
+    const name = declared(n);
+    if (name !== undefined && params.values.has(name)) return true;
     // attributeChangedCallback(name, old, value) { JSON.parse(value) }
     const def = findVariable(context.sourceCode.getScope(n), n.name)?.defs[0];
     const fn = def?.type === 'Parameter' ? (def.node as Node) : undefined;
@@ -185,8 +203,11 @@ export function isAttributeOrProp(context: Rule.RuleContext, node: Node): boolea
   if (memberName(object) === 'dataset' && object.type === 'MemberExpression') {
     return unwrap(object.object as Node).type === 'ThisExpression';
   }
+  const bag = declared(object);
   return (
-    (object.type === 'Identifier' && object.name === 'props') || memberName(object) === 'props'
+    (object.type === 'Identifier' && object.name === 'props') ||
+    memberName(object) === 'props' ||
+    (bag !== undefined && params.bags.has(bag))
   );
 }
 
