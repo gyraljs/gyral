@@ -1,6 +1,6 @@
 {
   "name": "@gyral/router",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Gyral router: typed route tables, navigation as commands, History API baseline with Navigation API enhancement.",
   "license": "MIT",
   "author": "Mike Zupper",

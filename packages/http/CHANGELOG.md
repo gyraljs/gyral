@@ -1,5 +1,16 @@
 # @gyral/http
 
+## 0.3.10
+
+### Patch Changes
+
+- Updated dependencies [5cb7e66]
+- Updated dependencies [467f293]
+- Updated dependencies [87a29dd]
+- Updated dependencies [65a7dd5]
+- Updated dependencies [9ab416d]
+  - @gyral/core@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes

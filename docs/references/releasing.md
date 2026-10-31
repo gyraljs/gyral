@@ -431,6 +431,23 @@ and a fresh Cargo project on Rust 1.99.1 with `gyral` 0.7.0 and the `axum` featu
 resolves V8 150.4.0. The Rust compatibility fixture now pins gyral-rs `394ab9f` and npm 0.3.9, and
 `verify-rust-compatibility.mjs` passes against it (gyral-vge).
 
+Recorded 0.3.10 candidate checks (2026-10-31, epic gyral-uvj): `pnpm check` passes on Node
+24.22.0 and on 26.12.0 (363 test files, 2413 tests, one skipped; 21 bundles within budget).
+`pnpm smoke:prod` passes. `verify:install` passes with ten tarballs, all Node-loadable entries,
+native SSR output and `npx --no-install @gyral/mcp`; no extra peers and no Lit package are
+installed. Both `verify:create` templates typecheck, build and pass their tests (basic 22.2 KiB
+JS, 8.4 KiB gzip; SSR 34.8 KiB JS, 14.2 KiB gzip). The first release on SSR protocol 1 needs no
+gyral-rs release of its own: gyral-rs 0.8.0 (`300faf1`, released first, decision 8) is pinned in
+`rust-compatibility.json`, `pnpm rust-compat` passes in its release binary, and
+`verify-rust-compatibility.mjs` passes on a fresh clone of `v0.8.0` (the renderer's `gyral` tests,
+the artifact smoke, and the Chromium and WebKit suites). The `@gyral/mcp` docs snapshot comes from
+the gyral.dev `release/0.3.10-docs` build (`5aa0570`). Before the release, the packed candidate
+(`b36c64a`) ran the gates of gyral-shop, joystyk-libraries, joystyk, starwars.run, sabacc,
+football-pool-tracker and gymtime on their 0.3.8 mains, each with exactly one core, the tarball's,
+and production bundles built from `dist/prod/`: no regression. 0.3.9's development checks in
+`vite dev` and browser tests surfaced app warnings there: joystyk's intentionally undefined tags
+(G0014; gyral-7dk) and sabacc's views building new `Set`s on every render (G0017).
+
 ## gyral-rs and the SSR protocol
 
 Gyral and gyral-rs meet at a versioned SSR protocol, not at a version pin

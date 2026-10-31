@@ -1,5 +1,39 @@
 # @gyral/ssr
 
+## 0.3.10
+
+### Patch Changes
+
+- 65a7dd5: Browser bundles built without Vite get no development code (gyral-gpr). Core's development
+  checks were guarded by a flag that only Rollup-based bundlers (Vite) resolve across modules, so
+  esbuild, webpack, Rspack, Parcel and Bun kept every check and the modules only they use as dead code in
+  production: 17 to 19 KB minified in a small app, the template rule 15 element list, the
+  undefined-tag watch and the skipped-view recheck included. `@gyral/core` now also ships a
+  production build, `dist/prod/`, with that code removed when Gyral is built, and its exports send
+  the `browser` condition there unless `development` is set. An esbuild bundle of gyral-rs's
+  Askama client goes from 86,958 to 69,151 bytes. Development builds, Vite's output, and Node,
+  Deno and Bun (which always load the full build, as before) are unchanged. For development
+  checks in a non-Vite browser build, pass the `development` condition (esbuild:
+  `conditions: ['development']`).
+
+  `@gyral/ssr` finds core's hydration chunk in the production build too, so `clientAssets` and
+  `renderPage` keep preloading it.
+
+- a942b63: `@gyral/ssr` exports `SSR_PROTOCOL` (`1`), the embedded SSR protocol this release implements
+  (gyral-uvj.1, ADR 0034). Nothing changes for apps that serve pages from Node, Deno, Bun or a
+  worker. A server bundle run by an embedded host such as gyral-rs declares it with
+  `globalThis.gyralBundleVersion = SSR_PROTOCOL`, and its build writes the same number to the
+  manifest's `abi`, so a host that doesn't support the protocol refuses the bundle at startup.
+  Protocol 1 is the bundle ABI 1 that Gyral 0.3.8 and later implement: from gyral-rs 0.8.0, a
+  Gyral release that keeps the protocol (this one does) needs no new gyral-rs release, and only a
+  protocol change, in a Gyral minor with an upgrade note, does.
+- Updated dependencies [5cb7e66]
+- Updated dependencies [467f293]
+- Updated dependencies [87a29dd]
+- Updated dependencies [65a7dd5]
+- Updated dependencies [9ab416d]
+  - @gyral/core@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes
