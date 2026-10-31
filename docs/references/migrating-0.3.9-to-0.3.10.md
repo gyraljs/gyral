@@ -28,3 +28,15 @@ since 0.3.10", [view/07-hydration.md](../design-docs/view/07-hydration.md) "The 
 - **A notice kept outside the component** (in the page's HTML, or rendered only when not
   hydrated) to avoid the mismatch: move it back into the view, next to the controls it stands
   in for.
+
+## Production builds without Vite (gyral-gpr)
+
+### Behavior changes
+
+| Change                                                                                                                                                                                                        | Before 0.3.10                                                                                                                                                                                           | What to do                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Browser bundles built without the `development` condition (esbuild, webpack, Rspack, Parcel, Bun) resolve core's production build, `dist/prod/`: no development checks, and none of the modules only they use | Only Vite (Rollup/Rolldown) left the checks out; other bundlers kept them as dead code, 17 to 19 KB minified in a small app (rule 15's element list, the undefined-tag watch, the skipped-view recheck) | Nothing: rebuild. For development checks in such a build, pass `development` (esbuild: `conditions: ['development']`) |
+
+Node, Deno, Bun, Vite's dev server, `vite build` and Vitest resolve as before. Details:
+[consumer-setup.md](consumer-setup.md) "Development and production builds of core",
+[ADR 0018](../design-docs/0018-view-layer.md)'s 0.3.10 addendum.
