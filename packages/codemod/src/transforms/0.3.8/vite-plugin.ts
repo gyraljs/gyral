@@ -2,6 +2,7 @@
 //   defineConfig(gyralVitePreset(o))      → defineConfig({ plugins: [gyral(o)] })
 //   { ...gyralVitePreset(o), build }      → { plugins: [gyral(o)], build }   (no plugins key)
 //   gyralVitePreset(o).plugins            → gyral(o)
+//   ...(gyralVitePreset(o).plugins ?? []) → ...gyral(o)  (gyral() always returns an array)
 //   const p = gyralVitePreset(o); … plugins: [...p.plugins] → plugins: [gyral(o)]  (vite-preset-const.ts)
 // The preset's optimizeDeps only listed `optimize`'s modules, which gyral() adds by itself.
 import type { CallExpression, ImportDeclaration, ImportSpecifier, Node } from '@babel/types';
@@ -79,6 +80,46 @@ function spreadInObject(context: ViteContext, { call, ancestors }: Site): Outcom
   return 'done';
 }
 
+/** `[]`, also as `[] as Plugin[]`. */
+function isEmptyArray(node: Node): boolean {
+  const n =
+    node.type === 'TSAsExpression' ||
+    node.type === 'TSSatisfiesExpression' ||
+    node.type === 'TSTypeAssertion'
+      ? node.expression
+      : node;
+  return n.type === 'ArrayExpression' && n.elements.length === 0;
+}
+
+/**
+ * A `?? []` or `|| []` after the preset's plugins is dead once they are gyral()'s, which is
+ * always an array (gyral-68h). Removes it, and the parentheses it needed when only whitespace
+ * separates them from it: `...(gyralVitePreset().plugins ?? [])` → `...gyral()`.
+ */
+function dropFallback(context: ViteContext, member: Node, fallback: Node | undefined): void {
+  if (
+    fallback?.type !== 'LogicalExpression' ||
+    fallback.left !== member ||
+    fallback.operator === '&&' ||
+    !isEmptyArray(fallback.right)
+  ) {
+    return;
+  }
+  const { code, edit } = context;
+  edit.remove(endOf(member), endOf(fallback));
+  const open = fallback.extra?.parenStart;
+  const close = /^\s*\)/.exec(code.slice(endOf(fallback)));
+  if (
+    fallback.extra?.parenthesized === true &&
+    typeof open === 'number' &&
+    close !== null &&
+    code.slice(open + 1, startOf(fallback)).trim() === ''
+  ) {
+    edit.remove(open, startOf(fallback));
+    edit.remove(endOf(fallback), endOf(fallback) + close[0].length);
+  }
+}
+
 function pluginsOf(context: ViteContext, { call, ancestors }: Site): Outcome {
   const member = ancestors.at(-1);
   if (member?.type !== 'MemberExpression' || member.object !== call) return 'other';
@@ -86,6 +127,7 @@ function pluginsOf(context: ViteContext, { call, ancestors }: Site): Outcome {
   if (property !== 'plugins') return 'other';
   renameCallee(context, call);
   context.edit.remove(endOf(call), endOf(member));
+  dropFallback(context, member, ancestors.at(-2));
   return 'done';
 }
 
