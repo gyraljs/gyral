@@ -28,3 +28,23 @@ since 0.3.10", [view/07-hydration.md](../design-docs/view/07-hydration.md) "The 
 - **A notice kept outside the component** (in the page's HTML, or rendered only when not
   hydrated) to avoid the mismatch: move it back into the view, next to the controls it stands
   in for.
+
+## Hydration mismatches in development (gyral-uvj.3)
+
+### Behavior changes
+
+| Change                                                                                                                                                                                  | Before 0.3.10                                                                                                                                                                                                  | What to do                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In development, a component whose server DOM doesn't match its first render is rendered fresh, as in production, and works                                                              | Development threw the mismatch: the component kept the server's DOM, no render updated it, and every render tried to hydrate again                                                                             | Nothing. Fix the mismatch the error names                                                                                                          |
+| Development logs the mismatch with `console.error`: G0062 (component, template call site, DOM path, expected and found, the explanation), then G0063. Production still warns, unchanged | The scheduler reported it as a view failure (G0031, phase `view`, ADR 0024): the component's `error` view rendered, ancestors got its bubbling `error` event, `window` `error` listeners and monitoring saw it | A test or boundary that expected a development mismatch as a `GyralError` (`collectErrors()`, an `error` view): look for the console error instead |
+
+Details: [view/07-hydration.md](../design-docs/view/07-hydration.md) "Mismatches",
+[ADR 0018](../design-docs/0018-view-layer.md) "Addendum: hydration mismatches recover in
+development (0.3.10)".
+
+### Messages
+
+- **Hydration tests** still fail on a mismatch: `@gyral/testing`'s `hydrated()` fails on any
+  console error or warning, in development and production builds of core. In development the
+  failure now quotes the mismatch itself; before, it read "view failed" (G0031) and the
+  mismatch was only the error's `cause`.

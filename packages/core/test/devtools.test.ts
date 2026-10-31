@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { command, define, defineDriver, defineStore, html, send, settled } from '../src/index.js';
 import { DEVTOOLS_GLOBAL, type DevEvent } from '../src/internal.js';
 import { devtoolsEnabled } from '../src/internal.js';
@@ -137,6 +137,29 @@ describe('devtools hook (ADR 0017)', () => {
       /^<test-devtools-probe>#\d+$/,
     );
     expect(el.state.got).toEqual(['B']);
+  });
+
+  it('reports a hydration mismatch once, then the host hydrated fresh (no error)', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const root = document.createElement('div');
+    root.setHTMLUnsafe(
+      `<test-devtools-probe data-gyral-seed='{"state":{"got":[]},"props":{}}'>` +
+        '<template shadowrootmode="open"><b>bump</b></template></test-devtools-probe>',
+    );
+    document.body.append(root);
+    await settled();
+    await settle();
+    expect(kinds().filter((k) => /mismatch|hydrated|error/.test(k))).toEqual([
+      'mismatch',
+      'hydrated',
+    ]);
+    expect(events.find((e) => e.kind === 'mismatch')).toMatchObject({
+      component: { tag: 'test-devtools-probe' },
+      message: expect.stringMatching(/expected <button>, found <b>/) as unknown,
+    });
+    expect(events.find((e) => e.kind === 'hydrated')).toMatchObject({ serverRendered: true });
+    expect(logged).toHaveBeenCalledOnce();
+    vi.restoreAllMocks();
   });
 
   it('reports disconnects', async () => {

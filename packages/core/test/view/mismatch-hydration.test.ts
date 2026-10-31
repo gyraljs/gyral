@@ -1,8 +1,10 @@
 // view/07-hydration.md "Mismatches": development checks every node, text, bound attribute and
-// template marker and throws a HydrationMismatch naming the component, the template's call
-// site, the path and what was expected and found; production checks structure only (node
-// types, local names, text lengths), and a host whose DOM doesn't match is rebuilt alone: its
-// root is cleared and rendered fresh, with a warning, while its siblings stay hydrated.
+// template marker and production structure only (node types, local names, text lengths); the
+// walk throws a HydrationMismatch naming the component, the template's call site, the path and
+// what was expected and found. A host whose DOM doesn't match is rebuilt alone, in both builds
+// (0.3.10, gyral-uvj.3): its root is cleared and rendered fresh while its siblings stay
+// hydrated. Development logs the mismatch as an error, production as a warning (G0063); neither
+// goes through the error channel (ADR 0024).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { collectErrors } from '../collect-errors.js';
 import { define, html, settled } from '../../src/index.js';
@@ -134,8 +136,9 @@ describe('a host whose server DOM does not match', () => {
     (tag.endsWith('light') ? '' : '</template>') +
     `</${tag}>`;
 
-  it('fails alone; its siblings hydrate (development reports it, production rebuilds it)', async () => {
+  it('is rebuilt alone in both builds; its siblings hydrate; development logs an error', async () => {
     const collected = collectErrors();
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const warnings = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const root = container();
     const broken = page('test-mm-shadow', 2).replace('<button', '<a').replace('</button>', '</a>');
@@ -149,30 +152,36 @@ describe('a host whose server DOM does not match', () => {
     (good?.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
     await settled();
     expect(good?.shadowRoot?.textContent).toBe('n 2');
+    // Rendered fresh from the seed, and interactive.
+    expect(bad?.shadowRoot?.innerHTML).toBe('<button data-intent="Inc">n 2</button>');
+    expect(bad?.state.n).toBe(2);
+    expect(light?.innerHTML).toBe('<button data-intent="Inc">n 3</button>');
+    (bad?.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
+    (light?.querySelector('button') as HTMLButtonElement).click();
+    await settled();
+    expect(bad?.shadowRoot?.textContent).toBe('n 3');
+    expect(light?.textContent).toBe('n 4');
     collected.stop();
-    const reported = [collected.text(), ...warnings.mock.calls.flat().map(String)].join('\n');
+    expect(collected.errors).toEqual([]); // not a failure: nothing renders an error view
+    const [logged, other] = DEV ? [errors, warnings] : [warnings, errors];
+    expect(other).not.toHaveBeenCalled();
+    // Once per host: hydration isn't retried by the renders that follow.
+    expect(logged).toHaveBeenCalledTimes(2);
+    const reported = logged.mock.calls.map((args) => args.map(String).join(' ')).join('\n');
     expect(reported).toMatch(
-      /hydration mismatch in <test-mm-shadow>.*expected <button>, found <a>/,
+      /hydration mismatch in <test-mm-shadow>.*at a\[0\]: expected <button>, found <a>/,
     );
-    expect(reported).toMatch(/hydration mismatch in <test-mm-light>/);
+    expect(reported).toMatch(/hydration mismatch in <test-mm-light>.*found <i>/);
     if (DEV) {
-      expect(collected.errors[0]?.phase).toBe('view'); // thrown, reported for the host (ADR 0024)
-      // The explanation, then the code and docs URL, as every coded message (gyral-99d).
-      expect(String(collected.errors[0]?.cause)).toMatch(
-        /#mismatches\)\. \(G0062: https:\/\/gyral\.dev\/errors\/#G0062\)$/,
+      // The mismatch in full (template call site, explanation, code), then what was done.
+      expect(reported).toMatch(/in <test-mm-shadow> \(template at [^)]+mismatch-hydration/);
+      expect(reported).toMatch(
+        /#mismatches\)\. \(G0062: https:\/\/gyral\.dev\/errors\/#G0062\) <test-mm-shadow> was rendered fresh after a hydration mismatch\. \(G0063: https:\/\/gyral\.dev\/errors\/#G0063\)/,
       );
-      expect(bad?.shadowRoot?.querySelector('a')).not.toBeNull(); // left as the server wrote it
     } else {
-      expect(collected.errors).toEqual([]);
       // G0063 (production: the code, the tag and the docs URL), then the mismatch itself.
       expect(reported).toMatch(/Gyral G0063 test-mm-shadow https:\/\/gyral\.dev\/errors\/#G0063/);
       expect(reported).toMatch(/expected <button>, found <a>\. Gyral G0062 https:/);
-      expect(bad?.shadowRoot?.innerHTML).toBe('<button data-intent="Inc">n 2</button>');
-      expect(bad?.state.n).toBe(2); // resumed from its seed
-      expect(light?.innerHTML).toBe('<button data-intent="Inc">n 3</button>');
-      (bad?.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
-      await settled();
-      expect(bad?.shadowRoot?.textContent).toBe('n 3');
     }
   });
 });

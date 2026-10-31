@@ -289,8 +289,8 @@ can't render that markup itself, so it comes from Node:
 
 Details and a full example: the `@gyral/testing` README. Run hydration tests against
 production builds of core too (a second browser project with
-`resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
-re-renders instead of throwing.
+`resolve: { conditions: ['module', 'browser', 'production'] }`): production checks structure
+only and warns where development logs an error; both re-render the mismatched component.
 
 ## Server rendering
 
@@ -334,8 +334,8 @@ state from its `data-gyral-seed` and adopts the server's DOM in place; there is 
 import, and module order doesn't matter. Keep the state and props of server-rendered
 components (and seeded store state) JSON-serializable: they travel in the hydration seed.
 Client-only components have no seed, so their state may hold other values. A mismatch between server markup and the first client
-render throws `HydrationMismatch` in development; production builds warn and re-render only
-that component. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
+render re-renders only that component: development logs an error with the details (G0062),
+production builds warn (G0063); before 0.3.10 development threw `HydrationMismatch`. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
 server-rendered component, so client-only pages never fetch it. For server-rendered pages,
 read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
 (`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser

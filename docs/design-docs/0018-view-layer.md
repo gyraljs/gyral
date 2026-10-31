@@ -85,7 +85,7 @@ general-purpose features. The priorities, in order: correctness, speed, bundle s
 | Scheduling     | One global scheduler, microtask flush, parents first, post-render work in one place, `settled()`                                                                                        | [04-scheduler](view/04-scheduler.md)           |
 | Element base   | `HTMLElement` subclass; props declared with Standard Schema, attributes parsed through it                                                                                               | [05-element](view/05-element.md)               |
 | Server         | `@gyral/core/server`: renders from the spec without a DOM; light DOM and DSD natively; synchronous chunked stream                                                                       | [06-server](view/06-server.md)                 |
-| Hydration      | Built into core; parallel walk of template and DOM; per-component; dev throws, prod recovers one component                                                                              | [07-hydration](view/07-hydration.md)           |
+| Hydration      | Built into core; parallel walk of template and DOM; per-component; a mismatch recovers one component (dev logs an error, prod warns; dev threw until 0.3.10)                            | [07-hydration](view/07-hydration.md)           |
 | Styles         | One shared `CSSStyleSheet` per component class; inline `<style>` in DSD with CSP hashes; swap on hydration                                                                              | [08-styles](view/08-styles.md)                 |
 | Template rules | One rule set, surfaced by compiler, dev runtime and `@gyral/core/eslint`                                                                                                                | [09-template-rules](view/09-template-rules.md) |
 | Testing        | `await settled()` replaces `el.updateComplete`                                                                                                                                          | [04-scheduler](view/04-scheduler.md)           |
@@ -441,3 +441,49 @@ that G0017 fired on pure views.
   `message(code, …)` now ends with ` (G0017: https://gyral.dev/errors/#G0017)` in development,
   and `docsLink(code)` gives the same ending there (the hydration mismatch, G0062, which keeps
   its own sentence). Production text and size are unchanged; errors.md says both forms.
+
+## Addendum: hydration mismatches recover in development (0.3.10)
+
+Owner's decision, 2026-10-31 (gyral-uvj.3, found fixing gyral-qqa). The design table above said
+"dev throws, prod recovers one component", and so did view/07 "Mismatches" and ADR 0012's
+"hydration in core" addendum. A development mismatch was thrown out of the hydrating render,
+and the scheduler reported it as a view failure (G0031, ADR 0024): the component kept the
+server's DOM, its `error` view rendered if it had one, and every later render tried to hydrate
+again and failed again. That is a loud signal when the app's own view isn't deterministic. It
+is a trap when the framework causes the mismatch: before 0.3.10 every `<noscript>` notice in
+a view was a mismatch in Chromium and WebKit (gyral-qqa), and an app author got a component
+that was dead in development with nothing in their code to fix.
+
+Decision:
+
+- **Development recovers exactly as production does:** the host's root is cleared and rendered
+  fresh from its resumed state, its siblings stay hydrated, and it works (intents, updates,
+  `Hydrated` with `serverRendered: true`, `init`'s commands).
+- **Development adds information, not behaviour:** it logs the mismatch at error level
+  (`console.error`) in full: G0062 with the tag, the template's call site, the DOM path,
+  expected and found, and the explanation, then G0063 ("was rendered fresh"). Production keeps
+  its warning (G0063's code, then the mismatch) and its size: the change removes the
+  development-only rethrow and adds nothing to production bundles.
+- **Tests still catch it:** `@gyral/testing`'s `hydrated()` fails a test on any console error or
+  warning, so a mismatch fails a hydration test in both builds, now with the mismatch's detail
+  (before, development's failure read "view failed", G0031, with the mismatch only in its
+  `cause`).
+- **Not the error channel**, in either build. ADR 0024's channel is for code that threw and left
+  a component unable to do its job: it renders the `error` view, dispatches a bubbling `error`
+  event that a parent may answer by re-mounting the child, and calls `reportError`. After
+  recovery nothing is broken: a fallback view would hide a working component, and a re-mount
+  would throw away the state the seed resumed. Many mismatches in the field come from outside
+  the app (extensions, translation, CDN rewrites, stale cached pages), so reporting them to
+  monitoring as uncaught errors would be noise the author can't act on; `ErrorPhase` has no
+  phase for them either. Production already chose a warning, and ADR 0024 decision 5 keeps the
+  two builds' behaviour the same. The devtools hook still gets its `mismatch` event.
+- The view layer's `hydrate(value, root)` keeps throwing `HydrationMismatch` (an internal
+  export): the recovery and the log are core's `hydrateRoot`, the caller that has a host.
+- G0062's and G0063's texts don't mention throwing and stay as they are.
+
+Specs: view/07 "Mismatches" (the table and "Development recovers"), view/04 "Errors", view/05
+"Errors", view/08 "Hydration". Tested in `core/test/view/mismatch-hydration.test.ts` (both builds
+recover the host, which then responds to intents; one log per host, at error level in
+development and warning level in production; nothing reported to the error channel),
+`testing/test/mismatch-hydration.test.ts` (`hydrated()` rejects on the logged mismatch) and
+`core/test/devtools.test.ts` (`mismatch`, then `hydrated`, no `error` event).
