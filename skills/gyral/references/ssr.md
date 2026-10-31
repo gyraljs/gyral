@@ -29,10 +29,10 @@ Pages work before JavaScript loads.
    plain elements. Hydration never overwrites what the user typed before scripts ran.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
-   first and switch in the `Hydrated` reducer. A mismatch throws a hydration-mismatch error in
-   development (logged with the tag, template location, DOM path, expected and found; the
-   component keeps the server's DOM) and, in production, warns and re-renders only that
-   component. Browser extensions that edit the page before scripts run cause mismatches too.
+   first and switch in the `Hydrated` reducer. A mismatch re-renders only that component, in
+   both builds (since 0.3.10): development logs an error with the tag, template location, DOM
+   path, expected and found (G0062, then G0063); production warns. `hydrated()` fails a test
+   on either. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
    components' `<style>` elements are allowed by hash, so `style-src` needs no
    `'unsafe-inline'`; Trusted Types need the `gyral` policy allowed: see
@@ -334,7 +334,8 @@ export const ShareButton = define<State, Msg>()('my-share', {
 
 For visitors without JavaScript, a view can also carry a `<noscript>` notice next to the
 controls it stands in for: static markup only (no `${…}` inside), written by the server and
-adopted as is by hydration; client renders leave it empty (0.3.10, `references/view.md`).
+adopted as is by hydration; client renders leave it empty (0.3.10, `references/view.md`), in
+`raw()` markup too.
 
 ## Static generation and production serving (`@gyral/ssr/static`)
 

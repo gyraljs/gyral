@@ -200,7 +200,8 @@ with `vitest -u` and review the diff.
 | you want no files to keep in sync                            | tests run outside Vitest browser mode, or the server needs services Vite can't load     |
 
 Both feed the same `mountSsr` / `hydrated` assertions; run hydration tests against production
-builds of core too (a mismatch there warns and re-renders instead of throwing).
+builds of core too: production checks structure only and warns where development logs an
+error (both re-render the mismatched component, and `hydrated` fails on either).
 
 ## Documentation
 

@@ -314,6 +314,17 @@ export const flash = defineHook<[value: unknown]>({
   01 "Instantiation") and inserted after the same start anchor, only when the string changes.
   Under `require-trusted-types-for 'script'` that policy is what lets `raw()` parse, so the
   string must still never be user input: the policy trusts it as the template's own HTML.
+- **`<noscript>` in the markup** (0.3.10, gyral-uvj.2): its content is server-only, as in a
+  template (01 "Normalization"). The server writes the markup verbatim, notice included; the
+  browser empties every `<noscript>` in the parsed markup before inserting it, so a client
+  render creates the element empty. Before 0.3.10 Chromium and WebKit, which parse a
+  `<template>` with scripting off, inserted the notice as live elements (a `<style>` that
+  applied to the page, an `<img>` that loaded); Firefox inserted it as text. Hydration adopts
+  a server-rendered notice as it is (07 "The walk's algorithm"). One `querySelectorAll` per
+  parse, only in apps that call `raw` (measured: +38 B gzip, +101 B minified, on the view
+  entry; no example calls `raw`, and the hydration chunk is unchanged). Tested in
+  `core/test/view/raw-noscript-hydration.test.ts` (Chromium, Firefox and WebKit through
+  `browsers.config.ts`; development and production builds).
 - A `raw()` value in a component that renders in the browser is a development warning (09):
   every change re-parses it.
 - Like `each` (03), its result carries the code that commits it: apps that never call `raw`

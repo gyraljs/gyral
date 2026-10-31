@@ -323,8 +323,9 @@ it('hydrates the server markup in place and stays interactive', async () => {
 - Don't `fetch('/')` from a browser test for server markup: that reaches Vitest's own server,
   not your app.
 - Run hydration tests against production builds of core too (a Vitest project with
-  `resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
-  re-renders that component instead of throwing.
+  `resolve: { conditions: ['module', 'browser', 'production'] }`): production checks structure
+  only and warns where development logs an error; both re-render the mismatched component,
+  and `hydrated()` fails on either log.
 
 `mountSsr(html, { stores?, metas? })` parses a server document or fragment (Declarative Shadow
 DOM included) into the test page, restoring the store seed and named `<meta>`s. Server-only
