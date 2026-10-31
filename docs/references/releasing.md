@@ -467,7 +467,11 @@ Recorded 0.3.10 follow-ups (2026-10-31): the MCP image was built from `76b8ac3` 
 `--released-corpus 0.3.10` on the pinned `node:24.22.1-trixie-slim` (corpus `f0ecd3fd…`); it passed
 `verify-mcp-proxy.mjs` and `verify-mcp-traefik.mjs` and was pushed as
 `docker-push.xode.app/gyraljs/gyral-mcp:sha-76b8ac3` and `:latest` (digest `e05eee5d…`).
-gyral.dev installs @gyral/* 0.3.10 from npm (gyral.dev #17), and its gate passes.
+`mcp.gyral.dev` was redeployed with that digest; `/healthz` reports `"version":"0.3.10"` and corpus
+`f0ecd3fd…`, and the official MCP client lists seven tools and 19 resources, reads `gyral://skill` and
+gets 0.3.10 answers from `get_api` (`SSR_PROTOCOL`), `search_docs` ("Notices without JavaScript") and
+`scaffold_component`. gyral.dev installs @gyral/* 0.3.10 from npm (gyral.dev #17), its gate passes, and
+it serves the 0.3.10 docs and llms files.
 
 ## gyral-rs and the SSR protocol
 
