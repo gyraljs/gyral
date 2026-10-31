@@ -35,6 +35,9 @@ must cost nothing in production and almost nothing in development when no panel 
   pre-bundled package's `#…` imports without Vite's conditions, so until 0.3.9 an installed
   core's dev pre-bundle got the off module; `gyral()` now names the conditions for it
   (gyral-3pv, ADR 0018's 0.3.9 addendum).
+  Since 0.3.10 the published production build (`dist/prod/`, what browser bundlers resolve
+  without `development`) has the call sites removed already, so bundlers that don't carry
+  constants across modules (esbuild) drop them too (gyral-gpr, ADR 0018's 0.3.10 addendum).
 - Measured with `pnpm size` before and after: counter 150.2 KiB min / 49.3 KiB gzip both
   times; the largest change across all examples was +0.1 KiB (a few `void 0` arguments). A
   production build contains neither the global name nor the listener code.

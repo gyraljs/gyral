@@ -10,6 +10,13 @@ import { factsOf, writes } from '../../src/compiler/facts.js';
 import { createFeatures } from '../../src/compiler/features.js';
 import { buildApp } from './fixture.js';
 
+const unparsableContext = {
+  parse: () => {
+    throw new SyntaxError('unparsable');
+  },
+  resolve: () => Promise.resolve(null),
+};
+
 it.each([
   ['a client ?modal part', 'const t = { parts: [[5, [0, 1], "modal"]] };', 'dialogs'],
   ['an SSR ?popover-open segment', 'const t = {"k":"bool","name":"popover-open"};', 'dialogs'],
@@ -23,17 +30,24 @@ it.each([
   "the text fallback, for a module that doesn't parse, sees %s",
   async (_n, code, feature) => {
     const features = createFeatures([feature], '/core/src/view/compiled.ts');
-    const unparsable = {
-      parse: () => {
-        throw new SyntaxError('unparsable');
-      },
-      resolve: () => Promise.resolve(null),
-    };
-    expect(await features.inject(code, '/app/src/lib.js', unparsable)).toContain(
+    expect(await features.inject(code, '/app/src/lib.js', unparsableContext)).toContain(
       `virtual:gyral-use/${feature}`,
     );
   },
 );
+
+it.each([
+  ['its sources', '/core/src/view/compiled.ts', '/core/src/use-states.ts'],
+  ['its published build', '/core/dist/view/compiled.js', '/core/dist/use-states.js'],
+  ['its production build', '/core/dist/prod/view/compiled.js', '/core/dist/prod/use-states.js'],
+])('a feature registers next to the compiled entry of %s', async (_name, entry, registration) => {
+  const features = createFeatures(['states'], entry);
+  expect(features.load('\0gyral-use/states')).toBe(
+    `import { register } from ${JSON.stringify(registration)};\nregister();\n`,
+  );
+  // Core's own modules are never scanned for features.
+  expect(await features.inject('states', registration, unparsableContext)).toBe('');
+});
 
 const LIBRARY = `
 import { define, html } from '@gyral/core';

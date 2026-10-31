@@ -65,6 +65,16 @@ consumer setup guide (packages, Vite preset, template compiler):
 > [public API](https://github.com/gyraljs/gyral/blob/main/docs/references/public-api-0.3.1.md)
 > come only in a new minor version, with a migration guide.
 
+## Development and production builds
+
+Bundling for the browser without the `development` condition (`vite build`, esbuild, webpack
+or Rspack in production mode) resolves core's production build, `dist/prod/`: the development
+checks and the modules only they use are already removed, so every bundler leaves them out.
+With `development` (Vite's dev server, Vitest, webpack's development mode, esbuild's
+`conditions: ['development']`) you get the full build with its checks. Node, Deno and Bun
+always load the full build, with its checks on only under `development`. Details:
+[consumer setup](https://github.com/gyraljs/gyral/blob/main/docs/references/consumer-setup.md#development-and-production-builds-of-core).
+
 ## Diagnostic codes
 
 Development builds print each message in full, ending with its code and link:
