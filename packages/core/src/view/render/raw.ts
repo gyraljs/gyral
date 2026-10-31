@@ -1,6 +1,8 @@
 // `raw(html)` (view/02-bindings.md "`raw(html)`"): trusted markup parsed in a child hole, kept
-// as a node range after a start anchor and re-parsed only when the string changes. Its result
-// carries `commitRaw`, so apps that never call `raw` don't bundle this module.
+// as a node range after a start anchor and re-parsed only when the string changes. A
+// `<noscript>`'s content is server-only, as in templates (01 "Normalization"): the client
+// inserts the element empty. Its result carries `commitRaw`, so apps that never call `raw`
+// don't bundle this module.
 import { DEV } from '#view-dev';
 import { EMPTY, RAW, type ChildPart } from './child-part.js';
 import { removeRange } from './nodes.js';
@@ -42,6 +44,18 @@ export function parse(html: string): DocumentFragment {
   return parser.content;
 }
 
+/**
+ * `html` parsed for insertion: every `<noscript>` emptied. Chromium and WebKit parse a
+ * <template> with scripting off, so its content would be live elements (a `<style>` that
+ * applies, an `<img>` that loads); Firefox would keep it as text. The walk (adopt.ts) reads
+ * `parse` alone: it compares top-level nodes and inserts nothing.
+ */
+function fragment(html: string): DocumentFragment {
+  const frag = parse(html);
+  for (const el of frag.querySelectorAll('noscript')) el.replaceChildren();
+  return frag;
+}
+
 /** Commits `raw()` markup into `part`. */
 function commitRaw(part: ChildPart, html: string): void {
   if (DEV) warnRaw();
@@ -50,7 +64,7 @@ function commitRaw(part: ChildPart, html: string): void {
     const range = part.content as RawRange;
     if (range.html === html) return;
     if (range.end !== range.start) removeRange(range.start.nextSibling as Node, range.end);
-    const frag = parse(html);
+    const frag = fragment(html);
     range.end = frag.lastChild ?? range.start;
     range.html = html;
     range.start.after(frag);
@@ -58,7 +72,7 @@ function commitRaw(part: ChildPart, html: string): void {
   }
   if (part.kind !== EMPTY) part.clear();
   const start = document.createComment('');
-  const frag = parse(html);
+  const frag = fragment(html);
   const end = frag.lastChild ?? start;
   frag.prepend(start);
   part.parent().insertBefore(frag, part.end());

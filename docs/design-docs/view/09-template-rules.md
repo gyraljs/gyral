@@ -113,6 +113,8 @@ repair. A client render built live elements from the notice in Chromium and WebK
   in every engine.
 - Hydration adopts the `<noscript>` element as it is, its attribute parts included, and never
   walks or compares its content (07 "The parallel walk").
+- `raw()` markup follows the same rule (gyral-uvj.2, 02 "`raw(html)`"): the server writes it
+  verbatim, and the client empties every `<noscript>` in it before inserting it.
 
 Rule 3 is checked where it always was: `vite build`, the runtime preparer and ESLint. Tested in
 `core/test/view/noscript-hydration.test.ts` (both builds; also in Firefox and WebKit through

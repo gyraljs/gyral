@@ -235,7 +235,9 @@ declarations (Firefox empties a blocked one).
 - **Lists and arrays:** rows adopt one after another; `each` rows record key, item and pick
   as a client render would, so the first update skips unchanged rows.
 - **`raw()`:** the start anchor, then as many nodes as the markup parses to on its own (a
-  `<template>` parse, as the client does): non-text nodes by node name, text by length.
+  `<template>` parse, as the client does): non-text nodes by node name, text by length. So a
+  `<noscript>` in the markup is adopted as it is, the server's text inside it never compared;
+  a client render of `raw()` creates it empty (0.3.10, gyral-uvj.2, 02 "`raw(html)`").
 - **Elements:** the local name must match; parts are adopted (`adoptAttr` in `adopt-attr.ts`:
   committed values set, nothing written); then the children are walked unless a text part owns
   them (`<textarea>`, `<title>`), the element is a light host, it is a custom element without
@@ -384,10 +386,11 @@ preload and release-retention boundaries. No blanket browser-version workaround 
 - **0.3.10 (mismatches):** `testing/test/mismatch-hydration.test.ts` (`hydrated()` fails on
   the logged mismatch in both builds; the recovered component works) and
   `core/test/devtools.test.ts` (a `mismatch` event, then `hydrated`, no `error`).
-- **0.3.10 (`<noscript>`):** `core/test/view/noscript-hydration.test.ts` (the walk, a client render, both
-  builds; Firefox and WebKit too through `browsers.config.ts`) and
+- **0.3.10 (`<noscript>`):** `core/test/view/noscript-hydration.test.ts` (the walk, a client
+  render, both builds; Firefox and WebKit too through `browsers.config.ts`),
   `core/test/noscript-hydration.test.ts` (shadow and light hosts with a `<noscript>` notice,
-  from real server output).
+  from real server output) and `core/test/view/raw-noscript-hydration.test.ts` (a notice in
+  `raw()` markup: client renders empty, server output hydrated; three engines, both builds).
 - **Size:** Phase 5 added hydration to every client bundle (about 1.8 KiB gzip); since
   gyral-g1r.18 it loads lazily ("Loading"), so a client-only app's initial chunk carries none
   of it and only server-rendered pages fetch the separate chunk, preloaded by the server

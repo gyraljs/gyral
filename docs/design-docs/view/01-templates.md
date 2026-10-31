@@ -103,7 +103,9 @@ Steps, in order:
    and WebKit and on in Firefox, so a client copy was elements in two engines (a `<style>`
    that applied to the page, an `<img>` that loaded) and text in the third. Now every client
    render creates the element empty, hydration adopts the server's as it is (07), and rule 3
-   keeps holes out of it (09). Notices cost client bundles nothing.
+   keeps holes out of it (09). Notices cost client bundles nothing. `raw()` markup follows the
+   same rule since 0.3.10 (gyral-uvj.2): the client empties every `<noscript>` in it before
+   inserting it (02 "`raw(html)`").
 4. **Build the part table:** one entry per hole, in source order: kind, the path to its element
    (or to its parent element and position for child holes), the attribute name and static
    strings for attribute holes; a child hole's kind also says whether it is its parent's only

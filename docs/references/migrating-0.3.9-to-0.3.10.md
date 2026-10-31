@@ -4,17 +4,19 @@ Gyral 0.3.10 fixes what migrating apps to 0.3.9 found (epic gyral-uvj). Each sec
 stands on its own: changes a working app can notice first, each with what to do, then new
 checks and workarounds you can remove.
 
-## `<noscript>` in a view (gyral-qqa)
+## `<noscript>` in a view and in `raw()` (gyral-qqa, gyral-uvj.2)
 
 ### Behavior changes
 
-| Change                                                                                                                                | Before 0.3.10                                                                                                                                                                                                        | What to do                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| A component whose view holds a `<noscript>` notice hydrates: the `<noscript>` element is adopted as it is, its content never compared | Hydration reported a mismatch (G0062) for every such notice: development threw, so the component never hydrated; production rendered it fresh and warned (G0063). The development runtime also reported it as rule 7 | Nothing                                                                                        |
-| A `<noscript>`'s content is server-only: a client render creates the element empty                                                    | Chromium and Safari built its markup as live elements while scripts ran: a `<noscript><style>` applied to the page, a `<noscript><img>` loaded                                                                       | Nothing, unless a script read the notice's elements on the client: render that content outside |
+| Change                                                                                                                                      | Before 0.3.10                                                                                                                                                                                                        | What to do                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| A component whose view holds a `<noscript>` notice hydrates: the `<noscript>` element is adopted as it is, its content never compared       | Hydration reported a mismatch (G0062) for every such notice: development threw, so the component never hydrated; production rendered it fresh and warned (G0063). The development runtime also reported it as rule 7 | Nothing                                                                                        |
+| A `<noscript>`'s content is server-only: a client render creates the element empty                                                          | Chromium and Safari built its markup as live elements while scripts ran: a `<noscript><style>` applied to the page, a `<noscript><img>` loaded                                                                       | Nothing, unless a script read the notice's elements on the client: render that content outside |
+| The same holds for a `<noscript>` inside `raw()` markup (gyral-uvj.2): the server writes it verbatim, the browser inserts the element empty | Chromium and Safari inserted the notice's markup as live elements (a `<style>` applied to the page, an `<img>` loaded); Firefox inserted it as text                                                                  | Nothing, unless a script read the notice's elements on the client                              |
 
 Details: [view/09-template-rules.md](../design-docs/view/09-template-rules.md) "`<noscript>`
-since 0.3.10", [view/07-hydration.md](../design-docs/view/07-hydration.md) "The parallel walk".
+since 0.3.10", [view/07-hydration.md](../design-docs/view/07-hydration.md) "The parallel walk",
+[view/02-bindings.md](../design-docs/view/02-bindings.md) "`raw(html)`".
 
 ### Messages
 
