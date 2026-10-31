@@ -80,6 +80,7 @@ First run needs `pnpm exec playwright install chromium`.
 | CI, GitHub Actions                            | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                                                |
 | Dependencies, lockfiles, Dependabot           | [0032-dependency-updates.md](docs/design-docs/0032-dependency-updates.md)                            |
 | Package manifests, peers, `@gyral/core` deps  | [0033-core-peer.md](docs/design-docs/0033-core-peer.md)                                              |
+| Embedded SSR, gyral-rs, `SSR_PROTOCOL`        | [0034-ssr-protocol.md](docs/design-docs/0034-ssr-protocol.md)                                        |
 | Repo docs, lint rules, this file              | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md)                          |
 | Why Gyral differs from Cycle.js               | [lessons-from-cyclejs.md](docs/design-docs/lessons-from-cyclejs.md)                                  |
 
