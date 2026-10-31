@@ -25,6 +25,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm ui:check [name…] [--baseline\|--compare]` | **See UI changes:** screenshots (desktop/phone × light/dark), console, overflow, axe → `.ui-check/<run>/report.md` |
 | `pnpm demos:record [name…]`                     | Record each example's `demo.mjs` (1280×720 video + poster) → `.demos/` for gyral.dev                               |
 | `pnpm verify:create`                            | Generate both `create-gyral` templates from the tarball, install, typecheck, build, test (network)                 |
+| `pnpm rust-compat`                              | The candidate in the pinned gyral-rs release binary: no Rust build (network; CI job, ADR 0034)                     |
 | `pnpm smoke:prod`                               | Build SSR examples for production, check every page hydrates in place (run after hydration changes)                |
 | `pnpm bench:view`                               | View-layer benchmarks in Chromium: renderer timings, list reconciliation candidates (not part of `check`)          |
 
@@ -81,6 +82,7 @@ First run needs `pnpm exec playwright install chromium`.
 | CI, GitHub Actions                            | [0004-local-ci.md](docs/design-docs/0004-local-ci.md)                                                |
 | Dependencies, lockfiles, Dependabot           | [0032-dependency-updates.md](docs/design-docs/0032-dependency-updates.md)                            |
 | Package manifests, peers, `@gyral/core` deps  | [0033-core-peer.md](docs/design-docs/0033-core-peer.md)                                              |
+| Embedded SSR, gyral-rs, `SSR_PROTOCOL`        | [0034-ssr-protocol.md](docs/design-docs/0034-ssr-protocol.md)                                        |
 | Repo docs, lint rules, this file              | [0005-harness-engineering.md](docs/design-docs/0005-harness-engineering.md)                          |
 | Why Gyral differs from Cycle.js               | [lessons-from-cyclejs.md](docs/design-docs/lessons-from-cyclejs.md)                                  |
 

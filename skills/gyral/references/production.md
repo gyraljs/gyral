@@ -73,7 +73,9 @@ Three paths, all with the same components: build-time pages plus a Rust API, Ask
 browser-rendered components (tags + fallback, no hydration), or experimental `gyral-rs`
 embedded SSR that hydrates. Only the last needs gyral-rs. Read
 https://gyral.dev/docs/rust-servers/ (`get_doc "rust-servers"`) before writing any of them.
-gyral-rs 0.4.x accepts Gyral 0.3.6 exactly, on Linux x86_64 GNU; a later Gyral release needs a
-new gyral-rs minor. Its bundle is one IIFE using `renderToString` (no `renderPage`, no Fetch,
-no `TextEncoder`), built with one self-contained ESM client. Rust owns permissions, approved
+gyral-rs runs on Linux x86_64 GNU. 0.7.x accepts Gyral 0.3.9 exactly; from 0.8.0 (unreleased)
+it accepts any Gyral release, 0.3.8 or later, on a protocol it supports (`SSR_PROTOCOL`,
+ssr.md "Embedded hosts"), so a Gyral release that keeps the protocol needs no new gyral-rs.
+Its bundle is one IIFE using `renderToString` (no `renderPage`, no Fetch, no `TextEncoder`),
+built with one self-contained ESM client. Rust owns permissions, approved
 props, the CSP and worker shutdown; the renderer is not a sandbox.

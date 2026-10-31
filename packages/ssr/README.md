@@ -54,6 +54,8 @@ const app = await productionServer({ distDir: 'dist', createApp });
 createServer(toNodeListener(app.fetch, { origin: 'https://example.com' })).listen(3000);
 ```
 
+`SSR_PROTOCOL` is the embedded SSR protocol this release implements, for hosts that run the server bundle outside Node, such as [gyral-rs](https://github.com/gyraljs/gyral-rs) (ADR 0034). The server entry declares it with `globalThis.gyralBundleVersion = SSR_PROTOCOL` and installs `globalThis.gyralRender`, which returns `renderToString`'s promise; the build writes the same number to the bundle manifest's `abi`. Protocol 1's host has only the ECMAScript built-ins, `Intl`, `queueMicrotask` and `console`, so compute `styleHashes()` at build time. A Gyral release that keeps the protocol needs no new host release.
+
 ## Documentation
 
 Guides and API reference: **[gyral.dev](https://gyral.dev)**. Source, issues and the

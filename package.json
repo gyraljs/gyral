@@ -32,6 +32,7 @@
     "verify:install": "node scripts/verify-install.mjs",
     "verify:create": "node scripts/verify-create.mjs",
     "verify:platforms": "node scripts/verify-platforms.mjs",
+    "rust-compat": "node scripts/rust-compat.mjs",
     "mcp:refresh": "pnpm --filter @gyral/mcp run refresh"
   },
   "devDependencies": {
