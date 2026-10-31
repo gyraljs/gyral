@@ -598,6 +598,34 @@ to validate that seed in the browser. To give part of a page its own instances, 
 `<gyral-stores>` element; the server renders it with its
 own seed.
 
+## Embedded hosts: `SSR_PROTOCOL`
+
+A host that runs the server bundle outside Node, such as gyral-rs's deno_core renderer,
+speaks Gyral's embedded SSR protocol (ADR 0034). `SSR_PROTOCOL` from `@gyral/ssr` is the
+protocol this release implements (unreleased: next release, 0.3.10; protocol 1 holds from
+0.3.8). The server entry declares it, and the build writes the same number to the bundle
+manifest's `abi`, so a host that doesn't support it refuses the bundle at startup:
+
+```ts
+import { html } from '@gyral/core';
+import { renderToString, SSR_PROTOCOL } from '@gyral/ssr';
+
+interface Request {
+  readonly page: string;
+  readonly props: { readonly name: string };
+}
+const gyralRender = ({ props }: Request): Promise<string> =>
+  renderToString(html`<p>Hello, ${props.name}</p>`, { onError: 'throw' });
+
+Object.assign(globalThis, { gyralBundleVersion: SSR_PROTOCOL, gyralRender });
+```
+
+Protocol 1's host has only the ECMAScript built-ins, `Intl`, `queueMicrotask` and `console`:
+render with `renderToString` (`renderPage` returns a Fetch `Response`), bundle the entry into
+one IIFE, and compute `styleHashes()` at build time in Node. Build the browser bundle from the
+same components and Gyral release. A Gyral release that keeps the protocol needs no new
+gyral-rs; production.md "Rust" names the releases.
+
 ## Preloads under a service worker
 
 Chromium may warn "preload … not used because it is a cross-world service worker resource
