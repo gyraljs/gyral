@@ -607,7 +607,7 @@ own seed.
 
 A host that runs the server bundle outside Node, such as gyral-rs's deno_core renderer,
 speaks Gyral's embedded SSR protocol (ADR 0034). `SSR_PROTOCOL` from `@gyral/ssr` is the
-protocol this release implements (unreleased: next release, 0.3.10; protocol 1 holds from
+protocol this release implements (0.3.10; protocol 1 holds from
 0.3.8). The server entry declares it, and the build writes the same number to the bundle
 manifest's `abi`, so a host that doesn't support it refuses the bundle at startup:
 

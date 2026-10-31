@@ -463,13 +463,6 @@ needs no gyral-rs release**, patch or minor: don't wait for one, and don't move 
   fixture (`protocol`, `minGyral`, `apiHash`, `gyralRs`) and an upgrade page in one change. A
   change no host can notice only updates `apiHash`, with the reason in the commit.
 
-**Until the fixture pins gyral-rs 0.8.0**, it pins 0.7.0, the last release before the protocol,
-which accepts exactly Gyral 0.3.9 (`gyralRs.acceptsGyral`). The candidate packages say 0.3.9
-until the release commit, so the job runs the candidate in the 0.7.0 binary until then. The
-0.3.10 release commit fails it, naming the fix, until the fixture pins gyral-rs 0.8.0, which
-ships first (decision 8): set its version, commit and archive digests and remove
-`acceptsGyral`.
-
 ## When something goes wrong
 
 - **Staging failed halfway**: fix the cause and re-run the workflow. The stage script skips

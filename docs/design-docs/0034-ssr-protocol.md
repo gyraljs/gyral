@@ -154,13 +154,13 @@ There is no schedule (ADR 0004). At release time `verify-rust-compatibility.mjs`
 full check on the candidate tarballs: a Rust build of the pinned commit, in a throwaway copy,
 and the Chromium/WebKit hydration and CSP suites, without exact npm pins.
 
-**Until the fixture pins gyral-rs 0.8.0,** it pins 0.7.0, which accepts exactly Gyral 0.3.9
+**Until gyral-rs 0.8.0 shipped,** the fixture pinned 0.7.0, which accepts exactly Gyral 0.3.9
 (`acceptsGyral` in the fixture). The candidate packages carry the version of the last release
-until the release commit bumps them, so on every pull request before 0.3.10's the job runs the
-candidate's server code in the 0.7.0 binary, labelled 0.3.9, with nothing relabelled. The
-release commit's 0.3.10 then fails the job, saying to pin a gyral-rs release that accepts
-protocol 1, until the fixture moves to 0.8.0. That enforces decision 8 instead of skipping
-the check.
+until the release commit bumps them, so on every pull request before 0.3.10's the job ran the
+candidate's server code in the 0.7.0 binary, labelled 0.3.9, with nothing relabelled, and a
+0.3.10 candidate would have failed it, saying to pin a gyral-rs release that accepts protocol 1.
+That enforced decision 8 instead of skipping the check. gyral-rs 0.8.0 shipped on 2026-10-31
+(`300faf1`), and 0.3.10's release commit pins it.
 
 **In gyral-rs**, a `gyral-canary` job (push, pull requests, and by hand with a version) tests
 each supported protocol's minimum release and the newest npm release declaring it: the

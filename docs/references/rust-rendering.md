@@ -23,9 +23,9 @@ release that declares a protocol it supports, from that protocol's minimum relea
 release that keeps the protocol, minors included, needs no gyral-rs release; only a new
 protocol does, and it ships in a Gyral minor with an upgrade note.
 
-| Protocol | Gyral releases                                                                       | gyral-rs                                                                                                                                          |
-| -------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | 0.3.8 and later, no prereleases; `SSR_PROTOCOL` is exported from 0.3.10 (unreleased) | 0.8.0 and later (unreleased). Before 0.8.0 each minor accepted one Gyral release: 0.7.x 0.3.9, 0.6.x 0.3.8, 0.5.x 0.3.7, 0.4.x 0.3.6, 0.3.x 0.3.5 |
+| Protocol | Gyral releases                                                          | gyral-rs                                                                                                                             |
+| -------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 1        | 0.3.8 and later, no prereleases; `SSR_PROTOCOL` is exported from 0.3.10 | 0.8.0 and later. Before 0.8.0 each minor accepted one Gyral release: 0.7.x 0.3.9, 0.6.x 0.3.8, 0.5.x 0.3.7, 0.4.x 0.3.6, 0.3.x 0.3.5 |
 
 The supported embedded target is Linux x86_64 GNU, Rust 1.99.1/edition 2024,
 deno_core 0.412.0 and V8 150.4.0. Other targets have no verified support claim. The
@@ -94,9 +94,6 @@ Gyral checks every change against protocol 1 three ways
   commit (the checkout is only read), a Rust build, and gyral-rs's embedded, artifact and
   real-browser checks. It writes only its copy (and `--target-dir`, when given), never edits
   manifests or publishes crates.
-
-While the fixture pins gyral-rs 0.7.0, which accepts only 0.3.9, both refuse another candidate
-version with a message naming the fix: pin a gyral-rs release that accepts the protocol.
 
 The fixtures cover real SSR, escaped props, stores, forms, timezones, error recovery,
 request isolation, enforcing CSP, no-JS first paint, DOM adoption, typed-before-hydration
