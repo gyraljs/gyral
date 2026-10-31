@@ -448,6 +448,31 @@ and production bundles built from `dist/prod/`: no regression. 0.3.9's developme
 `vite dev` and browser tests surfaced app warnings there: joystyk's intentionally undefined tags
 (G0014; gyral-7dk) and sabacc's views building new `Set`s on every render (G0017).
 
+Recorded 0.3.10 registry checks (2026-10-31, step 6): all ten packages serve 0.3.10 as `latest`
+with SLSA v1 provenance (release run 41218993035, tag `v0.3.10` at `76b8ac3`; the GitHub release
+opens with the behavior changes), and each sibling package peers on `@gyral/core` 0.3.10 exactly.
+`npx -y @gyral/mcp@0.3.10` answers `initialize` over stdio as `gyral 0.3.10` with eight tools;
+`get_api` returns `SSR_PROTOCOL` (`1`, `@gyral/ssr`), and `search_docs` finds "Notices without
+JavaScript" for `noscript hydration` and only Rust pages for `rust`. `npx -y @gyral/codemod@0.3.10
+--version` prints 0.3.10. `npm create gyral@0.3.10` generated both templates in fresh directories on
+Node 24.22.0, and npm installed them; each app's `typecheck`, `build` and `test` pass (basic 22.8 kB
+JS, 8.7 kB gzip; SSR counter chunk 25.8 kB). Both manifests depend on `^0.3.10` with no overrides;
+every lockfile entry resolves from `registry.npmjs.org` with SHA-512 integrity, none uses `file:` or
+`link:`, and no Lit package is installed. `node scripts/verify-ssr-production.mjs` (exact 0.3.10; a
+60,173-byte one-file server) passes. gyral-rs's `gyral-canary` workflow, started by hand with
+0.3.10 (run 41233462620), passes: gyral-rs 0.8.0 builds, renders and serves 0.3.10 with no gyral-rs
+release, and its Chromium and WebKit suites pass (ADR 0034).
+
+Recorded 0.3.10 follow-ups (2026-10-31): the MCP image was built from `76b8ac3` with
+`--released-corpus 0.3.10` on the pinned `node:24.22.1-trixie-slim` (corpus `f0ecd3fd…`); it passed
+`verify-mcp-proxy.mjs` and `verify-mcp-traefik.mjs` and was pushed as
+`docker-push.xode.app/gyraljs/gyral-mcp:sha-76b8ac3` and `:latest` (digest `e05eee5d…`).
+`mcp.gyral.dev` was redeployed with that digest; `/healthz` reports `"version":"0.3.10"` and corpus
+`f0ecd3fd…`, and the official MCP client lists seven tools and 19 resources, reads `gyral://skill` and
+gets 0.3.10 answers from `get_api` (`SSR_PROTOCOL`), `search_docs` ("Notices without JavaScript") and
+`scaffold_component`. gyral.dev installs @gyral/* 0.3.10 from npm (gyral.dev #17), its gate passes, and
+it serves the 0.3.10 docs and llms files.
+
 ## gyral-rs and the SSR protocol
 
 Gyral and gyral-rs meet at a versioned SSR protocol, not at a version pin
