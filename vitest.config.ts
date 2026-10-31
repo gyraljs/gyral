@@ -2,6 +2,10 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import { gyralVitePreset } from './packages/core/src/vite.js';
 import { renderOnServer } from './packages/testing/src/vitest.js';
+import { stripDevelopmentPlugin } from './scripts/lib/strip-dev.mjs';
+
+const production = gyralVitePreset();
+const CORE_SOURCES = /[\\/]packages[\\/]core[\\/]src[\\/]/;
 
 export default defineConfig({
   test: {
@@ -34,8 +38,10 @@ export default defineConfig({
         // The hydration tests again, against core's PRODUCTION build (no `development` export
         // condition: `#view-dev` and `#devtools` resolve to their production modules), so
         // behaviour that differs between builds is covered (view/07-hydration.md "Testing"):
-        // every package's and example's hydration tests.
-        ...gyralVitePreset(),
+        // every package's and example's hydration tests. Core's modules are stripped of their
+        // development code as its published production build is (dist/prod/, gyral-gpr).
+        ...production,
+        plugins: [...production.plugins, stripDevelopmentPlugin({ include: CORE_SOURCES })],
         resolve: { conditions: ['module', 'browser', 'production'] },
         test: {
           name: 'browser-prod',

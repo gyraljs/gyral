@@ -24,9 +24,14 @@ export interface LocatorHooks {
   readonly transform: HookFn<'transform'>;
 }
 
-/** Core's own view modules: always sources (core-internal templates, tests). */
-export const VIEW = ['index', 'template'].flatMap((name) =>
-  ['.ts', '.js'].map((ext) => fileURLToPath(new URL(`../view/${name}${ext}`, import.meta.url))),
+/**
+ * Core's own view modules: always sources (core-internal templates, tests). In the published
+ * package, those of its production build too (dist/prod/view/, gyral-gpr).
+ */
+export const VIEW = ['view', 'prod/view'].flatMap((dir) =>
+  ['index', 'template'].flatMap((name) =>
+    ['.ts', '.js'].map((ext) => fileURLToPath(new URL(`../${dir}/${name}${ext}`, import.meta.url))),
+  ),
 );
 
 const SCRIPT = /\.[cm]?[jt]sx?$/;

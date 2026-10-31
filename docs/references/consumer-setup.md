@@ -193,6 +193,36 @@ Options: `gyral({ compiler: { parse5: false } })` skips the parse5 check;
 `compiledSvg` if it re-exports `svg`).
 The preset is the only Vite API: compiler and client-only behaviour are its options. The compiler needs Vite 8.
 
+## Development and production builds of core
+
+`@gyral/core` ships two builds of its runtime entry points (`.`, `/compiled`, `/internal`,
+`/internal/server`, `/storage`, `/indexeddb`). The **full build** (`dist/`) has every
+development check; the `development` resolve condition switches them on, and without it they
+stay off. The **production build** (`dist/prod/`, 0.3.10) is the same code with the
+development checks and the modules only they use removed when Gyral is built, so every bundler
+leaves them out, not only those that carry constants across modules (Rollup, Rolldown).
+
+| Who resolves core                                             | Gets                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------- |
+| Vite's dev server and Vitest's browser mode (`development`)   | the full build, checks on                             |
+| `vite build` for the browser                                  | the production build                                  |
+| esbuild, webpack, Rspack, Parcel or Bun bundling for browsers | the production build; the full one with `development` |
+| Node, Deno, Bun, Vite SSR, Vitest node projects               | the full build, checks only with `development`        |
+
+Only the `browser` condition selects the production build. Server runtimes keep one build
+however a tool resolves core: Vitest runs Node with `development` but resolves the packages
+it leaves external without it, and two builds in one process would be two copies of core.
+
+- **Development checks in a non-Vite browser build:** pass the condition, e.g. esbuild's
+  `conditions: ['development']` (webpack and Rspack set it in development mode). Without it
+  you get the production build: coded messages (`Gyral G0010 …`), no checks, no devtools
+  events.
+- **Before 0.3.10**, esbuild and other bundlers that don't carry constants across modules
+  bundled the development checks into production as dead code (17 to 19 KB minified in
+  the small apps measured). Nothing to change: rebuild.
+- **SSR bundles** for a non-browser platform (esbuild's `platform: 'neutral'`, an embedded V8)
+  still get the full build with its checks off, as before.
+
 ## ESLint: `@gyral/core/eslint`
 
 The template rules (view/09-template-rules.md) in the editor, with the compiler's messages, and

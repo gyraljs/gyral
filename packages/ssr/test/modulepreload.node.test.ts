@@ -58,6 +58,8 @@ describe('clientAssets (gyral-g1r.21)', () => {
     for (const key of [
       'node_modules/@gyral/core/dist/hydration-client.js',
       'node_modules/.pnpm/@gyral+core@0.3.0/node_modules/@gyral/core/dist/hydration-client.js',
+      // core's production build (gyral-gpr), what `vite build` resolves since 0.3.10
+      'node_modules/@gyral/core/dist/prod/hydration-client.js',
     ]) {
       const manifest: ViteManifest = {
         [key]: { file: 'assets/hydration-client-X.js', imports: ['_dep.js'] },

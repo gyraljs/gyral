@@ -59,10 +59,11 @@ export interface ClientAssets {
 
 /**
  * `@gyral/core`'s hydration module (view/07-hydration.md "Loading") as a manifest key: from the
- * published package (any package manager's layout) or from this repository's sources.
+ * published package (any package manager's layout; its production build in dist/prod/ since
+ * 0.3.10) or from this repository's sources.
  */
 const HYDRATION_MODULE =
-  /(?:^|\/)(?:@gyral\/core\/dist|packages\/core\/src)\/hydration-client\.[jt]s$/;
+  /(?:^|\/)(?:@gyral\/core\/dist(?:\/prod)?|packages\/core\/src)\/hydration-client\.[jt]s$/;
 
 /**
  * `ClientAssets` for `entry`, from a manifest already in memory. `also`: manifest keys of

@@ -1,7 +1,8 @@
-// Development only (gyral-7se.35): warns about custom-element tags on the page that nothing
-// defines. An entry that never imports a component's module leaves its tag an unknown element
-// that renders nothing and reports no error. define() starts the check under `if (DEV)`, so
-// production bundles leave this module out. It looks a few seconds after the page loads, and
+// Development only: warns about custom-element tags on the page that nothing defines. An entry
+// that never imports a component's module leaves its tag an unknown element that renders
+// nothing and reports no error. define() starts the check under `if (DEV)`, so core's
+// production build (dist/prod/) has no import of this module, and Rollup-based builds of the
+// full build drop it with the branch. It looks a few seconds after the page loads, and
 // again after each later define() (a lazily loaded route can render more tags), in the document
 // and in open shadow roots; it warns once per tag.
 import { message } from './view/index.js';

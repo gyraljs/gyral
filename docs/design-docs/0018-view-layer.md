@@ -441,3 +441,100 @@ that G0017 fired on pure views.
   `message(code, …)` now ends with ` (G0017: https://gyral.dev/errors/#G0017)` in development,
   and `docsLink(code)` gives the same ending there (the hydration mismatch, G0062, which keeps
   its own sentence). Production text and size are unchanged; errors.md says both forms.
+
+## Addendum: production build without development code (0.3.10, gyral-gpr, gyral-fve)
+
+Core guards each development check with `if (DEV)` (its devtools hooks with
+`if (DEVTOOLS_ENABLED)`), flags imported from `#view-dev` and `#devtools`, whose production
+modules export a literal `false`. Rollup and Rolldown carry that constant across modules and
+drop the checks with every module only they import. esbuild inlines it only when printing,
+after tree shaking, so its bundles kept them all as dead code: gyral-rs's Askama client
+(esbuild, minified, no `development` condition) was 16,546 B larger at 0.3.8 and 17,684 B at
+0.3.9 than with `DEV` replaced by `false`, `undefined-tags.js` and rule 15's element list
+(`view/normalize/component-name.js`) included. Webpack, Rspack and Parcel without constant
+propagation across modules are in the same position.
+
+- **Two trees in the package.** `dist/` is the full build, as before: development checks
+  behind the flags, which the `development` condition switches on. `dist/prod/` is the
+  production build: every module a production app can load, at the same path, with its
+  development code removed at Gyral's build (`scripts/lib/prod-build.mjs`, run by
+  `build-package.mjs` after `tsc`). Per module (`scripts/lib/strip-dev.mjs`): imports of the
+  flags become `false`, re-exports `export const DEV = false`, and esbuild's transform folds
+  the branches away (`minifySyntax`) and drops the imports and top-level code only they used
+  (TypeScript's unused-import rule, `treeShaking`), repeated until nothing changes; a
+  side-effect import that stripping leaves (`import "./undefined-tags.js"`) goes too, since
+  core is `sideEffects: false`. Only modules a production entry still reaches are written:
+  no `undefined-tags.js`, `view/messages.js` (the message table), `view/render/dev-check.js`,
+  `view/loc.js` or `devtools.js`. Rule 15's list stays for `normalize()` and `checkTemplate()`,
+  which always check names (tools call them); nothing else imports it, so bundles that don't
+  call them drop it. Names stay unminified; no source maps (the full build has them). 136
+  files, +43 KiB packed (664 → 707 KiB).
+- **Selection.** Each runtime entry (`.`, `/internal`, `/internal/server`, `/compiled`,
+  `/storage`, `/indexeddb`) is
+  `{ types, browser: { development: dist/…, default: dist/prod/… }, default: dist/… }`;
+  `/vite`, `/eslint` and the CLI are tools and have only `dist/`.
+  - **Only `browser` selects it.** One process must load one copy of core. In Node, two
+    resolvers can pick core's entries: Vitest runs its workers with `--conditions development`
+    but resolves an externalized package's entry with Vite's `externalConditions` (`node`,
+    `module-sync`), so an app's `@gyral/core` would get one tree and `@gyral/ssr`'s
+    `@gyral/core/internal` the other (create-gyral's SSR template tests that way). With the
+    production tree under `browser`, Node, Deno and Bun resolve exactly as in 0.3.9. A `node`
+    branch would do too, but publint reads `node` as CommonJS and asks for `engines.node`,
+    which Gyral's runtime packages don't declare; server bundles don't need the bytes.
+  - **Its own subpath imports.** Production modules import only each other and
+    `#prod/prepare`, `#prod/hydration-loader`, `#prod/invoker-fallback` and
+    `#prod/spec-features`: the twins of core's conditional imports without `development`
+    (`gyral-compiled` and `gyral-client-only` work as before). `#view-dev` and `#devtools` are
+    inlined. Vite's dependency optimizer resolves exports with Vite's resolver and `#…` imports
+    with rolldown's (gyral-3pv); if the trees shared `#prepare`, an app without `gyral()` would
+    pre-bundle the full build with the production preparer, two copies of the view layer.
+    With names of its own, no resolver can mix the trees.
+- **Prior art.** Vue ships `.prod.js` builds and selects its CommonJS ones by
+  `process.env.NODE_ENV`; React's production bundles are selected the same way; Preact keeps
+  its checks out of the main entry (`preact/debug`, opted into). Gyral's packages are ESM and
+  already select development code by condition (`#view-dev`), so the export condition picks the
+  tree, as Solid's `development` builds do; nothing to replace at build time, nothing to opt
+  into.
+- **Who gets what.**
+
+  | Consumer                                                  | Build                                        |
+  | --------------------------------------------------------- | -------------------------------------------- |
+  | Vite dev server, its pre-bundle, Vitest browser mode      | `dist/` with checks (`development`)          |
+  | `vite build` (client), Vitest with production conditions  | `dist/prod/`                                 |
+  | esbuild, webpack, Rspack, Parcel, Bun for browsers        | `dist/prod/`; `dist/` with `development`     |
+  | Node, Vite SSR, Vitest node projects                      | `dist/`, checks only with `development`      |
+  | Deno, an SSR bundle for embedded V8 (`platform: neutral`) | `dist/`, checks off (dead code, as in 0.3.9) |
+
+- **Tooling follows the tree an app resolves.** The template compiler's feature
+  registrations sit next to the compiled entry it resolves (`dist/prod/use-*.js`), its
+  `VIEW` sources include `dist/prod/view/`, and `@gyral/ssr` finds the hydration chunk at
+  `dist/prod/hydration-client.js` too.
+- **Checks.** `pack:check` bundles the packed core with esbuild (`lib/prod-build-fixture.mjs`):
+  without `development` (and with `gyral-client-only`) no module outside `dist/prod/` and none
+  of the skipped-view recheck, rule 15's list, the undefined-tag watch, the message table or
+  the devtools hook; with `development` all of them. In plain Node, both trees export the same
+  names from every runtime entry and server-render a component identically. The browser-prod
+  Vitest project strips core's sources with the same pass, so its hydration and
+  `*.prod.test.ts` tests run what production apps run (`production-build.prod.test.ts` checks
+  that it does). Unit tests: `scripts/test/strip-dev.test.mjs`.
+- **Size.** esbuild, minified, no `development`: gyral-rs's Askama client source 86,958 →
+  69,151 B (−17,807; `gyral-client-only`), its axum-app client 101,044 → 81,465 B (−19,579),
+  the fixture app 98,386 → 79,027 B (−19,359); with `development` unchanged (Askama 100,087 B).
+  gyral-rs's embedded SSR bundle (`platform: 'neutral'`) is unchanged (117,710 B). The
+  examples' budgets build core from source with Rolldown and are unchanged, byte for byte.
+- **Cross-chunk development exports (gyral-fve).** Production modules no longer call
+  development functions, so no bundler splitting an app built on the published core can keep
+  one as a chunk export. Builds from source (the examples, `pnpm size`) still rely on
+  Rolldown: each example built with and without stripping core's sources first differs by
+  −13 to +18 B in single-chunk examples (minifier noise) and by 210 B (isomorphic), 69 B
+  (register) and 65 B (no-js-first) in split ones. In isomorphic that is eleven more exports
+  of its render chunk: the devtools no-ops, `absent`, `VERSION` and the self-guarded
+  `recheckView` and `checkKeys` stubs; in register and no-js-first, three of the main chunk
+  for the hydration chunk: `absent`, `checkKeys` and `devMismatch`. The self-guards
+  (`if (!DEV) return` in `recheckView`, `checkKeys`, `checkSpecFeatures`) keep the bodies out
+  and stay: source builds need them. Unguarded development functions called across modules
+  (`warnLowercased`, `checkAttr`, the `warn.ts` helpers) share a chunk with their callers in
+  all three split examples.
+- **Not covered.** A platform-neutral bundle (gyral-rs's embedded SSR bundle) still carries
+  the dead development code, as before. `@gyral/http` reads `devtoolsEnabled` from
+  `@gyral/core/internal` for its CSRF check; esbuild keeps that check in its bundles.

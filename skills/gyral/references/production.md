@@ -25,6 +25,15 @@ count against the real proxy. Keep one effective policy owner and update policy 
 Vite nonce placeholders need per-request replacement in both HTML/meta and the CSP header;
 development HMR needs its exact WebSocket origin in `connect-src`.
 
+## Bundlers other than Vite
+
+Browser bundles without the `development` condition (esbuild, webpack, Rspack, Bun) get core's
+production build, `dist/prod/` (0.3.10): no development checks, coded messages, nothing to
+configure. Add `development` (esbuild `conditions: ['development']`) for the checks while
+developing. Node, Deno and Bun always load the full build `dist/`; its checks run only under
+`development`. A `platform: 'neutral'` SSR bundle gets the full build with checks off. Don't
+alias or deep-import `@gyral/core/dist/…`: the export conditions pick the build.
+
 ## Node bundles and composition
 
 Keep `gyralDevServer` in the development entry. Production imports `toNodeListener` from
