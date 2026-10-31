@@ -27,7 +27,7 @@ development HMR needs its exact WebSocket origin in `connect-src`.
 
 ## Bundlers other than Vite
 
-Browser bundles without the `development` condition (esbuild, webpack, Rspack, Bun) get core's
+Browser bundles without the `development` condition (esbuild, webpack, Rspack, Parcel, Bun) get core's
 production build, `dist/prod/` (0.3.10): no development checks, coded messages, nothing to
 configure. Add `development` (esbuild `conditions: ['development']`) for the checks while
 developing. Node, Deno and Bun always load the full build `dist/`; its checks run only under

@@ -67,8 +67,8 @@ consumer setup guide (packages, Vite preset, template compiler):
 
 ## Development and production builds
 
-Bundling for the browser without the `development` condition (`vite build`, esbuild, webpack
-or Rspack in production mode) resolves core's production build, `dist/prod/`: the development
+Bundling for the browser without the `development` condition (`vite build`, esbuild, Parcel, Bun,
+or webpack and Rspack in production mode) resolves core's production build, `dist/prod/`: the development
 checks and the modules only they use are already removed, so every bundler leaves them out.
 With `development` (Vite's dev server, Vitest, webpack's development mode, esbuild's
 `conditions: ['development']`) you get the full build with its checks. Node, Deno and Bun

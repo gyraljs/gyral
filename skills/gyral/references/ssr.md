@@ -30,7 +30,7 @@ Pages work before JavaScript loads.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
    first and switch in the `Hydrated` reducer. A mismatch re-renders only that component, in
-   both builds (since 0.3.10): development logs an error with the tag, template location, DOM
+   both builds (0.3.10): development logs an error with the tag, template location, DOM
    path, expected and found (G0062, then G0063); production warns. `hydrated()` fails a test
    on either. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
