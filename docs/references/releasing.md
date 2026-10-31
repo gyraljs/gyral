@@ -108,10 +108,11 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    this release and its API pages carry this checkout's doc comments
    (packages/mcp/test/snapshot-api.node.test.ts). It consumes the changesets, bumps every
    `@gyral/*` package to the same version and writes each `CHANGELOG.md`. Commit as
-   `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, merge. In the same PR, rewrite the
-   "unreleased (next release)" markers on features this release ships: they are in package
-   READMEs, the skill (which the MCP corpus bundles), `docs/references` and example READMEs
-   (`git grep -in 'unreleased'`). Remove the marker: the docs describe the current release.
+   `chore(release): vX.Y.Z`, open a PR, run `pnpm check`, let CI's `rust-compat` job pass
+   (["gyral-rs and the SSR protocol"](#gyral-rs-and-the-ssr-protocol)), merge. In the same PR,
+   rewrite the "unreleased (next release)" markers on features this release ships: they are in
+   package READMEs, the skill (which the MCP corpus bundles), `docs/references` and example
+   READMEs (`git grep -in 'unreleased'`). Remove the marker: the docs describe the current release.
 3. GitHub → Actions → **release** → Run workflow (branch `main`) → approve the `npm`
    deployment when asked.
 4. The workflow refuses unconsumed changesets, runs `pnpm check`, builds, runs
@@ -128,7 +129,9 @@ publish or approve. Do this for the unscoped placeholders (`gyral`, `gyraljs`) t
    app's `typecheck`, `build` and `test`. Check manifests and lockfiles contain registry
    dependencies, with no `file:`, `link:`, vendor tarballs or overrides for Gyral. Run
    `npx -y @gyral/mcp@X.Y.Z --help` (the documented command, which picks the package's only
-   bin) and start it as an MCP stdio server, and `npx -y @gyral/codemod@X.Y.Z --help`.
+   bin) and start it as an MCP stdio server, and `npx -y @gyral/codemod@X.Y.Z --help`. Then
+   start gyral-rs's `gyral-canary` workflow with `X.Y.Z` (ADR 0034; from gyral-rs 0.8.0): it tests
+   the release in gyral-rs's own suites without adopting it.
 7. Move gyral.dev to the verified npm release (registry dependencies only, no overrides or
    vendored packages) on the branch from step 2, run its gate and deploy matching docs and llms
    files. Then rebuild the hosted MCP image (production-mcp.md) with `--released-corpus X.Y.Z`.
@@ -153,6 +156,9 @@ The placeholders occupy 0.0.0, so every real release is **0.1.0** or higher (the
   `npx --no-install @gyral/mcp` over stdio and calls tools, so npx's bin selection is
   exercised as users run it. It fails if the tarballs install any Lit package (ADR 0018).
   The browser-only entry `@gyral/devtools` is covered by the browser tests instead.
+- `pnpm rust-compat` (network, not in the gate; CI's `rust-compat` job): the candidate in the
+  pinned gyral-rs release binary
+  (["gyral-rs and the SSR protocol"](#gyral-rs-and-the-ssr-protocol)).
 - `pnpm verify:create` (network, not in the gate): installs `create-gyral` from its packed
   tarball and runs it as `npm create gyral` for each template (`basic`, `ssr`), points the
   app's `@gyral/*` at the tarballs, installs with npm and runs the generated app's
@@ -424,6 +430,45 @@ for Gyral 0.3.9) published all four crates to crates.io through Trusted Publishi
 and a fresh Cargo project on Rust 1.99.1 with `gyral` 0.7.0 and the `axum` feature builds and
 resolves V8 150.4.0. The Rust compatibility fixture now pins gyral-rs `394ab9f` and npm 0.3.9, and
 `verify-rust-compatibility.mjs` passes against it (gyral-vge).
+
+## gyral-rs and the SSR protocol
+
+Gyral and gyral-rs meet at a versioned SSR protocol, not at a version pin
+([ADR 0034](../design-docs/0034-ssr-protocol.md)). **A Gyral release that keeps the protocol
+needs no gyral-rs release**, patch or minor: don't wait for one, and don't move the fixture.
+[rust-compatibility.json](rust-compatibility.json) records the protocol (`protocol`,
+`minGyral`, `apiHash`, the host profile and limits) and the gyral-rs release Gyral tests against
+(`gyralRs`: its version, commit and the SHA-256 of its source and Linux binary archives).
+
+- **Every pull request and push to `main`:** the contract test in `pnpm check`
+  (`packages/ssr/test/embedded-protocol.node.test.ts`) and the `rust-compat` job in `ci.yml`,
+  which runs `pnpm rust-compat`: the candidate's packed `@gyral/core` and `@gyral/ssr`, built by
+  gyral-rs's example build and served by the pinned release's binary. Run it locally the same
+  way (Linux x86_64, network; `--archives <dir>` reuses downloaded archives, `--keep` keeps the
+  work directory).
+- **Before the release:** run the full fixture on the candidate,
+  `node scripts/verify-rust-compatibility.mjs /path/to/gyral-rs`, with that checkout at the
+  fixture's commit (a fresh `git clone --branch vX.Y.Z` works; `--target-dir` reuses a Cargo
+  build directory). It exports the commit into a throwaway copy, installs the candidate
+  tarballs in place of gyral-rs's npm pins, builds, and runs the renderer's `gyral` and
+  `budgets` tests, the artifact smoke and both browser suites. Record it with the candidate
+  checks.
+- **After npm approval:** step 6 starts gyral-rs's `gyral-canary` with the release.
+- **Moving the fixture:** only when Gyral should test against a newer gyral-rs release (a new
+  protocol, a raised minimum, a new deno_core or V8). Take the version, the commit and the
+  archive digests from that release's `SHA256SUMS`, and check `pnpm rust-compat` passes.
+- **A protocol change** (the contract test fails, and an embedded host could notice the change,
+  ADR 0034 "What changes the protocol") ships only in a minor: an ADR 0034 addendum specifying
+  protocol N+1, a gyral-rs minor that supports it released first, then `SSR_PROTOCOL`, the
+  fixture (`protocol`, `minGyral`, `apiHash`, `gyralRs`) and an upgrade page in one change. A
+  change no host can notice only updates `apiHash`, with the reason in the commit.
+
+**Until the fixture pins gyral-rs 0.8.0**, it pins 0.7.0, the last release before the protocol,
+which accepts exactly Gyral 0.3.9 (`gyralRs.acceptsGyral`). The candidate packages say 0.3.9
+until the release commit, so the job runs the candidate in the 0.7.0 binary until then. The
+0.3.10 release commit fails it, naming the fix, until the fixture pins gyral-rs 0.8.0, which
+ships first (decision 8): set its version, commit and archive digests and remove
+`acceptsGyral`.
 
 ## When something goes wrong
 

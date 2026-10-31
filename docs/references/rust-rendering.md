@@ -75,14 +75,28 @@ performance superiority. Crates are published from the gyral-rs release workflow
 Trusted Publishing); a new Gyral release needs a gyral-rs release only when it changes the
 protocol.
 
-## Reproduce the release fixture
+## Reproduce the compatibility checks
 
-Run `node scripts/verify-rust-compatibility.mjs /path/to/gyral-rs`. It refuses an unreviewed
-source revision or changed exact npm pins, uses the Rust repository's frozen installation,
-builds both asset pairs and runs its embedded, artifact and real-browser checks. It writes
-only ignored local build outputs, never edits manifests or publishes crates. A candidate
-Gyral release needs its own reviewed compatibility descriptor and coordinated Rust acceptance;
-passing the 0.3.9 descriptor does not certify unreleased Gyral changes.
+Gyral checks every change against protocol 1 three ways
+([ADR 0034](../design-docs/0034-ssr-protocol.md) "Compatibility testing"):
+
+- **The contract test** in `pnpm check` builds a fixture entry the way gyral-rs's example does
+  and runs it in a `node:vm` context limited to the protocol's host profile, and fingerprints
+  the server declarations the protocol relies on. No Rust, no download.
+- **`pnpm rust-compat`**, CI's `rust-compat` job on every pull request: it downloads the pinned
+  gyral-rs release's source and Linux binary archives, checks their SHA-256 against the
+  fixture, packs this checkout's `@gyral/core` and `@gyral/ssr`, runs the example's own build
+  on them and serves the result with the released `gyral-axum-example`: readiness, an escaped
+  render under the enforcing CSP, the client asset, the opaque 500 of a failing page, a clean
+  shutdown, and startup refusal of a tampered digest and of an unknown protocol. No Rust build.
+- **`node scripts/verify-rust-compatibility.mjs /path/to/gyral-rs`**, at release time, with
+  the checkout at the fixture's commit: the same candidate tarballs in a throwaway copy of that
+  commit (the checkout is only read), a Rust build, and gyral-rs's embedded, artifact and
+  real-browser checks. It writes only its copy (and `--target-dir`, when given), never edits
+  manifests or publishes crates.
+
+While the fixture pins gyral-rs 0.7.0, which accepts only 0.3.9, both refuse another candidate
+version with a message naming the fix: pin a gyral-rs release that accepts the protocol.
 
 The fixtures cover real SSR, escaped props, stores, forms, timezones, error recovery,
 request isolation, enforcing CSP, no-JS first paint, DOM adoption, typed-before-hydration

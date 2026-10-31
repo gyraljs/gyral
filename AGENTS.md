@@ -25,6 +25,7 @@ details live in the linked docs, which are the system of record.
 | `pnpm ui:check [name…] [--baseline\|--compare]` | **See UI changes:** screenshots (desktop/phone × light/dark), console, overflow, axe → `.ui-check/<run>/report.md` |
 | `pnpm demos:record [name…]`                     | Record each example's `demo.mjs` (1280×720 video + poster) → `.demos/` for gyral.dev                               |
 | `pnpm verify:create`                            | Generate both `create-gyral` templates from the tarball, install, typecheck, build, test (network)                 |
+| `pnpm rust-compat`                              | The candidate in the pinned gyral-rs release binary: no Rust build (network; CI job, ADR 0034)                     |
 | `pnpm smoke:prod`                               | Build SSR examples for production, check every page hydrates in place (run after hydration changes)                |
 | `pnpm bench:view`                               | View-layer benchmarks in Chromium: renderer timings, list reconciliation candidates (not part of `check`)          |
 
