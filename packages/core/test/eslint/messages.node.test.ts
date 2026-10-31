@@ -15,6 +15,7 @@ const BAD = [
   '<${x}></p>',
   '<p data-${x}="y"></p>',
   '<script>let a = ${x}</script>',
+  '<noscript><a href=${x}>Upload</a></noscript>',
   '<!doctype ${x}>',
   '<template><p class=${x}></p></template>',
   '<input .value=${x}>',

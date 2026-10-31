@@ -75,6 +75,9 @@ The server writes the template HTML (01), putting each value in at its hole:
   development markers as usual), so the browser's parser builds SVG elements from it. Escaping
   is the same: in SVG content the parser decodes character references in text and attribute
   values as in HTML, and `<title>`/`<style>`/`<script>` inside SVG are not raw text there.
+- **`<noscript>`** (0.3.10, gyral-qqa): its content is static (rule 3) and only the server
+  writes it, as the template has it (01 "Normalization"). A browser with scripting on keeps it
+  as text and hydration adopts it as is (07); one without scripting shows it.
 - **Page shells:** a `server` template (01) has no anchors in its HTML, and a `raw()` value in
   one of its own holes is written without its start anchor: hydration never walks a shell.
   Templates nested in a shell's holes are ordinary templates and keep theirs. With 01's

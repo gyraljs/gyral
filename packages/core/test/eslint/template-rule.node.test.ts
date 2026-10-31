@@ -66,6 +66,7 @@ describe('gyral/template', () => {
       // 3: holes in raw text, comments, <template>
       bad('<script>let a = ${x}</script>', '${x}'),
       bad('<style>p { color: ${x} }</style>', '${x}'),
+      bad('<noscript><p>${x}</p></noscript>', '${x}'),
       bad('<!-- ${x} -->', '${x}'),
       bad('<template><p>${x}</p></template>', '${x}'),
       // 4: form state as a property

@@ -223,8 +223,10 @@ function element(t: Element, a: Adoption, inst: Instance, values: readonly unkno
     if (holes) fail(`no children from the parent in light host <${t.localName}>`, el, el);
     return el;
   }
-  // A custom element without children in the template: what it holds is its own.
-  if (!holes && t.firstChild === null && t.localName.includes('-')) return el;
+  // A custom element without children in the template: what it holds is its own. So is a
+  // <noscript>'s content (always empty in the template, emit.ts): the server's, which the
+  // parser kept as text, adopted as is (07).
+  if (!holes && t.firstChild === null && /-|^noscript$/.test(t.localName)) return el;
   const outer = cur;
   const outerParent = parent;
   parent = el;

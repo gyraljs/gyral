@@ -165,7 +165,13 @@ class Emitter {
     ) {
       this.out('\n');
     }
-    const shape = this.children(el.children, path, el);
+    // <noscript> content is server-only (01 "Normalization"): with scripting on, the page's
+    // parser keeps it as one Text node that nothing renders, and hydration adopts it as is
+    // (07). Rule 3 keeps it static. The client's copy would be live elements in Chromium and
+    // WebKit, whose <template> parse runs with scripting off (a <style> that applies).
+    const serverOnly = el.ns === 'html' && el.name === 'noscript';
+    if (serverOnly) for (const c of el.children) if (c.type === 'text') this.serverOut(c.raw);
+    const shape = serverOnly ? [] : this.children(el.children, path, el);
     if (el.props !== undefined) {
       this.html += `</${el.raw}>`;
       this.op({ k: 'close', tag: el.name });

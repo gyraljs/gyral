@@ -56,6 +56,10 @@ A `Date`, `Set` or class instance built in the view compares by reference: keep 
   (`references/ssr.md` "Content-Security-Policy").
 - Graphics: write the whole `<svg>` inline in `html`. An SVG fragment that is its own template
   (shown conditionally or per list item inside an `<svg>`) uses `svg` (below).
+- A notice for visitors without JavaScript goes in `<noscript>`, as static markup: no `${…}`
+  inside it (template rule 3; attributes on the `<noscript>` itself may be bound). Its content
+  is server-only: a client render creates the element empty, and hydration keeps the server's
+  as it is (0.3.10). Before 0.3.10 such a notice broke hydration (G0062/G0063).
 - With `gyral()`, `vite build` compiles templates and reports rule errors at build
   time (https://gyral.dev/docs/views/#checked-before-it-runs); dev and tests use the same rules at runtime.
 - `@gyral/core/eslint` reports the same rule errors in the editor, with the same messages,
