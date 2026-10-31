@@ -61,6 +61,12 @@ it. Two properties run with fast-check over generated templates and values:
 2. **Hydration is identity:** hydrating server output and then rendering a second result gives
    the same DOM as client-rendering the second result directly, and keeps the server's nodes.
 
+One difference is by design (0.3.10, gyral-qqa): a `<noscript>`'s content is server-only (01
+"Normalization"), in a template's markup and in `raw()` markup alike (gyral-uvj.2, 02
+"`raw(html)`"). The server writes it, a client render creates the element empty, and
+hydration keeps the server's text (07). The generators don't produce `<noscript>`;
+`core/test/view/noscript-hydration.test.ts` and `raw-noscript-hydration.test.ts` cover it.
+
 Notes from the implementations: property 1 is `core/test/view/server-conformance.test.ts`
 (Phase 4). Property 2 is `core/test/view/conformance-hydration.test.ts` (Phase 5), over the
 same generated results (nested templates, `each`, arrays, attributes, merged text, `raw()`,

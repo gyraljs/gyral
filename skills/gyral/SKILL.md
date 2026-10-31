@@ -178,4 +178,4 @@ Gyral doesn't own (signals, Redux, XState, WebSocket) → `subscription()` in co
 - `references/devtools.md` — the dev-only timeline panel
 - `references/anti-patterns.md` — idioms, anti-patterns, and common errors with fixes
 - `references/workloads.md` — state-owned sequences, workers, authoritative drafts, held input, readiness and lifetime boundaries
-- `references/production.md` — strict CSP, Node composition, offline workspace assets and Rust rendering contracts
+- `references/production.md` — bundlers other than Vite, strict CSP, Node composition, offline workspace assets and Rust rendering contracts

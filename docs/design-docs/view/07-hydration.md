@@ -159,6 +159,7 @@ what comes next, because it has the template object and this render's values.
 | child hole: `nothing`/`null` | nothing                                                      | records an empty part                                                                |
 | child hole: `raw()`          | its start anchor, then nodes up to the hole's reference node | records the range                                                                    |
 | nested Gyral host            | that element                                                 | records its parts on the host; walks a shadow host's light children only (above)     |
+| static `<noscript>`          | a `<noscript>`                                               | records its attribute parts; never walks or compares its content (below)             |
 
 **svg templates** (0.3.1, 01 "svg templates") are walked like any template: the template's
 content was parsed inside an `<svg>` and the server's markup inside the page's `<svg>`, so both
@@ -167,6 +168,17 @@ sides have SVG elements with the parser's names, and the walk's local-name check
 are checked and removed as usual. In development, an svg template whose DOM parent isn't SVG
 content is a mismatch ("expected an svg template inside SVG content"); production checks
 structure only, as everywhere.
+
+**`<noscript>`** (0.3.10, gyral-qqa): the walk only runs with scripting on, and then the page's
+parser keeps a `<noscript>`'s content as raw text: one Text node holding the server's markup.
+The template has none of it: its content is server-only, and the client's template HTML writes
+the element empty (01 "Normalization"; before 0.3.10 Chromium and WebKit parsed it into
+elements there, and every such notice was a mismatch, 09 "`<noscript>` since 0.3.10"). So the
+walk adopts the element (local name, attribute parts) and skips its content in both builds,
+as it skips a light host's: nothing is compared, the server's text stays as the parser made it,
+and no later render touches it (rule 3 keeps parts out of it). Content that only shows without
+JavaScript has nothing to check against the client render, and a third party (or another
+server's whitespace) changing it breaks nothing.
 
 **Merged text.** The HTML parser joins adjacent text: `Hi ${name}!` arrives as one Text node
 `Hi Bob` before the anchor. The walk splits it with `splitText` at the known lengths (static
@@ -223,14 +235,16 @@ declarations (Firefox empties a blocked one).
 - **Lists and arrays:** rows adopt one after another; `each` rows record key, item and pick
   as a client render would, so the first update skips unchanged rows.
 - **`raw()`:** the start anchor, then as many nodes as the markup parses to on its own (a
-  `<template>` parse, as the client does): non-text nodes by node name, text by length.
+  `<template>` parse, as the client does): non-text nodes by node name, text by length. So a
+  `<noscript>` in the markup is adopted as it is, the server's text inside it never compared;
+  a client render of `raw()` creates it empty (0.3.10, gyral-uvj.2, 02 "`raw(html)`").
 - **Elements:** the local name must match; parts are adopted (`adoptAttr` in `adopt-attr.ts`:
   committed values set, nothing written); then the children are walked unless a text part owns
-  them (`<textarea>`, `<title>`), the element is a light host, or it is a custom element without
-  template children. Server-only attributes on nested hosts (`data-gyral-seed`,
-  `data-gyral-light`, `defer-hydration`, `data-gyral-hydrate`) are never compared: the walk
-  checks bound attributes only, never the static attribute set (hooks' server halves and
-  third parties add attributes).
+  them (`<textarea>`, `<title>`), the element is a light host, it is a custom element without
+  template children, or it is a `<noscript>` (0.3.10, above). Server-only attributes on
+  nested hosts (`data-gyral-seed`, `data-gyral-light`, `defer-hydration`,
+  `data-gyral-hydrate`) are never compared: the walk checks bound attributes only, never the
+  static attribute set (hooks' server halves and third parties add attributes).
 
 ### The server markup the walk meets (from Phase 4)
 
@@ -270,10 +284,10 @@ locale differences), third parties changing the DOM before scripts run (translat
 managers, extensions, CDN email obfuscation), or a stale cached page served with a new
 deployment.
 
-| Mode        | Detection                                                                                                            | On mismatch                                                                                                                         |
-| ----------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| development | every row of the walk table above, plus the template id comment before each instance (06) and text content of values | **throw** `HydrationMismatch` with the tag, the template's `loc` when it has one (01), the path, and expected vs found              |
-| production  | structural only: node type and local name at each step, and enough text length                                       | **recover this component only:** `replaceChildren()` on its root, render fresh, log a warning. The rest of the page stays hydrated. |
+| Mode        | Detection                                                                                                            | On mismatch                                                                                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| development | every row of the walk table above, plus the template id comment before each instance (06) and text content of values | **recover this component only**, as production does, and **log an error** (`console.error`) with the tag, the template's `loc` when it has one (01), the path, and expected vs found |
+| production  | structural only: node type and local name at each step, and enough text length                                       | **recover this component only:** `replaceChildren()` on its root, render fresh, log a warning. The rest of the page stays hydrated.                                                  |
 
 **Phase 5 notes:**
 
@@ -283,15 +297,39 @@ deployment.
   its value next changes.
 - Extra nodes are structural: a missing node, an extra child at the end of an element, or
   content after the view all count in both builds.
-- The thrown error is caught by the scheduler like any render error (04 "Errors"): it is
-  logged with the tag, the host keeps the server DOM, and the next render tries again. The
-  devtools hook gets a `mismatch` event (development builds; production has no hook).
+- Until 0.3.10 development threw the mismatch, and the scheduler caught it like any render
+  error (04 "Errors"): the host kept the server DOM and the next render tried again. Now
+  development recovers (below).
 - Messages, for example:
   `gyral: hydration mismatch in <shop-cart> at ul[1] › li[2] › #text[0]: expected text "3", found text "4".`
-  Development adds the explanation; production keeps the path and the expected/found part (useful in
-  field reports). The `(template at file:line:col)` part appears for a template object that
-  carries `loc`: development runtime templates do since 0.3.1 (01 "Source locations"); compiled
-  and production ones don't, so there the tag and path locate the mismatch.
+  Development adds the explanation, then G0063's sentence (`<shop-cart> was rendered fresh
+after a hydration mismatch.`); production logs G0063's code first, then the path and the
+  expected/found part (useful in field reports). The `(template at file:line:col)` part
+  appears for a template object that carries `loc`: development runtime templates do since
+  0.3.1 (01 "Source locations"); compiled and production ones don't, so there the tag and path
+  locate the mismatch.
+
+**Development recovers (0.3.10, gyral-uvj.3, owner decision 2026-10-31; ADR 0018 addendum
+"Hydration mismatches recover in development").** Development used to throw the mismatch. The
+host then kept the server's DOM, which no render updated: every later render tried to hydrate
+again and failed again. A mismatch the framework caused (a `<noscript>` notice before 0.3.10)
+left the app author with a component that was dead in development and nothing in their code
+to fix. Now both builds recover the same way, and development only adds information: the log
+is an error, not a warning, and carries the full mismatch (G0062 with its explanation), then
+G0063. A hydration test still fails on it: `@gyral/testing`'s `hydrated()` fails on any console
+error or warning.
+
+- **Not a failure for the error channel** (ADR 0024), in either build: no `GyralError`, no
+  bubbling `error` event, no `error` view, no `reportError`. The component works, with its
+  seeded state and a fresh DOM, so a fallback view, or a parent boundary that re-mounts it
+  under a new key, would be the wrong response. Many mismatches in the field come from outside
+  the app (extensions, translation, CDN rewrites, stale cached pages); reporting them to
+  monitoring as uncaught errors would be noise the author can't act on. Production already
+  logs a warning, and ADR 0024 decision 5 keeps both builds' behaviour the same.
+- The devtools hook gets a `mismatch` event (development builds; production has no hook),
+  then `hydrated` with `serverRendered: true`, as for any hydrated host.
+- The view layer's `hydrate(value, root)` still throws `HydrationMismatch`: recovery and the
+  log belong to core's `hydrateRoot` (`hydration-client.ts`), the caller that has a host.
 
 No in-place patching of a mismatched DOM: rebuilding one component is simple and predictable.
 
@@ -338,11 +376,21 @@ preload and release-retention boundaries. No blanket browser-version workaround 
 - Every hydration test runs against development and production builds of core (the
   `browser-prod` Vitest project stays).
 - **Phase 5:** `core/test/view/walk-hydration.test.ts` (the walk), `mismatch-hydration.test.ts`
-  (each mismatch kind per build, one host recovered with siblings hydrated),
+  (each mismatch kind per build, one host recovered with siblings hydrated; since 0.3.10 in
+  both builds, logged as an error in development and a warning in production, interactive
+  after),
   `conformance-hydration.test.ts` (README property 2), `core/test/element-hydration.test.ts`
   (hosts, style swap, child-first and parent-first order, islands), the `@gyral/ssr` suites
   and the examples' hydration tests (both projects), and `pnpm smoke:prod`, which now also
   checks that every element the parser built is still in the page after hydration.
+- **0.3.10 (mismatches):** `testing/test/mismatch-hydration.test.ts` (`hydrated()` fails on
+  the logged mismatch in both builds; the recovered component works) and
+  `core/test/devtools.test.ts` (a `mismatch` event, then `hydrated`, no `error`).
+- **0.3.10 (`<noscript>`):** `core/test/view/noscript-hydration.test.ts` (the walk, a client
+  render, both builds; Firefox and WebKit too through `browsers.config.ts`),
+  `core/test/noscript-hydration.test.ts` (shadow and light hosts with a `<noscript>` notice,
+  from real server output) and `core/test/view/raw-noscript-hydration.test.ts` (a notice in
+  `raw()` markup: client renders empty, server output hydrated; three engines, both builds).
 - **Size:** Phase 5 added hydration to every client bundle (about 1.8 KiB gzip); since
   gyral-g1r.18 it loads lazily ("Loading"), so a client-only app's initial chunk carries none
   of it and only server-rendered pages fetch the separate chunk, preloaded by the server

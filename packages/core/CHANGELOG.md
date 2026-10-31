@@ -1,5 +1,77 @@
 # @gyral/core
 
+## 0.3.10
+
+0.3.10 fixes what migrating the apps to 0.3.9 found and adds the versioned SSR protocol (epic
+gyral-uvj). The first three entries change what a working app sees: in development a hydration
+mismatch renders the component fresh and logs an error instead of leaving it dead, and a
+`<noscript>` notice, in a view or in `raw()` markup, hydrates and is created empty on the
+client. Browser bundles built without Vite now get core's production build, without development
+code.
+[Behavior changes in 0.3.10](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/references/migrating-0.3.9-to-0.3.10.md)
+lists each with what to do, then the new checks and the workarounds you can remove.
+
+### Patch Changes
+
+- 5cb7e66: In development, a hydration mismatch no longer leaves the component dead (gyral-uvj.3). A
+  component whose server-rendered DOM doesn't match its first client render is now rendered
+  fresh in development too, exactly as production builds already did, and responds to intents.
+  Development logs the mismatch with `console.error` in full (G0062: the component, the
+  template's call site, the DOM path, what was expected and what was found), then G0063.
+
+  Before, development threw the mismatch: the component kept the server's DOM, no render updated
+  it, and every render tried to hydrate again. A mismatch Gyral itself caused (a `<noscript>`
+  notice, fixed in this release) left a component you couldn't fix from your code. The mismatch
+  was also reported as a view failure (G0031): the component's `error` view rendered, and
+  `window` `error` listeners and `collectErrors()` saw it. It no longer goes through the error
+  channel in either build; look for the console error instead. `hydrated()` from
+  `@gyral/testing` still fails a test on it, now quoting the mismatch itself. Production is
+  unchanged.
+
+- 467f293: A `<noscript>` notice in a component's view no longer breaks hydration (gyral-qqa). The browser
+  keeps a server-rendered `<noscript>`'s content as text while scripts run, but the client's
+  template held it as elements, so every such notice was a hydration mismatch (G0062): development
+  threw and the component never hydrated; production rendered it fresh and warned (G0063).
+  Hydration now adopts a `<noscript>` element as it is, without comparing its content.
+
+  A `<noscript>`'s content is now server-only: a client render creates the element empty. Before,
+  Chromium and Safari built its markup as live elements, so a `<noscript><style>` applied to the
+  page and a `<noscript><img>` loaded while scripts ran. The development runtime no longer reports
+  such a notice as a template rule 7 repair. A `${…}` inside `<noscript>` was already template rule
+  3; its message now says to write the notice as static markup and keep what changes outside it.
+
+- 9ab416d: A `<noscript>` inside `raw()` markup is now inserted empty in the browser (gyral-uvj.2), as a
+  `<noscript>` in a template already is in this release. Before, Chromium and Safari parsed the
+  notice's markup into live elements while scripts ran, so a `<noscript><style>` applied to the
+  page and a `<noscript><img>` loaded; Firefox inserted it as text. The server still writes
+  `raw()` markup verbatim, so visitors without JavaScript see the notice, and hydration keeps the
+  server's notice as it is. If a script read the notice's elements on the client, render that
+  content outside the `<noscript>`.
+
+- 65a7dd5: Browser bundles built without Vite get no development code (gyral-gpr). Core's development
+  checks were guarded by a flag that only Rollup-based bundlers (Vite) resolve across modules, so
+  esbuild, webpack, Rspack, Parcel and Bun kept every check and the modules only they use as dead code in
+  production: 17 to 19 KB minified in a small app, the template rule 15 element list, the
+  undefined-tag watch and the skipped-view recheck included. `@gyral/core` now also ships a
+  production build, `dist/prod/`, with that code removed when Gyral is built, and its exports send
+  the `browser` condition there unless `development` is set. An esbuild bundle of gyral-rs's
+  Askama client goes from 86,958 to 69,151 bytes. Development builds, Vite's output, and Node,
+  Deno and Bun (which always load the full build, as before) are unchanged. For development
+  checks in a non-Vite browser build, pass the `development` condition (esbuild:
+  `conditions: ['development']`).
+
+  `@gyral/ssr` finds core's hydration chunk in the production build too, so `clientAssets` and
+  `renderPage` keep preloading it.
+
+- 87a29dd: `gyral/prefer-built-in` now warns about `JSON.parse` of a prop whatever the props parameter is
+  called, and when it is destructured (gyral-bt4): `init: (p) => ({ a: JSON.parse(p.a) })`,
+  `init: ({ items }) => …JSON.parse(items)…` and `view: (s, i, { props: { items } }) => …` warn
+  as `init: (props) => …JSON.parse(props.a)…` already did. The rule finds the props by their
+  position in the spec's functions: `init`'s first parameter, `subscriptions`' second, and the
+  context of `view`, the reducers, intent parsers (`on()`'s too) and `formAssociated`. Linting may
+  show new warnings where a component parses a prop by hand: declare it as `prop.json(schema)`,
+  and Gyral parses and validates the attribute for you.
+
 ## 0.3.9
 
 0.3.9 fixes what migrating the apps to 0.3.8 found (epic gyral-vge). The first entry changes

@@ -2,8 +2,9 @@
 // applied, workspace:* rewritten) and checks each tarball with publint, @arethetypeswrong/cli and
 // content assertions. `npm pack --dry-run` must agree on the file list, so the `files` allowlist
 // means the same thing to both tools. Fixtures then install the packed core: as an exact-version
-// peer (lib/peer-fixture.mjs), and in an app whose dev server pre-bundles it, which must get its
-// development build (lib/dev-prebundle-fixture.mjs).
+// peer (lib/peer-fixture.mjs), in an app whose dev server pre-bundles it, which must get its
+// development build (lib/dev-prebundle-fixture.mjs), and in an app bundled by esbuild, which
+// must get the production build, without development code (lib/prod-build-fixture.mjs).
 import { execFile, spawn } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,6 +13,7 @@ import { promisify } from 'node:util';
 import { npxBinProblem, RUN_BY_NAME } from './lib/npx-bin.mjs';
 import { devPrebundleFixture } from './lib/dev-prebundle-fixture.mjs';
 import { peerFixture } from './lib/peer-fixture.mjs';
+import { prodBuildFixture } from './lib/prod-build-fixture.mjs';
 
 const run = promisify(execFile);
 const PUBLINT_TIMEOUT_MS = 120_000;
@@ -149,6 +151,7 @@ const results = await Promise.all(dirs.map(check));
 const tarballOf = (name) => results.find((r) => r.name === name)?.tarball ?? '';
 const fixture = await peerFixture(tarballOf('@gyral/core'), tarballOf('@gyral/http'));
 const devChecks = await devPrebundleFixture(tarballOf('@gyral/core'));
+const prodBuild = await prodBuildFixture(tarballOf('@gyral/core'));
 rmSync(out, { recursive: true, force: true });
 
 let failed = false;
@@ -173,5 +176,14 @@ if (devChecks.length === 0) {
 } else {
   failed = true;
   console.error(`FAIL installed core's development checks:\n  ${devChecks.join('\n  ')}`);
+}
+if (prodBuild.problems.length === 0) {
+  console.log(
+    `ok   installed core in esbuild: no development code without the condition ` +
+      `(fixture ${String(prodBuild.bytes)} B minified), all of it with`,
+  );
+} else {
+  failed = true;
+  console.error(`FAIL installed core's production build:\n  ${prodBuild.problems.join('\n  ')}`);
 }
 process.exit(failed ? 1 : 0);

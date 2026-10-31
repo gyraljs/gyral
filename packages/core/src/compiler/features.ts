@@ -91,8 +91,11 @@ const PREFIX = 'virtual:gyral-use/';
 const CORE = '@gyral/core';
 const RESOLVED = '\0gyral-use/';
 const SCRIPT = /\.[cm]?[jt]sx?$/;
-/** core's compiled entry, in its source tree or its published dist/: [, dir, extension]. */
-const ENTRY_FILE = /[\\/](src|dist)[\\/]view[\\/]compiled\.(ts|js)$/;
+/**
+ * core's compiled entry, in its source tree, its published dist/ or the production build in
+ * dist/prod/ (gyral-gpr): [, dir, extension]. Registrations sit at the top of the same tree.
+ */
+const ENTRY_FILE = /[\\/](src|dist(?:[\\/]prod)?)[\\/]view[\\/]compiled\.(ts|js)$/;
 
 /** A plugin context's `resolve`, as far as detection needs it. */
 type Resolve = (source: string, importer: string) => Promise<{ readonly id: string } | null>;

@@ -95,7 +95,17 @@ Steps, in order:
    and hydration adopts it like any multi-attribute. Page shells and the content of a nested
    `<template>` (which no part reaches) keep theirs. Only templates with a static style pay:
    about a dozen bytes per attribute in the part table; the runtime handles the entry with the
-   multi-attribute code it already has.
+   multi-attribute code it already has. **A second exception** (0.3.10, gyral-qqa): a
+   `<noscript>`'s content is server-only. The segments keep it as written, the client HTML
+   writes the element empty (`<noscript></noscript>`), and the shape gives it no children.
+   With scripting on, the only way the client runs, the parser keeps that content as one Text
+   node that never renders. A `<template>`'s content is parsed with scripting off in Chromium
+   and WebKit and on in Firefox, so a client copy was elements in two engines (a `<style>`
+   that applied to the page, an `<img>` that loaded) and text in the third. Now every client
+   render creates the element empty, hydration adopts the server's as it is (07), and rule 3
+   keeps holes out of it (09). Notices cost client bundles nothing. `raw()` markup follows the
+   same rule since 0.3.10 (gyral-uvj.2): the client empties every `<noscript>` in it before
+   inserting it (02 "`raw(html)`").
 4. **Build the part table:** one entry per hole, in source order: kind, the path to its element
    (or to its parent element and position for child holes), the attribute name and static
    strings for attribute holes; a child hole's kind also says whether it is its parent's only

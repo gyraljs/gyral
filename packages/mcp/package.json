@@ -1,6 +1,6 @@
 {
   "name": "@gyral/mcp",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Gyral MCP server: docs search, API lookup, examples, scaffolding and snippet checks for coding agents.",
   "keywords": [
     "gyral",

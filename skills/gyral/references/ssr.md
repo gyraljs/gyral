@@ -29,10 +29,10 @@ Pages work before JavaScript loads.
    plain elements. Hydration never overwrites what the user typed before scripts ran.
 5. **Server and client must render the same markup for the same state.** Don't branch on
    `typeof window`, dates or randomness in a view; for JS-only UI, render the no-JS version
-   first and switch in the `Hydrated` reducer. A mismatch throws a hydration-mismatch error in
-   development (logged with the tag, template location, DOM path, expected and found; the
-   component keeps the server's DOM) and, in production, warns and re-renders only that
-   component. Browser extensions that edit the page before scripts run cause mismatches too.
+   first and switch in the `Hydrated` reducer. A mismatch re-renders only that component, in
+   both builds (0.3.10): development logs an error with the tag, template location, DOM
+   path, expected and found (G0062, then G0063); production warns. `hydrated()` fails a test
+   on either. Browser extensions that edit the page before scripts run cause mismatches too.
 6. **CSP:** scripts stay `script-src 'self'` (seeds are attributes, not scripts). Shadow
    components' `<style>` elements are allowed by hash, so `style-src` needs no
    `'unsafe-inline'`; Trusted Types need the `gyral` policy allowed: see
@@ -332,6 +332,11 @@ export const ShareButton = define<State, Msg>()('my-share', {
 });
 ```
 
+For visitors without JavaScript, a view can also carry a `<noscript>` notice next to the
+controls it stands in for: static markup only (no `${…}` inside), written by the server and
+adopted as is by hydration; client renders leave it empty (0.3.10, `references/view.md`), in
+`raw()` markup too.
+
 ## Static generation and production serving (`@gyral/ssr/static`)
 
 ```ts
@@ -597,6 +602,34 @@ carries one store seed the client restores before components hydrate. Give store
 to validate that seed in the browser. To give part of a page its own instances, wrap it in a
 `<gyral-stores>` element; the server renders it with its
 own seed.
+
+## Embedded hosts: `SSR_PROTOCOL`
+
+A host that runs the server bundle outside Node, such as gyral-rs's deno_core renderer,
+speaks Gyral's embedded SSR protocol (ADR 0034). `SSR_PROTOCOL` from `@gyral/ssr` is the
+protocol this release implements (0.3.10; protocol 1 holds from
+0.3.8). The server entry declares it, and the build writes the same number to the bundle
+manifest's `abi`, so a host that doesn't support it refuses the bundle at startup:
+
+```ts
+import { html } from '@gyral/core';
+import { renderToString, SSR_PROTOCOL } from '@gyral/ssr';
+
+interface Request {
+  readonly page: string;
+  readonly props: { readonly name: string };
+}
+const gyralRender = ({ props }: Request): Promise<string> =>
+  renderToString(html`<p>Hello, ${props.name}</p>`, { onError: 'throw' });
+
+Object.assign(globalThis, { gyralBundleVersion: SSR_PROTOCOL, gyralRender });
+```
+
+Protocol 1's host has only the ECMAScript built-ins, `Intl`, `queueMicrotask` and `console`:
+render with `renderToString` (`renderPage` returns a Fetch `Response`), bundle the entry into
+one IIFE, and compute `styleHashes()` at build time in Node. Build the browser bundle from the
+same components and Gyral release. A Gyral release that keeps the protocol needs no new
+gyral-rs; production.md "Rust" names the releases.
 
 ## Preloads under a service worker
 

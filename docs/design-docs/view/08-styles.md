@@ -72,8 +72,8 @@ shared sheet and no duplicated style nodes.
 **Phase 5:** core's `hydrateRoot` does both right before the walk, in the host's first render
 (the `<style>` is the root's first child when the component has CSS). Until then (and for a
 pending island) the server's `<style>` styles the root on its own; the sheet is not adopted at
-connect, so styles never apply twice. A production mismatch clears the root and renders fresh
-with the sheet already adopted.
+connect, so styles never apply twice. A mismatch clears the root and renders fresh with the
+sheet already adopted (in both builds since 0.3.10, 07 "Mismatches").
 
 ## Style attributes under a strict CSP
 

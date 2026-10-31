@@ -70,6 +70,47 @@ describe('vite-plugin: rewrites', () => {
     `);
   });
 
+  // gyral-68h (gathered-wishes): gyral() always returns an array, so a fallback for the preset's
+  // plugins is dead, and the parentheses it needed go with it.
+  it('drops a ?? [] or || [] fallback after gyralVitePreset(o).plugins', () => {
+    const { code, findings } = migrate(
+      source`
+        import { gyralVitePreset } from '@gyral/core/vite';
+        import mine from './mine.js';
+
+        export default { plugins: [...(gyralVitePreset().plugins ?? []), mine()] };
+        export const other = { plugins: gyralVitePreset({ clientOnly: true }).plugins || [] };
+        export const typed = { plugins: [...( gyralVitePreset().plugins ?? ([] as Plugin[]) )] };
+      `,
+      file,
+    );
+    expect(code).toBe(source`
+      import { gyral } from '@gyral/core/vite';
+      import mine from './mine.js';
+
+      export default { plugins: [...gyral(), mine()] };
+      export const other = { plugins: gyral({ clientOnly: true }) };
+      export const typed = { plugins: [...gyral()] };
+    `);
+    expect(findings).toEqual([]);
+  });
+
+  it('keeps a fallback that is not an empty array, and parentheses a comment sits in', () => {
+    const { code } = migrate(
+      source`
+        import { gyralVitePreset } from '@gyral/core/vite';
+
+        export default { plugins: [...(gyralVitePreset().plugins ?? defaults), ...(gyralVitePreset().plugins ?? [] /* none */)] };
+      `,
+      file,
+    );
+    expect(code).toBe(source`
+      import { gyral } from '@gyral/core/vite';
+
+      export default { plugins: [...(gyral() ?? defaults), ...(gyral() /* none */)] };
+    `);
+  });
+
   it('inlines const p = gyralVitePreset(o) into ...p.plugins and drops ...p.optimizeDeps', () => {
     const { code, findings } = migrate(
       source`

@@ -19,6 +19,7 @@ export type { PageOptions, RenderOptions } from './page.js';
 export type { ComponentAssets, ComponentModule } from './components.js';
 export { contentSecurityPolicy, type CspDirectives, type CspOptions } from './csp.js';
 export { styleHashes } from '@gyral/core/internal/server';
+export { SSR_PROTOCOL } from './protocol.js';
 export { formAction, rejectWith, seeOther, wantsJson } from './forms.js';
 export type { FormActionHandlers, FormReject } from './forms.js';
 

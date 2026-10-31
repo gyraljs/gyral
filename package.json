@@ -32,6 +32,7 @@
     "verify:install": "node scripts/verify-install.mjs",
     "verify:create": "node scripts/verify-create.mjs",
     "verify:platforms": "node scripts/verify-platforms.mjs",
+    "rust-compat": "node scripts/rust-compat.mjs",
     "mcp:refresh": "pnpm --filter @gyral/mcp run refresh"
   },
   "devDependencies": {
@@ -44,6 +45,7 @@
     "@vitest/browser-playwright": "5.0.5",
     "@vitest/coverage-v8": "5.0.5",
     "axe-core": "4.14.0",
+    "esbuild": "0.28.2",
     "eslint": "10.12.0",
     "eslint-plugin-compat": "7.0.2",
     "fast-check": "4.10.2",

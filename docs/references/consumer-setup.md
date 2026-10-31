@@ -193,6 +193,36 @@ Options: `gyral({ compiler: { parse5: false } })` skips the parse5 check;
 `compiledSvg` if it re-exports `svg`).
 The preset is the only Vite API: compiler and client-only behaviour are its options. The compiler needs Vite 8.
 
+## Development and production builds of core
+
+`@gyral/core` ships two builds of its runtime entry points (`.`, `/compiled`, `/internal`,
+`/internal/server`, `/storage`, `/indexeddb`). The **full build** (`dist/`) has every
+development check; the `development` resolve condition switches them on, and without it they
+stay off. The **production build** (`dist/prod/`, 0.3.10) is the same code with the
+development checks and the modules only they use removed when Gyral is built, so every bundler
+leaves them out, not only those that carry constants across modules (Rollup, Rolldown).
+
+| Who resolves core                                             | Gets                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------- |
+| Vite's dev server and Vitest's browser mode (`development`)   | the full build, checks on                             |
+| `vite build` for the browser                                  | the production build                                  |
+| esbuild, webpack, Rspack, Parcel or Bun bundling for browsers | the production build; the full one with `development` |
+| Node, Deno, Bun, Vite SSR, Vitest node projects               | the full build, checks only with `development`        |
+
+Only the `browser` condition selects the production build. Server runtimes keep one build
+however a tool resolves core: Vitest runs Node with `development` but resolves the packages
+it leaves external without it, and two builds in one process would be two copies of core.
+
+- **Development checks in a non-Vite browser build:** pass the condition, e.g. esbuild's
+  `conditions: ['development']` (webpack and Rspack set it in development mode). Without it
+  you get the production build: coded messages (`Gyral G0010 …`), no checks, no devtools
+  events.
+- **Before 0.3.10**, esbuild and other bundlers that don't carry constants across modules
+  bundled the development checks into production as dead code (17 to 19 KB minified in
+  the small apps measured). Nothing to change: rebuild.
+- **SSR bundles** for a non-browser platform (esbuild's `platform: 'neutral'`, an embedded V8)
+  still get the full build with its checks off, as before.
+
 ## ESLint: `@gyral/core/eslint`
 
 The template rules (view/09-template-rules.md) in the editor, with the compiler's messages, and
@@ -289,8 +319,8 @@ can't render that markup itself, so it comes from Node:
 
 Details and a full example: the `@gyral/testing` README. Run hydration tests against
 production builds of core too (a second browser project with
-`resolve: { conditions: ['module', 'browser', 'production'] }`): a mismatch there warns and
-re-renders instead of throwing.
+`resolve: { conditions: ['module', 'browser', 'production'] }`): production checks structure
+only and warns where development logs an error; both re-render the mismatched component.
 
 ## Server rendering
 
@@ -334,8 +364,8 @@ state from its `data-gyral-seed` and adopts the server's DOM in place; there is 
 import, and module order doesn't matter. Keep the state and props of server-rendered
 components (and seeded store state) JSON-serializable: they travel in the hydration seed.
 Client-only components have no seed, so their state may hold other values. A mismatch between server markup and the first client
-render throws `HydrationMismatch` in development; production builds warn and re-render only
-that component. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
+render re-renders only that component: development logs an error with the details (G0062),
+production builds warn (G0063); before 0.3.10 development threw `HydrationMismatch`. Hydration code (about 2.8 KiB gzip) is a separate chunk loaded with the first
 server-rendered component, so client-only pages never fetch it. For server-rendered pages,
 read the entry and its preloads from the Vite manifest with `clientAssetsFromManifest()`
 (`@gyral/ssr/static`) and pass them as `renderPage({ scripts, modulepreload })`: the browser

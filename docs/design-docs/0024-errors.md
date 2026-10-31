@@ -313,3 +313,14 @@ reports instead of throwing, a driver failure without `onFailure` is an error, a
    (**recommended**); isolation only; or buffer-and-fail only?
 7. **Tests:** ship `collectErrors()` in `@gyral/testing` and document that deliberate failures
    must be collected (**recommended**), or leave it to apps?
+
+## Addendum: hydration mismatches are not failures (0.3.10)
+
+The "Today's behaviour" row above (development throws, which reached `window` `error`) became,
+with this ADR, a view failure: the scheduler caught the thrown `HydrationMismatch` and reported
+it through `fail()` (G0031, phase `view`). Since 0.3.10 (gyral-uvj.3, ADR 0018 addendum
+"Hydration mismatches recover in development") development recovers the component as
+production does and logs the mismatch with `console.error`; neither build sends it through
+this channel. A recovered component works, so a fallback view or a boundary re-mount would be
+the wrong response, and mismatches third parties cause would be monitoring noise. The
+`mismatch` devtools event (ADR 0017) is unchanged.

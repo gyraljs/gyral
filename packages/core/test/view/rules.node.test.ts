@@ -60,6 +60,12 @@ describe('template errors (view/09)', () => {
     expectRule(t`<template><p class=${0}></p></template>`, 3, '<template>');
   });
 
+  it('rule 3: holes in <noscript>, whose content only the server writes (gyral-qqa)', () => {
+    expectRule(t`<noscript>${0}</noscript>`, 3, 'inside <noscript>', 'static markup');
+    expectRule(t`<noscript><a href=${0}>Upload</a></noscript>`, 3, 'inside <noscript>');
+    expect(() => normalize(t`<noscript class=${0}><p>No JavaScript</p></noscript>`)).not.toThrow();
+  });
+
   it('rule 4: property bindings for form state', () => {
     expectRule(t`<input .value=${0}>`, 4, '.value', 'value=${…}');
     expectRule(t`<input type="checkbox" .checked=${0}>`, 4, '?checked=${…}');

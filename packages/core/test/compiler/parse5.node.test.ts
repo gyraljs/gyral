@@ -45,6 +45,21 @@ describe('template compiler: rule 7 with parse5', () => {
     expect(notices).toHaveLength(1);
   });
 
+  it('compiles a <noscript> notice for the server only, and fails a hole in it (gyral-qqa)', async () => {
+    const notice = [
+      '<noscript><p>Recording needs JavaScript &rarr;</p></noscript><button>',
+      '</button>',
+    ];
+    const client = await buildApp(files(notice));
+    expect(client.code).toContain('<noscript></noscript><button></button>');
+    expect(client.code).not.toContain('Recording needs JavaScript');
+    const ssr = await buildApp(files(notice), { ssr: true });
+    expect(ssr.code).toContain('Recording needs JavaScript &rarr;');
+    const error = await buildError(files(['<noscript><a href=', '>Upload</a></noscript>']));
+    expect(error.message).toContain('[gyral template rule 3]');
+    expect(error.message).toContain('inside <noscript>');
+  });
+
   it('can be turned off', async () => {
     const { logs } = await buildApp(files(IMAGE), { compiler: { parse5: false } });
     expect(logs.join('\n')).not.toContain('parse5');

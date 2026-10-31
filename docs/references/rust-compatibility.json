@@ -1,14 +1,30 @@
 {
-  "schema": 1,
-  "sourceCommit": "394ab9fd1ab1eac8468382b7de67459c0439251a",
-  "npm": { "@gyral/core": "0.3.9", "@gyral/ssr": "0.3.9" },
-  "abi": 1,
-  "target": "x86_64-unknown-linux-gnu",
-  "rust": "1.99.1",
-  "denoCore": "0.412.0",
-  "v8": "150.4.0",
+  "schema": 2,
+  "protocol": 1,
+  "minGyral": "0.3.8",
+  "apiHash": "769ce7b4ae1400a68463d1a45c05e253d7a341daf2e316255285871747d3f348",
+  "host": ["ecmascript", "Intl", "queueMicrotask", "console"],
   "limits": { "propsBytes": 262144, "htmlBytes": 2097152, "bundleBytes": 8388608 },
   "browserFormat": "single-esm-entry",
   "serverFormat": "single-iife",
-  "rustCratesPublished": true
+  "gyralRs": {
+    "repository": "gyraljs/gyral-rs",
+    "version": "0.8.0",
+    "sourceCommit": "300faf19d0ec4eeb4b9feb5f696745b599be3faa",
+    "archives": {
+      "source": {
+        "name": "gyral-rs-0.8.0-source.tar.gz",
+        "sha256": "8cd49cf82ea0ce245b7188e7889708ff7bf8cbcf2399be60ea53dd22974eb7d6"
+      },
+      "binary": {
+        "name": "gyral-rs-0.8.0-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "30677e0ec0a6be1042f4f8d4a49969bb2a27dfc3e19e3e9e807c978972a304f6"
+      }
+    },
+    "cratesPublished": true
+  },
+  "target": "x86_64-unknown-linux-gnu",
+  "rust": "1.99.1",
+  "denoCore": "0.412.0",
+  "v8": "150.4.0"
 }

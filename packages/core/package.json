@@ -1,6 +1,6 @@
 {
   "name": "@gyral/core",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Gyral core: Model-View-Intent web components on the web platform, with their own view layer.",
   "license": "MIT",
   "author": "Mike Zupper",
@@ -62,14 +62,26 @@
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
+        "browser": {
+          "development": "./dist/index.js",
+          "default": "./dist/prod/index.js"
+        },
         "default": "./dist/index.js"
       },
       "./internal/server": {
         "types": "./dist/server.d.ts",
+        "browser": {
+          "development": "./dist/server.js",
+          "default": "./dist/prod/server.js"
+        },
         "default": "./dist/server.js"
       },
       "./internal": {
         "types": "./dist/internal.d.ts",
+        "browser": {
+          "development": "./dist/internal.js",
+          "default": "./dist/prod/internal.js"
+        },
         "default": "./dist/internal.js"
       },
       "./vite": {
@@ -78,6 +90,10 @@
       },
       "./compiled": {
         "types": "./dist/view/compiled.d.ts",
+        "browser": {
+          "development": "./dist/view/compiled.js",
+          "default": "./dist/prod/view/compiled.js"
+        },
         "default": "./dist/view/compiled.js"
       },
       "./eslint": {
@@ -87,10 +103,18 @@
       "./errors.json": "./dist/errors.json",
       "./storage": {
         "types": "./dist/storage.d.ts",
+        "browser": {
+          "development": "./dist/storage.js",
+          "default": "./dist/prod/storage.js"
+        },
         "default": "./dist/storage.js"
       },
       "./indexeddb": {
         "types": "./dist/indexeddb.d.ts",
+        "browser": {
+          "development": "./dist/indexeddb.js",
+          "default": "./dist/prod/indexeddb.js"
+        },
         "default": "./dist/indexeddb.js"
       }
     },
@@ -121,6 +145,22 @@
       "#spec-features": {
         "gyral-compiled": "./dist/spec-features-used.js",
         "default": "./dist/spec-features.js"
+      },
+      "#prod/prepare": {
+        "gyral-compiled": "./dist/prod/view/prepare-stub.js",
+        "default": "./dist/prod/view/prepare.js"
+      },
+      "#prod/hydration-loader": {
+        "gyral-client-only": "./dist/prod/hydration-off.js",
+        "default": "./dist/prod/hydration-loader.js"
+      },
+      "#prod/invoker-fallback": {
+        "gyral-client-only": "./dist/prod/invoker-fallback-used.js",
+        "default": "./dist/prod/invoker-fallback.js"
+      },
+      "#prod/spec-features": {
+        "gyral-compiled": "./dist/prod/spec-features-used.js",
+        "default": "./dist/prod/spec-features.js"
       }
     }
   },

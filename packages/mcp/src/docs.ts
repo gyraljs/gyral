@@ -101,7 +101,7 @@ export function parseLlmsFull(text: string): DocPage[] {
 
 const STOP = new Set(['the', 'and', 'for', 'with', 'how', 'what', 'does', 'are', 'can', 'use']);
 
-/** A crude stem so a substring match finds other forms: hydrate → hydrat (hydration, hydrated). */
+/** A crude stem so a prefix match finds other forms: hydrate → hydrat (hydration, hydrated). */
 const stem = (word: string): string =>
   word.length > 4 && /^[a-z]+$/.test(word) ? word.replace(/(ions|ion|ing|ed|es|s|e)$/, '') : word;
 
@@ -120,16 +120,49 @@ export interface SearchHit {
   readonly score: number;
 }
 
-function count(haystack: string, needle: string): number {
-  let n = 0;
-  for (let i = haystack.indexOf(needle); i !== -1; i = haystack.indexOf(needle, i + 1)) n++;
-  return n;
+const LOWER = /[a-z]/;
+const UPPER = /[A-Z]/;
+const ALNUM = /[a-z0-9]/i;
+
+/**
+ * Whether a word starts at `text[i]`: after a character that is not a letter or digit, or at a
+ * camelCase hump (`PropsChanged`, `HTMLElement`). Terms match only there (gyral-99t): "rust"
+ * finds "Rust" and "rust-servers" but not "trusted", and "hydrat" still finds "hydration".
+ */
+function startsWord(text: string, i: number): boolean {
+  const [before = '', at = '', after = ''] = [text[i - 1], text[i], text[i + 1]];
+  if (!ALNUM.test(before)) return true;
+  return UPPER.test(at) && (LOWER.test(before) || (UPPER.test(before) && LOWER.test(after)));
 }
+
+/** Text to search: as written (for camelCase humps) and lowercased, index for index. */
+interface Searchable {
+  readonly text: string;
+  readonly lower: string;
+}
+
+const searchable = (text: string): Searchable => {
+  const lower = text.toLowerCase();
+  // Lowercasing a few non-ASCII letters changes the length; match on the lowercase alone then.
+  return { text: lower.length === text.length ? text : lower, lower };
+};
+
+/** Where `term` (lowercase) starts a word in `s`. */
+function wordStarts({ text, lower }: Searchable, term: string): number[] {
+  const at: number[] = [];
+  for (let i = lower.indexOf(term); i !== -1; i = lower.indexOf(term, i + 1)) {
+    if (startsWord(text, i)) at.push(i);
+  }
+  return at;
+}
+
+const count = (s: Searchable, term: string): number => wordStarts(s, term).length;
 
 function snippet(body: string, words: readonly string[]): string {
   const flat = body.replace(/\s+/g, ' ').trim();
-  const lower = flat.toLowerCase();
-  const at = Math.min(...words.map((w) => lower.indexOf(w)).filter((i) => i >= 0), flat.length);
+  const s = searchable(flat);
+  const firsts = words.map((w) => wordStarts(s, w)[0] ?? -1);
+  const at = Math.min(...firsts.filter((i) => i >= 0), flat.length);
   const start = at === flat.length ? 0 : Math.max(0, at - 80);
   const text = flat.slice(start, start + 240);
   return `${start > 0 ? '…' : ''}${text}${start + 240 < flat.length ? '…' : ''}`;
@@ -141,40 +174,41 @@ const B = 0.75;
 const API_WEIGHT = 0.7;
 
 /**
- * BM25 over sections (substring matches, so "hydrat" finds "hydration"), plus a bonus when a
- * term is in the page title or heading trail, and a larger one when the section's own heading
- * contains the whole query. Sections matching only some terms are scaled down.
+ * BM25 over sections (terms match at word starts, so "hydrat" finds "hydration" and "rust" skips
+ * "trusted"), plus a bonus when a term is in the page title or heading trail, and a larger one
+ * when the section's own heading contains the whole query. Sections matching only some terms are
+ * scaled down.
  */
 export function searchDocs(pages: readonly DocPage[], query: string, limit = 8): SearchHit[] {
   const words = [...new Set(terms(query))];
   if (words.length === 0) return [];
   const all = pages.flatMap((page) =>
-    page.sections.map((section) => ({ page, section, body: section.body.toLowerCase() })),
+    page.sections.map((section) => ({ page, section, body: searchable(section.body) })),
   );
-  const average = all.reduce((sum, s) => sum + s.body.length, 0) / Math.max(1, all.length);
+  const average = all.reduce((sum, s) => sum + s.body.lower.length, 0) / Math.max(1, all.length);
   const idf = new Map(
     words.map((w) => {
-      const n = all.filter((s) => s.body.includes(w)).length;
+      const n = all.filter((s) => count(s.body, w) > 0).length;
       return [w, Math.log(1 + (all.length - n + 0.5) / (n + 0.5))];
     }),
   );
   const phrase = query.toLowerCase().trim();
   return all
     .map(({ page, section, body }) => {
-      const heading = `${page.title} ${section.trail}`.toLowerCase();
-      const norm = K1 * (1 - B + (B * body.length) / average);
+      const heading = searchable(`${page.title} ${section.trail}`);
+      const norm = K1 * (1 - B + (B * body.lower.length) / average);
       let score = 0;
       let matched = 0;
       for (const w of words) {
         const tf = count(body, w);
-        const inHeading = heading.includes(w);
+        const inHeading = count(heading, w) > 0;
         if (tf > 0 || inHeading) matched++;
         const weight = idf.get(w) ?? 0;
         score += weight * ((tf * (K1 + 1)) / (tf + norm)) + (inHeading ? 1.5 * weight : 0);
       }
-      if (phrase.includes(' ') && body.includes(phrase)) score *= 1.5;
+      if (phrase.includes(' ') && count(body, phrase) > 0) score *= 1.5;
       // A section named after the query is about it (`Lazy hydration` for "lazy hydration").
-      if (section.heading.toLowerCase().includes(phrase)) score *= 2;
+      if (count(searchable(section.heading), phrase) > 0) score *= 2;
       score *= (matched / words.length) ** 2;
       if (page.url.includes('/docs/api/')) score *= API_WEIGHT;
       return {

@@ -26,9 +26,14 @@ export const msg = {
     `use ?name=${H} to add or remove it, or choose between whole templates.`,
   // 3
   inRawText: (tag: string): string =>
-    `A hole can't sit inside <${tag}>: no part can live there, and values in it are an ` +
-    `injection risk. Pass data through an attribute, styles through a CSS custom property ` +
-    `(style=\${\`--x: \${v}\`}), or trusted markup through raw().`,
+    tag === 'noscript'
+      ? `A hole can't sit inside <noscript>: only the server writes its content, which the ` +
+        `browser shows when scripts don't run and keeps as plain text when they do, so no ` +
+        `part can live there. Write the notice as static markup, and keep what changes ` +
+        `outside the <noscript>.`
+      : `A hole can't sit inside <${tag}>: no part can live there, and values in it are an ` +
+        `injection risk. Pass data through an attribute, styles through a CSS custom property ` +
+        `(style=\${\`--x: \${v}\`}), or trusted markup through raw().`,
   inComment: (): string =>
     `A hole can't sit inside an HTML comment: no part can live there. Move the value out of ` +
     `the comment, or drop the comment.`,

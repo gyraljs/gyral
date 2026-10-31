@@ -1,4 +1,4 @@
-# Gyral 0.3.9: complete documentation
+# Gyral 0.3.10: complete documentation
 
 > Gyral is a small framework for web components: intents in, a pure update, a pure view out. Server rendering, forms, routing and testing built in.
 
@@ -61,7 +61,9 @@ Leave out `--template` and it asks you which one you want.
 
 ### Or set it up by hand
 
-Gyral works with any bundler. To add it to a [Vite](https://vite.dev) project yourself:
+Gyral works with any bundler (see
+[which build of core each one gets](https://gyral.dev/docs/packages/#development-and-production-builds)). To add
+it to a [Vite](https://vite.dev) project yourself:
 
 ```sh
 npm create vite@latest my-app -- --template vanilla-ts
@@ -261,7 +263,7 @@ rendering, hydration and virtual time. See [Testing](https://gyral.dev/docs/test
 - Working with a coding agent? Connect it to Gyral's MCP server and skill:
   [Use Gyral with coding agents](https://gyral.dev/docs/coding-agents/).
 - Upgrading an existing app? [Versioning and stability](https://gyral.dev/docs/versioning/) explains how to move
-  to 0.3.9 safely.
+  to 0.3.10 safely.
 
 ---
 
@@ -274,7 +276,7 @@ Source: https://gyral.dev/docs/recipes/
 Each recipe is a whole component in one file, with its tests. They need only `@gyral/core`,
 plus `@gyral/testing` and Vitest for the tests, so they work in a new `basic` app from
 [create-gyral](https://gyral.dev/docs/getting-started/#create-a-project). Every recipe compiles against Gyral
-0.3.9, and the site tests each one in a browser when it builds.
+0.3.10, and the site tests each one in a browser when it builds.
 
 ## A todo list with filters
 
@@ -873,7 +875,7 @@ Any other client that speaks Streamable HTTP: add a server with the URL
 The hosted server has every tool except `check_snippet`, which needs your project's
 TypeScript and packages. It can run an older `@gyral/mcp` than the latest release; its
 `initialize` response and `https://mcp.gyral.dev/healthz` report the version it serves. This
-page describes the tools as `@gyral/mcp` 0.3.9 provides them.
+page describes the tools as `@gyral/mcp` 0.3.10 provides them.
 
 ## The local MCP server
 
@@ -916,7 +918,7 @@ the latest docs at startup instead; it falls back to the bundled copy after 3 se
 | Tool                 | What it returns                                                                                                            |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `start_here`         | The mental model, the rules, the workflow, and which example or guide covers which task                                    |
-| `search_docs`        | Ranked doc sections for a query: title, URL and snippet                                                                    |
+| `search_docs`        | Ranked doc sections for a query, matching words at their start (`hydrat` finds hydration): title, URL and snippet          |
 | `get_doc`            | One docs page, or one section with `#anchor`, such as `forms#the-server-half`                                              |
 | `get_api`            | The declaration, doc comment and import line of an export, with usage code and the next call; on a miss, the nearest names |
 | `list_examples`      | Every example and what it shows                                                                                            |
@@ -961,7 +963,7 @@ GYRAL_MCP_PUBLIC_ORIGIN=http://127.0.0.1:3000 npx -y @gyral/mcp http
 
 It is configured by environment variables only; `gyral-mcp http --help` lists them. Put it
 behind TLS, and pin the package version you deploy. The
-[package README](https://github.com/gyraljs/gyral/blob/v0.3.9/packages/mcp/README.md#public-hosting)
+[package README](https://github.com/gyraljs/gyral/blob/v0.3.10/packages/mcp/README.md#public-hosting)
 has the details.
 
 ## The agent skill
@@ -986,8 +988,8 @@ write it. Run it from the app's directory, with the version of `@gyral/core` the
 installed:
 
 ```sh
-npx @gyral/mcp@0.3.9 skill           # write the skill into the project
-npx @gyral/mcp@0.3.9 skill --check   # in CI: fail when a copy differs
+npx @gyral/mcp@0.3.10 skill           # write the skill into the project
+npx @gyral/mcp@0.3.10 skill --check   # in CI: fail when a copy differs
 ```
 
 `skill` writes `SKILL.md` and its references to `.claude/skills/gyral`, and to
@@ -998,7 +1000,7 @@ when it doesn't. With `--check` it writes nothing and exits 1 when a copy differ
 catches a skill left behind by an upgrade.
 
 Each copy gets a `VERSION` file naming its release and the source it came from
-(`https://github.com/gyraljs/gyral/tree/v0.3.9/skills/gyral`), which `--check` compares like the
+(`https://github.com/gyraljs/gyral/tree/v0.3.10/skills/gyral`), which `--check` compares like the
 skill's other files, so a vendored copy needs no note of its own saying which release it is.
 `skill` removes files the skill doesn't ship, except the ones an owner keeps at the top of a copy:
 `LICENSE` (or `LICENCE`), `NOTICE`, `COPYING`, `PINNED` and `SOURCE` (or `SOURCES`), with any
@@ -1006,7 +1008,7 @@ extension or suffix (`NOTICE.txt`, `SOURCE-gyral.md`). Those are never compared.
 MIT-licensed, so a vendored copy carries Gyral's `LICENSE` and `NOTICE`.
 
 Other agents: copy
-[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.9/skills/gyral) into the agent's
+[`skills/gyral/`](https://github.com/gyraljs/gyral/tree/v0.3.10/skills/gyral) into the agent's
 skills or rules folder, or point it at `SKILL.md`.
 
 ## Docs for agents
@@ -2823,7 +2825,7 @@ control, a self-closing `<my-el />` (HTML ignores the slash, so the element swal
 follows it), an unquoted `class=a${b}`, markup the browser would repair (a `<tr>` directly in a
 `<table>`, a `<div>` inside a `<p>`), an HTML element such as `<button>` inside an `<svg>` (it
 would become an unknown SVG element that renders nothing), a bound `xlink:href=${…}`, a
-`${…}` inside `<script>` or `<style>`, a list row that reads the view's variables, a JSX-style `<SignupForm>` where the component's tag `<signup-form>` belongs, and a camelCase attribute on a custom element (`<pool-card playerBase=${…}>`, which HTML lowercases to `playerbase`, an attribute no prop reads). Each
+`${…}` inside `<script>`, `<style>` or `<noscript>`, a list row that reads the view's variables, a JSX-style `<SignupForm>` where the component's tag `<signup-form>` belongs, and a camelCase attribute on a custom element (`<pool-card playerBase=${…}>`, which HTML lowercases to `playerbase`, an attribute no prop reads). Each
 message says what to write instead.
 
 The ESLint config also reports a function written in a hole (`${() => …}`), which is never
@@ -3421,7 +3423,9 @@ export const flash = defineHook<[value: unknown]>({
 a JSON-LD script. Use it only for markup your own code produced, never for user input. It
 belongs mostly on the server: in a component that renders in the browser, every change parses
 the string again, and development mode warns about it. This site renders every docs page with
-`raw()` inside a server-only template.
+`raw()` inside a server-only template. A `<noscript>` in the markup is written by the server and
+inserted empty in the browser, as in a template
+([Notices without JavaScript](https://gyral.dev/docs/server-rendering/#notices-without-javascript)).
 
 ## Focus is a command
 
@@ -5291,7 +5295,10 @@ failed component can render its fallback while the page continues. `onError: 'th
 the render fail before returning the response; chunked output cannot change an HTTP status
 after bytes have been sent. See [Server rendering](https://gyral.dev/docs/server-rendering/).
 
-For a hydration mismatch, reproduce with the production build and the exact server/client
+A hydration mismatch doesn't use this channel: the component renders fresh and works, and the
+console says what differed, as an error in development ([G0062](https://gyral.dev/errors/#G0062) with the
+template's file and line) and a warning in production
+([Mismatches](https://gyral.dev/docs/server-rendering/#mismatches)). Reproduce it with the exact server/client
 assets. Check stale HTML, unseeded current time, locale differences, invalid parser-repaired
 markup, and third-party changes before scripts arrive. Use `mountSsr()` and `hydrated()` to
 exercise real server markup; they report mounting/hydration problems. Keep a small failing
@@ -6511,7 +6518,7 @@ export const staticPaths = (): string[] =>
 
 `RenderMode` names them the way the rest of the ecosystem does: `ssg` (static), `ssr` (per
 request) and `csr` (client). Gyral's
-[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.9/examples/isomorphic) uses
+[isomorphic example](https://github.com/gyraljs/gyral/tree/v0.3.10/examples/isomorphic) uses
 exactly this table.
 
 ## Client-only builds
@@ -6533,11 +6540,11 @@ With `clientOnly: true` the browser bundle carries no hydration code: no seed re
 hydration chunk, and when your app has no other `import()`, Vite's preload helper goes too. The
 fallback for [invoker commands](https://gyral.dev/docs/intent/#invoker-commands) stays only when a module may make
 a component listen for `command` intents ([what the build reads](#what-the-build-reads)).
-Measured on Gyral's examples (gzip, 0.3.9):
+Measured on Gyral's examples (gzip, 0.3.10):
 
 | App         | Default: first load | Default: all chunks | `clientOnly: true` |
 | ----------- | ------------------- | ------------------- | ------------------ |
-| hello-world | 9.69 KiB            | 12.14 KiB           | 8.60 KiB           |
+| hello-world | 9.70 KiB            | 12.15 KiB           | 8.60 KiB           |
 
 "First load" is what a page downloads before any lazy `import()`; in these examples a
 client-only build has nothing lazy left, so its first load is all of it.
@@ -6815,21 +6822,49 @@ devtools and a later move to server rendering simple. State that equals `init(pr
 typed before scripts ran: hydration never overwrites it, and a control is written again only
 when the model's value for it changes.
 
+## Notices without JavaScript
+
+A notice for visitors without JavaScript goes in a `<noscript>` in the view, next to the
+controls it stands in for:
+
+```ts
+html`
+  <button type="button" data-intent=${i.Record}>Record</button>
+  <noscript>
+    <p>Recording needs JavaScript: <a href="/upload">upload a file</a> instead.</p>
+  </noscript>
+`;
+```
+
+Only the server writes a `<noscript>`'s content. Hydration adopts the server's notice as it is,
+and a client render creates the element empty, so a `<style>` or `<img>` inside it never
+applies or loads while scripts run. Write the notice as static markup: a `${…}` inside
+`<noscript>` is a template error, so keep what changes outside it (attributes of the
+`<noscript>` element itself may be bound). A `<noscript>` inside
+[`raw()`](https://gyral.dev/docs/views/#trusted-markup-with-raw) markup works the same way.
+
 ## Mismatches
 
 The server and the browser share one template normalizer, so they agree on every template's
 structure. A mismatch means the view rendered something different for the same state: it read
 the clock or a random number, or a browser extension edited the page before scripts ran.
 
-- **In development**, hydration fails with a `HydrationMismatch` that names the tag, the
-  template's file and line, the DOM path, and what it expected and found. It is reported as a
-  `view` failure through the [error channel](https://gyral.dev/docs/error-handling/#one-channel), and the
-  component keeps the server's DOM (or shows its `error` view).
-  Development output carries `<!--gyral:ID-->` markers, so the browser also checks that each
-  template is the one it expects.
-- **In production**, the component logs a warning that describes the mismatch and links to
-  [its entry on the errors page](https://gyral.dev/errors/#G0062), then renders itself fresh. Only that
-  component: the rest of the page stays hydrated.
+In development and in production alike, Gyral clears that one component and renders it fresh
+from its seeded state: it works as usual, and the rest of the page stays hydrated. The console
+says what differed:
+
+- **In development**, an error that names the tag, the template's file and line, the DOM path,
+  and what it expected and found, links to [its entry on the errors page](https://gyral.dev/errors/#G0062), and
+  ends with [G0063](https://gyral.dev/errors/#G0063): the component was rendered fresh. Development output
+  carries `<!--gyral:ID-->` markers, so the browser also checks that each template is the one
+  it expects.
+- **In production**, a warning: G0063's code and the tag, then the DOM path, what was expected
+  and what was found. Production checks structure only, not what text says.
+
+A mismatch isn't a failure for the [error channel](https://gyral.dev/docs/error-handling/#one-channel): the
+component doesn't show its `error` view, no `error` event bubbles, and monitoring doesn't hear
+of it. A hydration test fails on it, because `hydrated()` fails on any console error or warning
+(see [Testing](https://gyral.dev/docs/testing/#mountssr-and-hydrated)).
 
 ## Lazy hydration
 
@@ -6994,7 +7029,9 @@ See [Deploying](https://gyral.dev/docs/deploying/) for both.
 `styleHashes()` lists the CSP hashes of every registered component's styles, for a policy you
 build yourself. Import them only from server code, so client bundles carry no server renderer.
 `renderToString` is also what a Rust server calls when it embeds Gyral through `gyral-rs`
-([Rust servers](https://gyral.dev/docs/rust-servers/#embedded-rendering-with-gyral-rs)).
+([Rust servers](https://gyral.dev/docs/rust-servers/#embedded-rendering-with-gyral-rs)). `SSR_PROTOCOL` (`1`) is
+the embedded SSR protocol this release implements: a server bundle that such a host runs
+declares it, so a host that doesn't support the protocol refuses the bundle at startup.
 
 ## Production checklist
 
@@ -7607,7 +7644,7 @@ How far each one is tested today:
 
 Run the networked `pnpm verify:platforms` in the framework repository to reproduce the Deno
 and workerd checks. The
-[spike report](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/platform-spikes-2026-10-11.md)
+[spike report](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/references/platform-spikes-2026-10-11.md)
 describes the tested boundary.
 
 ## Cache headers
@@ -7775,12 +7812,13 @@ then. There is nothing to hydrate: the server sent a tag, not the component's HT
 attribute is parsed and validated like any [prop](https://gyral.dev/docs/components/#builders-and-attributes),
 so a bad value falls back to the prop's default.
 
-Build the client with your usual bundler (the example uses esbuild). Rust serves its hashed
-files and sends a policy that allows them. Components that render in the browser adopt their
-styles as constructed stylesheets, so `style-src 'self'` is enough; style hashes are only for
-server-rendered components. Components that read form fields, such as a live preview, observe
-the native controls with a [subscription](https://gyral.dev/docs/outside-state/); the form still submits to
-Rust.
+Build the client with your usual bundler (the example uses esbuild); without the `development`
+condition, it bundles core's [production build](https://gyral.dev/docs/packages/#development-and-production-builds).
+Rust serves its hashed files and sends a policy that allows them. Components that render in the
+browser adopt their styles as constructed stylesheets, so `style-src 'self'` is enough; style
+hashes are only for server-rendered components. Components that read form fields, such as a
+live preview, observe the native controls with a [subscription](https://gyral.dev/docs/outside-state/); the form
+still submits to Rust.
 
 The [`gyral-rs` Askama example](https://github.com/gyraljs/gyral-rs/tree/main/examples/askama-client-app)
 is a complete notes app on this path: Axum routes, CSRF checks, SQLite, redirects after
@@ -7793,20 +7831,24 @@ rendered, and hydrate in the browser. `gyral-rs` runs your app's own Gyral serve
 embedded V8 inside the Rust process. Node builds the bundles; the running server doesn't need
 it.
 
-`gyral-rs` is **experimental**. Version 0.7 accepts bundles built with Gyral **0.3.9** exactly,
-and its tested target is Linux x86_64 (GNU) with Rust 1.99. Each `gyral-rs` minor accepts one
-Gyral release, so check its [changelog](https://github.com/gyraljs/gyral-rs/blob/main/CHANGELOG.md)
-before you upgrade Gyral in a Rust-served app.
+`gyral-rs` is **experimental**, and its tested target is Linux x86_64 (GNU) with Rust 1.99.
+Version 0.8 accepts bundles that declare SSR protocol 1, built with Gyral **0.3.8 or newer**
+(stable releases, not prereleases), so a Gyral release that keeps the protocol needs no new
+`gyral-rs`. Only a new protocol does: it comes in a Gyral minor with an upgrade guide, after a
+`gyral-rs` minor that supports it. Its
+[changelog](https://github.com/gyraljs/gyral-rs/blob/main/CHANGELOG.md) names the protocols and
+Gyral releases each version accepts.
 
 ### The server bundle
 
-The bundle is one script that sets two globals. Rust calls `gyralRender` with a page name and
-the JSON props it approved; the function returns the page's HTML:
+The bundle is one script that sets two globals. `gyralBundleVersion` declares the embedded SSR
+protocol the bundle speaks, `SSR_PROTOCOL` from `@gyral/ssr`. Rust calls `gyralRender` with a
+page name and the JSON props it approved; the function returns the page's HTML:
 
 ```ts
 // src/server.ts
 import { html } from '@gyral/core';
-import { renderToString } from '@gyral/ssr';
+import { renderToString, SSR_PROTOCOL } from '@gyral/ssr';
 import './counter.js';
 
 // The build replaces these with the hashed client file and its integrity hash.
@@ -7823,7 +7865,7 @@ declare global {
   var gyralRender: (input: RenderInput) => Promise<string>;
 }
 
-globalThis.gyralBundleVersion = 1;
+globalThis.gyralBundleVersion = SSR_PROTOCOL;
 globalThis.gyralRender = ({ page, props }) => {
   if (page !== 'home') throw new Error(`Unknown page: ${page}`);
   return renderToString(
@@ -7854,21 +7896,24 @@ runtime has no Fetch API, so the bundle writes its own document shell and return
 `onError: 'throw'` turns a failing component into a failed render, which Rust answers with an
 error page instead of a page with a hole in it.
 
-The runtime is not Node and not a browser. It has no DOM, file system, network or `TextEncoder`,
-and Gyral's style hashing needs `TextEncoder`. The
+The runtime is not Node and not a browser. It has the ECMAScript built-ins, `Intl`,
+`queueMicrotask` and `console`, and nothing else: no DOM, file system, network, timers, `URL` or
+`TextEncoder`. Gyral's server rendering uses nothing else, so the bundle needs no shim for it. Only
+`styleHashes()` uses `TextEncoder`, and the build calls it in Node. The
 [example's server entry](https://github.com/gyraljs/gyral-rs/blob/main/examples/axum-app/web/server.mjs)
-installs a small UTF-8 encoder first; copy it.
+is a fuller one, with a store, a form and time zones.
 
 ### Building the pair
 
-Build the browser and server bundles together, from the same components and the same exact
-Gyral version:
+Build the browser and server bundles together, from the same components and the same Gyral
+release (the HTML and the hydration seeds are a contract between one release's server and
+browser code), and write a manifest beside them:
 
 - **Browser**: one self-contained ES module from `src/client.ts`, named by its SHA-256 hash.
 - **Server**: one IIFE from `src/server.ts` with every import bundled in, `platform: 'neutral'`,
   and the client's path and integrity hash defined into it.
-- **Manifest**: `manifest.json` with the bundle ABI (`1`), the Gyral version, both hashes and
-  the style hashes from `styleHashes()`.
+- **Manifest**: `manifest.json` with the protocol as `abi` (`SSR_PROTOCOL` from the installed
+  `@gyral/ssr`), the Gyral version, both hashes and the style hashes from `styleHashes()`.
 
 The renderer loads no modules at runtime, so split chunks and dynamic `import()` are not
 supported. The [example's build script](https://github.com/gyraljs/gyral-rs/blob/main/tools/build-example.mjs)
@@ -8574,13 +8619,15 @@ it('hydrates the server page in place', async () => {
 - **`mountSsr(html)`** parses Declarative Shadow DOM, applies only the `<head>` styles, restores
   the store seed and `<meta>` tags, and starts recording console errors.
 - **`hydrated(page)`** waits until every component, including nested ones, has hydrated (it
-  awaits `settled()`). It fails on a hydration mismatch, on any console error or warning since
-  mounting, and on a server-rendered element whose module was never imported. Islands keep
-  waiting unless you pass `{ releaseIslands: true }`.
+  awaits `settled()`). It fails on any console error or warning since mounting, so on a
+  hydration mismatch too, quoting the mismatch, and on a server-rendered element whose module
+  was never imported. Islands keep waiting unless you pass `{ releaseIslands: true }`.
 - Render the markup with development output (Vitest does by default) and the browser also
   checks each template's id while hydrating. Run the hydration tests against a production build
-  of your components too: production hydration recovers from a mismatch instead of throwing, so
-  only a warning shows it.
+  of core too, a second browser project with
+  `resolve: { conditions: ['module', 'browser', 'production'] }`: production checks structure
+  only and warns where development logs an error. Both builds render a mismatched component
+  fresh, and `hydrated()` fails on either log.
 
 ## Testing stores
 
@@ -8682,12 +8729,13 @@ region with a real heading and keyboard-operable controls, in light and dark.
 
 The instrumentation lives in `@gyral/core`, behind a package-internal import with a
 `development` condition. Vite resolves that condition in the dev server and in Vitest (`gyral()`
-passes it to the dependency pre-bundle of an installed `@gyral/core` too), and the production one
-in `vite build`, where every call site is guarded by a constant `false`. The bundler drops the
-call sites and the module: a production build contains neither the hook nor its event code.
+passes it to the dependency pre-bundle of an installed `@gyral/core` too). A browser bundle built
+without it, by `vite build` or any other bundler, gets core's
+[production build](https://gyral.dev/docs/packages/#development-and-production-builds), which has neither the
+hook nor its event code: they are removed when Gyral is built.
 
-With other bundlers, set the `development` resolve condition in development builds to get events.
-Without it you get the safe default: no events.
+With other bundlers, set the `development` resolve condition in development builds to get events
+(esbuild: `conditions: ['development']`). Without it you get the safe default: no events.
 
 ## Building your own tools
 
@@ -8902,7 +8950,7 @@ These checks run in real Chromium with `pnpm verify:platforms` in the framework 
 install pinned host
 packages in a temporary directory, leaving Gyral's runtime dependency graph unchanged. They cover
 client mounts, not each host's SSR/hydration integration. The [spike
-report](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/platform-spikes-2026-10-11.md)
+report](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/references/platform-spikes-2026-10-11.md)
 records the results, fixtures and limits.
 
 ## Server rendering in another framework
@@ -9259,7 +9307,7 @@ not replace a visible label.
 A label and its control must share the relevant tree. A page's `label for` cannot simply
 point at an input hidden in another component's shadow root. Put the label inside the
 component, or use a deliberate naming contract that copies the external label into its
-accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.9/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
+accessible name. The skill's [view recipes](https://github.com/gyraljs/gyral/blob/v0.3.10/skills/gyral/references/view.md#naming-a-components-form-from-the-page)
 include naming a component's form from the page; the recipe is application code, not a Gyral
 export.
 
@@ -9425,7 +9473,7 @@ Source: https://gyral.dev/docs/packages/
 
 Gyral is a set of small packages under the `@gyral` scope on npm, plus `create-gyral`, which
 sets up a new app. Every app needs `@gyral/core`; add the others when you need them. All ten
-packages are released together with the same version number (0.3.9), are ES modules with
+packages are released together with the same version number (0.3.10), are ES modules with
 TypeScript types, and are published from GitHub Actions with
 [npm provenance](https://docs.npmjs.com/generating-provenance-statements).
 
@@ -9442,6 +9490,28 @@ npm install @gyral/core
 `@gyral/core/storage` and `@gyral/core/indexeddb` are optional entry points in the same
 package. They provide separate native [localStorage and IndexedDB drivers](https://gyral.dev/docs/browser-storage/).
 Apps that do not import them carry no storage driver code.
+
+### Development and production builds
+
+`@gyral/core` ships two builds of its runtime entry points. The full build has every
+development check, switched on by the `development` resolve condition. The production build has
+those checks, and the modules only they use, removed when Gyral is built, so a production bundle
+leaves them out whichever bundler makes it. Your bundler picks the build from the package's
+export conditions:
+
+| Who resolves `@gyral/core`                                     | Gets                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| Vite's dev server and Vitest's browser mode                    | the full build, checks on                             |
+| `vite build` for the browser                                   | the production build                                  |
+| esbuild, webpack, Rspack, Parcel or Bun, bundling for browsers | the production build; the full one with `development` |
+| Node, Deno, Bun, Vite's SSR and Vitest's Node projects         | the full build, its checks on only with `development` |
+
+For the checks in a browser bundle built without Vite, pass the condition while you develop:
+esbuild's `conditions: ['development']` (webpack and Rspack set it in development mode).
+Without it you get the production build: coded messages (`Gyral G0010 …`), no checks and no
+[devtools](https://gyral.dev/docs/devtools/) events. Only the `browser` condition selects the production build,
+so a server process loads one copy of core whatever resolves it. Don't import files under
+`@gyral/core/dist/` yourself: the conditions pick the build.
 
 ## Optional packages
 
@@ -9563,7 +9633,8 @@ to each browser project's config too ([Testing](https://gyral.dev/docs/testing/#
 
 `gyralVitePreset(options)` returns the same plugins as `{ plugins, optimizeDeps }`, for a config
 that spreads it in. `npx @gyral/codemod 0.3.8` rewrites such a config to `plugins: [gyral()]`
-where it can prove the result the same, and lists the configs it leaves.
+where it can prove the result the same (`...(gyralVitePreset(o).plugins ?? [])` becomes
+`...gyral(o)`, which always returns an array), and lists the configs it leaves.
 
 ## The ESLint plugin
 
@@ -9584,7 +9655,8 @@ and `gyral/unused-intent` and `gyral/prefer-built-in` as warnings. `gyral/prefer
 hand-written versions of what Gyral has built in and names the built-in: a dialog opened with
 `showModal()` (`?modal`), `.focus()` in a driver on an element reached through a component's
 `shadowRoot` or `renderRoot` (the `focus()` command; a page element outside any component stays
-the driver's to focus), `JSON.parse` of an attribute or prop (`prop.json()`), a subscription
+the driver's to focus), `JSON.parse` of an attribute or prop, whatever the props parameter is
+called and when it is destructured (`prop.json()`), a subscription
 that drops repeated values by hand (`equals`), a record of drivers outside tests (a list), and a
 parser that checks the event's type, modifier keys, `Number(value)` of a number input or
 `composedPath()[0]` (`on()`, about 0.43 KiB gzip once per app). It works without Vite.
@@ -9599,14 +9671,14 @@ version you develop against:
 
 ```json
 {
-  "peerDependencies": { "@gyral/core": "^0.3.9" },
-  "devDependencies": { "@gyral/core": "0.3.9" }
+  "peerDependencies": { "@gyral/core": "^0.3.10" },
+  "devDependencies": { "@gyral/core": "0.3.10" }
 }
 ```
 
 - **A peer, never a dependency.** A dependency pinned to one version installs a second core
   whenever the app has another one ([G0015](https://gyral.dev/errors/#G0015)); a peer uses the app's.
-- **A caret range**: `^0.3.9` is 0.3.9 up to, but not including, 0.4.0. Its lower bound is the
+- **A caret range**: `^0.3.10` is 0.3.10 up to, but not including, 0.4.0. Its lower bound is the
   oldest core you test against. Gyral's own packages pin core exactly because they use its
   internals; a library uses the public API, so any core in the range works. Other Gyral packages
   the library imports, such as `@gyral/http`, are caret peers too.
@@ -9619,7 +9691,7 @@ version you develop against:
   installed package that lists `@gyral/core`, as a peer too, for the features its components
   use ([what the build reads](https://gyral.dev/docs/rendering-modes/#what-the-build-reads)).
 - **Test against the range**: run the library's tests with the lowest core its range allows and
-  with the newest. `npx @gyral/mcp@0.3.9 skill --check` in its CI keeps the
+  with the newest. `npx @gyral/mcp@0.3.10 skill --check` in its CI keeps the
   [agent skill](https://gyral.dev/docs/coding-agents/#the-agent-skill) it carries on the version it develops
   against.
 
@@ -9633,11 +9705,11 @@ cancellation, concurrency lanes and retries.
 Apps ship only the features they use. `each`, `raw`, hooks, commands, stores and the prop builders
 register themselves when your code first calls them, so an app that never calls one doesn't
 bundle it, and the hydration code is a separate chunk that only server-rendered pages fetch.
-Measured on Gyral's examples at 0.3.9 (KiB gzip, production builds with `gyral()`):
+Measured on Gyral's examples at 0.3.10 (KiB gzip, production builds with `gyral()`):
 
 | App                      | First load | All chunks |
 | ------------------------ | ---------- | ---------- |
-| hello-world              | 9.7        | 12.1       |
+| hello-world              | 9.7        | 12.2       |
 | hello-world, client-only | 8.6        | 8.6        |
 | isomorphic (SSR)         | 15.6       | 18.7       |
 | no-js-first (SSR, forms) | 20.0       | 20.1       |
@@ -9665,8 +9737,8 @@ feature-detected and used as enhancements.
 ## Known issues
 
 - **Some markup isn't handled yet by the template checks**: `<select>` content under the new
-  customizable-select parsing, CDATA in SVG, and `<noscript>` as raw text. Keep these out of
-  templates, or put them in `raw()` on the server.
+  customizable-select parsing and CDATA in SVG. Keep these out of templates, or put them in
+  `raw()` on the server.
 - **Deno and Cloudflare Workers have only had a spot check** for server rendering: a
   `renderPage` bundle ran on Deno and in a local Workers runtime, but adapters, deployed edge
   behavior, bindings and assets aren't tested (see
@@ -9764,7 +9836,7 @@ or workers, such as the absence of animation frames, remain even as browser supp
 ## Removal dates
 
 These dates follow the `web-features` 3.35.0 snapshot in
-[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/design-docs/0003-browser-baseline.md),
+[ADR 0003](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/design-docs/0003-browser-baseline.md),
 adding 30 months to newly available. They are scheduled review points, not claims that the
 fallback has already been removed:
 
@@ -9782,7 +9854,7 @@ fallback has already been removed:
 | Trusted Types             | 2028-08-24            |
 
 `moveBefore()` and `requestIdleCallback()` have no Baseline removal date in that snapshot.
-The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/native-first-audit-2026-10-11.md)
+The [native-first audit](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/references/native-first-audit-2026-10-11.md)
 records why cancellable and virtual-time timers remain useful even when native timeout
 signals become widely available.
 
@@ -9816,8 +9888,8 @@ interchangeable dependency update.
 Use documented public package entries. Entries containing `/internal` are for Gyral's own
 packages and have no stability promise. A symbol being technically exported does not make
 an internal entry an application API. The
-[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.9/docs/references/public-api-0.3.1.md)
-records the public boundary of 0.3.9: every entry and what it exports.
+[export inventory](https://github.com/gyraljs/gyral/blob/v0.3.10/docs/references/public-api-0.3.1.md)
+records the public boundary of 0.3.10: every entry and what it exports.
 
 The `@gyral/*` packages and `create-gyral` release together at a shared version: keep every
 `@gyral/*` package your app installs on that one version. Gyral's packages take `@gyral/core` as a
@@ -9828,7 +9900,7 @@ of core throws [G0016](https://gyral.dev/errors/#G0016) in development. The
 
 ## Releases
 
-These guides describe **0.3.9**, the `latest` version on npm. Every package is published
+These guides describe **0.3.10**, the `latest` version on npm. Every package is published
 from GitHub Actions with npm provenance; install from the registry. Today npm has releases
 only, under the `latest` tag.
 
@@ -9837,7 +9909,7 @@ Deploy server output and client assets from the same build: stale HTML with new 
 templates can cause hydration mismatches. Versioned hashed assets help keep that agreement.
 
 Breaking changes wait for a new minor version, and that release gets an upgrade guide in these
-docs. On an older 0.3.x release? Install 0.3.9 and read the
+docs. On an older 0.3.x release? Install 0.3.10 and read the
 [core changelog](https://github.com/gyraljs/gyral/blob/main/packages/core/CHANGELOG.md).
 
 ## Upgrade with evidence
@@ -9847,7 +9919,8 @@ docs. On an older 0.3.x release? Install 0.3.9 and read the
 2. Update packages together and install from the lockfile.
 3. Commit, then run `npx @gyral/codemod 0.3.8` from the app's directory, before or after you
    install. It moves code from 0.3.7's APIs to the current ones wherever it can prove the
-   rewrite safe: a spread-in `gyralVitePreset()` becomes `plugins: [gyral()]`, driver records
+   rewrite safe: a spread-in `gyralVitePreset()` becomes `plugins: [gyral()]`,
+   `...(gyralVitePreset(o).plugins ?? [])` becomes `...gyral(o)`, driver records
    outside tests become [lists](https://gyral.dev/docs/effects/#substituting-drivers), and
    `subscription('feed', …)` becomes `subscription(feed, …)` where the module declares the
    `feed` token. An app on 0.3.8 has nothing to rewrite. A package whose `@gyral/core` is older
@@ -9859,16 +9932,19 @@ docs. On an older 0.3.x release? Install 0.3.9 and read the
    instead), so `git diff` shows what it did.
 4. Run ESLint with `gyral.configs.recommended` from `@gyral/core/eslint`. `gyral/prefer-built-in`
    names code that a built-in replaces, such as a parser that checks modifier keys by hand
-   (`on()`), and `gyral/intent-event` an `on()` parser bound to another event
+   (`on()`) or `JSON.parse` of a prop, whatever the props parameter is called (`prop.json()`),
+   and `gyral/intent-event` an `on()` parser bound to another event
    ([the rules](https://gyral.dev/docs/packages/#the-eslint-plugin)).
 5. Run typechecking, component/browser tests and the production build. `vite dev` and browser
    tests run Gyral's development checks, and some throw, naming what to change. A view that
    reads something besides its state, props and stores warns ([G0017](https://gyral.dev/errors/#G0017)),
    because Gyral skips renders whose inputs are unchanged.
 6. Test server/client hydration, edited forms, routing and the production CSP if your app
-   uses them. Check payload size for the pages whose loading matters.
+   uses them. Check payload size for the pages whose loading matters. If `gyral-rs` renders
+   your pages, check that your `gyral-rs` release accepts the target
+   ([Rust servers](https://gyral.dev/docs/rust-servers/#embedded-rendering-with-gyral-rs)).
 7. Update the agent skill your project carries:
-   `npx @gyral/mcp@0.3.9 skill` ([coding agents](https://gyral.dev/docs/coding-agents/#the-agent-skill)).
+   `npx @gyral/mcp@0.3.10 skill` ([coding agents](https://gyral.dev/docs/coding-agents/#the-agent-skill)).
 
 The generated [API reference](https://gyral.dev/docs/api/) describes the packages installed for this site's
 build. Consult the changelog for the exact version your app runs:
@@ -9893,9 +9969,9 @@ Development builds of `@gyral/core` print each diagnostic in full, ending with i
 Gyral G0010 my-cart Add https://gyral.dev/errors/#G0010
 ```
 
-Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, or a build with `--mode development`). A hydration mismatch keeps its own sentence in production and ends with its code and link.
+Read that one as: `<my-cart>` has no update for the message `Add`. Find the code below; its message shows where each argument goes. For the full sentence, reproduce the problem in development (the dev server, tests, a Vite build with `--mode development`, or another bundler with the `development` condition). A hydration mismatch keeps its own sentence in production and ends with its code and link.
 
-The codes and messages are read from `@gyral/core` 0.3.9, the version this site is built with; codes are never reused.
+The codes and messages are read from `@gyral/core` 0.3.10, the version this site is built with; codes are never reused.
 
 ## Components
 
@@ -10325,7 +10401,7 @@ gyral: hydration mismatch in {host} at {path}: expected {expected}, found {found
 
 Arguments: `host`, `path`, `expected`, `found`.
 
-The server’s HTML differs from the first client render, so the component can’t be hydrated in place. Development throws `HydrationMismatch`, naming the template’s file and line; production keeps the sentence (the component, the DOM path, what was expected and found) and renders the component fresh (G0063). Both end the sentence with this code and its link.
+The server’s HTML differs from the first client render, so the component can’t be hydrated in place. Every build clears it and renders it fresh from its seeded state (G0063), and the rest of the page stays hydrated. Development logs this sentence as an error, naming the template’s file and line, then G0063’s; production warns with G0063’s code, then this sentence (the component, the DOM path, what was expected and found). Both end the sentence with this code and its link. It isn’t reported through the error channel, but `hydrated()` from `@gyral/testing` fails a test on it.
 
 **Fix:** Make the view render the same on both sides: no `Date.now()`, random numbers or locale-dependent formatting in `view` (put them in state through a command). Also rule out a browser extension or script that changed the DOM before hydration, and a stale cached page.
 
@@ -10337,9 +10413,9 @@ The server’s HTML differs from the first client render, so the component can�
 
 Arguments: `tag`.
 
-Production only: after a hydration mismatch, Gyral cleared this component and rendered it fresh. The warning prints this code with the component’s tag, then the mismatch’s own sentence, which ends with G0062. The rest of the page stays hydrated, but this component flashes and redoes the server’s work.
+After a hydration mismatch (G0062), Gyral cleared this component and rendered it fresh from its seeded state. Development logs this sentence after the mismatch’s own, in one error; production warns with this code and the component’s tag, then the mismatch’s sentence, which ends with G0062. The component works and the rest of the page stays hydrated, but it flashes and redoes the server’s work.
 
-**Fix:** Fix the mismatch the warning describes; reproducing it in development gives the full message and the template’s location.
+**Fix:** Fix the mismatch the message describes; in development it names the template’s file and line.
 
 ## Templates
 
@@ -14211,6 +14287,25 @@ Whether the request asks for JSON rather than a page (`Accept: application/json`
 `text/html`): `submitForm` and other fetch calls do, a browser's form post doesn't. The rule
 `formAction` answers by; for your own routes that serve both.
 
+### Constants
+
+| Name | Summary |
+| --- | --- |
+| [`SSR_PROTOCOL`](#ssr-ssr_protocol) | The embedded SSR protocol this release implements (ADR 0034). |
+
+#### `SSR_PROTOCOL`
+
+```ts
+const SSR_PROTOCOL: 1
+```
+
+The embedded SSR protocol this release implements (ADR 0034). A server entry built for an
+embedded host such as gyral-rs declares it with `globalThis.gyralBundleVersion =
+SSR_PROTOCOL`, and its build writes the same number to the bundle manifest's `abi`, so a
+host that doesn't support it refuses the bundle before running it. Protocol 1 is the bundle
+ABI 1 that every Gyral release from 0.3.8 on implements. It changes only in a minor release,
+with an upgrade note; a release that keeps it needs no new host release.
+
 ### Types and interfaces
 
 You rarely write most of these yourself: TypeScript infers them from the functions above. Look one up when an example or a compiler error names it.
@@ -15929,7 +16024,7 @@ Source: https://gyral.dev/docs/principles/
 
 These are the beliefs Gyral is built on. Each one explains a decision you'll meet in the API.
 The full reasoning lives in the decision records in
-[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.9/docs/design-docs).
+[Gyral's repository](https://github.com/gyraljs/gyral/tree/v0.3.10/docs/design-docs).
 
 ## The platform is the framework
 

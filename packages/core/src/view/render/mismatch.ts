@@ -1,7 +1,8 @@
 // Hydration mismatches (view/07-hydration.md "Mismatches"): the server DOM differs from what
 // the first client render needs. The message names the component, the template's call site
 // (development builds know it), the path from the root to the node, and what was expected
-// and found. Development throws it; production recovers the one component (core's caller).
+// and found. The walk throws it; core's caller (hydration-client.ts) recovers the one component
+// in both builds and logs it: an error in development, a warning in production.
 import { DEV } from '#view-dev';
 import { docsLink } from '../message.js';
 

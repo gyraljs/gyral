@@ -17,8 +17,10 @@ export { scheduleIsland } from './islands.js';
 /**
  * Hydrates a server-rendered host's root with its first view (view/07-hydration.md "Steps").
  * A shadow root swaps styles in the same step (08 "Hydration"): the shared sheets are adopted
- * and the server's `<style>` removed. On a mismatch development throws; production recovers
- * this component only: it clears the root, renders fresh and warns.
+ * and the server's `<style>` removed. On a mismatch both builds recover this component only:
+ * the root is cleared and rendered fresh. Development logs the mismatch in full as an error,
+ * production warns (G0063); it isn't a failure for the error channel (ADR 0018 addendum
+ * "Hydration mismatches recover in development").
  */
 export function hydrateRoot(
   host: HTMLElement,
@@ -38,8 +40,8 @@ export function hydrateRoot(
   } catch (error) {
     if (!(error instanceof HydrationMismatch)) throw error;
     if (DEVTOOLS_ENABLED) devMismatch(host, tag, error.message);
-    if (DEV) throw error;
-    console.warn(message(63, tag), error.message);
+    if (DEV) console.error(error.message, message(63, tag));
+    else console.warn(message(63, tag), error.message);
     root.replaceChildren();
     render(view, root, seen);
   }

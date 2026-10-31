@@ -1,6 +1,8 @@
 // Rule 7 at build time with parse5 (view/09-template-rules.md "How rule 7 is checked"): a
-// spec-compliant HTML parser parses each template's HTML as <template> content, exactly like
-// the runtime path's `<template>.innerHTML`, and its tree is compared with the shape the
+// spec-compliant HTML parser parses each template's HTML as <template> content, like the
+// runtime path's `<template>.innerHTML` (the scripting flag differs between them and between
+// engines, which only <noscript> content shows, and the client HTML leaves that content out:
+// view/01-templates.md "Normalization"), and its tree is compared with the shape the
 // normalizer computed paths for (view/normalize/shape.ts, shared with the browser check). An
 // svg template is parsed inside an <svg>, as the browser path does (template-element.ts).
 //
