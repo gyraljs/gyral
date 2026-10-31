@@ -332,6 +332,10 @@ export const ShareButton = define<State, Msg>()('my-share', {
 });
 ```
 
+For visitors without JavaScript, a view can also carry a `<noscript>` notice next to the
+controls it stands in for: static markup only (no `${…}` inside), written by the server and
+adopted as is by hydration; client renders leave it empty (0.3.10, `references/view.md`).
+
 ## Static generation and production serving (`@gyral/ssr/static`)
 
 ```ts

@@ -3,7 +3,9 @@
 // namespaces, void elements, raw text, the leading newline of <pre>/<listing>/<textarea>), so
 // part paths match the browser's DOM. Markup the parser would repair is an error instead of
 // being modelled (rule 7, repairs.ts), as are rules 3, 4, 6, 10, 12 and 13. An svg template's
-// top level is SVG content, as if inside an <svg> (01 "svg templates", svg.ts).
+// top level is SVG content, as if inside an <svg> (01 "svg templates", svg.ts). <noscript> is
+// raw text, as the parser reads it with scripting on, the only way the client runs (a hole in
+// it is rule 3; emit.ts leaves its content to the server, 09 "<noscript> since 0.3.10").
 import { decodeRefs, unquote } from './entities.js';
 import {
   breaksOutOfForeign,

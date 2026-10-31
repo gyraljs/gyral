@@ -3,7 +3,7 @@
 // place. Properties over generated templates (view/README.md "Conformance").
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { normalize } from '../../src/view/normalize/normalize.js';
+import { analyze, normalize } from '../../src/view/normalize/normalize.js';
 import { minifyStrings } from '../../src/view/normalize/whitespace.js';
 import { STATIC_STYLE, template } from './arbitrary.js';
 import { emptyRender, t, valueCounts } from './helpers.js';
@@ -54,6 +54,27 @@ describe('segments (view/06)', () => {
       '><title>',
       { k: 'text' },
       '</title>',
+    ]);
+  });
+
+  it("keep <noscript> content for the server; the client's HTML leaves it out (gyral-qqa)", () => {
+    const notice = '<style>.r { color: red }</style><p>Needs JavaScript&nbsp;&rarr;</p>';
+    const { template, shape } = analyze([
+      '<noscript class=',
+      `>${notice}</noscript><button>`,
+      '</button>',
+    ]);
+    expect(template.segments).toEqual([
+      '<noscript',
+      { k: 'attr', name: 'class' },
+      `>${notice}</noscript><button>`,
+      { k: 'child', in: 'button' },
+      '</button>',
+    ]);
+    expect(template.html).toBe('<noscript></noscript><button></button>');
+    expect(shape).toEqual([
+      ['noscript', []],
+      ['button', []],
     ]);
   });
 

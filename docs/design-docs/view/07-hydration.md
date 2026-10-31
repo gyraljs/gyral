@@ -159,6 +159,7 @@ what comes next, because it has the template object and this render's values.
 | child hole: `nothing`/`null` | nothing                                                      | records an empty part                                                                |
 | child hole: `raw()`          | its start anchor, then nodes up to the hole's reference node | records the range                                                                    |
 | nested Gyral host            | that element                                                 | records its parts on the host; walks a shadow host's light children only (above)     |
+| static `<noscript>`          | a `<noscript>`                                               | records its attribute parts; never walks or compares its content (below)             |
 
 **svg templates** (0.3.1, 01 "svg templates") are walked like any template: the template's
 content was parsed inside an `<svg>` and the server's markup inside the page's `<svg>`, so both
@@ -167,6 +168,17 @@ sides have SVG elements with the parser's names, and the walk's local-name check
 are checked and removed as usual. In development, an svg template whose DOM parent isn't SVG
 content is a mismatch ("expected an svg template inside SVG content"); production checks
 structure only, as everywhere.
+
+**`<noscript>`** (0.3.10, gyral-qqa): the walk only runs with scripting on, and then the page's
+parser keeps a `<noscript>`'s content as raw text: one Text node holding the server's markup.
+The template has none of it: its content is server-only, and the client's template HTML writes
+the element empty (01 "Normalization"; before 0.3.10 Chromium and WebKit parsed it into
+elements there, and every such notice was a mismatch, 09 "`<noscript>` since 0.3.10"). So the
+walk adopts the element (local name, attribute parts) and skips its content in both builds,
+as it skips a light host's: nothing is compared, the server's text stays as the parser made it,
+and no later render touches it (rule 3 keeps parts out of it). Content that only shows without
+JavaScript has nothing to check against the client render, and a third party (or another
+server's whitespace) changing it breaks nothing.
 
 **Merged text.** The HTML parser joins adjacent text: `Hi ${name}!` arrives as one Text node
 `Hi Bob` before the anchor. The walk splits it with `splitText` at the known lengths (static
@@ -226,11 +238,11 @@ declarations (Firefox empties a blocked one).
   `<template>` parse, as the client does): non-text nodes by node name, text by length.
 - **Elements:** the local name must match; parts are adopted (`adoptAttr` in `adopt-attr.ts`:
   committed values set, nothing written); then the children are walked unless a text part owns
-  them (`<textarea>`, `<title>`), the element is a light host, or it is a custom element without
-  template children. Server-only attributes on nested hosts (`data-gyral-seed`,
-  `data-gyral-light`, `defer-hydration`, `data-gyral-hydrate`) are never compared: the walk
-  checks bound attributes only, never the static attribute set (hooks' server halves and
-  third parties add attributes).
+  them (`<textarea>`, `<title>`), the element is a light host, it is a custom element without
+  template children, or it is a `<noscript>` (0.3.10, above). Server-only attributes on
+  nested hosts (`data-gyral-seed`, `data-gyral-light`, `defer-hydration`,
+  `data-gyral-hydrate`) are never compared: the walk checks bound attributes only, never the
+  static attribute set (hooks' server halves and third parties add attributes).
 
 ### The server markup the walk meets (from Phase 4)
 
@@ -343,6 +355,10 @@ preload and release-retention boundaries. No blanket browser-version workaround 
   (hosts, style swap, child-first and parent-first order, islands), the `@gyral/ssr` suites
   and the examples' hydration tests (both projects), and `pnpm smoke:prod`, which now also
   checks that every element the parser built is still in the page after hydration.
+- **0.3.10:** `core/test/view/noscript-hydration.test.ts` (the walk, a client render, both
+  builds; Firefox and WebKit too through `browsers.config.ts`) and
+  `core/test/noscript-hydration.test.ts` (shadow and light hosts with a `<noscript>` notice,
+  from real server output).
 - **Size:** Phase 5 added hydration to every client bundle (about 1.8 KiB gzip); since
   gyral-g1r.18 it loads lazily ("Loading"), so a client-only app's initial chunk carries none
   of it and only server-rendered pages fetch the separate chunk, preloaded by the server

@@ -6,7 +6,9 @@
 // CSP (view/08-styles.md "Style attributes under a strict CSP"); the Trusted Types tests run
 // with raw() and svg beside them, because those are the other two HTML sinks (gyral-ei9). The
 // dialog and popover bindings run here too, since each engine implements showModal() and the
-// Popover API itself (gyral-1zd.27).
+// Popover API itself (gyral-1zd.27). <noscript> runs here because the engines parse a
+// <template>'s content differently: Chromium and WebKit with scripting off, Firefox with it on
+// (gyral-qqa).
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 import { gyralVitePreset } from '../../src/vite.js';
@@ -15,7 +17,7 @@ export default defineConfig({
   ...gyralVitePreset(),
   test: {
     include: [
-      'packages/core/test/view/{render-style,style-hydration,style-csp,trusted-types,render-raw,render-svg,dialogs,dialogs-insertion,dialogs-hydration}.test.ts',
+      'packages/core/test/view/{render-style,style-hydration,style-csp,trusted-types,render-raw,render-svg,dialogs,dialogs-insertion,dialogs-hydration,noscript-hydration}.test.ts',
       'packages/core/test/dialog-focus.test.ts',
       'packages/ssr/test/style-attribute-hashes.test.ts',
     ],
