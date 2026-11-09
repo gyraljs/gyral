@@ -12,7 +12,7 @@
     "@gyral/core": "workspace:*",
     "@gyral/router": "workspace:*",
     "@gyral/ssr": "workspace:*",
-    "hono": "4.13.13"
+    "hono": "4.13.14"
   },
   "devDependencies": {
     "@gyral/testing": "workspace:*",
